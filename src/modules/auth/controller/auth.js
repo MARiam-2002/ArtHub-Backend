@@ -1,35 +1,24 @@
 import userModel from "../../../../DB/models/user.model.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcryptjs from "bcryptjs";
-import crypto, { randomBytes } from "crypto";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../../utils/sendEmails.js";
 import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
-import { countries } from "countries-list";
-import cloudinary from "../../../utils/cloud.js";
 
 export const register = asyncHandler(async (req, res, next) => {
-  const {
-    email,
-    userName,
-    password,
-    role,
-    phoneNumber,
-    country,
-  } = req.body;
+  const { email, password } = req.body;
 
   const isUser = await userModel.findOne({
-    $or: [{ email: email }, { userName: userName }],
+    email: email,
   });
 
   if (isUser) {
     return res
       .status(400)
-      .json({ success: false, message: "Email or userName already exists!" });
+      .json({ success: false, message: "Email already exists!" });
   }
-
-
 
   const hashPassword = bcryptjs.hashSync(
     password,
@@ -37,19 +26,14 @@ export const register = asyncHandler(async (req, res, next) => {
   );
 
   const user = await userModel.create({
-    userName,
-    role,
     email,
     password: hashPassword,
-    phoneNumber,
-    country,
   });
 
   const token = jwt.sign(
     {
       id: user._id,
       email: user.email,
-      userName: user.userName,
       role: user.role,
     },
     process.env.TOKEN_KEY
@@ -66,9 +50,6 @@ export const register = asyncHandler(async (req, res, next) => {
     message: "Registration successful!",
     data: {
       email: user.email,
-      userName: user.userName,
-      phone: user.phoneNumber,
-      country: user.country,
       role: user.role,
       token,
     },
@@ -222,13 +203,8 @@ export const fingerprint = asyncHandler(async (req, res) => {
   }
 });
 
-
-
-
 // export const redHeart = asyncHandler(async (req, res, next) => {
 //   const { productId } = req.params;
-
-  
 
 //   // Fetch product
 //   const product = await productModel.findById(productId);
@@ -266,19 +242,14 @@ export const fingerprint = asyncHandler(async (req, res) => {
 //   });
 // });
 
-
-
-
 // export const wishlist = asyncHandler(async (req, res, next) => {
- 
+
 //   // Fetch the user with populated fields
-//   let user = await userModel.findById(req.user._id).populate("wishlist"); 
+//   let user = await userModel.findById(req.user._id).populate("wishlist");
 
 //   if (!user) {
 //     return next(new Error("User not found", { status: 404 }));
 //   }
-
-  
 
 //   return res.status(200).json({
 //     success: true,

@@ -13,46 +13,11 @@ const defaultMessages = {
 
 export const registerSchema = joi
   .object({
-    email: joi
-      .string()
-      .email()
-      .required()
-      .messages({
-        "string.empty": "البريد الإلكتروني مطلوب.",
-        "string.email": "يرجى إدخال بريد إلكتروني صحيح.",
-        "any.required": "البريد الإلكتروني مطلوب.",
-      }),
-
-    userName: joi
-      .string()
-      .required()
-      .messages({
-        "string.empty": "اسم المستخدم مطلوب.",
-        "any.required": "اسم المستخدم مطلوب.",
-      }),
-
-    role: joi
-      .string()
-      .valid("buyer", "seller")
-      .required()
-      .messages({
-        "any.only": "الدور يجب أن يكون إما 'buyer' أو 'seller'.",
-        "any.required": "الدور مطلوب.",
-      }),
-
-    phoneNumber: joi
-      .string()
-      .when("role", {
-        is: "seller",
-        then: joi
-          .required()
-          .messages({
-            "string.empty": "رقم الهاتف مطلوب للبائع.",
-            "string.pattern.base":
-              "رقم الهاتف يجب أن يكون رقمًا سعوديًا يبدأ بـ +966 أو 05 ويحتوي على 9 أرقام.",
-            "any.required": "رقم الهاتف مطلوب للبائع.",
-          }),
-      }),
+    email: joi.string().email().required().messages({
+      "string.empty": "البريد الإلكتروني مطلوب.",
+      "string.email": "يرجى إدخال بريد إلكتروني صحيح.",
+      "any.required": "البريد الإلكتروني مطلوب.",
+    }),
 
     password: joi
       .string()
@@ -74,17 +39,8 @@ export const registerSchema = joi
         "any.only": "تأكيد كلمة المرور يجب أن يتطابق مع كلمة المرور الجديدة.",
         "any.required": "تأكيد كلمة المرور مطلوب.",
       }),
-
-    country: joi
-      .string()
-      .required()
-      .messages({
-        "string.empty": "الدولة مطلوبة.",
-        "any.required": "الدولة مطلوبة.",
-      }),
   })
   .required();
-
 
 export const loginSchema = joi
   .object({
@@ -153,4 +109,3 @@ export const verify = joi
       .messages(defaultMessages),
   })
   .required();
- 

@@ -47,7 +47,6 @@ router.patch(
   userController.VerifyCode
 );
 
-router.get("/allCountryWithFlag", userController.allCountryWithFlag);
 
 router.get(
   "/facebook",

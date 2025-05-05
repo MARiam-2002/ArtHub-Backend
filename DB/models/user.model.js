@@ -2,29 +2,8 @@ import mongoose, { Schema, Types, model } from "mongoose";
 
 const userSchema = new Schema(
   {
-    companyName: { type: String },
-
-    userName: {
-      type: String,
-      unique: true,
-
-      min: 3,
-      max: 20,
-    },
-    phoneNumber: { type: String },
-    document: {
-      url: {
-        type: String,
-      },
-      id: {
-        type: String,
-      },
-    },
-    country: { type: String },
-    businessType: { type: String, enum: ["Registered Business", "Freelancer"] },
-    services: { type: [String], enum: ["In-Store", "Online"] },
     fingerprint: { type: String },
-    faceData: { type: String },
+
     googleId: String,
     facebookId: String,
     email: {
@@ -35,19 +14,11 @@ const userSchema = new Schema(
     password: {
       type: String,
     },
-    gender: {
-      type: String,
-      enum: ["male", "female"],
-    },
-    status: {
-      type: String,
-      enum: ["online", "offline"],
-      default: "offline",
-    },
+
     role: {
       type: String,
-      enum: ["buyer", "seller"],
-      default: "buyer",
+      enum: ["user", "artist"],
+      default: "user",
     },
     wishlist: [
       {
@@ -55,14 +26,7 @@ const userSchema = new Schema(
         ref: "Product", // تأكد من أن لديك موديل "Product"
       },
     ],
-        cards: [
-      {
-        type: Types.ObjectId,
-        ref: "Card",
-      },
-    ],
-    forgetCode: String,
-    activationCode: String,
+
     profileImage: {
       url: {
         type: String,
