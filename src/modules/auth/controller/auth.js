@@ -4,7 +4,7 @@ import bcryptjs from "bcryptjs";
 import crypto, { randomBytes } from "crypto";
 import jwt from "jsonwebtoken";
 import { sendEmail } from "../../../utils/sendEmails.js";
-import { resetPassword, signupTemp } from "../../../utils/generateHtml.js";
+import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
 import { countries } from "countries-list";
 import cloudinary from "../../../utils/cloud.js";
@@ -198,23 +198,6 @@ export const resetPasswordByCode = asyncHandler(async (req, res, next) => {
   return res.status(200).json({ success: true, message: "Try to login!" });
 });
 
-export const allCountryWithFlag = asyncHandler((req, res, next) => {
-  const gulfCountriesCodes = ["BH", "KW", "OM", "QA", "SA", "AE"];
-
-  const gulfCountriesData = gulfCountriesCodes.map((code) => ({
-    name: countries[code].name,
-    code: code,
-    phone: `+${countries[code].phone}`,
-    flag: `https://flagcdn.com/w320/${code.toLowerCase()}.png`,
-  }));
-
-  return res.json({
-    success: true,
-    message: "Gulf Countries with flags",
-    data: gulfCountriesData,
-  });
-});
-
 export const fingerprint = asyncHandler(async (req, res) => {
   const { isFingerprintAuth } = req.body;
 
@@ -237,74 +220,6 @@ export const fingerprint = asyncHandler(async (req, res) => {
       message: "Invalid fingerprint authentication.",
     });
   }
-});
-
-export const updateUser = asyncHandler(async (req, res, next) => {
-  const id = req.user._id;
-  const { email, userName, phoneNumber, country } = req.body;
-
-  const isUnique = async (field, value) => {
-    const exists = await userModel.findOne({
-      [field]: value,
-      _id: { $ne: id },
-    });
-    if (exists) {
-      throw new Error(`${field} already exists!`, { cause: 400 });
-    }
-  };
-
-  try {
-    if (email) await isUnique("email", email);
-    if (userName) await isUnique("userName", userName);
-  } catch (error) {
-    return next(error);
-  }
-
-  const updates = { email, userName, phoneNumber, country };
-
-  if (req.file) {
-    const { secure_url, public_id } = await cloudinary.uploader.upload(
-      req.file.path,
-      {
-        folder: `${process.env.FOLDER_CLOUDINARY}/user/${id}/profileImage`,
-      }
-    );
-
-    if (req.user.profileImage?.id) {
-      await cloudinary.uploader.destroy(req.user.profileImage.id);
-    }
-
-    updates.profileImage = { url: secure_url, id: public_id };
-  }
-
-  Object.keys(updates).forEach(
-    (key) => updates[key] === undefined && delete updates[key]
-  );
-
-  if (Object.keys(updates).length === 0) {
-    return next(new Error("No valid fields to update!", { cause: 400 }));
-  }
-
-  const updatedUser = await userModel.findByIdAndUpdate(id, updates, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!updatedUser) {
-    return next(new Error("User not found!", { cause: 404 }));
-  }
-
-  return res.status(200).json({
-    success: true,
-    message: "User updated successfully!",
-    data: {
-      email: updatedUser.email,
-      userName: updatedUser.userName,
-      phone: updatedUser.phoneNumber,
-      country: updatedUser.country,
-      profileImage: updatedUser.profileImage,
-    },
-  });
 });
 
 

@@ -138,12 +138,7 @@ router.get(
   }
 );
 
-router.patch(
-  "/update-profile",
-  isAuthenticated,
-  fileUpload(filterObject.image).single("profileImage"),
-  userController.updateUser
-);
+
 
 
 // router.put(
