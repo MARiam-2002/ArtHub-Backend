@@ -13,11 +13,7 @@ const defaultMessages = {
 
 export const registerSchema = joi
   .object({
-    email: joi
-      .string()
-      .email()
-      .required()
-      .label("البريد الإلكتروني"),
+    email: joi.string().email().required().label("البريد الإلكتروني"),
 
     password: joi
       .string()
@@ -35,7 +31,6 @@ export const registerSchema = joi
       .valid(joi.ref("password"))
       .required()
       .label("تأكيد كلمة المرور"),
-
   })
   .messages(defaultMessages)
   .required();
@@ -59,6 +54,7 @@ export const loginSchema = joi
         "string.pattern.base":
           "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، ورقم أو رمز خاص.",
       }),
+    jobs: joi.string().required().label("الوظيفة").messages(defaultMessages),
   })
   .required();
 
@@ -72,7 +68,6 @@ export const forgetCode = joi
       .messages(defaultMessages),
   })
   .required();
-
 
 export const resetPassword = joi
   .object({
@@ -99,7 +94,7 @@ export const resetPassword = joi
   })
   .required();
 
-  export const verify = joi
+export const verify = joi
   .object({
     forgetCode: joi
       .string()
@@ -112,4 +107,3 @@ export const resetPassword = joi
       }),
   })
   .required();
-
