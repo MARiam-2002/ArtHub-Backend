@@ -1,11 +1,13 @@
 import { Types } from "mongoose";
 
-export const isValidObjectId = (value, helper) => {
+// ✅ Custom validator for ObjectId
+export const isValidObjectId = (value, helpers) => {
   return Types.ObjectId.isValid(value)
-    ? true
-    : helper.message("Invalid ObjectId");
+    ? value
+    : helpers.message("المعرّف غير صالح (Invalid ObjectId)");
 };
 
+// ✅ Middleware for schema validation
 export const isValidation = (Schema) => {
   return (req, res, next) => {
     const copyReq = {
@@ -15,23 +17,18 @@ export const isValidation = (Schema) => {
       ...req.files,
     };
 
-    const validationResult = Schema.validate(copyReq, { abortEarly: false });
+    const { error } = Schema.validate(copyReq, { abortEarly: false });
 
-    if (validationResult.error) {
-      const errorMessages = validationResult.error.details.map(
-        (error) => error.message
-      );
+    if (error) {
+      const errorMessages = error.details.map((err) => err.message);
 
-      // إعادة الخطأ بشكل استجابة JSON مع الحالة 400
       return res.status(400).json({
         success: false,
-        message: "Validation failed",
+        message: "فشل التحقق من البيانات",
         errors: errorMessages,
       });
     }
 
-    // إذا لم يكن هناك خطأ، متابعة الطلب
     return next();
   };
 };
-
