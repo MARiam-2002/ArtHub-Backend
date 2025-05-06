@@ -61,7 +61,7 @@ export const register = asyncHandler(async (req, res, next) => {
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await userModel.findOne({ email });
+  const user = await userModel.findOne({ email }).select("+password");;
 
   const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
 

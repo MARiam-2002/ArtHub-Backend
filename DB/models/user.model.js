@@ -22,7 +22,6 @@ const userSchema = new Schema(
 
     forgetCode: {
       type: String,
-      select: false,
     },
 
     password: {
