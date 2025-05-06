@@ -8,7 +8,7 @@ import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
 
 export const register = asyncHandler(async (req, res, next) => {
-  const { email, password, role } = req.body;
+  const { email, password, job } = req.body;
 
   const user = await userModel.findOne({ email });
 
@@ -26,7 +26,7 @@ export const register = asyncHandler(async (req, res, next) => {
   const newUser = await userModel.create({
     email,
     password: hashPassword,
-    role: role || "user",
+    job: job || "مستخدم",
   });
 
   const token = jwt.sign(
@@ -52,6 +52,7 @@ export const register = asyncHandler(async (req, res, next) => {
     data: {
       email: newUser.email,
       role: newUser.role,
+      job: newUser.job,
       token,
     },
   });
@@ -96,16 +97,15 @@ export const login = asyncHandler(async (req, res, next) => {
     data: {
       email: user.email,
       role: user.role,
+      job: user.job,
       token,
     },
   });
 });
 
-
 export const sendForgetCode = asyncHandler(async (req, res, next) => {
-
   const user = await userModel.findOne({ email: req.body.email });
-  
+
   if (!user) {
     return res.status(404).json({
       success: false,
@@ -118,7 +118,7 @@ export const sendForgetCode = asyncHandler(async (req, res, next) => {
   const code = crypto.randomInt(1000, 9999).toString();
   user.forgetCode = code;
 
-  await user.save();   
+  await user.save();
 
   try {
     const emailSent = await sendEmail({
@@ -128,26 +128,38 @@ export const sendForgetCode = asyncHandler(async (req, res, next) => {
     });
 
     if (!emailSent) {
-      return next(new Error("حدث خطأ أثناء إرسال البريد الإلكتروني.", { cause: 500 }));
+      return next(
+        new Error("حدث خطأ أثناء إرسال البريد الإلكتروني.", { cause: 500 })
+      );
     }
 
     return res.status(200).json({
       success: true,
-      message: "إذا كان البريد الإلكتروني صحيحًا، سيتم إرسال رمز إعادة تعيين كلمة المرور.",
+      message:
+        "إذا كان البريد الإلكتروني صحيحًا، سيتم إرسال رمز إعادة تعيين كلمة المرور.",
     });
   } catch (error) {
-    return next(new Error("فشل في إرسال البريد الإلكتروني، حاول مرة أخرى.", { cause: 500 }));
+    return next(
+      new Error("فشل في إرسال البريد الإلكتروني، حاول مرة أخرى.", {
+        cause: 500,
+      })
+    );
   }
 });
 
-
 export const VerifyCode = asyncHandler(async (req, res, next) => {
   if (!req.user || !req.user.forgetCode) {
-    return next(new Error("من فضلك، أعد إرسال رمز إعادة تعيين كلمة المرور.", { cause: 400 }));
+    return next(
+      new Error("من فضلك، أعد إرسال رمز إعادة تعيين كلمة المرور.", {
+        cause: 400,
+      })
+    );
   }
 
   if (req.user.forgetCode !== req.body.forgetCode) {
-    return next(new Error("رمز غير صالح! تأكد من إدخال الرمز الصحيح.", { cause: 400 }));
+    return next(
+      new Error("رمز غير صالح! تأكد من إدخال الرمز الصحيح.", { cause: 400 })
+    );
   }
 
   await userModel.updateOne(
@@ -160,7 +172,6 @@ export const VerifyCode = asyncHandler(async (req, res, next) => {
     message: "الرمز صحيح، يمكنك الآن إعادة تعيين كلمة المرور.",
   });
 });
-
 
 export const resetPasswordByCode = asyncHandler(async (req, res, next) => {
   if (!req.user || req.user.forgetCode) {

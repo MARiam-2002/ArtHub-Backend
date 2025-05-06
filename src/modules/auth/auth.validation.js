@@ -36,14 +36,6 @@ export const registerSchema = joi
       .required()
       .label("تأكيد كلمة المرور"),
 
-    role: joi
-      .string()
-      .valid("user", "photographer", "painter", "visual_artist")
-      .label("الدور")
-      .messages({
-        ...defaultMessages,
-        "any.only": "الدور يجب أن يكون واحدًا من الأدوار التالية: user, photographer, painter, visual_artist.",
-      }),
   })
   .messages(defaultMessages)
   .required();

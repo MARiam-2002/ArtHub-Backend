@@ -15,6 +15,10 @@ const userSchema = new Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "يرجى إدخال بريد إلكتروني صالح"],
     },
+    job:{
+      type: String,
+      default: "مستخدم",
+    },
 
     forgetCode: {
       type: String,
@@ -28,7 +32,7 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ["user", "photographer", "painter", "visual_artist"],
+      enum: ["user", "artist"],
       default: "user",
     },
 
