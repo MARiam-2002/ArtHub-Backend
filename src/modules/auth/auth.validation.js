@@ -54,7 +54,7 @@ export const loginSchema = joi
         "string.pattern.base":
           "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، ورقم أو رمز خاص.",
       }),
-    jobs: joi.string().required().label("الوظيفة").messages(defaultMessages),
+    job: joi.string().required().label("الوظيفة").messages(defaultMessages),
   })
   .required();
 
