@@ -10,14 +10,12 @@ import tokenModel from "../../../../DB/models/token.model.js";
 export const register = asyncHandler(async (req, res, next) => {
   const { email, password, role } = req.body;
 
-  const isUser = await userModel.findOne({
-    email: email,
-  });
+  const user = await userModel.findOne({ email });
 
-  if (isUser) {
-    return res
-      .status(400)
-      .json({ success: false, message: "البريد الإلكتروني موجود بالفعل!" });
+  const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+
+  if (user) {
+    return next(new Error(invalidMessage, { cause: 400 }));
   }
 
   const hashPassword = await bcryptjs.hash(
@@ -25,7 +23,7 @@ export const register = asyncHandler(async (req, res, next) => {
     Number(process.env.SALT_ROUND)
   );
 
-  const user = await userModel.create({
+  const newUser = await userModel.create({
     email,
     password: hashPassword,
     role: role || "user",
@@ -33,17 +31,18 @@ export const register = asyncHandler(async (req, res, next) => {
 
   const token = jwt.sign(
     {
-      id: user._id,
-      email: user.email,
-      role: user.role,
+      id: newUser._id,
+      email: newUser.email,
+      role: newUser.role,
     },
     process.env.TOKEN_KEY
   );
-  await tokenModel.findOneAndDelete({ user: user._id });
+
+  await tokenModel.findOneAndDelete({ user: newUser._id });
 
   await tokenModel.create({
     token,
-    user: user._id,
+    user: newUser._id,
     agent: req.headers["user-agent"],
   });
 
@@ -51,8 +50,8 @@ export const register = asyncHandler(async (req, res, next) => {
     success: true,
     message: "تم التسجيل بنجاح!",
     data: {
-      email: user.email,
-      role: user.role,
+      email: newUser.email,
+      role: newUser.role,
       token,
     },
   });
@@ -61,24 +60,17 @@ export const register = asyncHandler(async (req, res, next) => {
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await userModel.findOne({
-    email,
-  });
+  const user = await userModel.findOne({ email });
+
+  const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
 
   if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: "المستخدم غير موجود. الرجاء التسجيل أولًا.",
-    });
+    return next(new Error(invalidMessage, { cause: 400 }));
   }
 
   const isPasswordValid = await bcryptjs.compare(password, user.password);
   if (!isPasswordValid) {
-    return next(
-      new Error("كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.", {
-        cause: 400,
-      })
-    );
+    return next(new Error(invalidMessage, { cause: 400 }));
   }
 
   const token = jwt.sign(
@@ -89,6 +81,7 @@ export const login = asyncHandler(async (req, res, next) => {
     },
     process.env.TOKEN_KEY
   );
+
   await tokenModel.findOneAndDelete({ user: user._id });
 
   await tokenModel.create({
@@ -108,73 +101,96 @@ export const login = asyncHandler(async (req, res, next) => {
   });
 });
 
-//send forget Code
 
 export const sendForgetCode = asyncHandler(async (req, res, next) => {
-  // const user = await userModel.findOne({ email: req.body.email });
 
-  // if (!user) {
-  //   return next(new Error("Invalid email!", { cause: 400 }));
-  // }
+  const user = await userModel.findOne({ email: req.body.email });
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "البريد الإلكتروني غير مسجل لدينا.",
+    });
+  }
+
+  user.forgetCode = null;
 
   const code = crypto.randomInt(1000, 9999).toString();
+  user.forgetCode = code;
 
-  req.user.forgetCode = code;
-  await req.user.save();
+  await user.save();   
 
-  return (await sendEmail({
-    to: req.body.email,
-    subject: "Reset Password",
-    html: resetPassword(code),
-  }))
-    ? res.status(200).json({ success: true, message: "check you email!" })
-    : next(new Error("Something went wrong!", { cause: 400 }));
+  try {
+    const emailSent = await sendEmail({
+      to: req.body.email,
+      subject: "إعادة تعيين كلمة المرور",
+      html: resetPassword(code),
+    });
+
+    if (!emailSent) {
+      return next(new Error("حدث خطأ أثناء إرسال البريد الإلكتروني.", { cause: 500 }));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "إذا كان البريد الإلكتروني صحيحًا، سيتم إرسال رمز إعادة تعيين كلمة المرور.",
+    });
+  } catch (error) {
+    return next(new Error("فشل في إرسال البريد الإلكتروني، حاول مرة أخرى.", { cause: 500 }));
+  }
 });
 
+
 export const VerifyCode = asyncHandler(async (req, res, next) => {
-  if (!req.user.forgetCode) {
-    return next(new Error("Please resend the forget code.", { status: 400 }));
+  if (!req.user || !req.user.forgetCode) {
+    return next(new Error("من فضلك، أعد إرسال رمز إعادة تعيين كلمة المرور.", { cause: 400 }));
   }
 
   if (req.user.forgetCode !== req.body.forgetCode) {
-    return next(new Error("Invalid code!", { status: 400 }));
+    return next(new Error("رمز غير صالح! تأكد من إدخال الرمز الصحيح.", { cause: 400 }));
   }
 
   await userModel.updateOne(
-    {
-      $or: [{ email: req.user.email }, { username: req.user.userNme }],
-    },
+    { email: req.user.email },
     { $unset: { forgetCode: 1 } }
   );
+
   return res.status(200).json({
     success: true,
-    message: "Go to reset new password",
+    message: "الرمز صحيح، يمكنك الآن إعادة تعيين كلمة المرور.",
   });
 });
 
+
 export const resetPasswordByCode = asyncHandler(async (req, res, next) => {
-  if (req.user.forgetCode) {
-    return next(new Error("Please verify code first!", { status: 400 }));
+  if (!req.user || req.user.forgetCode) {
+    return next(
+      new Error("الرجاء التحقق من الرمز أولاً قبل إعادة تعيين كلمة المرور.", {
+        status: 400,
+      })
+    );
   }
+
   const newPassword = bcryptjs.hashSync(
     req.body.password,
     +process.env.SALT_ROUND
   );
-  await userModel.findOneAndUpdate(
-    {
-      _id: req.user._id,
-    },
-    { password: newPassword }
-  );
 
-  //invalidate tokens
+  await userModel.findByIdAndUpdate(req.user._id, {
+    password: newPassword,
+    $unset: { forgetCode: 1 },
+  });
+
   const tokens = await tokenModel.find({ user: req.user._id });
-
-  tokens.forEach(async (token) => {
+  for (const token of tokens) {
     token.isValid = false;
     await token.save();
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "تم تعيين كلمة المرور بنجاح. يرجى تسجيل الدخول.",
   });
-  return res.status(200).json({ success: true, message: "Try to login!" });
 });
 
 export const fingerprint = asyncHandler(async (req, res) => {

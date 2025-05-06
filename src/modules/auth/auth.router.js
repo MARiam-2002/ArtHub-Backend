@@ -29,7 +29,6 @@ router.post(
 
 router.patch(
   "/forgetCode",
-  isAuthenticated,
   isValidation(Validators.forgetCode),
   userController.sendForgetCode
 );

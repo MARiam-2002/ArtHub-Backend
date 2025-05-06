@@ -6,27 +6,27 @@ import userModel from "../../DB/models/user.model.js";
 export const isAuthenticated = asyncHandler(async (req, res, next) => {
   const token = req.headers["token"];
   if (!token) {
-    return next(new Error("Valid token is required"));
+    return next(new Error("يجب تسجيل الدخول أولاً", { cause: 401 }));
   }
 
   let decode;
   try {
     decode = jwt.verify(token, process.env.TOKEN_KEY);
   } catch (error) {
-    return next(new Error("Invalid token"));
+    return next(new Error("التوكن غير صالح أو منتهي الصلاحية", { cause: 401 }));
   }
 
   const tokenDB = await tokenModel.findOne({ token, isValid: true });
   if (!tokenDB) {
-    return next(new Error("Token expired or invalid!"));
+    return next(
+      new Error("هذا التوكن غير صالح أو تم تسجيل الخروج", { cause: 403 })
+    );
   }
 
   const user = await userModel.findById(decode.id);
-  if (user) {
-    req.user = user;
-    return next();
+  if (!user) {
+    return next(new Error("المستخدم غير موجود", { cause: 404 }));
   }
-
-  
-  return next(new Error("User not found!"));
+  req.user = user;
+  return next();
 });

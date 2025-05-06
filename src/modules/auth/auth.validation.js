@@ -23,7 +23,12 @@ export const registerSchema = joi
       .string()
       .pattern(/^(?=.*[A-Z])(?=.*\d|.*[!@#$%^&*(),.?":{}|<>])(?=.{8,}).*$/)
       .required()
-      .label("كلمة المرور"),
+      .label("كلمة المرور")
+      .messages({
+        ...defaultMessages,
+        "string.pattern.base":
+          "يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، حرف كبير، ورقم أو رمز خاص.",
+      }),
 
     confirmPassword: joi
       .string()
@@ -34,11 +39,14 @@ export const registerSchema = joi
     role: joi
       .string()
       .valid("user", "photographer", "painter", "visual_artist")
-      .label("الدور"),
+      .label("الدور")
+      .messages({
+        ...defaultMessages,
+        "any.only": "الدور يجب أن يكون واحدًا من الأدوار التالية: user, photographer, painter, visual_artist.",
+      }),
   })
   .messages(defaultMessages)
   .required();
-
 
 export const loginSchema = joi
   .object({
@@ -46,18 +54,18 @@ export const loginSchema = joi
       .string()
       .email()
       .required()
-      .label("Email")
+      .label("البريد الإلكتروني")
       .messages(defaultMessages),
 
     password: joi
       .string()
       .regex(/^(?=.*[A-Z])(?=.*\d|.*[!@#$%^&*(),.?":{}|<>])(?=.{8,}).*$/)
       .required()
-      .label("Password")
+      .label("كلمة المرور")
       .messages({
         ...defaultMessages,
         "string.pattern.base":
-          "Password must be at least 8 characters long, contain at least one uppercase letter, and include either a number or a special character.",
+          "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، ورقم أو رمز خاص.",
       }),
   })
   .required();
@@ -68,10 +76,11 @@ export const forgetCode = joi
       .string()
       .email()
       .required()
-      .label("Email")
+      .label("البريد الإلكتروني")
       .messages(defaultMessages),
   })
   .required();
+
 
 export const resetPassword = joi
   .object({
@@ -98,12 +107,17 @@ export const resetPassword = joi
   })
   .required();
 
-export const verify = joi
+  export const verify = joi
   .object({
     forgetCode: joi
       .string()
+      .pattern(/^\d{4}$/) // تأكد إنه 4 أرقام فقط
       .required()
-      .label("Forget Code")
-      .messages(defaultMessages),
+      .label("رمز التحقق")
+      .messages({
+        ...defaultMessages,
+        "string.pattern.base": "{#label} يجب أن يتكون من 4 أرقام.",
+      }),
   })
   .required();
+
