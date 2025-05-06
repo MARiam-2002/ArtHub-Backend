@@ -31,6 +31,7 @@ export const registerSchema = joi
       .valid(joi.ref("password"))
       .required()
       .label("تأكيد كلمة المرور"),
+    job: joi.string().required().label("الوظيفة").messages(defaultMessages),
   })
   .messages(defaultMessages)
   .required();
@@ -54,7 +55,6 @@ export const loginSchema = joi
         "string.pattern.base":
           "كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف كبير، ورقم أو رمز خاص.",
       }),
-      job: joi.string().required().label("الوظيفة").messages(defaultMessages),
   })
   .required();
 
