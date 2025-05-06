@@ -8,7 +8,7 @@ import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
 
 export const register = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password,role } = req.body;
 
   const isUser = await userModel.findOne({
     email: email,
@@ -28,6 +28,7 @@ export const register = asyncHandler(async (req, res, next) => {
   const user = await userModel.create({
     email,
     password: hashPassword,
+    role: role || "user",
   });
 
   const token = jwt.sign(
@@ -81,7 +82,6 @@ export const login = asyncHandler(async (req, res, next) => {
     {
       id: user._id,
       email: user.email,
-      userName: user.userName,
       role: user.role,
     },
     process.env.TOKEN_KEY
@@ -101,9 +101,6 @@ export const login = asyncHandler(async (req, res, next) => {
     message: "Login successful.",
     data: {
       email: user.email,
-      userName: user.userName,
-      phone: user.phoneNumber,
-      country: user.country,
       role: user.role,
       token,
     },

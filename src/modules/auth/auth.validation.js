@@ -13,34 +13,32 @@ const defaultMessages = {
 
 export const registerSchema = joi
   .object({
-    email: joi.string().email().required().messages({
-      "string.empty": "البريد الإلكتروني مطلوب.",
-      "string.email": "يرجى إدخال بريد إلكتروني صحيح.",
-      "any.required": "البريد الإلكتروني مطلوب.",
-    }),
+    email: joi
+      .string()
+      .email()
+      .required()
+      .label("البريد الإلكتروني"),
 
     password: joi
       .string()
-      .regex(/^(?=.*[A-Z])(?=.*\d|.*[!@#$%^&*(),.?":{}|<>])(?=.{8,}).*$/)
+      .pattern(/^(?=.*[A-Z])(?=.*\d|.*[!@#$%^&*(),.?":{}|<>])(?=.{8,}).*$/)
       .required()
-      .messages({
-        "string.empty": "كلمة المرور مطلوبة.",
-        "string.pattern.base":
-          "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل، وتحتوي على حرف كبير واحد على الأقل، ويجب أن تتضمن رقمًا أو رمزًا خاصًا.",
-        "any.required": "كلمة المرور مطلوبة.",
-      }),
+      .label("كلمة المرور"),
 
     confirmPassword: joi
       .string()
       .valid(joi.ref("password"))
       .required()
-      .messages({
-        "string.empty": "تأكيد كلمة المرور مطلوب.",
-        "any.only": "تأكيد كلمة المرور يجب أن يتطابق مع كلمة المرور الجديدة.",
-        "any.required": "تأكيد كلمة المرور مطلوب.",
-      }),
+      .label("تأكيد كلمة المرور"),
+
+    role: joi
+      .string()
+      .valid("user", "photographer", "painter", "visual_artist")
+      .label("الدور"),
   })
+  .messages(defaultMessages)
   .required();
+
 
 export const loginSchema = joi
   .object({

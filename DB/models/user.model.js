@@ -17,7 +17,7 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ["user", "artist"],
+      enum: ["user", "photographer", "painter", "visual_artist"],
       default: "user",
     },
     wishlist: [
