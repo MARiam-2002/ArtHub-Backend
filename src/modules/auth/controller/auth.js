@@ -8,7 +8,7 @@ import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
 
 export const register = asyncHandler(async (req, res, next) => {
-  const { email, password,role } = req.body;
+  const { email, password, role } = req.body;
 
   const isUser = await userModel.findOne({
     email: email,
@@ -17,10 +17,10 @@ export const register = asyncHandler(async (req, res, next) => {
   if (isUser) {
     return res
       .status(400)
-      .json({ success: false, message: "Email already exists!" });
+      .json({ success: false, message: "البريد الإلكتروني موجود بالفعل!" });
   }
 
-  const hashPassword = bcryptjs.hashSync(
+  const hashPassword = await bcryptjs.hash(
     password,
     Number(process.env.SALT_ROUND)
   );
@@ -39,6 +39,7 @@ export const register = asyncHandler(async (req, res, next) => {
     },
     process.env.TOKEN_KEY
   );
+  await tokenModel.findOneAndDelete({ user: user._id });
 
   await tokenModel.create({
     token,
@@ -48,7 +49,7 @@ export const register = asyncHandler(async (req, res, next) => {
 
   return res.status(201).json({
     success: true,
-    message: "Registration successful!",
+    message: "تم التسجيل بنجاح!",
     data: {
       email: user.email,
       role: user.role,
@@ -67,14 +68,16 @@ export const login = asyncHandler(async (req, res, next) => {
   if (!user) {
     return res.status(404).json({
       success: false,
-      message: "User not found. Please register.",
+      message: "المستخدم غير موجود. الرجاء التسجيل أولًا.",
     });
   }
 
-  const isPasswordValid = bcryptjs.compareSync(password, user.password);
+  const isPasswordValid = await bcryptjs.compare(password, user.password);
   if (!isPasswordValid) {
     return next(
-      new Error("Invalid Password. Please try again.", { cause: 400 })
+      new Error("كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.", {
+        cause: 400,
+      })
     );
   }
 
@@ -86,6 +89,7 @@ export const login = asyncHandler(async (req, res, next) => {
     },
     process.env.TOKEN_KEY
   );
+  await tokenModel.findOneAndDelete({ user: user._id });
 
   await tokenModel.create({
     token,
@@ -93,12 +97,9 @@ export const login = asyncHandler(async (req, res, next) => {
     agent: req.headers["user-agent"] || "unknown",
   });
 
-  user.status = "online";
-  await user.save();
-
   return res.status(200).json({
     success: true,
-    message: "Login successful.",
+    message: "تم تسجيل الدخول بنجاح.",
     data: {
       email: user.email,
       role: user.role,
