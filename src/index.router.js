@@ -1,7 +1,7 @@
 
 import authRouter from "./modules/auth/auth.router.js";
 import { globalErrorHandling } from "./utils/asyncHandler.js";
-import cors from "cors";
+import corsMiddleware, { corsOptions } from "./middleware/cors.js";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import imageRouter from './modules/image/image.router.js';
@@ -19,8 +19,11 @@ export const bootstrap = (app, express) => {
     app.use(morgan("common"));
   }
 
-  // CORS configuration to allow access from different sources
-  app.use(cors());
+  // Apply CORS middleware globally
+  app.use(corsMiddleware);
+
+  // Enable pre-flight across all routes
+  app.options('*', corsMiddleware);
 
   // Use Express JSON to parse data
   app.use(express.json());
@@ -44,8 +47,14 @@ export const bootstrap = (app, express) => {
   // Response enhancer middleware
   app.use(responseMiddleware);
 
+  // Set special headers for Swagger docs specifically
+  app.use("/api-docs", (req, res, next) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+  }, swaggerRoutes);
+
   // API routes
-  app.use("/api-docs", swaggerRoutes);
   app.use("/auth", authRouter);
   app.use('/image', imageRouter);
   app.use('/chat', chatRouter);

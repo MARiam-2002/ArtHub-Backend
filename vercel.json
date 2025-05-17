@@ -9,8 +9,22 @@
   ],
   "routes": [
     {
+      "src": "/api-docs",
+      "dest": "/index.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept"
+      }
+    },
+    {
       "src": "/api-docs/(.*)",
-      "dest": "/index.js"
+      "dest": "/index.js",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept"
+      }
     },
     {
       "src": "/api/(.*)",

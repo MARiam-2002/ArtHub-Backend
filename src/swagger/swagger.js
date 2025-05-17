@@ -1,3 +1,4 @@
+
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import { fileURLToPath } from 'url';
@@ -13,6 +14,7 @@ try {
   const jsonPath = join(__dirname, 'swagger.json');
   const jsonContent = fs.readFileSync(jsonPath, 'utf8');
   swaggerDocument = JSON.parse(jsonContent);
+  console.log('Using swagger.json file for documentation');
 } catch (error) {
   console.log('Using JSDoc for Swagger documentation generation');
   
@@ -181,12 +183,18 @@ const swaggerOptions = {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'ArtHub API Documentation',
   customfavIcon: '/favicon.ico',
+  explorer: true,
   swaggerOptions: {
     persistAuthorization: true,
     docExpansion: 'none', // 'list', 'full' or 'none'
     filter: true,
     defaultModelsExpandDepth: 1,
-    tryItOutEnabled: true
+    tryItOutEnabled: true,
+    displayRequestDuration: true,
+    syntaxHighlight: {
+      activate: true,
+      theme: "agate"
+    }
   }
 };
 
