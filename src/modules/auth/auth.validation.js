@@ -107,3 +107,42 @@ export const verify = joi
       }),
   })
   .required();
+
+export const verifyForgetCode = joi
+  .object({
+    email: joi.string().email().required().label("البريد الإلكتروني").messages(defaultMessages),
+    forgetCode: joi
+      .string()
+      .pattern(/^\d{4}$/)
+      .required()
+      .label("رمز التحقق")
+      .messages({
+        ...defaultMessages,
+        "string.pattern.base": "{#label} يجب أن يتكون من 4 أرقام.",
+      }),
+  })
+  .required();
+
+export const resetPasswordByCode = joi
+  .object({
+    email: joi.string().email().required().label("البريد الإلكتروني").messages(defaultMessages),
+    password: joi
+      .string()
+      .regex(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/)
+      .required()
+      .label("كلمة المرور الجديدة")
+      .messages({
+        ...defaultMessages,
+        "string.pattern.base": "كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم على الأقل.",
+      }),
+    confirmPassword: joi
+      .string()
+      .valid(joi.ref("password"))
+      .required()
+      .label("تأكيد كلمة المرور")
+      .messages({
+        ...defaultMessages,
+        "any.only": "تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.",
+      }),
+  })
+  .required();

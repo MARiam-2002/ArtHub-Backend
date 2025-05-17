@@ -1,63 +1,39 @@
+
 import authRouter from "./modules/auth/auth.router.js";
 import { globalErrorHandling } from "./utils/asyncHandler.js";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
+import imageRouter from './modules/image/image.router.js';
+import chatRouter from './modules/chat/chat.router.js';
+import { responseMiddleware } from './middleware/response.middleware.js';
+import { errorHandler } from './middleware/error.middleware.js';
+import artworkRouter from './modules/artwork/artwork.router.js';
+import homeRouter from './modules/home/home.router.js';
+import swaggerRoutes from './swagger/swagger.js';
 dotenv.config();
-import passport from "passport";
 import jwt from "jsonwebtoken";
-import session from "express-session";
 
 export const bootstrap = (app, express) => {
   if (process.env.NODE_ENV == "dev") {
     app.use(morgan("common"));
   }
 
-  // استخدام CORS للتمكين من الوصول من مصادر مختلفة
+  // CORS configuration to allow access from different sources
   app.use(cors());
 
-  // استخدم Express JSON لتحليل البيانات
+  // Use Express JSON to parse data
   app.use(express.json());
 
-  // لا حاجة لاستخدام express-session لأنك ستعتمد على JWT بدلاً منها
-  // app.use(
-  //   session({
-  //     secret: process.env.SESSION_SECRET, 
-  //     resave: false,
-  //     saveUninitialized: false,
-  //     cookie: {
-  //       secure: process.env.NODE_ENV === "production", 
-  //       httpOnly: true, 
-  //       maxAge: 1000 * 60 * 60 * 24, 
-  //     },
-  //   })
-  // );
-  
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === "production", 
-        httpOnly: true, 
-        maxAge: 1000 * 60 * 60 * 24, 
-      },
-    })
-  );
-  
-  app.use(passport.initialize());
-  app.use(passport.session()); 
-  
-
+  // JWT authentication middleware
   app.use((req, res, next) => {
     const token = req.headers["authorization"]?.split(" ")[1]; 
     if (token) {
       jwt.verify(token, process.env.TOKEN_KEY, (err, decoded) => {
         if (err) {
-          return res.status(403).json({ message: "Invalid token" });
+          return res.status(403).json({ success: false, message: "Invalid token" });
         }
-        req.user = decoded; // إضافة بيانات المستخدم من التوكن إلى الطلب
+        req.user = decoded; // Add user data from token to request
         next();
       });
     } else {
@@ -65,13 +41,22 @@ export const bootstrap = (app, express) => {
     }
   });
 
-  app.use("/auth", authRouter);
- 
- 
+  // Response enhancer middleware
+  app.use(responseMiddleware);
 
+  // API routes
+  app.use("/api-docs", swaggerRoutes);
+  app.use("/auth", authRouter);
+  app.use('/image', imageRouter);
+  app.use('/chat', chatRouter);
+  app.use('/artworks', artworkRouter);
+  app.use('/home', homeRouter);
+ 
+  // 404 handler
   app.all("*", (req, res, next) => {
     return next(new Error("not found page", { cause: 404 }));
   });
 
-  app.use(globalErrorHandling);
+  // Global error handler
+  app.use(errorHandler);
 };

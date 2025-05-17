@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import { sendEmail } from "../../../utils/sendEmails.js";
 import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
+import admin from '../../../utils/firebaseAdmin.js';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { email, password, job } = req.body;
@@ -173,34 +174,47 @@ export const VerifyCode = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const resetPasswordByCode = asyncHandler(async (req, res, next) => {
-  if (!req.user || req.user.forgetCode) {
-    return next(
-      new Error("الرجاء التحقق من الرمز أولاً قبل إعادة تعيين كلمة المرور.", {
-        status: 400,
-      })
-    );
+export const verifyForgetCode = asyncHandler(async (req, res, next) => {
+  const { email, forgetCode } = req.body;
+  const user = await userModel.findOne({ email });
+  if (!user || !user.forgetCode) {
+    return res.status(400).json({
+      success: false,
+      message: "يرجى طلب كود جديد أولاً.",
+    });
   }
-
-  const newPassword = bcryptjs.hashSync(
-    req.body.password,
-    +process.env.SALT_ROUND
-  );
-
-  await userModel.findByIdAndUpdate(req.user._id, {
-    password: newPassword,
-    $unset: { forgetCode: 1 },
-  });
-
-  const tokens = await tokenModel.find({ user: req.user._id });
-  for (const token of tokens) {
-    token.isValid = false;
-    await token.save();
+  if (user.forgetCode !== forgetCode) {
+    return res.status(400).json({
+      success: false,
+      message: "رمز التحقق غير صحيح!",
+    });
   }
-
+  user.forgetCode = null;
+  user.isForgetCodeVerified = true;
+  await user.save();
   return res.status(200).json({
     success: true,
-    message: "تم تعيين كلمة المرور بنجاح. يرجى تسجيل الدخول.",
+    message: "تم التحقق من الرمز بنجاح. يمكنك الآن إعادة تعيين كلمة المرور.",
+  });
+});
+
+export const resetPasswordByCode = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
+  const user = await userModel.findOne({ email });
+  if (!user || !user.isForgetCodeVerified) {
+    return res.status(400).json({
+      success: false,
+      message: "يرجى التحقق من الكود أولاً.",
+    });
+  }
+  const hashPassword = await bcryptjs.hash(password, Number(process.env.SALT_ROUND));
+  user.password = hashPassword;
+  user.isForgetCodeVerified = false;
+  await user.save();
+  await tokenModel.updateMany({ user: user._id }, { isValid: false });
+  return res.status(200).json({
+    success: true,
+    message: "تم تحديث كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.",
   });
 });
 
@@ -226,6 +240,39 @@ export const fingerprint = asyncHandler(async (req, res) => {
       message: "Invalid fingerprint authentication.",
     });
   }
+});
+
+export const socialLogin = asyncHandler(async (req, res, next) => {
+  const { email, name, picture, uid } = req.user;
+  let user = await userModel.findOne({ email });
+  if (!user) {
+    user = await userModel.create({
+      email,
+      googleId: uid,
+      profileImage: { url: picture },
+      job: "مستخدم",
+    });
+  }
+  const token = jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    process.env.TOKEN_KEY
+  );
+  await tokenModel.findOneAndDelete({ user: user._id });
+  await tokenModel.create({
+    token,
+    user: user._id,
+    agent: req.headers["user-agent"] || "unknown",
+  });
+  return res.success(
+    {
+      email: user.email,
+      role: user.role,
+      job: user.job,
+      token,
+      profileImage: user.profileImage?.url,
+    },
+    "تم تسجيل الدخول الاجتماعي بنجاح."
+  );
 });
 
 // export const redHeart = asyncHandler(async (req, res, next) => {

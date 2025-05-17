@@ -1,0 +1,1174 @@
+
+openapi: 3.0.0
+info:
+  title: ArtHub API
+  description: |
+    Complete API documentation for ArtHub backend services.
+    This API is designed for integration with Flutter mobile applications.
+  version: 1.0.0
+  contact:
+    name: ArtHub Support
+    email: support@arthub.com
+servers:
+  - url: /api
+    description: Main API server
+tags:
+  - name: Authentication
+    description: Authentication and user management endpoints
+  - name: Images
+    description: Image upload and management
+  - name: Artworks
+    description: Artwork management endpoints
+  - name: Chat
+    description: Chat and messaging functionality
+  - name: Categories
+    description: Category management
+  - name: Reviews
+    description: Reviews and ratings
+
+paths:
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input or email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/social-login:
+    post:
+      tags:
+        - Authentication
+      summary: Social login with Firebase
+      description: Authenticate user using Firebase ID token from social login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SocialLoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid Firebase token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Image Endpoints
+  /image/upload:
+    post:
+      tags:
+        - Images
+      summary: Upload images
+      description: Upload one or more images with metadata
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files to upload (maximum 10)
+                title:
+                  type: string
+                  description: Image title (optional)
+                description:
+                  type: string
+                  description: Image description (optional)
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Image tags (optional)
+                category:
+                  type: string
+                  description: Image category (optional)
+      responses:
+        '201':
+          description: Images uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadImagesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/upload/firebase:
+    post:
+      tags:
+        - Images
+      summary: Upload images with Firebase auth
+      description: Upload one or more images with Firebase token authentication
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Image files to upload (maximum 10)
+                title:
+                  type: string
+                  description: Image title (optional)
+                description:
+                  type: string
+                  description: Image description (optional)
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Image tags (optional)
+                category:
+                  type: string
+                  description: Image category (optional)
+      responses:
+        '201':
+          description: Images uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadImagesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/my-images:
+    get:
+      tags:
+        - Images
+      summary: Get user images
+      description: Get all images uploaded by the authenticated user
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Number of items per page
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter by category
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedImagesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/my-images/firebase:
+    get:
+      tags:
+        - Images
+      summary: Get user images with Firebase auth
+      description: Get all images uploaded by the user authenticated with Firebase
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Number of items per page
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter by category
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedImagesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/{imageId}:
+    get:
+      tags:
+        - Images
+      summary: Get image details
+      description: Get details of a specific image
+      parameters:
+        - in: path
+          name: imageId
+          required: true
+          schema:
+            type: string
+          description: ID of the image
+      responses:
+        '200':
+          description: Image retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/{imageId}:
+    patch:
+      tags:
+        - Images
+      summary: Update image metadata
+      description: Update metadata of a specific image
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: imageId
+          required: true
+          schema:
+            type: string
+          description: ID of the image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateImageRequest'
+      responses:
+        '200':
+          description: Image updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/{imageId}/firebase:
+    patch:
+      tags:
+        - Images
+      summary: Update image metadata with Firebase auth
+      description: Update metadata of a specific image using Firebase authentication
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - in: path
+          name: imageId
+          required: true
+          schema:
+            type: string
+          description: ID of the image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateImageRequest'
+      responses:
+        '200':
+          description: Image updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/{publicId}:
+    delete:
+      tags:
+        - Images
+      summary: Delete image
+      description: Delete a specific image
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+          description: Public ID of the image in Cloudinary
+      responses:
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/{publicId}/firebase:
+    delete:
+      tags:
+        - Images
+      summary: Delete image with Firebase auth
+      description: Delete a specific image using Firebase authentication
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+          description: Public ID of the image in Cloudinary
+      responses:
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /image/categories/popular:
+    get:
+      tags:
+        - Images
+        - Categories
+      summary: Get popular image categories
+      description: Get a list of popular image categories with counts
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoriesResponse'
+
+  # Chat Endpoints
+  /chat:
+    get:
+      tags:
+        - Chat
+      summary: Get user chats
+      description: Get all chats for the authenticated user
+      security:
+        - FirebaseAuth: []
+      responses:
+        '200':
+          description: Chats retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /chat/{chatId}/messages:
+    get:
+      tags:
+        - Chat
+      summary: Get chat messages
+      description: Get all messages in a specific chat
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - in: path
+          name: chatId
+          required: true
+          schema:
+            type: string
+          description: ID of the chat
+      responses:
+        '200':
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Chat
+      summary: Send message
+      description: Send a new message in a specific chat
+      security:
+        - FirebaseAuth: []
+      parameters:
+        - in: path
+          name: chatId
+          required: true
+          schema:
+            type: string
+          description: ID of the chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /chat/create:
+    post:
+      tags:
+        - Chat
+      summary: Create chat
+      description: Create a new chat with another user
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChatRequest'
+      responses:
+        '201':
+          description: Chat created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login or registration
+    FirebaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase ID token obtained from Firebase Authentication
+
+  schemas:
+    # Authentication schemas
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - confirmPassword
+        - job
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+          description: User email address
+        password:
+          type: string
+          format: password
+          example: P@ssword123
+          description: User password (min 8 chars, at least one uppercase letter and one number/special char)
+        confirmPassword:
+          type: string
+          example: P@ssword123
+          description: Confirm password (must match password)
+        job:
+          type: string
+          example: فنان
+          description: User job/role
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: P@ssword123
+
+    SocialLoginRequest:
+      type: object
+      required:
+        - idToken
+      properties:
+        idToken:
+          type: string
+          description: Firebase ID token
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم تسجيل الدخول بنجاح
+        data:
+          type: object
+          properties:
+            email:
+              type: string
+              example: user@example.com
+            role:
+              type: string
+              example: user
+            job:
+              type: string
+              example: فنان
+            token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            profileImage:
+              type: string
+              format: uri
+              example: https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    # Image schemas
+    UpdateImageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: لوحة الغروب
+        description:
+          type: string
+          example: لوحة تصور غروب الشمس على الشاطئ
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["طبيعة", "غروب", "شاطئ"]
+        category:
+          type: string
+          example: مناظر طبيعية
+
+    UploadImagesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 201
+        message:
+          type: string
+          example: تم رفع الصور بنجاح
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              _id:
+                type: string
+                example: 60d21b4667d0d8992e610c85
+              url:
+                type: string
+                format: uri
+                example: https://res.cloudinary.com/demo/image/upload/v1612345678/artwork.jpg
+              publicId:
+                type: string
+                example: artworks/abcdef123456
+              title:
+                type: string
+                example: لوحة الغروب
+              description:
+                type: string
+                example: لوحة تصور غروب الشمس على الشاطئ
+              tags:
+                type: array
+                items:
+                  type: string
+                example: ["طبيعة", "غروب", "شاطئ"]
+              category:
+                type: string
+                example: مناظر طبيعية
+              size:
+                type: integer
+                example: 1024000
+              format:
+                type: string
+                example: jpg
+              width:
+                type: integer
+                example: 1200
+              height:
+                type: integer
+                example: 800
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    PaginatedImagesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم استرجاع الصور بنجاح
+        data:
+          type: object
+          properties:
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/Image'
+            pagination:
+              type: object
+              properties:
+                currentPage:
+                  type: integer
+                  example: 1
+                totalPages:
+                  type: integer
+                  example: 5
+                totalCount:
+                  type: integer
+                  example: 47
+                hasNextPage:
+                  type: boolean
+                  example: true
+                hasPrevPage:
+                  type: boolean
+                  example: false
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    ImageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم استرجاع بيانات الصورة بنجاح
+        data:
+          $ref: '#/components/schemas/Image'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    Image:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 60d21b4667d0d8992e610c85
+        user:
+          type: string
+          example: 60d21b4667d0d8992e610c80
+        url:
+          type: string
+          format: uri
+          example: https://res.cloudinary.com/demo/image/upload/v1612345678/artwork.jpg
+        publicId:
+          type: string
+          example: artworks/abcdef123456
+        title:
+          type: string
+          example: لوحة الغروب
+        description:
+          type: string
+          example: لوحة تصور غروب الشمس على الشاطئ
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["طبيعة", "غروب", "شاطئ"]
+        category:
+          type: string
+          example: مناظر طبيعية
+        size:
+          type: integer
+          example: 1024000
+        format:
+          type: string
+          example: jpg
+        width:
+          type: integer
+          example: 1200
+        height:
+          type: integer
+          example: 800
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-05-15T10:30:45.123Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+
+    CategoriesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم استرجاع التصنيفات بنجاح
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              _id:
+                type: string
+                example: مناظر طبيعية
+              count:
+                type: integer
+                example: 25
+              sampleImage:
+                type: string
+                format: uri
+                example: https://res.cloudinary.com/demo/image/upload/v1612345678/sample.jpg
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    # Chat schemas
+    ChatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم استرجاع المحادثات بنجاح
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chat'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    Chat:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 60d21b4667d0d8992e610c85
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        lastMessage:
+          $ref: '#/components/schemas/Message'
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-05-15T10:30:45.123Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+
+    ChatResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 201
+        message:
+          type: string
+          example: تم إنشاء المحادثة بنجاح
+        data:
+          $ref: '#/components/schemas/Chat'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    CreateChatRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          example: 60d21b4667d0d8992e610c80
+          description: ID of the user to chat with
+
+    MessagesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم استرجاع الرسائل بنجاح
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    MessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 201
+        message:
+          type: string
+          example: تم إرسال الرسالة بنجاح
+        data:
+          $ref: '#/components/schemas/Message'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    Message:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 60d21b4667d0d8992e610c85
+        chat:
+          type: string
+          example: 60d21b4667d0d8992e610c80
+        sender:
+          $ref: '#/components/schemas/User'
+        text:
+          type: string
+          example: مرحباً، كيف حالك؟
+        read:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-05-15T10:30:45.123Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2023-05-15T10:30:45.123Z
+
+    SendMessageRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          example: مرحباً، كيف حالك؟
+
+    # Common schemas
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 60d21b4667d0d8992e610c80
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        role:
+          type: string
+          example: artist
+        job:
+          type: string
+          example: فنان
+        profileImage:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+              example: https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تمت العملية بنجاح
+        data:
+          type: object
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        status:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: حدث خطأ ما
+        error:
+          type: string
+          example: Invalid input data
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456

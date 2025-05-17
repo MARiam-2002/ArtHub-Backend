@@ -24,6 +24,11 @@ const userSchema = new Schema(
       type: String,
     },
 
+    isForgetCodeVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     password: {
       type: String,
       select: false,
@@ -67,6 +72,19 @@ const userSchema = new Schema(
         },
       },
     ],
+
+    firebaseUid: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    displayName: String,
+    photoURL: String,
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
