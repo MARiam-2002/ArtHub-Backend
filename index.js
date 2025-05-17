@@ -3,8 +3,6 @@ import express from "express";
 import dotenv from "dotenv";
 import { bootstrap } from "./src/index.router.js";
 import { connectDB } from "./DB/connection.js";
-import path from "path";
-import { fileURLToPath } from "url";
 
 dotenv.config();
 const app = express();
