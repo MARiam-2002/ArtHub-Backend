@@ -66,6 +66,8 @@ export const bootstrap = (app, express) => {
   });
 
   app.use("/auth", authRouter);
+ 
+ 
 
   app.all("*", (req, res, next) => {
     return next(new Error("not found page", { cause: 404 }));
