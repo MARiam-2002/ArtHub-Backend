@@ -1,4 +1,3 @@
-
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import { fileURLToPath } from 'url';
@@ -32,8 +31,12 @@ try {
       },
       servers: [
         {
+          url: 'https://art-hub-backend.vercel.app/api',
+          description: 'Production API server',
+        },
+        {
           url: '/api',
-          description: 'Main API server',
+          description: 'Development API server',
         },
       ],
       components: {
@@ -183,10 +186,11 @@ const swaggerOptions = {
     docExpansion: 'none', // 'list', 'full' or 'none'
     filter: true,
     defaultModelsExpandDepth: 1,
+    tryItOutEnabled: true
   }
 };
 
 export default [
   swaggerUi.serve, 
   swaggerUi.setup(swaggerDocument, swaggerOptions)
-]; 
+];
