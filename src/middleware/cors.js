@@ -8,15 +8,16 @@ export const corsOptions = {
     
     const allowedOrigins = [
       'https://art-hub-backend.vercel.app',
-      'https://art-hub-backend.vercel.app/api-docs',
+      'https://art-hub-frontend.vercel.app', // Add your frontend URL
+      'https://arthub-app.com', // Add your production domain if any
       'http://localhost:3000',
       'http://localhost:5000'
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
-      callback(null, true); // Allow all origins in production for now
+      callback(new Error('Not allowed by CORS'));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -26,4 +27,4 @@ export const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-export default cors(corsOptions); 
+export default cors(corsOptions);

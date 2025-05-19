@@ -1,4 +1,3 @@
-
 import authRouter from "./modules/auth/auth.router.js";
 import { globalErrorHandling } from "./utils/asyncHandler.js";
 import corsMiddleware, { corsOptions } from "./middleware/cors.js";
@@ -11,6 +10,7 @@ import { errorHandler } from './middleware/error.middleware.js';
 import artworkRouter from './modules/artwork/artwork.router.js';
 import homeRouter from './modules/home/home.router.js';
 import swaggerRoutes from './swagger/swagger.js';
+import termsRouter from './modules/global/terms.router.js';
 dotenv.config();
 import jwt from "jsonwebtoken";
 
@@ -60,6 +60,7 @@ export const bootstrap = (app, express) => {
   app.use('/chat', chatRouter);
   app.use('/artworks', artworkRouter);
   app.use('/home', homeRouter);
+  app.use('/terms', termsRouter);
  
   // 404 handler
   app.all("*", (req, res, next) => {

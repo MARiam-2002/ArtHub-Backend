@@ -7,26 +7,26 @@ export const addArtworkReview = asyncHandler(async (req, res) => {
   const { artwork, rating, comment } = req.body;
   const user = req.user._id;
   const review = await reviewModel.create({ user, artwork, rating, comment });
-  res.status(201).json({ success: true, data: review });
+  res.success(review, 'تم إضافة التقييم بنجاح', 201);
 });
 
 export const getArtworkReviews = asyncHandler(async (req, res) => {
   const { artworkId } = req.params;
   const reviews = await reviewModel.find({ artwork: artworkId }).populate('user', 'email');
-  res.json({ success: true, data: reviews });
+  res.success(reviews, 'تم جلب التقييمات بنجاح');
 });
 
 export const addArtistReview = asyncHandler(async (req, res) => {
   const { artist, rating, comment } = req.body;
   const user = req.user._id;
   const review = await reviewModel.create({ user, artist, rating, comment });
-  res.status(201).json({ success: true, data: review });
+  res.success(review, 'تم إضافة التقييم بنجاح', 201);
 });
 
 export const getArtistReviews = asyncHandler(async (req, res) => {
   const { artistId } = req.params;
   const reviews = await reviewModel.find({ artist: artistId }).populate('user', 'email');
-  res.json({ success: true, data: reviews });
+  res.success(reviews, 'تم جلب التقييمات بنجاح');
 });
 
 export const getArtworkReviewsWithStats = asyncHandler(async (req, res) => {
@@ -44,5 +44,5 @@ export const getArtworkReviewsWithStats = asyncHandler(async (req, res) => {
   ]);
   const avgRating = stats[0]?.avgRating || 0;
   const reviewsCount = stats[0]?.count || 0;
-  res.json({ success: true, data: { reviews, avgRating, reviewsCount, page, limit } });
+  res.success({ reviews, avgRating, reviewsCount, page, limit }, 'تم جلب التقييمات والإحصائيات بنجاح');
 }); 

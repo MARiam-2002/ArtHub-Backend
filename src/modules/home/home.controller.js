@@ -26,13 +26,7 @@ export async function getHomeData(req, res, next) {
       { $project: { email: 1, job: 1, profileImage: 1, artworksCount: 1 } },
     ]);
 
-    res.json({
-      success: true,
-      data: {
-        latestArtworks,
-        topArtists,
-      },
-    });
+    res.success({ latestArtworks, topArtists }, 'تم جلب بيانات الصفحة الرئيسية بنجاح');
   } catch (err) {
     next(err);
   }
@@ -42,7 +36,7 @@ export async function search(req, res, next) {
   try {
     const { q } = req.query;
     if (!q || q.trim() === '') {
-      return res.status(400).json({ success: false, message: 'يرجى إدخال كلمة بحث.' });
+      return res.fail(null, 'يرجى إدخال كلمة بحث.', 400);
     }
     const regex = new RegExp(q, 'i');
     // بحث في الأعمال الفنية
@@ -61,7 +55,7 @@ export async function search(req, res, next) {
         { displayName: regex },
       ],
     }).select('email job profileImage displayName');
-    res.json({ success: true, data: { artworks, artists } });
+    res.success({ artworks, artists }, 'تم جلب نتائج البحث بنجاح');
   } catch (err) {
     next(err);
   }

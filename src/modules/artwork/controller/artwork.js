@@ -15,7 +15,7 @@ export async function getAllArtworks(req, res, next) {
         .limit(limit),
       artworkModel.countDocuments({})
     ]);
-    res.json({ success: true, data: artworks, page, limit, totalCount });
+    res.success(artworks, 'تم جلب الأعمال الفنية بنجاح');
   } catch (err) {
     next(err);
   }
@@ -26,7 +26,7 @@ export async function getArtworkById(req, res, next) {
   try {
     const artwork = await artworkModel.findById(req.params.id)
       .populate({ path: 'artist', select: 'email job profileImage' });
-    if (!artwork) return res.status(404).json({ success: false, message: 'العمل غير موجود' });
+    if (!artwork) return res.fail(null, 'العمل غير موجود', 404);
     // احسب متوسط وعدد التقييمات
     const stats = await reviewModel.aggregate([
       { $match: { artwork: artwork._id } },
@@ -34,7 +34,7 @@ export async function getArtworkById(req, res, next) {
     ]);
     const avgRating = stats[0]?.avgRating || 0;
     const reviewsCount = stats[0]?.count || 0;
-    res.json({ success: true, data: { ...artwork.toObject(), avgRating, reviewsCount } });
+    res.success({ ...artwork.toObject(), avgRating, reviewsCount });
   } catch (err) {
     next(err);
   }
@@ -60,7 +60,7 @@ export async function updateArtwork(req, res, next) {
       { title, description, image, price, category },
       { new: true }
     );
-    if (!artwork) return res.status(404).json({ success: false, message: 'العمل غير موجود أو ليس لديك صلاحية' });
+    if (!artwork) return res.fail(null, 'العمل غير موجود أو ليس لديك صلاحية', 404);
     res.json({ success: true, data: artwork });
   } catch (err) {
     next(err);
@@ -71,8 +71,8 @@ export async function deleteArtwork(req, res, next) {
   try {
     const { id } = req.params;
     const artwork = await artworkModel.findOneAndDelete({ _id: id, artist: req.user._id });
-    if (!artwork) return res.status(404).json({ success: false, message: 'العمل غير موجود أو ليس لديك صلاحية' });
-    res.json({ success: true });
+    if (!artwork) return res.fail(null, 'العمل غير موجود أو ليس لديك صلاحية', 404);
+    res.success(null, 'تم حذف العمل بنجاح');
   } catch (err) {
     next(err);
   }

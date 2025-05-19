@@ -1,4 +1,3 @@
-
 import cloudinary from '../../../utils/cloudinary.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import fs from 'fs';
@@ -8,7 +7,7 @@ export const uploadImages = asyncHandler(async (req, res) => {
   try {
     const files = req.files || (req.file ? [req.file] : []);
     if (!files || files.length === 0) {
-      return res.status(400).json({ success: false, message: 'لم يتم توفير ملفات الصور' });
+      return res.fail(null, 'لم يتم توفير ملفات الصور', 400);
     }
     
     const uploaded = await Promise.all(files.map(async file => {
@@ -35,7 +34,7 @@ export const uploadImages = asyncHandler(async (req, res) => {
       }
     }));
     
-    res.status(201).json({ success: true, urls: uploaded });
+    res.success(uploaded, 'تم رفع الصور بنجاح', 201);
   } catch (err) {
     console.error('خطأ عام في رفع الصور:', err);
     
@@ -52,11 +51,7 @@ export const uploadImages = asyncHandler(async (req, res) => {
       });
     }
     
-    res.status(500).json({ 
-      success: false, 
-      message: 'حدث خطأ أثناء رفع الصور', 
-      error: err.message 
-    });
+    res.fail(err, 'حدث خطأ أثناء رفع الصور', 500);
   }
 }); 
 
@@ -101,19 +96,13 @@ export const getImageById = asyncHandler(async (req, res) => {
   
   const image = await imageModel.findById(imageId);
   if (!image) {
-    return res.status(404).json({
-      success: false,
-      message: 'الصورة غير موجودة'
-    });
+    return res.fail(null, 'الصورة غير موجودة', 404);
   }
   
   // Increment view count
   await image.incrementViewCount();
   
-  res.status(200).json({
-    success: true,
-    data: image
-  });
+  res.success(image, 'تم استرجاع بيانات الصورة بنجاح');
 });
 
 // Update image metadata
@@ -124,18 +113,12 @@ export const updateImageMetadata = asyncHandler(async (req, res) => {
   
   const image = await imageModel.findById(imageId);
   if (!image) {
-    return res.status(404).json({
-      success: false,
-      message: 'الصورة غير موجودة'
-    });
+    return res.fail(null, 'الصورة غير موجودة', 404);
   }
   
   // Check ownership
   if (image.user.toString() !== userId) {
-    return res.status(403).json({
-      success: false,
-      message: 'غير مصرح لك بتعديل هذه الصورة'
-    });
+    return res.fail(null, 'غير مصرح لك بتعديل هذه الصورة', 403);
   }
   
   // Update only provided fields
@@ -146,11 +129,7 @@ export const updateImageMetadata = asyncHandler(async (req, res) => {
   
   await image.save();
   
-  res.status(200).json({
-    success: true,
-    data: image,
-    message: 'تم تحديث بيانات الصورة بنجاح'
-  });
+  res.success(image, 'تم تحديث بيانات الصورة بنجاح');
 });
 
 // Delete image
@@ -160,18 +139,12 @@ export const deleteImage = asyncHandler(async (req, res) => {
   
   const image = await imageModel.findOne({ publicId });
   if (!image) {
-    return res.status(404).json({
-      success: false,
-      message: 'الصورة غير موجودة'
-    });
+    return res.fail(null, 'الصورة غير موجودة', 404);
   }
   
   // Check ownership
   if (image.user.toString() !== userId) {
-    return res.status(403).json({
-      success: false,
-      message: 'غير مصرح لك بحذف هذه الصورة'
-    });
+    return res.fail(null, 'غير مصرح لك بحذف هذه الصورة', 403);
   }
   
   // Delete from Cloudinary
@@ -180,10 +153,7 @@ export const deleteImage = asyncHandler(async (req, res) => {
   // Delete from database
   await imageModel.deleteOne({ _id: image._id });
   
-  res.status(200).json({
-    success: true,
-    message: 'تم حذف الصورة بنجاح'
-  });
+  res.success(null, 'تم حذف الصورة بنجاح');
 });
 
 // Get image categories
@@ -197,8 +167,5 @@ export const getImageCategories = asyncHandler(async (req, res) => {
     { $project: { name: "$_id", count: 1, _id: 0 } }
   ]);
   
-  res.status(200).json({
-    success: true,
-    data: categories
-  });
+  res.success(categories, 'تم استرجاع التصنيفات بنجاح');
 });

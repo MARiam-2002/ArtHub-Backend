@@ -1,4 +1,3 @@
-
 import userModel from '../../../DB/models/user.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
 import imageModel from '../../../DB/models/image.model.js';
@@ -11,7 +10,7 @@ export const toggleWishlist = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { artworkId } = req.body;
   const user = await userModel.findById(userId);
-  if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+  if (!user) return res.fail(null, 'المستخدم غير موجود', 404);
   const index = user.wishlist.findIndex(id => id.toString() === artworkId);
   let action;
   if (index > -1) {
@@ -22,7 +21,7 @@ export const toggleWishlist = asyncHandler(async (req, res) => {
     action = 'added';
   }
   await user.save();
-  res.json({ success: true, action });
+  res.success({ success: true, action });
 });
 
 export const getWishlist = asyncHandler(async (req, res) => {
@@ -30,8 +29,8 @@ export const getWishlist = asyncHandler(async (req, res) => {
     path: 'wishlist',
     model: 'Artwork',
   });
-  if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
-  res.json({ success: true, data: user.wishlist });
+  if (!user) return res.fail(null, 'المستخدم غير موجود', 404);
+  res.success(user.wishlist, 'تم جلب قائمة المفضلة بنجاح');
 });
 
 export const updateProfile = asyncHandler(async (req, res) => {
@@ -51,13 +50,9 @@ export const updateProfile = asyncHandler(async (req, res) => {
     { new: true }
   ).select('-password');
   
-  if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+  if (!user) return res.fail(null, 'المستخدم غير موجود', 404);
   
-  res.json({ 
-    success: true, 
-    message: 'تم تحديث الملف الشخصي بنجاح',
-    data: user 
-  });
+  res.success({ success: true, message: 'تم تحديث الملف الشخصي بنجاح', data: user });
 });
 
 export const changePassword = asyncHandler(async (req, res) => {
@@ -72,18 +67,15 @@ export const changePassword = asyncHandler(async (req, res) => {
   }
   
   const user = await userModel.findById(userId).select('+password');
-  if (!user) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+  if (!user) return res.fail(null, 'المستخدم غير موجود', 404);
   
   const isMatch = await bcryptjs.compare(oldPassword, user.password);
-  if (!isMatch) return res.status(400).json({ success: false, message: 'كلمة المرور القديمة غير صحيحة' });
+  if (!isMatch) return res.fail(null, 'كلمة المرور القديمة غير صحيحة', 400);
   
   user.password = await bcryptjs.hash(newPassword, Number(process.env.SALT_ROUND || 8));
   await user.save();
   
-  res.json({ 
-    success: true,
-    message: 'تم تغيير كلمة المرور بنجاح' 
-  });
+  res.success(null, 'تم تغيير كلمة المرور بنجاح');
 });
 
 export const getArtistProfile = asyncHandler(async (req, res) => {
@@ -91,10 +83,7 @@ export const getArtistProfile = asyncHandler(async (req, res) => {
   const artist = await userModel.findById(artistId).select('displayName profileImage job coverImages email');
   
   if (!artist || artist.role !== 'artist') {
-    return res.status(404).json({ 
-      success: false, 
-      message: 'الفنان غير موجود' 
-    });
+    return res.fail(null, 'الفنان غير موجود', 404);
   }
   
   // Get followers count
@@ -133,20 +122,17 @@ export const getArtistProfile = asyncHandler(async (req, res) => {
     isFollowing = !!followRecord;
   }
   
-  res.json({
-    success: true,
-    data: {
-      artist,
-      followersCount,
-      artworksCount,
-      imagesCount,
-      avgRating,
-      reviewsCount,
-      isFollowing,
-      artworks,
-      images
-    },
-  });
+  res.success({
+    artist,
+    followersCount,
+    artworksCount,
+    imagesCount,
+    avgRating,
+    reviewsCount,
+    isFollowing,
+    artworks,
+    images
+  }, 'تم جلب بيانات الفنان بنجاح');
 });
 
 export const followArtist = asyncHandler(async (req, res) => {
@@ -155,19 +141,13 @@ export const followArtist = asyncHandler(async (req, res) => {
   
   // Check if user is trying to follow themselves
   if (followerId.toString() === artistId) {
-    return res.status(400).json({
-      success: false,
-      message: 'لا يمكنك متابعة نفسك'
-    });
+    return res.fail(null, 'لا يمكنك متابعة نفسك', 400);
   }
   
   // Check if artist exists
   const artist = await userModel.findById(artistId);
   if (!artist) {
-    return res.status(404).json({
-      success: false,
-      message: 'الفنان غير موجود'
-    });
+    return res.fail(null, 'الفنان غير موجود', 404);
   }
   
   // Check if already following
@@ -177,10 +157,7 @@ export const followArtist = asyncHandler(async (req, res) => {
   });
   
   if (existingFollow) {
-    return res.status(400).json({
-      success: false,
-      message: 'أنت بالفعل تتابع هذا الفنان'
-    });
+    return res.fail(null, 'أنت بالفعل تتابع هذا الفنان', 400);
   }
   
   // Create follow relationship
@@ -192,14 +169,7 @@ export const followArtist = asyncHandler(async (req, res) => {
   // Get updated follower count
   const followersCount = await followModel.countDocuments({ following: artistId });
   
-  return res.status(200).json({
-    success: true,
-    message: 'تمت متابعة الفنان بنجاح',
-    data: {
-      isFollowing: true,
-      followersCount
-    }
-  });
+  res.success({ isFollowing: true, followersCount }, 'تمت متابعة الفنان بنجاح');
 });
 
 export const unfollowArtist = asyncHandler(async (req, res) => {
@@ -213,10 +183,7 @@ export const unfollowArtist = asyncHandler(async (req, res) => {
   });
   
   if (!existingFollow) {
-    return res.status(400).json({
-      success: false,
-      message: 'أنت لا تتابع هذا الفنان'
-    });
+    return res.fail(null, 'أنت لا تتابع هذا الفنان', 400);
   }
   
   // Remove follow relationship
@@ -228,14 +195,7 @@ export const unfollowArtist = asyncHandler(async (req, res) => {
   // Get updated follower count
   const followersCount = await followModel.countDocuments({ following: artistId });
   
-  return res.status(200).json({
-    success: true,
-    message: 'تم إلغاء متابعة الفنان بنجاح',
-    data: {
-      isFollowing: false,
-      followersCount
-    }
-  });
+  res.success({ isFollowing: false, followersCount }, 'تم إلغاء متابعة الفنان بنجاح');
 });
 
 export const getUserStats = asyncHandler(async (req, res) => {
@@ -250,16 +210,7 @@ export const getUserStats = asyncHandler(async (req, res) => {
     followModel.countDocuments({ following: userId })
   ]);
   
-  return res.status(200).json({
-    success: true,
-    data: {
-      artworksCount,
-      imagesCount,
-      wishlistCount,
-      followingCount,
-      followersCount
-    }
-  });
+  res.success({ artworksCount, imagesCount, wishlistCount, followingCount, followersCount }, 'تم جلب إحصائيات المستخدم بنجاح');
 });
 
 export const getFollowers = asyncHandler(async (req, res) => {
@@ -280,19 +231,13 @@ export const getFollowers = asyncHandler(async (req, res) => {
   const totalCount = await followModel.countDocuments({ following: userId });
   const totalPages = Math.ceil(totalCount / parseInt(limit));
   
-  return res.status(200).json({
-    success: true,
-    data: {
-      followers: followers.map(f => f.follower),
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages,
-        totalCount,
-        hasNextPage: parseInt(page) < totalPages,
-        hasPrevPage: parseInt(page) > 1
-      }
-    }
-  });
+  res.success({ followers: followers.map(f => f.follower), pagination: {
+    currentPage: parseInt(page),
+    totalPages,
+    totalCount,
+    hasNextPage: parseInt(page) < totalPages,
+    hasPrevPage: parseInt(page) > 1
+  } }, 'تم جلب المتابعين بنجاح');
 });
 
 export const getFollowing = asyncHandler(async (req, res) => {
@@ -313,17 +258,11 @@ export const getFollowing = asyncHandler(async (req, res) => {
   const totalCount = await followModel.countDocuments({ follower: userId });
   const totalPages = Math.ceil(totalCount / parseInt(limit));
   
-  return res.status(200).json({
-    success: true,
-    data: {
-      following: following.map(f => f.following),
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages,
-        totalCount,
-        hasNextPage: parseInt(page) < totalPages,
-        hasPrevPage: parseInt(page) > 1
-      }
-    }
-  });
+  res.success({ following: following.map(f => f.following), pagination: {
+    currentPage: parseInt(page),
+    totalPages,
+    totalCount,
+    hasNextPage: parseInt(page) < totalPages,
+    hasPrevPage: parseInt(page) > 1
+  } }, 'تم جلب المتابَعين بنجاح');
 });
