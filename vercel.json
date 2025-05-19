@@ -13,33 +13,59 @@
   "routes": [
     {
       "src": "/assets/(.*)",
-      "dest": "/src/public/assets/$1"
+      "dest": "/src/public/assets/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=86400"
+      }
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/src/public/assets/images/logo.png",
+      "headers": {
+        "Cache-Control": "public, max-age=86400"
+      }
     },
     {
       "src": "/api/.*",
       "headers": {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With"
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, X-Api-Key, X-Auth-Token, X-Device-ID, X-App-Version",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Expose-Headers": "Content-Disposition, X-Rate-Limit, X-Rate-Limit-Remaining"
       },
       "continue": true
     },
     {
-      "src": "/api-docs",
+      "src": "/(api-docs|docs|swagger)(.*)",
       "dest": "/index.js",
       "headers": {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept"
+        "Cache-Control": "no-cache",
+        "Content-Type": "text/html; charset=utf-8"
       }
     },
     {
-      "src": "/api-docs/(.*)",
+      "src": "/api-docs/swagger.json",
+      "dest": "/src/swagger/swagger.json",
+      "headers": {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=3600"
+      }
+    },
+    {
+      "src": "/api-docs/swagger.yaml",
+      "dest": "/src/swagger/swagger.yaml",
+      "headers": {
+        "Content-Type": "text/yaml",
+        "Cache-Control": "public, max-age=3600"
+      }
+    },
+    {
+      "src": "/health",
       "dest": "/index.js",
       "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "X-Requested-With, Content-Type, Accept"
+        "Cache-Control": "no-cache"
       }
     },
     {
@@ -53,5 +79,24 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
 }

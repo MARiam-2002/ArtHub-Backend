@@ -1,4 +1,3 @@
-
 {
   "openapi": "3.0.0",
   "info": {
@@ -32,6 +31,18 @@
     {
       "name": "Home",
       "description": "Home page data"
+    },
+    {
+      "name": "Special Requests",
+      "description": "Special commission request management"
+    },
+    {
+      "name": "Reports",
+      "description": "Content reporting system"
+    },
+    {
+      "name": "Transactions",
+      "description": "Financial transactions and payments"
     }
   ],
   "paths": {
@@ -820,6 +831,471 @@
           }
         }
       }
+    },
+    "/transactions/artwork": {
+      "post": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Purchase artwork",
+        "description": "Create a transaction to purchase an artwork",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "artworkId",
+                  "paymentMethod",
+                  "shippingAddress"
+                ],
+                "properties": {
+                  "artworkId": {
+                    "type": "string",
+                    "description": "ID of the artwork to purchase"
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": ["credit_card", "debit_card", "bank_transfer", "paypal", "stripe", "other"],
+                    "description": "Payment method"
+                  },
+                  "paymentId": {
+                    "type": "string",
+                    "description": "Payment ID from payment gateway (optional)"
+                  },
+                  "shippingAddress": {
+                    "type": "object",
+                    "required": [
+                      "fullName",
+                      "addressLine1",
+                      "city",
+                      "country",
+                      "phoneNumber"
+                    ],
+                    "properties": {
+                      "fullName": {
+                        "type": "string",
+                        "description": "Recipient's full name"
+                      },
+                      "addressLine1": {
+                        "type": "string",
+                        "description": "Address line 1"
+                      },
+                      "addressLine2": {
+                        "type": "string",
+                        "description": "Address line 2 (optional)"
+                      },
+                      "city": {
+                        "type": "string",
+                        "description": "City"
+                      },
+                      "state": {
+                        "type": "string",
+                        "description": "State/Province (optional)"
+                      },
+                      "postalCode": {
+                        "type": "string",
+                        "description": "Postal/ZIP code (optional)"
+                      },
+                      "country": {
+                        "type": "string",
+                        "description": "Country"
+                      },
+                      "phoneNumber": {
+                        "type": "string",
+                        "description": "Contact phone number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction created successfully"
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "404": {
+            "description": "Artwork not found"
+          }
+        }
+      }
+    },
+    "/transactions/special-request": {
+      "post": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Pay for special request",
+        "description": "Create a transaction to pay for an accepted special request",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "specialRequestId",
+                  "paymentMethod",
+                  "shippingAddress"
+                ],
+                "properties": {
+                  "specialRequestId": {
+                    "type": "string",
+                    "description": "ID of the special request to pay for"
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": ["credit_card", "debit_card", "bank_transfer", "paypal", "stripe", "other"],
+                    "description": "Payment method"
+                  },
+                  "paymentId": {
+                    "type": "string",
+                    "description": "Payment ID from payment gateway (optional)"
+                  },
+                  "shippingAddress": {
+                    "type": "object",
+                    "description": "Shipping address details"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction created successfully"
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "404": {
+            "description": "Special request not found"
+          }
+        }
+      }
+    },
+    "/transactions/{transactionId}": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Get transaction details",
+        "description": "Get details of a specific transaction",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the transaction"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction details retrieved successfully"
+          },
+          "404": {
+            "description": "Transaction not found"
+          }
+        }
+      }
+    },
+    "/transactions/{transactionId}/status": {
+      "patch": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Update transaction status",
+        "description": "Update status of a transaction (admin or seller only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the transaction"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["pending", "completed", "failed", "refunded"],
+                    "description": "New transaction status"
+                  },
+                  "notes": {
+                    "type": "string",
+                    "description": "Additional notes (optional)"
+                  },
+                  "trackingInfo": {
+                    "type": "object",
+                    "description": "Tracking information (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction status updated successfully"
+          },
+          "403": {
+            "description": "Unauthorized to update this transaction"
+          },
+          "404": {
+            "description": "Transaction not found"
+          }
+        }
+      }
+    },
+    "/transactions/{transactionId}/tracking": {
+      "patch": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Update shipping tracking",
+        "description": "Update shipping and tracking information for a transaction (seller only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID of the transaction"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "trackingNumber"
+                ],
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "description": "Shipping provider"
+                  },
+                  "trackingNumber": {
+                    "type": "string",
+                    "description": "Tracking number"
+                  },
+                  "trackingUrl": {
+                    "type": "string",
+                    "description": "Tracking URL (optional)"
+                  },
+                  "estimatedDelivery": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Estimated delivery date (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tracking information updated successfully"
+          },
+          "403": {
+            "description": "Unauthorized to update this transaction"
+          },
+          "404": {
+            "description": "Transaction not found"
+          }
+        }
+      }
+    },
+    "/transactions/buyer/history": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Get purchase history",
+        "description": "Get user's purchase transaction history",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "completed", "failed", "refunded"]
+            },
+            "description": "Filter by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Purchase history retrieved successfully"
+          }
+        }
+      }
+    },
+    "/transactions/seller/history": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Get sales history",
+        "description": "Get seller's sales transaction history",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Items per page"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "completed", "failed", "refunded"]
+            },
+            "description": "Filter by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales history retrieved successfully"
+          }
+        }
+      }
+    },
+    "/transactions/seller/stats": {
+      "get": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Get seller stats",
+        "description": "Get sales statistics for seller",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales statistics retrieved successfully"
+          },
+          "403": {
+            "description": "Unauthorized to view statistics"
+          }
+        }
+      }
+    },
+    "/transactions/admin/stats": {
+      "get": {
+        "tags": [
+          "Transactions",
+          "Admin"
+        ],
+        "summary": "Get admin transaction stats",
+        "description": "Get platform-wide transaction statistics (admin only)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction statistics retrieved successfully"
+          },
+          "403": {
+            "description": "Unauthorized to view admin statistics"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -936,6 +1412,90 @@
           "icon": {
             "type": "string",
             "format": "uri"
+          }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "buyer": {
+            "$ref": "#/components/schemas/User"
+          },
+          "seller": {
+            "$ref": "#/components/schemas/User"
+          },
+          "artwork": {
+            "$ref": "#/components/schemas/Artwork"
+          },
+          "specialRequest": {
+            "$ref": "#/components/schemas/SpecialRequest"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "commissionAmount": {
+            "type": "number"
+          },
+          "netAmount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "completed", "failed", "refunded"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "shippingAddress": {
+            "type": "object"
+          },
+          "trackingInfo": {
+            "type": "object"
+          }
+        }
+      },
+      "SpecialRequest": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/User"
+          },
+          "artist": {
+            "$ref": "#/components/schemas/User"
+          },
+          "requestType": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "budget": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "accepted", "rejected", "completed"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },

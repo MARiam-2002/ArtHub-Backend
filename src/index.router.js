@@ -11,6 +11,9 @@ import artworkRouter from './modules/artwork/artwork.router.js';
 import homeRouter from './modules/home/home.router.js';
 import swaggerRoutes from './swagger/swagger.js';
 import termsRouter from './modules/global/terms.router.js';
+import specialRequestRouter from './modules/specialRequest/specialRequest.router.js';
+import reportRouter from './modules/report/report.router.js';
+import transactionRouter from './modules/transaction/transaction.router.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 dotenv.config();
@@ -68,13 +71,26 @@ export const bootstrap = (app, express) => {
   }, swaggerRoutes);
 
   // API routes
-  app.use("/auth", authRouter);
-  app.use('/image', imageRouter);
-  app.use('/chat', chatRouter);
-  app.use('/artworks', artworkRouter);
-  app.use('/home', homeRouter);
-  app.use('/terms', termsRouter);
+  app.use("/api/auth", authRouter);
+  app.use('/api/image', imageRouter);
+  app.use('/api/chat', chatRouter);
+  app.use('/api/artworks', artworkRouter);
+  app.use('/api/home', homeRouter);
+  app.use('/api/terms', termsRouter);
+  app.use('/api/special-requests', specialRequestRouter);
+  app.use('/api/reports', reportRouter);
+  app.use('/api/transactions', transactionRouter);
  
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.success({
+      status: 'UP',
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development'
+    }, 'API is running properly');
+  });
+
   // 404 handler
   app.all("*", (req, res, next) => {
     return next(new Error("not found page", { cause: 404 }));

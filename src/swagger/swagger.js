@@ -21,18 +21,42 @@ try {
 
 const router = Router();
 
+// Website URL for meta tags
+const siteUrl = process.env.API_URL || 'https://arthub-api.vercel.app';
+
 // Create custom Swagger UI HTML with absolute URLs
 router.get('/', (req, res) => {
   const swaggerHtml = `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArtHub API Documentation</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
+  <title>ArtHub API Documentation | توثيق واجهة برمجة التطبيقات</title>
+  <meta name="description" content="توثيق كامل لواجهة برمجة التطبيقات (API) الخاصة بتطبيق ArtHub للمبدعين والفنانين">
+  <meta name="keywords" content="ArtHub, API, documentation, توثيق, واجهة برمجة التطبيقات, فن, إبداع">
+  
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="${logoBase64}" />
+  
+  <!-- Open Graph meta tags for better social sharing -->
+  <meta property="og:title" content="ArtHub API Documentation">
+  <meta property="og:description" content="توثيق كامل لواجهة برمجة التطبيقات (API) الخاصة بتطبيق ArtHub للمبدعين والفنانين">
+  <meta property="og:image" content="${logoBase64}">
+  <meta property="og:url" content="${siteUrl}/api-docs">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ar_SA">
+  
+  <!-- Twitter Card for Twitter sharing -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ArtHub API Documentation">
+  <meta name="twitter:description" content="توثيق كامل لواجهة برمجة التطبيقات (API) الخاصة بتطبيق ArtHub للمبدعين والفنانين">
+  <meta name="twitter:image" content="${logoBase64}">
+  
+  <!-- Preload CSS for better performance -->
+  <link rel="preload" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" as="style">
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
+  
   <style>
     body { 
       margin: 0; 
@@ -189,6 +213,43 @@ router.get('/', (req, res) => {
     /* Improve scheme selection */
     .swagger-ui .scheme-container .schemes-title {
       color: #333;
+    }
+    
+    /* Mobile Responsive Improvements */
+    @media screen and (max-width: 768px) {
+      .header-container {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px 10px;
+      }
+      
+      .logo-container {
+        flex-direction: column;
+        margin-bottom: 10px;
+      }
+      
+      .logo {
+        margin-right: 0;
+        margin-bottom: 10px;
+        width: 80px;
+      }
+      
+      .title {
+        font-size: 20px;
+      }
+      
+      .subtitle {
+        font-size: 14px;
+      }
+      
+      .swagger-ui .opblock .opblock-summary {
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .swagger-ui .opblock .opblock-summary-method {
+        margin-bottom: 5px;
+      }
     }
   </style>
 </head>
