@@ -1,4 +1,4 @@
-
+import { Router } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import { fileURLToPath } from 'url';
@@ -198,7 +198,7 @@ const swaggerOptions = {
   }
 };
 
-export default [
-  swaggerUi.serve, 
-  swaggerUi.setup(swaggerDocument, swaggerOptions)
-];
+const router = Router();
+router.use('/', swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
+
+export default router;
