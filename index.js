@@ -1,4 +1,3 @@
-
 import express from "express";
 import dotenv from "dotenv";
 import { bootstrap } from "./src/index.router.js";
@@ -27,4 +26,6 @@ app.get("/health", (req, res) => {
 });
 
 // Start the server
-app.listen(port, () => console.log(`ArtHub server running on port ${port}!`));
+// app.listen(port, () => console.log(`ArtHub server running on port ${port}!`));
+
+export default app;
