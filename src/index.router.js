@@ -53,6 +53,9 @@ export const bootstrap = (app, express) => {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
+  // خدمة الملفات الثابتة من مجلد public
+  app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+
   // 1. خدمة ملفات swagger.json و swagger.yaml كـ static قبل swaggerRoutes
   app.use('/api-docs/swagger.json', express.static(path.join(__dirname, 'swagger', 'swagger.json')));
   app.use('/api-docs/swagger.yaml', express.static(path.join(__dirname, 'swagger', 'swagger.yaml')));
