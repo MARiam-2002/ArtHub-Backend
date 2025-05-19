@@ -32,15 +32,15 @@ router.get('/', (req, res) => {
     }
     
     .topbar {
-      background-color: #6B4EFF !important;
+      background-color: #C1D1E6 !important;
       padding: 10px 0;
       text-align: center;
     }
     
     /* Logo and Header */
     .header-container {
-      background-color: #6B4EFF;
-      color: white;
+      background-color: #C1D1E6;
+      color: #333;
       padding: 20px;
       display: flex;
       align-items: center;
@@ -55,58 +55,83 @@ router.get('/', (req, res) => {
     }
     
     .logo {
-      width: 80px;
+      width: 120px;
       height: auto;
       margin-right: 15px;
     }
     
     .title {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: bold;
+      color: #333;
     }
     
     .subtitle {
-      font-size: 14px;
+      font-size: 16px;
       opacity: 0.8;
+      color: #333;
     }
     
     /* Custom Swagger UI Colors */
     .swagger-ui .opblock.opblock-post {
-      background: rgba(107, 78, 255, 0.1);
-      border-color: #6B4EFF;
+      background: rgba(193, 209, 230, 0.1);
+      border-color: #C1D1E6;
     }
     
     .swagger-ui .opblock.opblock-post .opblock-summary-method {
-      background: #6B4EFF;
+      background: #C1D1E6;
+      color: #333;
     }
     
     .swagger-ui .opblock.opblock-get {
-      background: rgba(97, 175, 254, 0.1);
-      border-color: #61affe;
+      background: rgba(193, 209, 230, 0.1);
+      border-color: #C1D1E6;
+    }
+    
+    .swagger-ui .opblock.opblock-get .opblock-summary-method {
+      background: #C1D1E6;
+      color: #333;
     }
     
     .swagger-ui .opblock.opblock-put {
-      background: rgba(252, 161, 48, 0.1);
-      border-color: #fca130;
+      background: rgba(193, 209, 230, 0.1);
+      border-color: #C1D1E6;
+    }
+    
+    .swagger-ui .opblock.opblock-put .opblock-summary-method {
+      background: #C1D1E6;
+      color: #333;
     }
     
     .swagger-ui .opblock.opblock-delete {
-      background: rgba(249, 62, 62, 0.1);
-      border-color: #f93e3e;
+      background: rgba(193, 209, 230, 0.1);
+      border-color: #C1D1E6;
+    }
+    
+    .swagger-ui .opblock.opblock-delete .opblock-summary-method {
+      background: #C1D1E6;
+      color: #333;
     }
     
     .swagger-ui .opblock.opblock-patch {
-      background: rgba(80, 227, 194, 0.1);
-      border-color: #50e3c2;
+      background: rgba(193, 209, 230, 0.1);
+      border-color: #C1D1E6;
+    }
+    
+    .swagger-ui .opblock.opblock-patch .opblock-summary-method {
+      background: #C1D1E6;
+      color: #333;
     }
     
     .swagger-ui .btn.execute {
-      background-color: #6B4EFF;
-      border-color: #6B4EFF;
+      background-color: #C1D1E6;
+      border-color: #C1D1E6;
+      color: #333;
     }
     
     .swagger-ui .btn.execute:hover {
-      background-color: #5336FF;
+      background-color: #A9C0DD;
+      border-color: #A9C0DD;
     }
     
     .swagger-ui section.models .model-container,
@@ -116,12 +141,39 @@ router.get('/', (req, res) => {
     }
     
     .swagger-ui .info a {
-      color: #6B4EFF;
+      color: #C1D1E6;
     }
     
     .swagger-ui .scheme-container {
       background: #fff;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    /* Fix button text color for better contrast */
+    .swagger-ui .btn {
+      color: #333;
+    }
+    
+    /* Fix links color */
+    .swagger-ui a.nostyle, 
+    .swagger-ui a.nostyle:visited {
+      color: #333 !important;
+    }
+    
+    /* Fix tag headers */
+    .swagger-ui .opblock-tag {
+      border-color: #C1D1E6;
+      background: rgba(193, 209, 230, 0.1);
+    }
+    
+    /* Improve tab colors */
+    .swagger-ui .tab-header .tab-item.active h4 {
+      color: #333;
+    }
+    
+    /* Improve scheme selection */
+    .swagger-ui .scheme-container .schemes-title {
+      color: #333;
     }
   </style>
 </head>
