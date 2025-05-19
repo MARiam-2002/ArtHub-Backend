@@ -49,19 +49,20 @@ export const bootstrap = (app, express) => {
   // Response enhancer middleware
   app.use(responseMiddleware);
 
-  // Set special headers for Swagger docs specifically
+  // إعداد متغيرات المسار للـ ESM
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  // 1. خدمة ملفات swagger.json و swagger.yaml كـ static قبل swaggerRoutes
+  app.use('/api-docs/swagger.json', express.static(path.join(__dirname, 'swagger', 'swagger.json')));
+  app.use('/api-docs/swagger.yaml', express.static(path.join(__dirname, 'swagger', 'swagger.yaml')));
+
+  // 2. راوتر Swagger UI (لا تغيره)
   app.use("/api-docs", (req, res, next) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Access-Control-Allow-Origin', '*');
     next();
   }, swaggerRoutes);
-
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-
-  // Serve swagger.json and swagger.yaml as static files
-  app.use('/api-docs/swagger.json', express.static(path.join(__dirname, 'swagger', 'swagger.json')));
-  app.use('/api-docs/swagger.yaml', express.static(path.join(__dirname, 'swagger', 'swagger.yaml')));
 
   // API routes
   app.use("/auth", authRouter);
