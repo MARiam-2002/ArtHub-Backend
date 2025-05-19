@@ -2,9 +2,22 @@ import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import swaggerDocument from './swagger.json' assert { type: 'json' };
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// قراءة ملف اللوجو وتحويله إلى Base64 لتضمينه مباشرة في HTML
+let logoBase64 = '';
+try {
+  const logoPath = path.join(__dirname, '..', 'public', 'assets', 'images', 'logo.png');
+  const logoBuffer = fs.readFileSync(logoPath);
+  logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+} catch (error) {
+  console.error('Error loading logo:', error);
+  // استخدام مسار URL في حالة الفشل
+  logoBase64 = '/assets/images/logo.png';
+}
 
 const router = Router();
 
@@ -180,7 +193,7 @@ router.get('/', (req, res) => {
 <body>
   <div class="header-container">
     <div class="logo-container">
-      <img src="/assets/images/logo.png" alt="ArtHub Logo" class="logo">
+      <img src="${logoBase64}" alt="ArtHub Logo" class="logo">
       <div>
         <div class="title">ArtHub API</div>
         <div class="subtitle">وثائق API للعمليات الخلفية لتطبيق ArtHub</div>
