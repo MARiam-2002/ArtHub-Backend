@@ -31,6 +31,8 @@ router.get('/', (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ArtHub API Documentation</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="${logoBase64}" />
   <style>
     body { 
       margin: 0; 
