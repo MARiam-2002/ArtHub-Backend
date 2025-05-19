@@ -167,3 +167,40 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For any questions or support, please contact the development team at:
 - Email: support@arthub-app.com 
+
+## نشر المشروع على Vercel
+
+لنشر المشروع على Vercel، اتبع الخطوات التالية:
+
+1. تأكد من أن تغييرات كودك محفوظة على GitHub
+2. قم بإنشاء حساب على [Vercel](https://vercel.com) إذا لم يكن لديك حساب بالفعل
+3. انتقل إلى لوحة التحكم في Vercel واضغط على "New Project"
+4. اختر المستودع الذي يحتوي على مشروع ArtHub
+5. في صفحة إعداد المشروع، قم بإضافة المتغيرات البيئية التالية:
+
+### المتغيرات البيئية المطلوبة في Vercel
+
+```
+PORT=3000
+NODE_ENV=production
+CONNECTION_URL=mongodb+srv://username:password@cluster.mongodb.net/artHub?retryWrites=true&w=majority
+TOKEN_KEY=your_jwt_secret_key
+SALT_ROUND=8
+CLOUD_NAME=your_cloud_name
+API_KEY=your_api_key
+API_SECRET=your_api_secret
+FIREBASE_PROJECT_ID=your_firebase_project_id
+FIREBASE_CLIENT_EMAIL=your_firebase_client_email
+FIREBASE_PRIVATE_KEY="your_firebase_private_key"
+FIREBASE_DATABASE_URL=https://your-project-id.firebaseio.com
+```
+
+6. اضغط على "Deploy" للبدء في عملية النشر
+7. بعد اكتمال النشر، سيتم توفير رابط لتطبيقك مثل `https://your-app-name.vercel.app`
+
+### ملاحظات هامة للنشر:
+
+- تأكد من استبدال القيم الموجودة أعلاه بالقيم الفعلية لبيئة الإنتاج الخاصة بك
+- للـ `FIREBASE_PRIVATE_KEY`، قم بنسخ المفتاح الخاص بأكمله مع علامات الاقتباس
+- تأكد من أن قاعدة بيانات MongoDB يمكن الوصول إليها من الإنترنت (أي أنها مستضافة على Atlas أو خدمة مماثلة)
+- إذا واجهت أي مشاكل في النشر، تحقق من سجلات Vercel للحصول على معلومات حول الأخطاء 
