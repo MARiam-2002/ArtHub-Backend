@@ -11,6 +11,8 @@ import artworkRouter from './modules/artwork/artwork.router.js';
 import homeRouter from './modules/home/home.router.js';
 import swaggerRoutes from './swagger/swagger.js';
 import termsRouter from './modules/global/terms.router.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 dotenv.config();
 import jwt from "jsonwebtoken";
 
@@ -53,6 +55,13 @@ export const bootstrap = (app, express) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     next();
   }, swaggerRoutes);
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  // Serve swagger.json and swagger.yaml as static files
+  app.use('/api-docs/swagger.json', express.static(path.join(__dirname, 'swagger', 'swagger.json')));
+  app.use('/api-docs/swagger.yaml', express.static(path.join(__dirname, 'swagger', 'swagger.yaml')));
 
   // API routes
   app.use("/auth", authRouter);
