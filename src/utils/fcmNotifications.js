@@ -1,3 +1,8 @@
+/**
+ * @deprecated This file is deprecated. Use pushNotifications.js instead.
+ * All functionality has been moved to src/utils/pushNotifications.js for better maintenance
+ * and to avoid duplication. This file will be removed in a future update.
+ */
 
 import admin from './firebaseAdmin.js';
 import userModel from '../../DB/models/user.model.js';
@@ -8,8 +13,12 @@ import userModel from '../../DB/models/user.model.js';
  * @param {object} notification - Notification object with title and body
  * @param {object} data - Additional data for Flutter app to handle
  * @returns {Promise} - FCM send result
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendPushToUser = async (userId, notification, data = {}) => {
+  // Show deprecation warning
+  console.warn('Warning: fcmNotifications.js is deprecated. Use pushNotifications.js instead.');
+  
   try {
     // Find user and get FCM token
     const user = await userModel.findById(userId);
@@ -73,8 +82,12 @@ export const sendPushToUser = async (userId, notification, data = {}) => {
 /**
  * Send a chat message notification
  * Optimized for Flutter chat UI
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendChatNotification = async (receiverId, senderId, senderName, messageText, chatId) => {
+  // Show deprecation warning
+  console.warn('Warning: fcmNotifications.js is deprecated. Use pushNotifications.js instead.');
+  
   return sendPushToUser(
     receiverId,
     {
@@ -94,8 +107,12 @@ export const sendChatNotification = async (receiverId, senderId, senderName, mes
 /**
  * Send notification for new artwork comment
  * Optimized for Flutter artwork detail screen
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendCommentNotification = async (artistId, commenterId, commenterName, artworkId, artworkTitle) => {
+  // Show deprecation warning
+  console.warn('Warning: fcmNotifications.js is deprecated. Use pushNotifications.js instead.');
+  
   return sendPushToUser(
     artistId,
     {
@@ -115,8 +132,12 @@ export const sendCommentNotification = async (artistId, commenterId, commenterNa
 /**
  * Send notification for new follower
  * Optimized for Flutter profile screen
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendFollowNotification = async (artistId, followerId, followerName) => {
+  // Show deprecation warning
+  console.warn('Warning: fcmNotifications.js is deprecated. Use pushNotifications.js instead.');
+  
   return sendPushToUser(
     artistId,
     {
@@ -134,8 +155,12 @@ export const sendFollowNotification = async (artistId, followerId, followerName)
 
 /**
  * Register or update FCM token for a user
+ * @deprecated Use pushNotifications.js instead
  */
 export const updateFcmToken = async (userId, fcmToken) => {
+  // Show deprecation warning
+  console.warn('Warning: fcmNotifications.js is deprecated. Use pushNotifications.js instead.');
+  
   if (!userId || !fcmToken) return false;
   
   try {

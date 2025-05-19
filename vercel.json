@@ -8,34 +8,17 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "index.js"
-    },
-    {
       "src": "/(.*)",
       "dest": "index.js"
     }
   ],
   "env": {
-    "NODE_ENV": "production"
-  },
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
-      ]
-    }
-  ]
+    "NODE_ENV": "production",
+    "CONNECTION_URL": "mongodb+srv://your_username:your_password@your_cluster.mongodb.net/arthubdb?retryWrites=true&w=majority",
+    "TOKEN_KEY": "replace_with_strong_secret_key",
+    "SALT_ROUND": "8",
+    "CLOUD_NAME": "your_cloudinary_cloud_name",
+    "API_KEY": "your_cloudinary_api_key",
+    "API_SECRET": "your_cloudinary_api_secret"
+  }
 }

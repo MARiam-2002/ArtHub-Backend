@@ -1,16 +1,24 @@
 import express from "express";
 import dotenv from "dotenv";
 import { bootstrap } from "./src/index.router.js";
-import { connectDB } from "./DB/connection.js";
+import { connectDB, closeDatabase } from "./DB/connection.js";
+import mongoose from "mongoose";
 
 dotenv.config();
 const app = express();
-const port = process.env.PORT || 3000;
+const port = parseInt(process.env.PORT || '3000');
+const MAX_PORT_ATTEMPTS = 10; // Try up to 10 consecutive ports if needed
+let server;
 
-// Connect to MongoDB
+// Connect to MongoDB with improved error handling
 connectDB()
   .then(() => console.log("✅ Connected to MongoDB successfully"))
-  .catch(err => console.error("❌ MongoDB Connection Error:", err));
+  .catch(err => {
+    console.error("❌ MongoDB Connection Error:", err);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("⚠️ Application will continue without database connection - some features may not work properly");
+    }
+  });
 
 // Initialize routes and middleware
 bootstrap(app, express);
@@ -29,36 +37,97 @@ app.get("/api", (req, res) => {
 
 // Health check endpoint
 app.get("/health", (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? "Connected" : "Disconnected";
+  
   res.status(200).json({
     status: "UP",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
+    database: dbStatus,
     memory: process.memoryUsage(),
     uptime: process.uptime()
   });
 });
 
-// Start the server
-if (process.env.NODE_ENV !== 'test') {
-  const server = app.listen(port, () => {
-    const serverEnv = process.env.NODE_ENV || 'development';
-    console.log(`
+// Start the server for non-serverless environments
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+  // Try to bind to the port, and if it fails, increment the port number
+  const startServer = (portToUse, attempts = 0) => {
+    if (attempts >= MAX_PORT_ATTEMPTS) {
+      console.error(`❌ Failed to start server after trying ${MAX_PORT_ATTEMPTS} different ports`);
+      return;
+    }
+
+    try {
+      server = app.listen(portToUse);
+      
+      server.on('listening', () => {
+        const serverEnv = process.env.NODE_ENV || 'development';
+        const address = server.address();
+        const actualPort = address.port;
+        
+        console.log(`
     ✅ ArtHub API Server Running!
     🌐 Environment: ${serverEnv}
-    🚪 Port: ${port}
-    📚 API Docs: http://localhost:${port}/api-docs
+    🚪 Port: ${actualPort}
+    📚 API Docs: http://localhost:${actualPort}/api-docs
     ⏱️ Started at: ${new Date().toLocaleString()}
-    `);
-  });
+        `);
+      });
+      
+      server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`Port ${portToUse} is busy, trying port ${portToUse + 1}...`);
+          server.close();
+          startServer(portToUse + 1, attempts + 1);
+        } else {
+          console.error('Server error:', err);
+        }
+      });
+    } catch (error) {
+      console.error('Error starting server:', error);
+    }
+  };
+  
+  // Start with initial port
+  startServer(port);
+  
+  // Handle graceful shutdown
+  const gracefulShutdown = async (signal) => {
+    console.log(`\n🛑 Received ${signal}. Shutting down gracefully...`);
+    if (server) {
+      server.close(() => {
+        console.log('💤 HTTP server closed');
+        // Close MongoDB connection if it exists
+        closeDatabase()
+          .then(() => {
+            console.log('💤 Database connection closed');
+            process.exit(0);
+          })
+          .catch(err => {
+            console.error('❌ Error closing database:', err);
+            process.exit(1);
+          });
+      });
+    } else {
+      process.exit(0);
+    }
+    
+    // Force close after 10 seconds
+    setTimeout(() => {
+      console.error('⚠️ Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  };
+  
+  // Listen for termination signals
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   
   // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
     console.error('❌ Uncaught Exception:', error);
-    // Graceful shutdown
-    server.close(() => {
-      console.log('🛑 Server closed due to uncaught exception');
-      process.exit(1);
-    });
+    gracefulShutdown('uncaughtException');
   });
   
   // Handle unhandled rejections
@@ -68,4 +137,5 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
+// For serverless functions
 export default app;

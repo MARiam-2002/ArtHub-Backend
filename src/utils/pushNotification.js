@@ -1,3 +1,8 @@
+/**
+ * @deprecated This file is deprecated. Use pushNotifications.js instead.
+ * All functionality has been moved to src/utils/pushNotifications.js for better maintenance
+ * and to avoid duplication. This file will be removed in a future update.
+ */
 
 import admin from './firebaseAdmin.js';
 import userModel from '../../DB/models/user.model.js';
@@ -8,8 +13,12 @@ import userModel from '../../DB/models/user.model.js';
  * @param {object} notification - Notification object with title and body
  * @param {object} data - Additional data to send with the notification
  * @returns {Promise} - Promise with the messaging response
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendPushNotificationToUser = async (userId, notification, data = {}) => {
+  // Show deprecation warning
+  console.warn('Warning: pushNotification.js is deprecated. Use pushNotifications.js instead.');
+  
   try {
     // Get the user's FCM token
     const user = await userModel.findById(userId);
@@ -59,8 +68,12 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
  * @param {object} notification - Notification object with title and body
  * @param {object} data - Additional data to send with the notification
  * @returns {Promise} - Promise with the messaging response
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendPushNotificationToUsers = async (userIds, notification, data = {}) => {
+  // Show deprecation warning
+  console.warn('Warning: pushNotification.js is deprecated. Use pushNotifications.js instead.');
+  
   try {
     // Get users' FCM tokens
     const users = await userModel.find({ _id: { $in: userIds } });
@@ -113,8 +126,12 @@ export const sendPushNotificationToUsers = async (userIds, notification, data = 
  * @param {string} senderName - Sender's name
  * @param {string} messageText - Message content
  * @returns {Promise} - Promise with the messaging response
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendChatMessageNotification = async (receiverId, senderName, messageText) => {
+  // Show deprecation warning
+  console.warn('Warning: pushNotification.js is deprecated. Use pushNotifications.js instead.');
+  
   return sendPushNotificationToUser(
     receiverId,
     {
@@ -134,8 +151,12 @@ export const sendChatMessageNotification = async (receiverId, senderName, messag
  * @param {string} commenterName - Name of the commenter
  * @param {string} artworkTitle - Title of the artwork
  * @returns {Promise} - Promise with the messaging response
+ * @deprecated Use pushNotifications.js instead
  */
 export const sendArtworkCommentNotification = async (artistId, commenterName, artworkTitle) => {
+  // Show deprecation warning
+  console.warn('Warning: pushNotification.js is deprecated. Use pushNotifications.js instead.');
+  
   return sendPushNotificationToUser(
     artistId,
     {

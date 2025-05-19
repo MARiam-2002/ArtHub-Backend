@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import swaggerDocument from './swagger.json' assert { type: 'json' };
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// قراءة ملف swagger.json بدلاً من استخدام assert
+const swaggerJsonPath = path.join(__dirname, 'swagger.json');
+const swaggerDocument = JSON.parse(fs.readFileSync(swaggerJsonPath, 'utf8'));
 
 // قراءة ملف اللوجو وتحويله إلى Base64 لتضمينه مباشرة في HTML
 let logoBase64 = '';

@@ -17,7 +17,7 @@
       "description": "Authentication and user management endpoints"
     },
     {
-      "name": "Artworks",
+      "name": "Artwork",
       "description": "Artwork management endpoints"
     },
     {
@@ -645,6 +645,72 @@
           },
           "404": {
             "description": "Chat not found"
+          }
+        }
+      }
+    },
+    "/artwork": {
+      "get": {
+        "tags": [
+          "Artwork"
+        ],
+        "summary": "Get all artworks",
+        "description": "Get all artworks with pagination",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of artworks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artworks": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Artwork"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -3514,9 +3580,6 @@
         "responses": {
           "200": {
             "description": "تم تحديث حالة التقرير بنجاح"
-          },
-          "400": {
-            "description": "بيانات غير صالحة"
           },
           "403": {
             "description": "غير مصرح لك بتحديث حالة التقارير"

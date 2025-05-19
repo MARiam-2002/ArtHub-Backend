@@ -16,6 +16,7 @@ import reportRouter from './modules/report/report.router.js';
 import transactionRouter from './modules/transaction/transaction.router.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cors from 'cors';
 dotenv.config();
 import jwt from "jsonwebtoken";
 
@@ -24,11 +25,13 @@ export const bootstrap = (app, express) => {
     app.use(morgan("common"));
   }
 
-  // Apply CORS middleware globally
-  app.use(corsMiddleware);
-
-  // Enable pre-flight across all routes
-  app.options('*', corsMiddleware);
+  // Apply simple CORS middleware for all environments
+  app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
+  }));
 
   // Use Express JSON to parse data
   app.use(express.json());
@@ -37,13 +40,14 @@ export const bootstrap = (app, express) => {
   app.use((req, res, next) => {
     const token = req.headers["authorization"]?.split(" ")[1]; 
     if (token) {
-      jwt.verify(token, process.env.TOKEN_KEY, (err, decoded) => {
-        if (err) {
-          return res.status(403).json({ success: false, message: "Invalid token" });
-        }
+      try {
+        const decoded = jwt.verify(token, process.env.TOKEN_KEY);
         req.user = decoded; // Add user data from token to request
         next();
-      });
+      } catch (error) {
+        // Don't return error, just continue without user
+        next();
+      }
     } else {
       next();
     }
@@ -64,11 +68,7 @@ export const bootstrap = (app, express) => {
   app.use('/api-docs/swagger.yaml', express.static(path.join(__dirname, 'swagger', 'swagger.yaml')));
 
   // 2. راوتر Swagger UI (لا تغيره)
-  app.use("/api-docs", (req, res, next) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    next();
-  }, swaggerRoutes);
+  app.use("/api-docs", swaggerRoutes);
 
   // API routes
   app.use("/api/auth", authRouter);
