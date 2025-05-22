@@ -1,4 +1,3 @@
-
 openapi: 3.0.0
 info:
   title: ArtHub API
@@ -25,6 +24,18 @@ tags:
     description: Category management
   - name: Reviews
     description: Reviews and ratings
+  - name: Home
+    description: Home page data
+  - name: Special Requests
+    description: Special commission request management
+  - name: Reports
+    description: Content reporting system
+  - name: Transactions
+    description: Financial transactions and payments
+  - name: Follow
+    description: Artist follow/unfollow functionality
+  - name: Notifications
+    description: User notifications management
 
 paths:
   # Authentication Endpoints
@@ -605,6 +616,270 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  # Notification Endpoints
+  /notifications:
+    get:
+      tags:
+        - Notifications
+      summary: الحصول على إشعارات المستخدم
+      description: استرجاع جميع إشعارات المستخدم المسجل الدخول
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: رقم الصفحة
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: عدد العناصر في الصفحة
+      responses:
+        '200':
+          description: تم جلب الإشعارات بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsResponse'
+    delete:
+      tags:
+        - Notifications
+      summary: حذف جميع الإشعارات
+      description: حذف جميع إشعارات المستخدم
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: تم حذف جميع الإشعارات بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /notifications/{notificationId}/read:
+    patch:
+      tags:
+        - Notifications
+      summary: وضع علامة "مقروء" على إشعار
+      description: تعيين إشعار معين كمقروء
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: معرف الإشعار
+      responses:
+        '200':
+          description: تم تحديث حالة قراءة الإشعار بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: الإشعار غير موجود
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /notifications/read-all:
+    patch:
+      tags:
+        - Notifications
+      summary: وضع علامة "مقروء" على جميع الإشعارات
+      description: تعيين جميع إشعارات المستخدم كمقروءة
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: تم تحديث حالة قراءة جميع الإشعارات بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /notifications/{notificationId}:
+    delete:
+      tags:
+        - Notifications
+      summary: حذف إشعار
+      description: حذف إشعار معين
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: معرف الإشعار
+      responses:
+        '200':
+          description: تم حذف الإشعار بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: الإشعار غير موجود
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Follow Endpoints
+  /follow/follow:
+    post:
+      tags:
+        - Follow
+      summary: متابعة فنان
+      description: إنشاء متابعة جديدة لفنان
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - artistId
+              properties:
+                artistId:
+                  type: string
+                  description: معرف الفنان المراد متابعته
+      responses:
+        '201':
+          description: تمت المتابعة بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowResponse'
+
+  /follow/unfollow:
+    post:
+      tags:
+        - Follow
+      summary: إلغاء متابعة فنان
+      description: إلغاء متابعة فنان تتم متابعته حاليًا
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - artistId
+              properties:
+                artistId:
+                  type: string
+                  description: معرف الفنان المراد إلغاء متابعته
+      responses:
+        '200':
+          description: تم إلغاء المتابعة بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowResponse'
+
+  /follow/followers/{artistId}:
+    get:
+      tags:
+        - Follow
+      summary: الحصول على متابعي فنان
+      description: جلب قائمة المستخدمين الذين يتابعون فنانًا معينًا
+      parameters:
+        - name: artistId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: معرف الفنان
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: رقم الصفحة
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: عدد العناصر في الصفحة
+      responses:
+        '200':
+          description: تم جلب المتابعين بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowersResponse'
+
+  /follow/following/{userId}:
+    get:
+      tags:
+        - Follow
+      summary: الحصول على متابَعي مستخدم
+      description: جلب قائمة الفنانين الذين يتابعهم المستخدم
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: معرف المستخدم
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: رقم الصفحة
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: عدد العناصر في الصفحة
+      responses:
+        '200':
+          description: تم جلب المتابَعين بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowingResponse'
+
+  /follow/status/{artistId}:
+    get:
+      tags:
+        - Follow
+      summary: التحقق من حالة المتابعة
+      description: التحقق مما إذا كان المستخدم الحالي يتابع فنانًا معينًا
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: artistId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: معرف الفنان
+      responses:
+        '200':
+          description: تم التحقق من حالة المتابعة بنجاح
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowStatusResponse'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -616,7 +891,6 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Firebase ID token obtained from Firebase Authentication
 
   schemas:
     # Authentication schemas
@@ -944,30 +1218,6 @@ components:
           example: req-123456
 
     # Chat schemas
-    ChatsResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: true
-        status:
-          type: integer
-          example: 200
-        message:
-          type: string
-          example: تم استرجاع المحادثات بنجاح
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Chat'
-        timestamp:
-          type: string
-          format: date-time
-          example: 2023-05-17T14:30:45.123Z
-        requestId:
-          type: string
-          example: req-123456
-
     Chat:
       type: object
       properties:
@@ -1108,17 +1358,21 @@ components:
       properties:
         _id:
           type: string
-          example: 60d21b4667d0d8992e610c80
+          example: 60d21b4667d0d8992e610c85
         email:
           type: string
           format: email
           example: user@example.com
+        displayName:
+          type: string
+          example: أحمد محمد
         role:
           type: string
+          enum: [user, artist]
           example: artist
         job:
           type: string
-          example: فنان
+          example: رسام
         profileImage:
           type: object
           properties:
@@ -1126,6 +1380,32 @@ components:
               type: string
               format: uri
               example: https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg
+            id:
+              type: string
+              example: profiles/abcdef123456
+        coverImages:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                format: uri
+                example: https://res.cloudinary.com/demo/image/upload/v1612345678/cover.jpg
+              id:
+                type: string
+                example: covers/abcdef123456
+        isVerified:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-05-15T10:30:45.123Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
 
     SuccessResponse:
       type: object
@@ -1172,3 +1452,123 @@ components:
         requestId:
           type: string
           example: req-123456
+
+    NotificationsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم استرجاع الإشعارات بنجاح
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        timestamp:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+        requestId:
+          type: string
+          example: req-123456
+
+    Notification:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 60d21b4667d0d8992e610c85
+        title:
+          type: string
+          example: جديد عمل جديد
+        message:
+          type: string
+          example: لديك عمل جديد من فنان جديد
+        read:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: 2023-05-15T10:30:45.123Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2023-05-17T14:30:45.123Z
+
+    FollowResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 201
+        message:
+          type: string
+          example: تمت المتابعة بنجاح
+        data:
+          type: object
+          properties:
+            followId:
+              type: string
+              example: 60d21b4667d0d8992e610c85
+
+    FollowersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم جلب المتابعين بنجاح
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+
+    FollowingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم جلب المتابَعين بنجاح
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+
+    FollowStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: تم التحقق من حالة المتابعة بنجاح
+        data:
+          type: object
+          properties:
+            isFollowing:
+              type: boolean
+              example: true

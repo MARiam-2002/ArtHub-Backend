@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as controller from './specialRequest.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import { createSpecialRequestSchema, updateRequestStatusSchema, completeRequestSchema } from './specialRequest.validation.js';
+import { createSpecialRequestSchema, updateRequestStatusSchema, completeRequestSchema, cancelSpecialRequestSchema } from './specialRequest.validation.js';
 
 const router = Router();
 
@@ -300,6 +300,44 @@ router.post('/:requestId/response', isAuthenticated, controller.addResponseToReq
  *         description: الطلب غير موجود
  */
 router.patch('/:requestId/complete', isAuthenticated, isValidation(completeRequestSchema), controller.completeRequest);
+
+/**
+ * @swagger
+ * /api/special-requests/{requestId}/cancel:
+ *   patch:
+ *     tags:
+ *       - Special Requests
+ *     summary: إلغاء طلب خاص
+ *     description: إلغاء طلب خاص من قبل المستخدم مع توفير سبب الإلغاء
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: requestId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: معرف الطلب الخاص
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cancellationReason:
+ *                 type: string
+ *                 description: سبب الإلغاء
+ *     responses:
+ *       200:
+ *         description: تم إلغاء الطلب بنجاح
+ *       400:
+ *         description: لا يمكن إلغاء الطلب في حالته الحالية
+ *       403:
+ *         description: غير مصرح لك بإلغاء هذا الطلب
+ *       404:
+ *         description: الطلب غير موجود
+ */
+router.patch('/:requestId/cancel', isAuthenticated, isValidation(cancelSpecialRequestSchema), controller.cancelSpecialRequest);
 
 /**
  * @swagger

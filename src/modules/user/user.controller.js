@@ -5,6 +5,8 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import bcryptjs from 'bcryptjs';
 import followModel from '../../../DB/models/follow.model.js';
 import reviewModel from '../../../DB/models/review.model.js';
+import mongoose from 'mongoose';
+import transactionModel from '../../../DB/models/transaction.model.js';
 
 export const toggleWishlist = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -78,61 +80,77 @@ export const changePassword = asyncHandler(async (req, res) => {
   res.success(null, 'تم تغيير كلمة المرور بنجاح');
 });
 
-export const getArtistProfile = asyncHandler(async (req, res) => {
+export const getArtistProfile = asyncHandler(async (req, res, next) => {
   const { artistId } = req.params;
-  const artist = await userModel.findById(artistId).select('displayName profileImage job coverImages email');
   
-  if (!artist || artist.role !== 'artist') {
-    return res.fail(null, 'الفنان غير موجود', 404);
+  // جلب بيانات الفنان
+  const artist = await userModel.findOne({ _id: artistId, role: 'artist' });
+  
+  if (!artist) {
+    return res.status(404).json({
+      success: false,
+      message: "الفنان غير موجود"
+    });
   }
   
-  // Get followers count
+  // جلب عدد المتابعين
   const followersCount = await followModel.countDocuments({ following: artistId });
   
-  // Get artist's artworks
-  const artworks = await artworkModel.find({ artist: artistId }).sort({ createdAt: -1 }).limit(10);
-  
-  // Get artist's images
-  const images = await imageModel.find({ user: artistId, isPublic: true })
-    .sort({ viewCount: -1, createdAt: -1 })
-    .limit(10);
-  
-  // Get artwork count
-  const artworksCount = await artworkModel.countDocuments({ artist: artistId });
-  
-  // Get images count
-  const imagesCount = await imageModel.countDocuments({ user: artistId, isPublic: true });
-  
-  // Get average rating
-  const stats = await reviewModel.aggregate([
-    { $match: { artist: artist._id } },
-    { $group: { _id: null, avgRating: { $avg: "$rating" }, count: { $sum: 1 } } }
+  // جلب إحصائيات التقييمات
+  const reviewStats = await reviewModel.aggregate([
+    { $match: { artist: new mongoose.Types.ObjectId(artistId) } },
+    {
+      $group: {
+        _id: null,
+        avgRating: { $avg: "$rating" },
+        ratingsCount: { $sum: 1 }
+      }
+    }
   ]);
   
-  const avgRating = stats[0]?.avgRating || 0;
-  const reviewsCount = stats[0]?.count || 0;
+  // جلب أعمال الفنان
+  const artworks = await artworkModel.find({ artist: artistId })
+    .sort({ createdAt: -1 })
+    .limit(10);
+    
+  // جلب عدد المبيعات
+  const salesCount = await transactionModel.countDocuments({ seller: artistId, status: 'completed' });
   
-  // Check if logged in user is following this artist
+  // التحقق مما إذا كان المستخدم الحالي يتابع هذا الفنان
   let isFollowing = false;
-  if (req.user && req.user._id) {
-    const followRecord = await followModel.findOne({ 
+  if (req.user) {
+    isFollowing = await followModel.findOne({ 
       follower: req.user._id, 
       following: artistId 
-    });
-    isFollowing = !!followRecord;
+    }).lean();
   }
   
-  res.success({
-    artist,
-    followersCount,
-    artworksCount,
-    imagesCount,
-    avgRating,
-    reviewsCount,
-    isFollowing,
-    artworks,
-    images
-  }, 'تم جلب بيانات الفنان بنجاح');
+  // جمع وإرجاع البيانات
+  res.status(200).json({
+    success: true,
+    message: "تم جلب بيانات الفنان بنجاح",
+    data: {
+      artist: {
+        _id: artist._id,
+        displayName: artist.displayName,
+        email: artist.email,
+        profileImage: artist.profileImage,
+        coverImage: artist.coverImage,
+        bio: artist.bio,
+        job: artist.job,
+        joinDate: artist.createdAt
+      },
+      stats: {
+        followersCount,
+        artworksCount: artworks.length,
+        salesCount,
+        avgRating: reviewStats[0]?.avgRating || 0,
+        ratingsCount: reviewStats[0]?.ratingsCount || 0
+      },
+      isFollowing: !!isFollowing,
+      artworks
+    }
+  });
 });
 
 export const followArtist = asyncHandler(async (req, res) => {
@@ -265,4 +283,28 @@ export const getFollowing = asyncHandler(async (req, res) => {
     hasNextPage: parseInt(page) < totalPages,
     hasPrevPage: parseInt(page) > 1
   } }, 'تم جلب المتابَعين بنجاح');
+});
+
+/**
+ * جلب الأعمال الفنية المفضلة للمستخدم
+ */
+export const getFavoriteArtworks = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  // جلب معلومات المستخدم مع الأعمال المفضلة
+  const user = await userModel.findById(userId).select('wishlist');
+  
+  if (!user) {
+    return res.fail(null, 'المستخدم غير موجود', 404);
+  }
+  
+  // جلب تفاصيل الأعمال الفنية المفضلة
+  const favoriteArtworks = await artworkModel.find({
+    _id: { $in: user.wishlist }
+  }).populate({
+    path: 'artist',
+    select: 'displayName profileImage'
+  }).select('title description images price category');
+  
+  res.success(favoriteArtworks, 'تم جلب الأعمال الفنية المفضلة بنجاح');
 });

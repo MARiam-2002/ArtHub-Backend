@@ -43,6 +43,18 @@
     {
       "name": "Transactions",
       "description": "Financial transactions and payments"
+    },
+    {
+      "name": "Reviews",
+      "description": "Artwork and artist reviews and ratings"
+    },
+    {
+      "name": "Follow",
+      "description": "Artist follow/unfollow functionality"
+    },
+    {
+      "name": "Notifications",
+      "description": "User notifications management"
     }
   ],
   "paths": {
@@ -743,10 +755,22 @@
                             "$ref": "#/components/schemas/Artwork"
                           }
                         },
+                        "featuredArtists": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        },
                         "categories": {
                           "type": "array",
                           "items": {
                             "$ref": "#/components/schemas/Category"
+                          }
+                        },
+                        "banners": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Banner"
                           }
                         }
                       }
@@ -3581,260 +3605,11 @@
           "200": {
             "description": "تم تحديث حالة التقرير بنجاح"
           },
-          "403": {
-            "description": "غير مصرح لك بتحديث حالة التقارير"
-          },
-          "404": {
-            "description": "التقرير غير موجود"
-          }
-        }
-      }
-    },
-    "/api/special-requests": {
-      "post": {
-        "tags": [
-          "Special Requests"
-        ],
-        "summary": "إنشاء طلب خاص",
-        "description": "إرسال طلب خاص لفنان محدد",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "artist",
-                  "requestType",
-                  "description",
-                  "budget"
-                ],
-                "properties": {
-                  "artist": {
-                    "type": "string",
-                    "description": "معرف الفنان"
-                  },
-                  "requestType": {
-                    "type": "string",
-                    "description": "نوع الطلب الخاص"
-                  },
-                  "description": {
-                    "type": "string",
-                    "description": "وصف تفصيلي للطلب"
-                  },
-                  "budget": {
-                    "type": "number",
-                    "description": "الميزانية المقترحة"
-                  },
-                  "deadline": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "الموعد النهائي (اختياري)"
-                  },
-                  "attachments": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "uri"
-                    },
-                    "description": "روابط ملفات مرفقة (اختياري)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إنشاء الطلب الخاص بنجاح"
-          },
           "400": {
             "description": "بيانات غير صالحة"
           },
-          "404": {
-            "description": "الفنان غير موجود"
-          }
-        }
-      }
-    },
-    "/api/special-requests/my": {
-      "get": {
-        "tags": [
-          "Special Requests"
-        ],
-        "summary": "عرض طلباتي الخاصة",
-        "description": "عرض الطلبات الخاصة التي أرسلها المستخدم",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "رقم الصفحة"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "عدد العناصر في الصفحة"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "accepted",
-                "rejected",
-                "completed"
-              ]
-            },
-            "description": "تصفية حسب الحالة"
-          },
-          {
-            "name": "sortBy",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            },
-            "description": "ترتيب حسب الحقل"
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            },
-            "description": "طريقة الترتيب"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "تم جلب طلبات المستخدم بنجاح"
-          }
-        }
-      }
-    },
-    "/api/special-requests/artist": {
-      "get": {
-        "tags": [
-          "Special Requests"
-        ],
-        "summary": "عرض الطلبات الموجهة للفنان",
-        "description": "عرض الطلبات الخاصة المرسلة إلى الفنان",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "رقم الصفحة"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer"
-            },
-            "description": "عدد العناصر في الصفحة"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "accepted",
-                "rejected",
-                "completed"
-              ]
-            },
-            "description": "تصفية حسب الحالة"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "تم جلب طلبات الفنان بنجاح"
-          },
           "403": {
-            "description": "غير مصرح لك بعرض طلبات الفنانين"
-          }
-        }
-      }
-    },
-    "/api/special-requests/artist/stats": {
-      "get": {
-        "tags": [
-          "Special Requests"
-        ],
-        "summary": "إحصائيات الطلبات للفنان",
-        "description": "عرض إحصائيات الطلبات الخاصة للفنان",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "تم جلب إحصائيات الطلبات بنجاح"
-          },
-          "403": {
-            "description": "غير مصرح لك بعرض إحصائيات الفنانين"
-          }
-        }
-      }
-    },
-    "/api/special-requests/{requestId}": {
-      "get": {
-        "tags": [
-          "Special Requests"
-        ],
-        "summary": "تفاصيل طلب خاص",
-        "description": "عرض تفاصيل طلب خاص محدد",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "requestId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "معرف الطلب"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "تم جلب تفاصيل الطلب بنجاح"
+            "description": "غير مصرح لك بتحديث حالة التقارير"
           },
           "404": {
             "description": "الطلب غير موجود"

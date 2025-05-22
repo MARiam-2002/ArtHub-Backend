@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import * as controller from './user.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
@@ -337,5 +336,60 @@ router.post('/unfollow/:artistId', isAuthenticated, controller.unfollowArtist);
  *         description: Artist unfollowed successfully
  */
 router.post('/unfollow/:artistId/firebase', verifyFirebaseToken, controller.unfollowArtist);
+
+/**
+ * @swagger
+ * /api/users/artists/{artistId}/profile:
+ *   get:
+ *     tags:
+ *       - Artists
+ *     summary: الحصول على الملف الشخصي للفنان
+ *     description: جلب بيانات الفنان مع أعماله وإحصائياته
+ *     parameters:
+ *       - name: artistId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: معرف الفنان
+ *     responses:
+ *       200:
+ *         description: تم جلب ملف الفنان بنجاح
+ *       404:
+ *         description: الفنان غير موجود
+ */
+router.get('/artists/:artistId/profile', controller.getArtistProfile);
+
+/**
+ * @swagger
+ * /api/user/favorites:
+ *   get:
+ *     tags:
+ *       - User
+ *     summary: جلب الأعمال الفنية المفضلة
+ *     description: جلب قائمة الأعمال الفنية المفضلة للمستخدم
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: تم جلب الأعمال الفنية المفضلة بنجاح
+ */
+router.get('/favorites', isAuthenticated, controller.getFavoriteArtworks);
+
+/**
+ * @swagger
+ * /api/user/favorites/firebase:
+ *   get:
+ *     tags:
+ *       - User
+ *     summary: جلب الأعمال الفنية المفضلة باستخدام Firebase
+ *     description: جلب قائمة الأعمال الفنية المفضلة للمستخدم المصادق عبر Firebase
+ *     security:
+ *       - FirebaseAuth: []
+ *     responses:
+ *       200:
+ *         description: تم جلب الأعمال الفنية المفضلة بنجاح
+ */
+router.get('/favorites/firebase', verifyFirebaseToken, controller.getFavoriteArtworks);
 
 export default router;

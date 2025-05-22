@@ -7,6 +7,7 @@ import { sendEmail } from "../../../utils/sendEmails.js";
 import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
 import admin from '../../../utils/firebaseAdmin.js';
+import { updateUserFCMToken } from '../../../utils/pushNotifications.js';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { email, password, job } = req.body;
@@ -218,61 +219,227 @@ export const resetPasswordByCode = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const fingerprint = asyncHandler(async (req, res) => {
-  const { isFingerprintAuth } = req.body;
-
-  if (isFingerprintAuth) {
-    return res.status(200).json({
-      success: true,
-      message: "Login with your fingerprint successful.",
-      data: {
-        email: req.user.email,
-        userName: req.user.userName,
-        phone: req.user.phoneNumber,
-        country: req.user.country,
-        role: req.user.role,
-        token: req.headers["token"],
-      },
-    });
-  } else {
-    res.status(401).json({
-      success: false,
-      message: "Invalid fingerprint authentication.",
-    });
+export const fingerprint = asyncHandler(async (req, res, next) => {
+  const { deviceId } = req.body;
+  
+  if (!deviceId) {
+    return next(new Error("معرف الجهاز مطلوب للمصادقة ببصمة الإصبع", { cause: 400 }));
   }
-});
-
-export const socialLogin = asyncHandler(async (req, res, next) => {
-  const { email, name, picture, uid } = req.user;
-  let user = await userModel.findOne({ email });
+  
+  // Check if the device is registered for this user
+  const user = await userModel.findById(req.user._id);
+  
   if (!user) {
-    user = await userModel.create({
-      email,
-      googleId: uid,
-      profileImage: { url: picture },
-      job: "مستخدم",
-    });
+    return next(new Error("المستخدم غير موجود", { cause: 404 }));
   }
+  
+  // Check if this device is authorized for fingerprint login
+  if (!user.authorizedDevices || !user.authorizedDevices.includes(deviceId)) {
+    return next(new Error("هذا الجهاز غير مصرح له باستخدام المصادقة ببصمة الإصبع", { cause: 403 }));
+  }
+  
+  // Generate a new token
   const token = jwt.sign(
-    { id: user._id, email: user.email, role: user.role },
+    {
+      id: user._id,
+      email: user.email,
+      role: user.role
+    },
     process.env.TOKEN_KEY
   );
-  await tokenModel.findOneAndDelete({ user: user._id });
+  
+  // Update or create token record
+  await tokenModel.findOneAndDelete({ 
+    user: user._id,
+    agent: req.headers["user-agent"] || "unknown"
+  });
+  
   await tokenModel.create({
     token,
     user: user._id,
     agent: req.headers["user-agent"] || "unknown",
+    deviceId
   });
-  return res.success(
-    {
+  
+  return res.status(200).json({
+    success: true,
+    message: "تم تسجيل الدخول ببصمة الإصبع بنجاح",
+    data: {
       email: user.email,
+      userName: user.userName,
+      profilePic: user.profilePic,
       role: user.role,
       job: user.job,
-      token,
-      profileImage: user.profileImage?.url,
-    },
-    "تم تسجيل الدخول الاجتماعي بنجاح."
+      token
+    }
+  });
+});
+
+export const registerDeviceForFingerprint = asyncHandler(async (req, res, next) => {
+  const { deviceId, deviceName } = req.body;
+  
+  if (!deviceId) {
+    return next(new Error("معرف الجهاز مطلوب لتسجيل بصمة الإصبع", { cause: 400 }));
+  }
+  
+  const user = await userModel.findById(req.user._id);
+  
+  if (!user) {
+    return next(new Error("المستخدم غير موجود", { cause: 404 }));
+  }
+  
+  // Initialize authorizedDevices array if it doesn't exist
+  if (!user.authorizedDevices) {
+    user.authorizedDevices = [];
+  }
+  
+  // Check if device is already registered
+  if (user.authorizedDevices.includes(deviceId)) {
+    return res.status(200).json({
+      success: true,
+      message: "الجهاز مسجل بالفعل لاستخدام بصمة الإصبع"
+    });
+  }
+  
+  // Add device to authorized devices
+  user.authorizedDevices.push(deviceId);
+  
+  if (deviceName) {
+    if (!user.deviceNames) {
+      user.deviceNames = {};
+    }
+    user.deviceNames[deviceId] = deviceName;
+  }
+  
+  await user.save();
+  
+  return res.status(200).json({
+    success: true,
+    message: "تم تسجيل الجهاز بنجاح لاستخدام بصمة الإصبع"
+  });
+});
+
+export const removeDeviceFingerprint = asyncHandler(async (req, res, next) => {
+  const { deviceId } = req.body;
+  
+  if (!deviceId) {
+    return next(new Error("معرف الجهاز مطلوب لإلغاء تسجيل بصمة الإصبع", { cause: 400 }));
+  }
+  
+  const user = await userModel.findById(req.user._id);
+  
+  if (!user || !user.authorizedDevices) {
+    return next(new Error("المستخدم غير موجود أو لا توجد أجهزة مسجلة", { cause: 404 }));
+  }
+  
+  // Remove device from authorized devices
+  user.authorizedDevices = user.authorizedDevices.filter(id => id !== deviceId);
+  
+  // Remove device name if exists
+  if (user.deviceNames && user.deviceNames[deviceId]) {
+    delete user.deviceNames[deviceId];
+  }
+  
+  await user.save();
+  
+  // Invalidate any tokens for this device
+  await tokenModel.updateMany(
+    { user: user._id, deviceId },
+    { isValid: false }
   );
+  
+  return res.status(200).json({
+    success: true,
+    message: "تم إلغاء تسجيل الجهاز لاستخدام بصمة الإصبع بنجاح"
+  });
+});
+
+export const updateFCMToken = asyncHandler(async (req, res, next) => {
+  const { fcmToken } = req.body;
+  
+  if (!fcmToken) {
+    return next(new Error("رمز الإشعارات مطلوب", { cause: 400 }));
+  }
+  
+  const user = await userModel.findById(req.user._id);
+  
+  if (!user) {
+    return next(new Error("المستخدم غير موجود", { cause: 404 }));
+  }
+  
+  // Update the FCM token
+  user.fcmToken = fcmToken;
+  await user.save();
+  
+  // Use the function directly from imported utilities
+  const updated = await updateUserFCMToken(user._id, fcmToken);
+  
+  if (!updated) {
+    console.warn(`Warning: Failed to update FCM token for user ${user._id} in notification system`);
+  }
+  
+  return res.status(200).json({
+    success: true,
+    message: "تم تحديث رمز الإشعارات بنجاح"
+  });
+});
+
+export const socialLogin = asyncHandler(async (req, res, next) => {
+  const { email, name, picture, uid, provider } = req.user;
+  let user = await userModel.findOne({ email });
+  
+  if (!user) {
+    // Create new user if they don't exist
+    user = await userModel.create({
+      email,
+      userName: name || email.split('@')[0],
+      profilePic: picture || undefined,
+      socialId: uid,
+      socialProvider: provider || 'firebase',
+      isVerified: true, // Social auth users are considered verified
+      job: 'مستخدم' // Default job title
+    });
+  } else if (!user.socialId) {
+    // If user exists but doesn't have socialId (registered via email), link accounts
+    user.socialId = uid;
+    user.socialProvider = provider || 'firebase';
+    if (!user.profilePic && picture) {
+      user.profilePic = picture;
+    }
+    await user.save();
+  }
+
+  // Generate JWT token
+  const token = jwt.sign(
+    {
+      id: user._id,
+      email: user.email,
+      role: user.role
+    },
+    process.env.TOKEN_KEY
+  );
+
+  // Remove old tokens and create new one
+  await tokenModel.findOneAndDelete({ user: user._id });
+  
+  await tokenModel.create({
+    token,
+    user: user._id,
+    agent: req.headers["user-agent"] || "unknown"
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "تم تسجيل الدخول بنجاح بواسطة " + (provider || 'حساب خارجي'),
+    data: {
+      email: user.email,
+      userName: user.userName,
+      profilePic: user.profilePic,
+      role: user.role,
+      job: user.job,
+      token
+    }
+  });
 });
 
 // export const redHeart = asyncHandler(async (req, res, next) => {

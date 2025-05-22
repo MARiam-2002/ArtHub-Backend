@@ -19,6 +19,9 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 dotenv.config();
 import jwt from "jsonwebtoken";
+import reviewRouter from './modules/review/review.router.js';
+import followRouter from './modules/follow/follow.router.js';
+import notificationRouter from './modules/notification/notification.router.js';
 
 export const bootstrap = (app, express) => {
   if (process.env.NODE_ENV == "dev") {
@@ -80,6 +83,9 @@ export const bootstrap = (app, express) => {
   app.use('/api/special-requests', specialRequestRouter);
   app.use('/api/reports', reportRouter);
   app.use('/api/transactions', transactionRouter);
+  app.use('/api/reviews', reviewRouter);
+  app.use('/api/follow', followRouter);
+  app.use('/api/notifications', notificationRouter);
  
   // Health check endpoint
   app.get('/api/health', (req, res) => {

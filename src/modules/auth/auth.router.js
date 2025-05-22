@@ -23,7 +23,22 @@ router.post(
 router.post(
   "/login-with-fingerprint",
   isAuthenticated,
+  isValidation(Validators.fingerprintLoginSchema),
   userController.fingerprint
+);
+
+router.post(
+  "/register-device-fingerprint",
+  isAuthenticated,
+  isValidation(Validators.registerDeviceSchema),
+  userController.registerDeviceForFingerprint
+);
+
+router.post(
+  "/remove-device-fingerprint",
+  isAuthenticated,
+  isValidation(Validators.removeDeviceSchema),
+  userController.removeDeviceFingerprint
 );
 
 router.patch(
@@ -61,6 +76,13 @@ router.post(
   "/social-login",
   verifyFirebaseToken,
   userController.socialLogin
+);
+
+router.post(
+  "/update-fcm-token",
+  isAuthenticated,
+  isValidation(Validators.fcmTokenSchema),
+  userController.updateFCMToken
 );
 
 // router.put(

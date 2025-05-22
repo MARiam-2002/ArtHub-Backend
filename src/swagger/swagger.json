@@ -43,9 +43,477 @@
     {
       "name": "Transactions",
       "description": "Financial transactions and payments"
+    },
+    {
+      "name": "Reviews",
+      "description": "Artwork and artist reviews and ratings"
+    },
+    {
+      "name": "Follow",
+      "description": "Artist follow/unfollow functionality"
+    },
+    {
+      "name": "Notifications",
+      "description": "User notifications management"
     }
   ],
   "paths": {
+    "/api/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "الحصول على إشعارات المستخدم",
+        "description": "استرجاع جميع إشعارات المستخدم المسجل الدخول",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الإشعارات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "حذف جميع الإشعارات",
+        "description": "حذف جميع إشعارات المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف جميع الإشعارات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deletedCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/{notificationId}": {
+      "delete": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "حذف إشعار",
+        "description": "حذف إشعار معين",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الإشعار"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف الإشعار بنجاح"
+          },
+          "404": {
+            "description": "الإشعار غير موجود"
+          }
+        }
+      }
+    },
+    "/api/notifications/{notificationId}/read": {
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "وضع علامة \"مقروء\" على إشعار",
+        "description": "تعيين إشعار معين كمقروء",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الإشعار"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تحديث حالة قراءة الإشعار بنجاح"
+          },
+          "404": {
+            "description": "الإشعار غير موجود"
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "الحصول على محادثات المستخدم",
+        "description": "استرجاع جميع محادثات المستخدم المسجل الدخول",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب المحادثات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/create": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "إنشاء محادثة",
+        "description": "إنشاء محادثة جديدة مع مستخدم آخر",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "معرف المستخدم الآخر"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء المحادثة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Chat"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "المستخدم غير موجود"
+          }
+        }
+      }
+    },
+    "/api/chat/{chatId}/messages": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "الحصول على رسائل محادثة",
+        "description": "استرجاع جميع الرسائل في محادثة معينة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الرسائل بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatMessage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "المحادثة غير موجودة"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "إرسال رسالة",
+        "description": "إرسال رسالة جديدة في محادثة معينة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "نص الرسالة"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال الرسالة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChatMessage"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "المحادثة غير موجودة"
+          }
+        }
+      }
+    },
+    "/api/chat/{chatId}/read": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "تحديث حالة قراءة الرسائل",
+        "description": "تعيين جميع الرسائل في محادثة معينة كمقروءة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تحديث حالة القراءة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "modifiedCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "المحادثة غير موجودة"
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "وضع علامة \"مقروء\" على جميع الإشعارات",
+        "description": "تعيين جميع إشعارات المستخدم كمقروءة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تحديث حالة قراءة جميع الإشعارات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "modifiedCount": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/register": {
       "post": {
         "tags": [
@@ -4908,6 +5376,254 @@
           }
         }
       }
+    },
+    "/api/follow/follow": {
+      "post": {
+        "tags": [
+          "Follow"
+        ],
+        "summary": "متابعة فنان",
+        "description": "إنشاء متابعة جديدة لفنان",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "artistId"
+                ],
+                "properties": {
+                  "artistId": {
+                    "type": "string",
+                    "description": "معرف الفنان المراد متابعته"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تمت المتابعة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "خطأ في البيانات المدخلة أو المستخدم يتابع الفنان بالفعل"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/follow/unfollow": {
+      "post": {
+        "tags": [
+          "Follow"
+        ],
+        "summary": "إلغاء متابعة فنان",
+        "description": "إلغاء متابعة فنان تتم متابعته حاليًا",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "artistId"
+                ],
+                "properties": {
+                  "artistId": {
+                    "type": "string",
+                    "description": "معرف الفنان المراد إلغاء متابعته"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إلغاء المتابعة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "خطأ في البيانات المدخلة أو المستخدم لا يتابع الفنان حاليًا"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/follow/followers/{artistId}": {
+      "get": {
+        "tags": [
+          "Follow"
+        ],
+        "summary": "الحصول على متابعي فنان",
+        "description": "جلب قائمة المستخدمين الذين يتابعون فنانًا معينًا",
+        "parameters": [
+          {
+            "name": "artistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الفنان"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب المتابعين بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowersResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/follow/following/{userId}": {
+      "get": {
+        "tags": [
+          "Follow"
+        ],
+        "summary": "الحصول على متابَعي مستخدم",
+        "description": "جلب قائمة الفنانين الذين يتابعهم المستخدم",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف المستخدم"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب المتابَعين بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowingResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "المستخدم غير موجود"
+          }
+        }
+      }
+    },
+    "/api/follow/status/{artistId}": {
+      "get": {
+        "tags": [
+          "Follow"
+        ],
+        "summary": "التحقق من حالة المتابعة",
+        "description": "التحقق مما إذا كان المستخدم الحالي يتابع فنانًا معينًا",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "artistId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الفنان"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التحقق من حالة المتابعة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowStatusResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4919,6 +5635,58 @@
       }
     },
     "schemas": {
+      "ChatMessage": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "chatId": {
+            "type": "string"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/User"
+          },
+          "text": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Chat": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "lastMessage": {
+            "$ref": "#/components/schemas/ChatMessage"
+          },
+          "unreadCount": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "AuthResponse": {
         "type": "object",
         "properties": {
@@ -5347,6 +6115,140 @@
           "externalUrl": {
             "type": "string",
             "format": "uri"
+          }
+        }
+      },
+      "FollowResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "FollowersResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "followers": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      },
+      "FollowingResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "following": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      },
+      "FollowStatusResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "isFollowing": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      },
+      "NotificationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "notifications": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              },
+              "pagination": {
+                "type": "object",
+                "properties": {
+                  "currentPage": {
+                    "type": "integer"
+                  },
+                  "totalPages": {
+                    "type": "integer"
+                  },
+                  "totalItems": {
+                    "type": "integer"
+                  },
+                  "itemsPerPage": {
+                    "type": "integer"
+                  },
+                  "unreadCount": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "sender": {
+            "$ref": "#/components/schemas/User"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "isRead": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

@@ -84,4 +84,19 @@ export const responseRequestSchema = {
       'any.required': 'يجب تحديد معرف الطلب'
     })
   })
+};
+
+export const cancelSpecialRequestSchema = {
+  params: Joi.object({
+    requestId: Joi.string().required().min(24).max(24).messages({
+      'string.empty': 'معرف الطلب مطلوب',
+      'string.min': 'معرف الطلب غير صالح',
+      'string.max': 'معرف الطلب غير صالح',
+    }),
+  }),
+  body: Joi.object({
+    cancellationReason: Joi.string().messages({
+      'string.empty': 'يرجى إدخال سبب الإلغاء',
+    }),
+  }),
 }; 

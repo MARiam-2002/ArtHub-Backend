@@ -33,7 +33,7 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           description: ميزانية الطلب
  *         status:
  *           type: string
- *           enum: [pending, accepted, rejected, completed]
+ *           enum: [pending, accepted, rejected, completed, cancelled]
  *           description: حالة الطلب
  *         response:
  *           type: string
@@ -59,6 +59,13 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           type: string
  *           format: date-time
  *           description: تاريخ إكمال الطلب
+ *         cancellationReason:
+ *           type: string
+ *           description: سبب إلغاء الطلب
+ *         cancelledAt:
+ *           type: string
+ *           format: date-time
+ *           description: تاريخ إلغاء الطلب
  */
 const specialRequestSchema = new Schema({
   sender: { type: Types.ObjectId, ref: "User", required: true },
@@ -68,7 +75,7 @@ const specialRequestSchema = new Schema({
   budget: { type: Number, required: true },
   status: { 
     type: String, 
-    enum: ["pending", "accepted", "rejected", "completed"], 
+    enum: ["pending", "accepted", "rejected", "completed", "cancelled"], 
     default: "pending"
   },
   response: { type: String },
@@ -76,7 +83,9 @@ const specialRequestSchema = new Schema({
   attachments: [{ type: String }],
   deliverables: [{ type: String }],
   finalNote: { type: String },
-  completedAt: { type: Date }
+  completedAt: { type: Date },
+  cancellationReason: { type: String },
+  cancelledAt: { type: Date }
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },

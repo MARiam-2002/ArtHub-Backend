@@ -44,6 +44,18 @@ module.exports = {
       name: 'Transactions',
       description: 'Financial transactions and payments',
     },
+    {
+      name: 'Reviews',
+      description: 'Artwork and artist reviews and ratings',
+    },
+    {
+      name: 'Follow',
+      description: 'Artist follow/unfollow functionality',
+    },
+    {
+      name: 'Notifications',
+      description: 'User notifications management',
+    },
   ],
   components: {
     securitySchemes: {

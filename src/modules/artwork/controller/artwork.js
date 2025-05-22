@@ -24,20 +24,101 @@ export const getAllArtworks = asyncHandler(async (req, res) => {
 // جلب تفاصيل عمل فني
 export const getArtworkById = asyncHandler(async (req, res) => {
   const artwork = await artworkModel.findById(req.params.id)
-    .populate({ path: 'artist', select: 'email job profileImage displayName' });
+    .populate({ path: 'artist', select: 'displayName profileImage job' })
+    .populate({ path: 'category', select: 'name' });
   
   if (!artwork) return res.fail(null, 'العمل غير موجود', 404);
   
-  // احسب متوسط وعدد التقييمات
-  const stats = await reviewModel.aggregate([
-    { $match: { artwork: artwork._id } },
-    { $group: { _id: null, avgRating: { $avg: "$rating" }, count: { $sum: 1 } } }
+  // زيادة عدد المشاهدات
+  artwork.viewCount = (artwork.viewCount || 0) + 1;
+  await artwork.save();
+  
+  // جلب المراجعات والتقييمات
+  const [reviews, stats] = await Promise.all([
+    reviewModel.find({ artwork: artwork._id })
+      .populate('user', 'displayName profileImage')
+      .sort({ createdAt: -1 })
+      .limit(5),
+    reviewModel.aggregate([
+      { $match: { artwork: artwork._id } },
+      { 
+        $group: { 
+          _id: null, 
+          avgRating: { $avg: "$rating" }, 
+          count: { $sum: 1 },
+          ratings: {
+            $push: "$rating"
+          }
+        } 
+      }
+    ])
   ]);
   
+  // استخراج إحصائيات التقييم
   const avgRating = stats[0]?.avgRating || 0;
   const reviewsCount = stats[0]?.count || 0;
   
-  res.success({ ...artwork.toObject(), avgRating, reviewsCount }, 'تم جلب تفاصيل العمل الفني بنجاح');
+  // حساب توزيع التقييمات (1-5 نجوم)
+  const ratingDistribution = stats[0]?.ratings 
+    ? Array(5).fill(0).map((_, i) => 
+        stats[0].ratings.filter(r => Math.round(r) === i + 1).length
+      )
+    : [0, 0, 0, 0, 0];
+  
+  // أعمال مشابهة
+  const similarArtworks = await artworkModel.find({
+    _id: { $ne: artwork._id },
+    $or: [
+      { category: artwork.category },
+      { artist: artwork.artist._id }
+    ]
+  })
+  .limit(4)
+  .populate('artist', 'displayName profileImage');
+  
+  // معلومات الفنان
+  const artist = await userModel.findById(artwork.artist._id);
+  
+  // متوسط تقييم الفنان
+  const artistRating = await reviewModel.aggregate([
+    { $match: { artist: artist._id } },
+    { 
+      $group: { 
+        _id: null, 
+        avgRating: { $avg: "$rating" }
+      } 
+    }
+  ]);
+  
+  // عدد المبيعات للعمل الفني
+  const salesCount = artwork.salesCount || 0;
+  
+  // تحقق إذا كان المستخدم قد قام بالتقييم مسبقًا
+  let userReview = null;
+  if (req.user) {
+    userReview = await reviewModel.findOne({
+      artwork: artwork._id,
+      user: req.user._id
+    });
+  }
+  
+  res.success({ 
+    artwork, 
+    artist: {
+      ...artist.toObject(),
+      avgRating: artistRating[0]?.avgRating || 0
+    },
+    avgRating, 
+    reviewsCount,
+    ratingDistribution,
+    reviews,
+    similarArtworks,
+    salesCount,
+    userReview: userReview ? {
+      rating: userReview.rating,
+      comment: userReview.comment
+    } : null
+  }, 'تم جلب تفاصيل العمل الفني بنجاح');
 });
 
 // إنشاء عمل فني جديد

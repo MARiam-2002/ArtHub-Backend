@@ -146,3 +146,48 @@ export const resetPasswordByCode = joi
       }),
   })
   .required();
+
+export const fingerprintLoginSchema = joi
+  .object({
+    deviceId: joi
+      .string()
+      .required()
+      .label("معرف الجهاز")
+      .messages(defaultMessages)
+  })
+  .required();
+
+export const registerDeviceSchema = joi
+  .object({
+    deviceId: joi
+      .string()
+      .required()
+      .label("معرف الجهاز")
+      .messages(defaultMessages),
+    deviceName: joi
+      .string()
+      .optional()
+      .label("اسم الجهاز")
+      .messages(defaultMessages)
+  })
+  .required();
+
+export const removeDeviceSchema = joi
+  .object({
+    deviceId: joi
+      .string()
+      .required()
+      .label("معرف الجهاز")
+      .messages(defaultMessages)
+  })
+  .required();
+
+export const fcmTokenSchema = joi
+  .object({
+    fcmToken: joi
+      .string()
+      .required()
+      .label("رمز الإشعارات")
+      .messages(defaultMessages)
+  })
+  .required();
