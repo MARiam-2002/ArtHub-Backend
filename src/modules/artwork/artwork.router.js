@@ -4,6 +4,7 @@ import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import { createArtworkSchema, updateArtworkSchema } from './artwork.validation.js';
 import * as reviewController from '../review/review.controller.js';
+import { verifyFirebaseToken } from '../../middleware/firebase.middleware.js';
 
 const router = Router();
 
@@ -394,5 +395,115 @@ router.patch('/:id', isAuthenticated, isValidation(updateArtworkSchema), artwork
  *         description: العمل الفني غير موجود أو غير مصرح
  */
 router.delete('/:id', isAuthenticated, artworkController.deleteArtwork);
+
+/**
+ * @swagger
+ * /api/artwork/search:
+ *   get:
+ *     tags:
+ *       - Artworks
+ *     summary: البحث عن الأعمال الفنية
+ *     description: البحث عن الأعمال الفنية حسب المعايير المختلفة
+ *     parameters:
+ *       - name: query
+ *         in: query
+ *         schema:
+ *           type: string
+ *         description: كلمة البحث (في العنوان، الوصف، الوسوم)
+ *       - name: category
+ *         in: query
+ *         schema:
+ *           type: string
+ *         description: معرف الفئة للتصفية
+ *       - name: minPrice
+ *         in: query
+ *         schema:
+ *           type: number
+ *         description: الحد الأدنى للسعر
+ *       - name: maxPrice
+ *         in: query
+ *         schema:
+ *           type: number
+ *         description: الحد الأقصى للسعر
+ *       - name: sort
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [newest, priceAsc, priceDesc, popular]
+ *           default: newest
+ *         description: ترتيب النتائج
+ *       - name: page
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: رقم الصفحة
+ *       - name: limit
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: عدد العناصر في الصفحة
+ *     responses:
+ *       200:
+ *         description: تم جلب نتائج البحث بنجاح
+ */
+router.get('/search', artworkController.searchArtworks);
+
+/**
+ * @swagger
+ * /api/artwork/search/firebase:
+ *   get:
+ *     tags:
+ *       - Artworks
+ *     summary: البحث عن الأعمال الفنية (Firebase)
+ *     description: البحث عن الأعمال الفنية حسب المعايير المختلفة مع مصادقة Firebase
+ *     security:
+ *       - FirebaseAuth: []
+ *     parameters:
+ *       - name: query
+ *         in: query
+ *         schema:
+ *           type: string
+ *         description: كلمة البحث (في العنوان، الوصف، الوسوم)
+ *       - name: category
+ *         in: query
+ *         schema:
+ *           type: string
+ *         description: معرف الفئة للتصفية
+ *       - name: minPrice
+ *         in: query
+ *         schema:
+ *           type: number
+ *         description: الحد الأدنى للسعر
+ *       - name: maxPrice
+ *         in: query
+ *         schema:
+ *           type: number
+ *         description: الحد الأقصى للسعر
+ *       - name: sort
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [newest, priceAsc, priceDesc, popular]
+ *           default: newest
+ *         description: ترتيب النتائج
+ *       - name: page
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: رقم الصفحة
+ *       - name: limit
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: عدد العناصر في الصفحة
+ *     responses:
+ *       200:
+ *         description: تم جلب نتائج البحث بنجاح
+ */
+router.get('/search/firebase', verifyFirebaseToken, artworkController.searchArtworks);
 
 export default router; 

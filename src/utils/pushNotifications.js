@@ -1,36 +1,50 @@
 import admin from './firebaseAdmin.js';
 import userModel from '../../DB/models/user.model.js';
+import notificationModel from '../../DB/models/notification.model.js';
 
 /**
  * @module notifications
  * @description Unified module for all push notification functionality in ArtHub application
+ * Supports multilingual notifications (Arabic and English)
  */
 
 /**
- * Send push notification to a specific user
+ * Send push notification to a specific user with language preference support
  * @param {string} userId - MongoDB user ID
  * @param {Object} notification - Notification data
- * @param {string} notification.title - Notification title
- * @param {string} notification.body - Notification body
+ * @param {Object} notification.title - Notification title object with ar and en properties
+ * @param {Object} notification.body - Notification body object with ar and en properties
  * @param {Object} data - Additional data to send with notification
+ * @param {Object} options - Additional options
  * @returns {Promise} - Result of the notification send operation
  */
-export const sendPushNotificationToUser = async (userId, notification, data = {}) => {
+export const sendPushNotificationToUser = async (userId, notification, data = {}, options = {}) => {
   try {
-    // Get user's FCM token
-    const user = await userModel.findById(userId).select('fcmToken');
+    // Get user's FCM token and language preference
+    const user = await userModel.findById(userId).select('fcmToken preferredLanguage');
     
     if (!user || !user.fcmToken) {
       console.log(`User ${userId} doesn't have an FCM token`);
       return { success: false, message: 'No FCM token found for user' };
     }
     
+    const preferredLanguage = user.preferredLanguage || 'ar';
+    
+    // Determine notification title and body based on language preference
+    const notificationTitle = typeof notification.title === 'object' 
+      ? (notification.title[preferredLanguage] || notification.title.ar) 
+      : notification.title;
+      
+    const notificationBody = typeof notification.body === 'object' 
+      ? (notification.body[preferredLanguage] || notification.body.ar) 
+      : notification.body;
+    
     // Send notification to the device
     const message = {
       token: user.fcmToken,
       notification: {
-        title: notification.title,
-        body: notification.body,
+        title: notificationTitle,
+        body: notificationBody,
       },
       data: {
         ...data,
@@ -39,6 +53,7 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
         screen: data.screen || 'default',
         id: data.id || '',
         timestamp: data.timestamp || Date.now().toString(),
+        language: preferredLanguage
       },
       android: {
         priority: 'high',
@@ -64,6 +79,32 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
       }
     };
     
+    // Save notification to database if requested
+    if (options.saveToDatabase !== false) {
+      try {
+        await notificationModel.create({
+          user: userId,
+          title: {
+            ar: typeof notification.title === 'object' ? notification.title.ar : notification.title,
+            en: typeof notification.title === 'object' ? notification.title.en : notification.title
+          },
+          message: {
+            ar: typeof notification.body === 'object' ? notification.body.ar : notification.body,
+            en: typeof notification.body === 'object' ? notification.body.en : notification.body
+          },
+          type: data.type || 'system',
+          ref: data.refId || null,
+          refModel: data.refModel || null,
+          data: {
+            ...data,
+            screen: data.screen || 'default'
+          }
+        });
+      } catch (dbError) {
+        console.error('Error saving notification to database:', dbError);
+      }
+    }
+    
     const response = await admin.messaging().send(message);
     console.log('Notification sent successfully:', response);
     return { success: true, messageId: response };
@@ -74,85 +115,151 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
 };
 
 /**
- * Send push notification to multiple users
+ * Send push notification to multiple users with language preferences
  * @param {Array<string>} userIds - Array of MongoDB user IDs
  * @param {Object} notification - Notification data
- * @param {string} notification.title - Notification title
- * @param {string} notification.body - Notification body
+ * @param {Object} notification.title - Notification title object with ar and en properties
+ * @param {Object} notification.body - Notification body object with ar and en properties
  * @param {Object} data - Additional data to send with notification
+ * @param {Object} options - Additional options
  * @returns {Promise} - Results of the notification send operations
  */
-export const sendPushNotificationToMultipleUsers = async (userIds, notification, data = {}) => {
+export const sendPushNotificationToMultipleUsers = async (userIds, notification, data = {}, options = {}) => {
   try {
-    // Get users' FCM tokens
-    const users = await userModel.find({ _id: { $in: userIds } }).select('fcmToken');
+    // Get users' FCM tokens and language preferences
+    const users = await userModel.find({ _id: { $in: userIds } }).select('fcmToken preferredLanguage');
     
-    // Filter out users without FCM tokens
-    const tokens = users.filter(user => user.fcmToken).map(user => user.fcmToken);
+    // Group users by language preference for batch notifications
+    const usersByLanguage = {
+      ar: [],
+      en: []
+    };
     
-    if (tokens.length === 0) {
-      console.log('No FCM tokens found for selected users');
-      return { success: false, message: 'No FCM tokens found' };
-    }
+    users.forEach(user => {
+      if (user.fcmToken) {
+        const lang = user.preferredLanguage || 'ar';
+        usersByLanguage[lang].push({
+          token: user.fcmToken,
+          userId: user._id
+        });
+      }
+    });
     
-    // Send notification to multiple devices
-    const message = {
-      notification: {
-        title: notification.title,
-        body: notification.body,
-      },
-      data: {
-        ...data,
-        click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        screen: data.screen || 'default',
-        timestamp: data.timestamp || Date.now().toString(),
-      },
-      android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          default_sound: true,
-          default_vibrate_timings: true,
-          channel_id: 'arthub_channel',
-          icon: 'ic_notification'
-        }
-      },
-      apns: {
-        headers: {
-          'apns-priority': '10'
+    const results = {
+      success: true,
+      successCount: 0,
+      failureCount: 0,
+      byLanguage: {}
+    };
+    
+    // Save notifications to database if requested
+    if (options.saveToDatabase !== false) {
+      const notificationsToInsert = users.map(user => ({
+        user: user._id,
+        title: {
+          ar: typeof notification.title === 'object' ? notification.title.ar : notification.title,
+          en: typeof notification.title === 'object' ? notification.title.en : notification.title
         },
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1,
-            content_available: true
-          }
+        message: {
+          ar: typeof notification.body === 'object' ? notification.body.ar : notification.body,
+          en: typeof notification.body === 'object' ? notification.body.en : notification.body
+        },
+        type: data.type || 'system',
+        ref: data.refId || null,
+        refModel: data.refModel || null,
+        data: {
+          ...data,
+          screen: data.screen || 'default'
         }
-      },
-      tokens: tokens
-    };
-    
-    const response = await admin.messaging().sendMulticast(message);
-    console.log(`${response.successCount} notifications sent successfully`);
-    
-    if (response.failureCount > 0) {
-      const failedTokens = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          failedTokens.push({
-            token: tokens[idx],
-            error: resp.error.message
-          });
-        }
-      });
-      console.log('List of tokens that failed to receive the message:', failedTokens);
+      }));
+      
+      try {
+        await notificationModel.insertMany(notificationsToInsert);
+      } catch (dbError) {
+        console.error('Error saving notifications to database:', dbError);
+      }
     }
     
-    return { 
-      success: true, 
-      successCount: response.successCount, 
-      failureCount: response.failureCount 
-    };
+    // Send notifications for each language group
+    for (const lang of ['ar', 'en']) {
+      const tokens = usersByLanguage[lang].map(u => u.token);
+      
+      if (tokens.length === 0) continue;
+      
+      const notificationTitle = typeof notification.title === 'object' 
+        ? notification.title[lang] || notification.title.ar 
+        : notification.title;
+        
+      const notificationBody = typeof notification.body === 'object' 
+        ? notification.body[lang] || notification.body.ar 
+        : notification.body;
+      
+      // Send notification to multiple devices
+      const message = {
+        notification: {
+          title: notificationTitle,
+          body: notificationBody,
+        },
+        data: {
+          ...data,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          screen: data.screen || 'default',
+          timestamp: data.timestamp || Date.now().toString(),
+          language: lang
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            default_sound: true,
+            default_vibrate_timings: true,
+            channel_id: 'arthub_channel',
+            icon: 'ic_notification'
+          }
+        },
+        apns: {
+          headers: {
+            'apns-priority': '10'
+          },
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1,
+              content_available: true
+            }
+          }
+        },
+        tokens: tokens
+      };
+      
+      const response = await admin.messaging().sendMulticast(message);
+      console.log(`${response.successCount} notifications sent successfully for language: ${lang}`);
+      
+      results.successCount += response.successCount;
+      results.failureCount += response.failureCount;
+      
+      results.byLanguage[lang] = {
+        sent: tokens.length,
+        success: response.successCount,
+        failure: response.failureCount
+      };
+      
+      if (response.failureCount > 0) {
+        const failedTokens = [];
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            failedTokens.push({
+              token: tokens[idx],
+              error: resp.error.message
+            });
+          }
+        });
+        console.log(`Failed tokens for ${lang}:`, failedTokens);
+        results.byLanguage[lang].failedTokens = failedTokens;
+      }
+    }
+    
+    return results;
   } catch (error) {
     console.error('Error sending push notifications:', error);
     return { success: false, error: error.message };
@@ -362,6 +469,27 @@ export const sendPushToUser = sendPushNotificationToUser;
  */
 export const sendChatNotification = sendChatMessageNotification;
 
+/**
+ * Create a notification object with multilingual support
+ * @param {string} titleAr - Arabic title
+ * @param {string} titleEn - English title
+ * @param {string} bodyAr - Arabic body
+ * @param {string} bodyEn - English body
+ * @returns {Object} - Notification object with language support
+ */
+export const createMultilingualNotification = (titleAr, titleEn, bodyAr, bodyEn) => {
+  return {
+    title: {
+      ar: titleAr,
+      en: titleEn || titleAr // Fallback to Arabic if English not provided
+    },
+    body: {
+      ar: bodyAr,
+      en: bodyEn || bodyAr // Fallback to Arabic if English not provided
+    }
+  };
+};
+
 // Default export with all functions
 export default {
   // Main notification functions
@@ -380,5 +508,8 @@ export default {
   
   // Aliases for backward compatibility
   sendPushToUser,
-  sendChatNotification
+  sendChatNotification,
+  
+  // New functions
+  createMultilingualNotification
 };

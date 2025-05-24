@@ -1,4 +1,3 @@
-
 import mongoose, { Schema, Types, model } from "mongoose";
 
 /**
@@ -81,6 +80,36 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *         isVerified:
  *           type: boolean
  *           description: Whether the user's account is verified
+ *         preferredLanguage:
+ *           type: string
+ *           enum: [ar, en]
+ *           description: User's preferred language
+ *         notificationSettings:
+ *           type: object
+ *           properties:
+ *             enablePush:
+ *               type: boolean
+ *               description: Whether the user wants to receive push notifications
+ *             enableEmail:
+ *               type: boolean
+ *               description: Whether the user wants to receive email notifications
+ *             muteChat:
+ *               type: boolean
+ *               description: Whether the user wants to mute chat notifications
+ *         isActive:
+ *           type: boolean
+ *           description: Whether the user is active
+ *         isDeleted:
+ *           type: boolean
+ *           description: Whether the user is deleted
+ *         fcmTokens:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Array of FCM tokens for push notifications
+ *         lastActive:
+ *           type: date
+ *           description: Last active time of the user
  */
 const userSchema = new Schema(
   {
@@ -167,6 +196,46 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    
+    preferredLanguage: {
+      type: String,
+      enum: ["ar", "en"],
+      default: "ar",
+    },
+    
+    notificationSettings: {
+      enablePush: {
+        type: Boolean,
+        default: true,
+      },
+      enableEmail: {
+        type: Boolean,
+        default: true,
+      },
+      muteChat: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    
+    fcmTokens: [String],
+    
+    lastActive: {
+      type: Date,
+      default: Date.now
+    }
   },
   { timestamps: true }
 );

@@ -7,6 +7,9 @@ import followModel from '../../../DB/models/follow.model.js';
 import reviewModel from '../../../DB/models/review.model.js';
 import mongoose from 'mongoose';
 import transactionModel from '../../../DB/models/transaction.model.js';
+import notificationModel from '../../../DB/models/notification.model.js';
+import tokenModel from '../../../DB/models/token.model.js';
+import chatModel from '../../../DB/models/chat.model.js';
 
 export const toggleWishlist = asyncHandler(async (req, res) => {
   const userId = req.user._id;
@@ -307,4 +310,369 @@ export const getFavoriteArtworks = asyncHandler(async (req, res) => {
   }).select('title description images price category');
   
   res.success(favoriteArtworks, 'تم جلب الأعمال الفنية المفضلة بنجاح');
+});
+
+export const discoverArtists = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10, sort = 'newest' } = req.query;
+  const skip = (page - 1) * limit;
+  
+  // Base query for artists
+  const baseQuery = { role: 'artist' };
+  
+  // Different sorting options
+  let sortOption = {};
+  switch(sort) {
+    case 'popular':
+      // Sort by number of followers (requires aggregation)
+      const artistsByFollowers = await followModel.aggregate([
+        { $group: { _id: '$following', followersCount: { $sum: 1 } } },
+        { $sort: { followersCount: -1 } },
+        { $skip: skip },
+        { $limit: parseInt(limit) }
+      ]);
+      
+      if (artistsByFollowers.length > 0) {
+        const artistIds = artistsByFollowers.map(item => item._id);
+        
+        // Get the actual artist documents
+        const artists = await userModel.find({ 
+          _id: { $in: artistIds }, 
+          role: 'artist' 
+        }).select('displayName email profileImage job coverImages createdAt');
+        
+        // Sort them in the same order as the aggregation result
+        const sortedArtists = [];
+        artistIds.forEach(id => {
+          const artist = artists.find(a => a._id.toString() === id.toString());
+          if (artist) {
+            // Add follower count to each artist
+            const followerData = artistsByFollowers.find(
+              item => item._id.toString() === id.toString()
+            );
+            artist._doc.followersCount = followerData.followersCount;
+            sortedArtists.push(artist);
+          }
+        });
+        
+        // Count total artists for pagination
+        const totalCount = await userModel.countDocuments(baseQuery);
+        
+        return res.success({
+          artists: sortedArtists,
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
+            hasNextPage: skip + sortedArtists.length < totalCount,
+            hasPrevPage: page > 1
+          }
+        }, 'تم جلب الفنانين بنجاح');
+      }
+      
+      // Fallback to newest if no followers data
+      sortOption = { createdAt: -1 };
+      break;
+      
+    case 'recommended':
+      // If user is logged in, recommend based on followed artists' categories
+      if (req.user) {
+        // Get artists the user follows
+        const following = await followModel.find({ follower: req.user._id })
+          .select('following')
+          .lean();
+        
+        if (following.length > 0) {
+          const followingIds = following.map(f => f.following);
+          
+          // Find artists with similar attributes but not already followed
+          const recommendedArtists = await userModel.find({
+            _id: { $nin: followingIds },
+            role: 'artist'
+          })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .select('displayName email profileImage job coverImages createdAt');
+          
+          const totalCount = await userModel.countDocuments({
+            _id: { $nin: followingIds },
+            role: 'artist'
+          });
+          
+          return res.success({
+            artists: recommendedArtists,
+            pagination: {
+              currentPage: parseInt(page),
+              totalPages: Math.ceil(totalCount / limit),
+              totalCount,
+              hasNextPage: skip + recommendedArtists.length < totalCount,
+              hasPrevPage: page > 1
+            }
+          }, 'تم جلب الفنانين الموصى بهم بنجاح');
+        }
+      }
+      
+      // Fallback to newest if no recommendations possible
+      sortOption = { createdAt: -1 };
+      break;
+      
+    case 'newest':
+    default:
+      sortOption = { createdAt: -1 };
+      break;
+  }
+  
+  // Standard query approach
+  const artists = await userModel.find(baseQuery)
+    .sort(sortOption)
+    .skip(skip)
+    .limit(parseInt(limit))
+    .select('displayName email profileImage job coverImages createdAt');
+  
+  // Add follower count to each artist
+  const artistsWithCounts = await Promise.all(artists.map(async (artist) => {
+    const followersCount = await followModel.countDocuments({ following: artist._id });
+    artist._doc.followersCount = followersCount;
+    return artist;
+  }));
+  
+  // Get total count for pagination
+  const totalCount = await userModel.countDocuments(baseQuery);
+  
+  res.success({
+    artists: artistsWithCounts,
+    pagination: {
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalCount / limit),
+      totalCount,
+      hasNextPage: skip + artists.length < totalCount,
+      hasPrevPage: page > 1
+    }
+  }, 'تم جلب الفنانين بنجاح');
+});
+
+/**
+ * تحديث اللغة المفضلة للمستخدم
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ * @returns {Object} استجابة JSON مع حالة النجاح ورسالة
+ */
+export const updateLanguagePreference = asyncHandler(async (req, res) => {
+  const { language } = req.body;
+  const userId = req.user._id;
+
+  // التحقق من صحة اللغة
+  if (!language || !['ar', 'en'].includes(language)) {
+    return res.status(400).json({
+      success: false,
+      message: 'اللغة غير صالحة',
+      error: 'يجب أن تكون اللغة إما "ar" للعربية أو "en" للإنجليزية'
+    });
+  }
+
+  // تحديث تفضيل اللغة في قاعدة البيانات
+  const updatedUser = await userModel.findByIdAndUpdate(
+    userId,
+    { preferredLanguage: language },
+    { new: true }
+  );
+
+  if (!updatedUser) {
+    return res.status(404).json({
+      success: false,
+      message: 'المستخدم غير موجود',
+      error: 'لم يتم العثور على المستخدم'
+    });
+  }
+
+  // استجابة النجاح
+  const successMessage = language === 'ar' 
+    ? 'تم تحديث اللغة المفضلة بنجاح' 
+    : 'Language preference updated successfully';
+
+  return res.status(200).json({
+    success: true,
+    message: successMessage,
+    data: {
+      preferredLanguage: updatedUser.preferredLanguage
+    }
+  });
+});
+
+export const updateNotificationSettings = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { enablePush, enableEmail, muteChat } = req.body;
+  
+  // Build update object with only provided fields
+  const notificationSettings = {};
+  if (enablePush !== undefined) notificationSettings['notificationSettings.enablePush'] = enablePush;
+  if (enableEmail !== undefined) notificationSettings['notificationSettings.enableEmail'] = enableEmail;
+  if (muteChat !== undefined) notificationSettings['notificationSettings.muteChat'] = muteChat;
+  
+  if (Object.keys(notificationSettings).length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'لم يتم توفير أي إعدادات للتحديث',
+      error: 'No settings provided for update'
+    });
+  }
+  
+  // Update user's notification settings
+  const user = await userModel.findByIdAndUpdate(
+    userId,
+    { $set: notificationSettings },
+    { new: true }
+  ).select('-password');
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'المستخدم غير موجود',
+      error: 'User not found'
+    });
+  }
+  
+  res.status(200).json({
+    success: true,
+    message: 'تم تحديث إعدادات الإشعارات بنجاح',
+    data: {
+      notificationSettings: user.notificationSettings
+    }
+  });
+});
+
+export const deleteAccount = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  // التحقق من كلمة المرور إذا كانت متوفرة
+  if (req.body.password) {
+    const user = await userModel.findById(userId).select('+password');
+    if (user && user.password) {
+      const isMatch = await bcryptjs.compare(req.body.password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          message: 'كلمة المرور غير صحيحة',
+          error: 'Incorrect password'
+        });
+      }
+    }
+  }
+  
+  // حذف جميع بيانات المستخدم المرتبطة
+  // البدء بالمعاملات
+  await Promise.all([
+    // حذف المراجعات والتقييمات
+    reviewModel.deleteMany({ user: userId }),
+    
+    // حذف الإشعارات
+    notificationModel.deleteMany({ user: userId }),
+    
+    // حذف رموز الجلسات
+    tokenModel.deleteMany({ user: userId }),
+    
+    // حذف المتابعات
+    followModel.deleteMany({ 
+      $or: [{ follower: userId }, { following: userId }] 
+    }),
+    
+    // وضع علامة على الأعمال الفنية كمحذوفة بدلاً من حذفها فعلياً
+    artworkModel.updateMany(
+      { artist: userId },
+      { isDeleted: true, isAvailable: false }
+    ),
+    
+    // وضع علامة على المحادثات كمحذوفة
+    chatModel.updateMany(
+      { members: userId },
+      { isDeleted: true }
+    )
+  ]);
+  
+  // حذف المستخدم نفسه (أو وضع علامة عليه كمحذوف)
+  await userModel.findByIdAndUpdate(
+    userId, 
+    { 
+      isDeleted: true,
+      email: `deleted_${userId}@arthub.com`,
+      displayName: 'مستخدم محذوف',
+      firebaseUid: null,
+      isActive: false
+    }
+  );
+  
+  res.status(200).json({
+    success: true,
+    message: 'تم حذف الحساب بنجاح',
+  });
+});
+
+export const logoutAllDevices = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  // حذف جميع رموز الجلسات للمستخدم
+  await tokenModel.deleteMany({ user: userId });
+  
+  // إذا كان المستخدم يستخدم Firebase، يمكن إضافة خطوات إضافية هنا
+  
+  res.status(200).json({
+    success: true,
+    message: 'تم تسجيل الخروج من جميع الأجهزة بنجاح',
+  });
+});
+
+export const deactivateAccount = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  // تحديث حالة المستخدم إلى غير نشط
+  await userModel.findByIdAndUpdate(userId, { isActive: false });
+  
+  // إلغاء صلاحية جميع رموز الجلسات
+  await tokenModel.updateMany(
+    { user: userId },
+    { isValid: false }
+  );
+  
+  res.status(200).json({
+    success: true,
+    message: 'تم تعطيل الحساب بنجاح',
+  });
+});
+
+export const reactivateAccount = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  
+  // البحث عن المستخدم
+  const user = await userModel.findOne({ email }).select('+password');
+  
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'البريد الإلكتروني غير مسجل',
+      error: 'Email not found'
+    });
+  }
+  
+  // التحقق من كلمة المرور
+  if (user.password) {
+    const isMatch = await bcryptjs.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'كلمة المرور غير صحيحة',
+        error: 'Incorrect password'
+      });
+    }
+  }
+  
+  // إعادة تنشيط الحساب
+  if (!user.isActive) {
+    user.isActive = true;
+    await user.save();
+  }
+  
+  res.status(200).json({
+    success: true,
+    message: 'تم إعادة تنشيط الحساب بنجاح',
+  });
 });

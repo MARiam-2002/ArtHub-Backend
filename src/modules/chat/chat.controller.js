@@ -4,6 +4,7 @@ import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import mongoose from 'mongoose';
 import { sendChatMessageNotification } from '../../utils/pushNotifications.js';
+import { sendNotification } from '../notification/notification.controller.js';
 
 /**
  * جلب قائمة المحادثات للمستخدم الحالي
@@ -134,71 +135,67 @@ export const sendMessage = asyncHandler(async (req, res) => {
   const { text } = req.body;
   const userId = req.user._id;
   
-  // التحقق من وجود المحادثة وأن المستخدم مشارك فيها
+  // تحقق من وجود المحادثة ومن أن المستخدم عضو فيها
   const chat = await chatModel.findOne({
     _id: chatId,
-    members: userId
+    members: userId,
+    isDeleted: { $ne: true }
   });
   
   if (!chat) {
-    return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
+    return res.status(404).json({
+      success: false,
+      message: "المحادثة غير موجودة",
+      error: "Chat not found"
+    });
   }
   
-  // إنشاء الرسالة
+  // إنشاء رسالة جديدة
   const message = await messageModel.create({
     chat: chatId,
     sender: userId,
-    text
+    text: text,
+    read: false
   });
   
-  // تحميل بيانات المرسل
-  await message.populate('sender', 'displayName profileImage');
+  // تحديث آخر رسالة في المحادثة
+  chat.lastMessage = message._id;
+  await chat.save();
   
-  // تحديث آخر رسالة وعدد الرسائل غير المقروءة
-  const otherUserId = chat.members.find(m => m.toString() !== userId.toString());
+  // إعادة قراءة الرسالة مع معلومات المرسل
+  const populatedMessage = await messageModel.findById(message._id)
+    .populate('sender', 'displayName userName profileImage');
+  
+  // إرسال إشعار للمستخدم الآخر في المحادثة
+  const otherUserId = chat.members.find(member => member.toString() !== userId.toString());
   
   if (otherUserId) {
-    // زيادة عدد الرسائل غير المقروءة للمستخدم الآخر
-    const unreadCount = (chat.unreadCounts?.get(otherUserId.toString()) || 0) + 1;
+    const senderUser = await userModel.findById(userId);
+    const senderName = senderUser.displayName || senderUser.userName || 'مستخدم';
     
-    if (!chat.unreadCounts) {
-      chat.unreadCounts = new Map();
+    // التحقق مما إذا كان المستخدم قد قام بكتم الإشعارات
+    const otherUser = await userModel.findById(otherUserId);
+    const shouldSendNotification = !(otherUser.notificationSettings?.muteChat === true);
+    
+    if (shouldSendNotification) {
+      await sendNotification(
+        otherUserId,
+        `رسالة جديدة من ${senderName}`,
+        text.length > 50 ? `${text.substring(0, 50)}...` : text,
+        {
+          type: 'chat',
+          chatId: chatId.toString(),
+          senderId: userId.toString()
+        }
+      );
     }
-    
-    chat.unreadCounts.set(otherUserId.toString(), unreadCount);
-    
-    // تحديث آخر رسالة
-    chat.lastMessage = message._id;
-    chat.updatedAt = Date.now();
-    
-    await chat.save();
-    
-    // إرسال إشعار للمستخدم الآخر
-    const sender = await userModel.findById(userId).select('displayName');
-    
-    await sendChatMessageNotification(
-      otherUserId.toString(),
-      userId.toString(),
-      sender.displayName,
-      text,
-      chatId.toString()
-    );
   }
   
-  // تنسيق الرسالة للرد
-  const formattedMessage = {
-    _id: message._id,
-    text: message.text,
-    isFromMe: true,
-    sender: {
-      _id: message.sender._id,
-      displayName: message.sender.displayName,
-      profileImage: message.sender.profileImage
-    },
-    createdAt: message.createdAt
-  };
-  
-  res.status(201).success(formattedMessage, 'تم إرسال الرسالة بنجاح');
+  res.status(201).json({
+    success: true,
+    message: "تم إرسال الرسالة بنجاح",
+    data: populatedMessage
+  });
 });
 
 /**

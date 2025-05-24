@@ -214,126 +214,89 @@ export const getArtworksByCategory = asyncHandler(async (req, res) => {
  * يدعم البحث متعدد المعايير مثل السعر والتقييم والتاريخ والفنان والفئة والوسوم
  */
 export const searchArtworks = asyncHandler(async (req, res) => {
-  const { 
-    query, 
-    minPrice, 
-    maxPrice, 
-    minRating,
-    category,
-    artist,
-    tags,
-    sortBy,
-    sortOrder
-  } = req.query;
+  const { query, category, minPrice, maxPrice, page = 1, limit = 10, sort = 'newest' } = req.query;
+  const skip = (page - 1) * parseInt(limit);
   
-  const { page, limit, skip } = getPaginationParams(req.query);
+  // Build the search filter
+  const filter = {};
   
-  // بناء استعلام البحث
-  const searchQuery = {};
-  
-  // البحث بالنص في العنوان والوصف
+  // Text search if query is provided
   if (query) {
-    searchQuery.$or = [
+    filter.$or = [
       { title: { $regex: query, $options: 'i' } },
-      { description: { $regex: query, $options: 'i' } }
+      { description: { $regex: query, $options: 'i' } },
+      { tags: { $in: [new RegExp(query, 'i')] } }
     ];
   }
   
-  // تصفية حسب السعر
-  if (minPrice !== undefined || maxPrice !== undefined) {
-    searchQuery.price = {};
-    if (minPrice !== undefined) searchQuery.price.$gte = Number(minPrice);
-    if (maxPrice !== undefined) searchQuery.price.$lte = Number(maxPrice);
-  }
-  
-  // تصفية حسب الفئة
+  // Filter by category if provided
   if (category) {
-    searchQuery.category = category;
+    filter.category = category;
   }
   
-  // تصفية حسب الفنان
-  if (artist) {
-    searchQuery.artist = artist;
+  // Price filter
+  if (minPrice || maxPrice) {
+    filter.price = {};
+    if (minPrice) filter.price.$gte = parseFloat(minPrice);
+    if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
   }
   
-  // تصفية حسب الوسوم
-  if (tags) {
-    const tagArray = Array.isArray(tags) ? tags : [tags];
-    searchQuery.tags = { $in: tagArray };
+  // Default to available artworks only
+  filter.isAvailable = true;
+  
+  // Determine sort order
+  let sortOption = {};
+  switch (sort) {
+    case 'priceAsc':
+      sortOption = { price: 1 };
+      break;
+    case 'priceDesc':
+      sortOption = { price: -1 };
+      break;
+    case 'popular':
+      sortOption = { viewCount: -1 };
+      break;
+    case 'newest':
+    default:
+      sortOption = { createdAt: -1 };
+      break;
   }
   
-  // تحديد ترتيب النتائج
-  const sort = {};
-  const validSortFields = ['price', 'createdAt', 'title', 'rating'];
-  
-  if (sortBy && validSortFields.includes(sortBy)) {
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-  } else {
-    sort.createdAt = -1; // افتراضيًا: الأحدث أولاً
-  }
-  
-  // تنفيذ البحث
-  const [artworks, totalCount] = await Promise.all([
-    artworkModel.find(searchQuery)
-      .populate({ path: 'artist', select: 'email job profileImage displayName' })
-      .populate({ path: 'category', select: 'name' })
-      .sort(sort)
-      .skip(skip)
-      .limit(limit),
-    artworkModel.countDocuments(searchQuery)
-  ]);
-  
-  // إذا تم طلب التصفية حسب التقييم، نحتاج لمعالجة خاصة
-  let filteredArtworks = [...artworks];
-  
-  if (minRating !== undefined) {
-    // جلب تقييمات كل عمل فني
-    const artworkIds = artworks.map(artwork => artwork._id);
-    
-    const ratings = await reviewModel.aggregate([
-      { $match: { artwork: { $in: artworkIds } } },
-      { $group: { _id: '$artwork', avgRating: { $avg: '$rating' } } }
+  try {
+    // Execute query with pagination
+    const [artworks, totalCount] = await Promise.all([
+      artworkModel.find(filter)
+        .populate('artist', 'displayName profileImage')
+        .populate('category', 'name')
+        .sort(sortOption)
+        .skip(skip)
+        .limit(parseInt(limit)),
+      artworkModel.countDocuments(filter)
     ]);
     
-    // خريطة للتقييمات
-    const ratingMap = {};
-    ratings.forEach(rating => {
-      ratingMap[rating._id.toString()] = rating.avgRating;
-    });
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
     
-    // تصفية الأعمال حسب التقييم
-    filteredArtworks = artworks.filter(artwork => {
-      const artworkId = artwork._id.toString();
-      const rating = ratingMap[artworkId] || 0;
-      return rating >= Number(minRating);
-    });
+    res.success({
+      artworks,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: totalCount,
+        hasNextPage: parseInt(page) < totalPages,
+        hasPrevPage: parseInt(page) > 1
+      },
+      searchParams: {
+        query,
+        category,
+        minPrice,
+        maxPrice,
+        sort
+      }
+    }, 'تم البحث عن الأعمال الفنية بنجاح');
+  } catch (error) {
+    res.fail(null, 'خطأ في البحث عن الأعمال الفنية', 500);
   }
-  
-  // تطبيق بيانات التقييم على النتائج
-  const artworksWithRatings = await Promise.all(filteredArtworks.map(async (artwork) => {
-    const stats = await reviewModel.aggregate([
-      { $match: { artwork: artwork._id } },
-      { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } }
-    ]);
-    
-    const avgRating = stats[0]?.avgRating || 0;
-    const reviewsCount = stats[0]?.count || 0;
-    
-    return {
-      ...artwork.toObject(),
-      avgRating,
-      reviewsCount
-    };
-  }));
-  
-  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(
-    minRating !== undefined ? filteredArtworks.length : totalCount
-  );
-  
-  res.success(
-    { artworks: artworksWithRatings, pagination: paginationMeta },
-    'تم جلب نتائج البحث بنجاح'
-  );
 });
 
 /**

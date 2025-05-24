@@ -157,3 +157,125 @@ function getErrorCode(status, error) {
 function generateRequestId() {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
 }
+
+/**
+ * تحديد اللغة المفضلة للمستخدم من الطلب
+ * @param {Object} req - كائن الطلب
+ * @returns {string} رمز اللغة (ar أو en)
+ */
+export const getPreferredLanguage = (req) => {
+  // التحقق من وجود معلمة اللغة في الاستعلام
+  if (req.query && req.query.language && ['ar', 'en'].includes(req.query.language)) {
+    return req.query.language;
+  }
+  
+  // التحقق من وجود هيدر اللغة
+  if (req.headers && req.headers['accept-language']) {
+    const acceptLanguage = req.headers['accept-language'];
+    if (acceptLanguage.startsWith('en')) {
+      return 'en';
+    }
+  }
+  
+  // التحقق من تفضيل المستخدم المخزن
+  if (req.user && req.user.preferredLanguage) {
+    return req.user.preferredLanguage;
+  }
+  
+  // القيمة الافتراضية هي العربية
+  return 'ar';
+};
+
+/**
+ * تحسين وسيط استجابة Express.js لتوحيد تنسيق الاستجابة وإضافة دعم اللغات
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ * @param {Function} next - دالة الانتقال للوسيط التالي
+ */
+export const responseEnhancer = (req, res, next) => {
+  // حفظ الدوال الأصلية
+  const originalSend = res.send;
+  const originalJson = res.json;
+  const originalStatus = res.status;
+  
+  // معرف الطلب الفريد
+  const requestId = req.id || `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  req.id = requestId;
+  
+  // تحديد اللغة المفضلة
+  const preferredLanguage = getPreferredLanguage(req);
+  req.preferredLanguage = preferredLanguage;
+  
+  // إعادة تعريف دالة الحالة
+  res.status = function(code) {
+    res.statusCode = code;
+    return originalStatus.apply(res, arguments);
+  };
+  
+  // إعادة تعريف دالة json لتوحيد الاستجابة
+  res.json = function(data) {
+    // التحقق مما إذا كانت البيانات بالفعل في التنسيق المطلوب
+    if (data && typeof data === 'object' && 'success' in data) {
+      // إضافة طابع زمني ومعرف الطلب إذا لم يكن موجودًا
+      data.timestamp = data.timestamp || new Date().toISOString();
+      data.requestId = data.requestId || requestId;
+      
+      // إضافة معلومات اللغة المستخدمة
+      data.language = preferredLanguage;
+      
+      return originalJson.call(this, data);
+    }
+    
+    // تحديد رسالة نجاح ديناميكية بناءً على اللغة
+    const successMessage = preferredLanguage === 'ar' 
+      ? 'تمت العملية بنجاح' 
+      : 'Operation completed successfully';
+    
+    // تنسيق البيانات
+    const formattedData = {
+      success: true,
+      status: res.statusCode || 200,
+      message: successMessage,
+      data: data,
+      timestamp: new Date().toISOString(),
+      requestId: requestId,
+      language: preferredLanguage
+    };
+    
+    return originalJson.call(this, formattedData);
+  };
+  
+  // إعادة تعريف دالة send لتوحيد الاستجابة
+  res.send = function(data) {
+    // إذا كانت البيانات نصية، مرر كما هي
+    if (typeof data === 'string') {
+      return originalSend.apply(res, arguments);
+    }
+    
+    // التحويل إلى JSON
+    return res.json(data);
+  };
+  
+  // إضافة دالة لإرسال رسائل خطأ منسقة
+  res.sendError = function(message, error, statusCode = 400) {
+    // تحديد رسالة خطأ ديناميكية بناءً على اللغة إذا لم يتم توفيرها
+    const errorMessage = message || (preferredLanguage === 'ar' 
+      ? 'حدث خطأ أثناء معالجة الطلب' 
+      : 'An error occurred while processing the request');
+    
+    const errorResponse = {
+      success: false,
+      status: statusCode,
+      message: errorMessage,
+      error: error,
+      timestamp: new Date().toISOString(),
+      requestId: requestId,
+      language: preferredLanguage
+    };
+    
+    return res.status(statusCode).json(errorResponse);
+  };
+  
+  // المتابعة إلى الوسيط التالي
+  next();
+};

@@ -1,4 +1,3 @@
-
 import mongoose, { Schema, Types, model } from "mongoose";
 
 /**
@@ -26,11 +25,25 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           type: string
  *           description: Cloudinary public ID for this image
  *         title:
- *           type: string
- *           description: Title of the image
+ *           type: object
+ *           properties:
+ *             ar:
+ *               type: string
+ *               description: Title in Arabic
+ *             en:
+ *               type: string
+ *               description: Title in English
+ *           description: Multilingual title of the image
  *         description:
- *           type: string
- *           description: Description of the image
+ *           type: object
+ *           properties:
+ *             ar:
+ *               type: string
+ *               description: Description in Arabic
+ *             en:
+ *               type: string
+ *               description: Description in English
+ *           description: Multilingual description of the image
  *         tags:
  *           type: array
  *           items:
@@ -69,6 +82,26 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *         forSale:
  *           type: boolean
  *           description: Whether this image is available for purchase
+ *         optimizationLevel:
+ *           type: string
+ *           enum: [low, medium, high]
+ *           description: Level of image optimization applied
+ *         variants:
+ *           type: object
+ *           properties:
+ *             thumbnail:
+ *               type: string
+ *               description: URL to thumbnail version
+ *             small:
+ *               type: string
+ *               description: URL to small version
+ *             medium:
+ *               type: string
+ *               description: URL to medium version
+ *             large:
+ *               type: string
+ *               description: URL to large version
+ *           description: Different size variants of the image
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -93,22 +126,21 @@ const imageSchema = new Schema({
     type: String, 
     required: true 
   },
-  title: { 
-    type: String,
-    default: 'بدون عنوان',
-    index: true
+  title: {
+    ar: { type: String, default: 'صورة بدون عنوان' },
+    en: { type: String, default: 'Untitled Image' }
   },
-  description: { 
-    type: String,
-    default: '' 
+  description: {
+    ar: { type: String, default: '' },
+    en: { type: String, default: '' }
   },
   tags: [{ 
     type: String,
-    index: true 
+    trim: true
   }],
   category: { 
-    type: String,
-    index: true 
+    type: Types.ObjectId, 
+    ref: "Category" 
   },
   size: { 
     type: Number 
@@ -122,10 +154,22 @@ const imageSchema = new Schema({
   height: { 
     type: Number 
   },
+  hasWatermark: {
+    type: Boolean,
+    default: false
+  },
+  album: {
+    type: String,
+    trim: true,
+    index: true
+  },
+  views: {
+    type: Number,
+    default: 0
+  },
   isPublic: {
     type: Boolean,
-    default: true,
-    index: true
+    default: true
   },
   isFeatured: {
     type: Boolean,
@@ -152,7 +196,29 @@ const imageSchema = new Schema({
   colors: [{ 
     type: String 
   }],
-}, { timestamps: true });
+  optimizedUrl: {
+    type: String
+  },
+  optimizationLevel: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
+  },
+  variants: {
+    thumbnail: { type: String },
+    small: { type: String },
+    medium: { type: String },
+    large: { type: String }
+  },
+  metadata: {
+    type: Object,
+    default: {}
+  }
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
 // Virtual for computed image URL with transformations
 imageSchema.virtual('thumbnailUrl').get(function() {
@@ -172,6 +238,8 @@ imageSchema.index({ tags: 1 });
 imageSchema.index({ isFeatured: 1, createdAt: -1 });
 imageSchema.index({ forSale: 1, price: 1 });
 imageSchema.index({ viewCount: -1 });
+imageSchema.index({ publicId: 1 });
+imageSchema.index({ "title.ar": "text", "title.en": "text", "description.ar": "text", "description.en": "text", tags: "text" });
 
 // Method to increment view count
 imageSchema.methods.incrementViewCount = async function() {
@@ -179,9 +247,22 @@ imageSchema.methods.incrementViewCount = async function() {
   return this.save();
 };
 
-// Ensure virtuals are included when converting to JSON
-imageSchema.set('toJSON', { virtuals: true });
-imageSchema.set('toObject', { virtuals: true });
+// Method to get localized content
+imageSchema.methods.getLocalizedContent = function(language = 'ar') {
+  const result = this.toObject();
+  result.title = this.title[language] || this.title.ar;
+  result.description = this.description[language] || this.description.ar;
+  return result;
+};
+
+// Virtual for stats
+imageSchema.virtual('stats').get(function() {
+  return {
+    views: 0,
+    downloads: 0,
+    likes: 0
+  };
+});
 
 const imageModel = mongoose.models.Image || model("Image", imageSchema);
 export default imageModel;

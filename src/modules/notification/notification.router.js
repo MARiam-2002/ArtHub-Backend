@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as notificationController from './notification.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
+import { verifyFirebaseToken } from '../../middleware/firebase.middleware.js';
 
 const router = Router();
 
@@ -114,5 +115,125 @@ router.delete('/:notificationId', isAuthenticated, notificationController.delete
  *         description: تم حذف جميع الإشعارات بنجاح
  */
 router.delete('/', isAuthenticated, notificationController.deleteAllNotifications);
+
+/**
+ * @swagger
+ * /api/notifications/token:
+ *   post:
+ *     tags:
+ *       - Notifications
+ *     summary: تسجيل رمز إشعارات FCM
+ *     description: تسجيل رمز FCM للإشعارات الفورية للمستخدم الحالي
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: رمز FCM للإشعارات الفورية
+ *     responses:
+ *       200:
+ *         description: تم تسجيل الرمز بنجاح
+ *       400:
+ *         description: الرمز مطلوب
+ */
+router.post('/token', isAuthenticated, notificationController.registerFCMToken);
+
+/**
+ * @swagger
+ * /api/notifications/token:
+ *   delete:
+ *     tags:
+ *       - Notifications
+ *     summary: إلغاء تسجيل رمز إشعارات FCM
+ *     description: إلغاء تسجيل رمز FCM للإشعارات الفورية للمستخدم الحالي
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: رمز FCM للإشعارات الفورية
+ *     responses:
+ *       200:
+ *         description: تم إلغاء تسجيل الرمز بنجاح
+ *       400:
+ *         description: الرمز مطلوب
+ */
+router.delete('/token', isAuthenticated, notificationController.unregisterFCMToken);
+
+/**
+ * @swagger
+ * /api/notifications/token/firebase:
+ *   post:
+ *     tags:
+ *       - Notifications
+ *     summary: تسجيل رمز إشعارات FCM (Firebase)
+ *     description: تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase
+ *     security:
+ *       - FirebaseAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: رمز FCM للإشعارات الفورية
+ *     responses:
+ *       200:
+ *         description: تم تسجيل الرمز بنجاح
+ *       400:
+ *         description: الرمز مطلوب
+ */
+router.post('/token/firebase', verifyFirebaseToken, notificationController.registerFCMToken);
+
+/**
+ * @swagger
+ * /api/notifications/token/firebase:
+ *   delete:
+ *     tags:
+ *       - Notifications
+ *     summary: إلغاء تسجيل رمز إشعارات FCM (Firebase)
+ *     description: إلغاء تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase
+ *     security:
+ *       - FirebaseAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: رمز FCM للإشعارات الفورية
+ *     responses:
+ *       200:
+ *         description: تم إلغاء تسجيل الرمز بنجاح
+ *       400:
+ *         description: الرمز مطلوب
+ */
+router.delete('/token/firebase', verifyFirebaseToken, notificationController.unregisterFCMToken);
 
 export default router; 

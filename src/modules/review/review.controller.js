@@ -229,10 +229,29 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
       { $group: { 
         _id: null, 
         avgRating: { $avg: "$rating" }, 
-        count: { $sum: 1 } 
+        count: { $sum: 1 },
+        ratings: { $push: "$rating" }
       }}
     ])
   ]);
+  
+  // حساب توزيع التقييمات (5 نجوم، 4 نجوم، إلخ)
+  const ratingDistribution = [0, 0, 0, 0, 0]; // توزيع التقييمات (1-5 نجوم)
+  
+  if (stats.length > 0 && stats[0].ratings) {
+    stats[0].ratings.forEach(rating => {
+      const index = Math.floor(rating) - 1;
+      if (index >= 0 && index < 5) {
+        ratingDistribution[index]++;
+      }
+    });
+  }
+  
+  // حساب النسب المئوية للتوزيع
+  const totalRatings = ratingDistribution.reduce((acc, val) => acc + val, 0);
+  const distributionPercentages = ratingDistribution.map(count => 
+    totalRatings > 0 ? Math.round((count / totalRatings) * 100) : 0
+  );
   
   // معلومات الصفحات
   const totalPages = Math.ceil(totalCount / limit);
@@ -243,8 +262,13 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
     data: {
       reviews,
       stats: {
-        avgRating: stats.length > 0 ? stats[0].avgRating : 0,
-        count: totalCount
+        avgRating: stats.length > 0 ? parseFloat(stats[0].avgRating.toFixed(1)) : 0,
+        count: totalCount,
+        distribution: {
+          counts: ratingDistribution.reverse(), // Reverse to show 5-star first
+          percentages: distributionPercentages.reverse(),
+          labels: ['5', '4', '3', '2', '1']
+        }
       },
       pagination: {
         currentPage: Number(page),
