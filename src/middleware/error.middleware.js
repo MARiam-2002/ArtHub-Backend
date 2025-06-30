@@ -3,24 +3,21 @@
  * Provides consistent error response format for the API
  * Optimized for Flutter integration
  */
-export function errorHandler(err, req, res, next) {
-  console.error('ERROR 💥:', err);
+export const globalErrorHandling = (err, req, res, next) => {
+  // Log the error for debugging
+  console.error(`ERROR 💥: ${err.stack}`);
   
-  // Default error information
-  const statusCode = err.status || err.statusCode || err.cause || 500;
-  const message = err.message || 'Internal Server Error';
-  
-  // Handle MongoDB connection errors specifically with more detailed checks
-  if (
-    err.name === 'MongoServerSelectionError' || 
-    err.name === 'MongooseServerSelectionError' ||
+  // Check if it's a MongoDB connection error
+  const isMongoConnectionError = 
     err.name === 'MongoNetworkError' ||
-    err.name === 'MongooseError' && err.message.includes('buffering timed out') ||
-    (err.message && err.message.includes('ECONNREFUSED')) ||
-    (err.message && err.message.includes('connection timed out')) ||
-    (err.message && err.message.includes('failed to connect')) ||
-    (err.message && err.message.includes('getaddrinfo'))
-  ) {
+    err.name === 'MongoServerSelectionError' ||
+    (err.name === 'MongooseError' && err.message.includes('buffering timed out')) ||
+    err.message.includes('failed to connect') ||
+    err.message.includes('connection timed out') ||
+    err.cause === 503;
+
+  // Handle MongoDB connection errors with a specific error response
+  if (isMongoConnectionError) {
     return res.status(503).json({
       success: false,
       status: 503,
@@ -31,54 +28,93 @@ export function errorHandler(err, req, res, next) {
     });
   }
   
-  // Handle MongoDB operation errors (timeouts, etc.)
-  if (
-    (err.name === 'MongooseError' && err.message.includes('Operation')) ||
-    (err.message && err.message.includes('cursor') && err.message.includes('timed out'))
-  ) {
-    return res.status(503).json({
+  // Handle validation errors
+  if (err.name === 'ValidationError') {
+    const validationErrors = {};
+    
+    // Extract validation error messages
+    Object.keys(err.errors).forEach((key) => {
+      validationErrors[key] = err.errors[key].message;
+    });
+    
+    return res.status(400).json({
       success: false,
-      status: 503,
-      message: "الخدمة غير متوفرة مؤقتًا",
-      error: "انتهت مهلة العملية، يرجى المحاولة مرة أخرى",
-      errorCode: "DB_OPERATION_TIMEOUT",
+      status: 400,
+      message: "خطأ في البيانات المدخلة",
+      errors: validationErrors,
       timestamp: new Date().toISOString()
     });
   }
   
-  // Validation errors handling
-  let validationErrors = null;
-  if (err.errors) {
-    validationErrors = Object.values(err.errors).map(error => ({
-      field: error.path,
-      message: error.message
-    }));
+  // Handle duplicate key errors
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue)[0];
+    const value = err.keyValue[field];
+    
+    return res.status(409).json({
+      success: false,
+      status: 409,
+      message: `القيمة '${value}' مستخدمة بالفعل في الحقل '${field}'`,
+      error: "خطأ في تكرار البيانات",
+      timestamp: new Date().toISOString()
+    });
   }
   
-  // Create error response object with Flutter-friendly format
-  const errorResponse = {
+  // Handle JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      success: false,
+      status: 401,
+      message: "غير مصرح",
+      error: "رمز المصادقة غير صالح",
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({
+      success: false,
+      status: 401,
+      message: "غير مصرح",
+      error: "انتهت صلاحية رمز المصادقة",
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Handle file size errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      status: 400,
+      message: "حجم الملف كبير جدًا",
+      error: "يجب أن يكون حجم الملف أقل من 5 ميجابايت",
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Handle timeout errors
+  if (err.name === 'TimeoutError' || err.message.includes('timeout')) {
+    return res.status(408).json({
+      success: false,
+      status: 408,
+      message: "انتهت مهلة الطلب",
+      error: "استغرق الطلب وقتًا طويلاً للاستجابة",
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Default error response
+  const statusCode = err.cause || 500;
+  const errorMessage = statusCode === 500 ? "حدث خطأ داخلي في الخادم" : err.message;
+  
+  res.status(statusCode).json({
     success: false,
     status: statusCode,
-    message: getArabicErrorMessage(statusCode, message),
-    error: process.env.NODE_ENV === 'production' 
-      ? (statusCode === 500 ? 'Server Error' : message)
-      : err.stack,
-    errorCode: getErrorCode(statusCode, message),
+    message: errorMessage,
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     timestamp: new Date().toISOString()
-  };
-  
-  // Add validation errors if they exist - important for form validation in Flutter
-  if (validationErrors) {
-    errorResponse.validationErrors = validationErrors;
-  }
-  
-  // Add request ID if available
-  if (req.id) {
-    errorResponse.requestId = req.id;
-  }
-  
-  res.status(statusCode).json(errorResponse);
-}
+  });
+};
 
 /**
  * Get arabic error message based on status code and english message

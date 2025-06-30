@@ -3,6 +3,7 @@
  * Especially useful in serverless environments
  */
 import mongoose from 'mongoose';
+import { connectDB } from '../../DB/connection.js';
 
 /**
  * Check if a collection exists and is accessible
@@ -168,10 +169,109 @@ export const checkDatabaseHealth = async () => {
   }
 };
 
+/**
+ * Ensure database connection is active and working
+ * @param {boolean} forceReconnect - Force reconnection even if already connected
+ * @returns {Promise<boolean>} - Whether the connection is healthy
+ */
+export const ensureDatabaseConnection = async (forceReconnect = false) => {
+  try {
+    // Check current connection state
+    const currentState = mongoose.connection.readyState;
+    
+    // If connected and not forcing reconnect, verify with a ping
+    if (currentState === 1 && !forceReconnect) {
+      try {
+        // Test connection with a ping
+        await mongoose.connection.db.admin().ping();
+        console.log('✅ MongoDB connection verified with ping');
+        return true;
+      } catch (pingError) {
+        console.error('❌ MongoDB connection ping failed:', pingError);
+        // Connection is not working despite being "connected"
+        // Continue to reconnection logic
+      }
+    }
+    
+    // Not connected or ping failed, try to connect/reconnect
+    if (currentState !== 1 || forceReconnect) {
+      console.log(`🔄 MongoDB connection state: ${currentState}, attempting to connect/reconnect...`);
+      
+      // Close existing connection if any
+      if (currentState !== 0) {
+        try {
+          await mongoose.connection.close();
+          console.log('✅ Closed existing MongoDB connection');
+        } catch (closeError) {
+          console.error('❌ Error closing existing MongoDB connection:', closeError);
+        }
+      }
+      
+      // Connect with our optimized connection function
+      await connectDB();
+      
+      // Verify connection with a ping
+      await mongoose.connection.db.admin().ping();
+      console.log('✅ MongoDB reconnected and verified');
+      return true;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to ensure database connection:', error);
+    return false;
+  }
+};
+
+/**
+ * Execute a database operation with automatic reconnection on failure
+ * @param {Function} operation - The database operation to execute
+ * @param {number} maxRetries - Maximum number of retries
+ * @returns {Promise<any>} - Result of the operation
+ */
+export const executeWithConnectionRetry = async (operation, maxRetries = 2) => {
+  let retries = 0;
+  
+  while (true) {
+    try {
+      // Ensure we have a valid connection
+      if (retries > 0) {
+        await ensureDatabaseConnection(true);
+      } else if (mongoose.connection.readyState !== 1) {
+        await ensureDatabaseConnection();
+      }
+      
+      // Execute the operation
+      return await operation();
+    } catch (error) {
+      // Check if it's a connection-related error
+      const isConnectionError = 
+        error.name === 'MongoNetworkError' ||
+        error.name === 'MongoServerSelectionError' ||
+        (error.name === 'MongooseError' && error.message.includes('buffering timed out')) ||
+        error.message.includes('failed to connect') ||
+        error.message.includes('connection timed out');
+      
+      // If it's a connection error and we haven't exceeded retries, try again
+      if (isConnectionError && retries < maxRetries) {
+        retries++;
+        console.log(`🔄 Retrying database operation (${retries}/${maxRetries}) after connection error:`, error.message);
+        await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+        continue;
+      }
+      
+      // Otherwise, rethrow the error
+      throw error;
+    }
+  }
+};
+
 export default {
   checkCollectionHealth,
   checkIndex,
   createOptimizedQuery,
   paginatedQuery,
-  checkDatabaseHealth
+  checkDatabaseHealth,
+  ensureDatabaseConnection,
+  executeWithConnectionRetry
 }; 

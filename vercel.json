@@ -13,11 +13,25 @@
     }
   ],
   "functions": {
+    "api/db-test.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "api/keepalive.js": {
+      "memory": 512,
+      "maxDuration": 5
+    },
     "index.js": {
       "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   }

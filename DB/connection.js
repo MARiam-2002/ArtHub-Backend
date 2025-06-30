@@ -14,6 +14,43 @@ let cachedConnection = null;
 let isConnecting = false;
 let connectionPromise = null;
 
+// Serverless-optimized connection options
+const getConnectionOptions = (isServerless = false) => {
+  const baseOptions = {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    maxPoolSize: isServerless ? 5 : 10,
+    minPoolSize: isServerless ? 1 : 2,
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    // Critical settings for preventing "buffering timed out" errors
+    bufferCommands: false, // Disable buffering when not connected
+    autoIndex: false, // Don't build indexes on connection
+    family: 4, // Force IPv4
+    // Auto reconnect settings
+    autoReconnect: true,
+    reconnectTries: Number.MAX_VALUE,
+    reconnectInterval: 1000,
+    // Heartbeat to keep connection alive
+    heartbeatFrequencyMS: 10000
+  };
+
+  if (isServerless) {
+    // Additional serverless optimizations
+    baseOptions.serverSelectionTimeoutMS = 5000; // Faster server selection timeout
+    baseOptions.connectTimeoutMS = 5000; // Faster connect timeout
+    
+    // Only add directConnection for non-SRV URIs
+    const connectionUrl = process.env.CONNECTION_URL || '';
+    if (!connectionUrl.includes('+srv')) {
+      baseOptions.directConnection = true; // Skip DNS seedlist discovery
+    }
+  }
+
+  return baseOptions;
+};
+
 /**
  * Connect to MongoDB with optimized settings for serverless environments
  * @param {number} retryCount - Current retry attempt
@@ -60,33 +97,14 @@ export const connectDB = async (retryCount = 0) => {
 
         console.log("🔄 Connecting to production MongoDB...");
         
-        // Highly optimized options for Vercel serverless environment
-        const options = {
-          serverSelectionTimeoutMS: 10000,
-          socketTimeoutMS: 45000,
-          connectTimeoutMS: 10000,
-          maxPoolSize: 5,
-          minPoolSize: 1,
-          bufferCommands: true,
-          bufferTimeoutMS: 30000,
-          useNewUrlParser: true,
-          useUnifiedTopology: true,
-          // Auto reconnect settings
-          autoReconnect: true,
-          reconnectTries: Number.MAX_VALUE,
-          reconnectInterval: 1000,
-          // Heartbeat to keep connection alive
-          heartbeatFrequencyMS: 10000,
-          // Serverless optimizations
-          poolSize: 5,
-          family: 4 // Force IPv4
-        };
-        
-        // Special handling for Vercel environment
-        if (process.env.VERCEL || process.env.VERCEL_ENV) {
-          console.log("🚀 Running in Vercel environment, using serverless optimizations");
-          options.directConnection = true;
+        // Detect serverless environment
+        const isServerless = !!process.env.VERCEL || !!process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME;
+        if (isServerless) {
+          console.log("🚀 Running in serverless environment, using optimized settings");
         }
+        
+        // Get appropriate connection options
+        const options = getConnectionOptions(isServerless);
         
         // Connect with optimized settings
         await mongoose.connect(process.env.CONNECTION_URL, options);
@@ -103,22 +121,12 @@ export const connectDB = async (retryCount = 0) => {
             process.env.CONNECTION_URL = mongoUri;
           }
           
-          // Connect to in-memory database
-          await mongoose.connect(process.env.CONNECTION_URL, {
-            serverSelectionTimeoutMS: 10000,
-            connectTimeoutMS: 10000,
-            bufferCommands: true,
-            bufferTimeoutMS: 30000,
-          });
+          // Connect to in-memory database with appropriate options
+          await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
         } else {
           // Use CONNECTION_URL from environment variables for development
           console.log("🔄 Connecting to development MongoDB with provided URL...");
-          await mongoose.connect(process.env.CONNECTION_URL, {
-            serverSelectionTimeoutMS: 10000,
-            connectTimeoutMS: 10000,
-            bufferCommands: true,
-            bufferTimeoutMS: 30000,
-          });
+          await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
         }
       }
 

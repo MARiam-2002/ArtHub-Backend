@@ -8,57 +8,103 @@ import { resetPassword } from "../../../utils/generateHtml.js";
 import tokenModel from "../../../../DB/models/token.model.js";
 import admin from '../../../utils/firebaseAdmin.js';
 import { updateUserFCMToken } from '../../../utils/pushNotifications.js';
+import mongoose from "mongoose";
 
-export const register = asyncHandler(async (req, res, next) => {
-  const { email, password, job } = req.body;
+export const register = async (req, res, next) => {
+  try {
+    // Check MongoDB connection first
+    if (mongoose.connection.readyState !== 1) {
+      console.log("MongoDB connection is not ready during registration. Current state:", mongoose.connection.readyState);
+      try {
+        // Try to reconnect
+        await mongoose.connect(process.env.CONNECTION_URL, {
+          serverSelectionTimeoutMS: 5000,
+          socketTimeoutMS: 30000,
+          connectTimeoutMS: 5000,
+          bufferCommands: false // Prevent operation buffering
+        });
+        console.log("MongoDB reconnected during registration");
+      } catch (connErr) {
+        console.error("Failed to reconnect to MongoDB during registration:", connErr);
+        return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+      }
+    }
 
-  const user = await userModel.findOne({ email });
+    // Extract data from request body
+    const { displayName, email, password, phoneNumber } = req.body;
+    
+    // Check if user already exists - with timeout handling
+    let existingUser;
+    try {
+      existingUser = await Promise.race([
+        userModel.findOne({ email }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Database operation timed out")), 5000)
+        )
+      ]);
+    } catch (findError) {
+      console.error("Registration error:", findError);
+      if (findError.message.includes("timed out")) {
+        return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+      }
+      return next(new Error("حدث خطأ أثناء التحقق من البريد الإلكتروني", { cause: 500 }));
+    }
 
-  const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+    if (existingUser) {
+      return next(new Error("البريد الإلكتروني مسجل بالفعل", { cause: 409 }));
+    }
 
-  if (user) {
-    return next(new Error(invalidMessage, { cause: 400 }));
+    // Hash password
+    const hashedPassword = await bcryptjs.hash(password, parseInt(process.env.SALT_ROUND));
+
+    // Create new user with explicit timeout handling
+    let newUser;
+    try {
+      newUser = await Promise.race([
+        userModel.create({
+          displayName,
+          email,
+          password: hashedPassword,
+          phoneNumber,
+          role: "User",
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("User creation timed out")), 5000)
+        )
+      ]);
+    } catch (createError) {
+      console.error("User creation error:", createError);
+      if (createError.message.includes("timed out")) {
+        return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+      }
+      return next(new Error("حدث خطأ أثناء إنشاء الحساب", { cause: 500 }));
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      { id: newUser._id, email: newUser.email, role: newUser.role },
+      process.env.TOKEN_KEY,
+      { expiresIn: "30d" }
+    );
+
+    // Return success response
+    return res.status(201).json({
+      success: true,
+      message: "تم إنشاء الحساب بنجاح",
+      data: {
+        _id: newUser._id,
+        displayName: newUser.displayName,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        role: newUser.role,
+        token,
+      },
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    return next(new Error("حدث خطأ أثناء إنشاء الحساب", { cause: 500 }));
   }
-
-  const hashPassword = await bcryptjs.hash(
-    password,
-    Number(process.env.SALT_ROUND)
-  );
-
-  const newUser = await userModel.create({
-    email,
-    password: hashPassword,
-    job: job || "مستخدم",
-  });
-
-  const token = jwt.sign(
-    {
-      id: newUser._id,
-      email: newUser.email,
-      role: newUser.role,
-    },
-    process.env.TOKEN_KEY
-  );
-
-  await tokenModel.findOneAndDelete({ user: newUser._id });
-
-  await tokenModel.create({
-    token,
-    user: newUser._id,
-    agent: req.headers["user-agent"],
-  });
-
-  return res.status(201).json({
-    success: true,
-    message: "تم التسجيل بنجاح!",
-    data: {
-      email: newUser.email,
-      role: newUser.role,
-      job: newUser.job,
-      token,
-    },
-  });
-});
+};
 
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;

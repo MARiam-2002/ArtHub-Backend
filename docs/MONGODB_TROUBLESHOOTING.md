@@ -284,4 +284,238 @@ If you're still experiencing issues:
 
 1. Check MongoDB Atlas status page: https://status.mongodb.com/
 2. Review MongoDB connection documentation: https://docs.mongodb.com/drivers/node/current/fundamentals/connection/
-3. Contact MongoDB Atlas support if you're using their cloud service 
+3. Contact MongoDB Atlas support if you're using their cloud service
+
+# MongoDB Troubleshooting Guide for Vercel Deployment
+
+## Common MongoDB Connection Issues in Serverless Environments
+
+When deploying a MongoDB-backed application on Vercel or other serverless platforms, you may encounter specific connection issues that don't typically occur in traditional server environments. This guide will help you diagnose and resolve these issues.
+
+## Identifying the Problem
+
+### Common Error Messages
+
+1. **Operation `collection.findOne()` buffering timed out after 10000ms**
+   - This occurs when MongoDB operations are queued (buffered) while waiting for a connection, but the connection isn't established within the timeout period.
+
+2. **MongoServerSelectionError: connection timed out**
+   - MongoDB driver couldn't select a server to connect to within the specified timeout.
+
+3. **MongoNetworkError: failed to connect to server**
+   - Network-level connection failure, often due to firewall rules or incorrect connection string.
+
+4. **MongooseServerSelectionError: getaddrinfo ENOTFOUND**
+   - DNS resolution failure - the MongoDB host cannot be found.
+
+### Diagnosis Steps
+
+1. **Check the connection status**:
+   - Visit `/api/db-test` endpoint with your DB_TEST_KEY to get detailed diagnostics
+   - Example: `https://your-app.vercel.app/api/db-test?key=your_db_test_key`
+
+2. **Verify environment variables**:
+   - Ensure `CONNECTION_URL` is properly set in Vercel's environment variables
+   - Check for any special characters that might need URL encoding
+
+3. **Check MongoDB Atlas settings**:
+   - IP access list (whitelist)
+   - User permissions
+   - Cluster status
+
+## Common Solutions
+
+### 1. MongoDB Atlas IP Whitelist
+
+The most common issue is IP whitelisting. Vercel functions run on dynamic IPs that change between invocations.
+
+**Solution**: Add `0.0.0.0/0` (allow access from anywhere) to your MongoDB Atlas IP Access List.
+
+1. Log in to MongoDB Atlas
+2. Go to Network Access under Security
+3. Add `0.0.0.0/0` to the IP Access List
+4. Save changes
+
+### 2. Connection String Configuration
+
+Optimize your connection string for serverless environments:
+
+```javascript
+// Optimized connection options for serverless
+const options = {
+  serverSelectionTimeoutMS: 5000,  // Reduce from default 30s
+  socketTimeoutMS: 45000,          // Keep socket alive longer
+  connectTimeoutMS: 5000,          // Connect faster or fail
+  maxPoolSize: 5,                  // Smaller connection pool for serverless
+  minPoolSize: 1,                  // Maintain at least one connection
+  bufferCommands: false,           // Don't buffer commands when disconnected
+  autoIndex: false,                // Don't build indexes on connection
+  family: 4                        // Force IPv4
+};
+
+mongoose.connect(process.env.CONNECTION_URL, options);
+```
+
+### 3. Connection Pooling Issues
+
+Serverless functions may create too many connections that aren't properly closed.
+
+**Solutions**:
+- Use a smaller connection pool (`maxPoolSize: 5`)
+- Implement connection caching (already done in our `DB/connection.js`)
+- Use a connection management service like MongoDB Atlas Serverless
+
+### 4. Cold Start Problems
+
+Serverless functions that haven't been used recently experience "cold starts" where the function container needs to be initialized.
+
+**Solutions**:
+- Use the `/api/keepalive` endpoint with a cron job (already configured in `vercel.json`)
+- Implement connection caching (already done in our code)
+- Use MongoDB Atlas Serverless for better cold start performance
+
+### 5. Authentication Issues
+
+**Solutions**:
+- Double-check username and password in connection string
+- Ensure special characters in password are URL encoded
+- Verify the user has appropriate permissions in MongoDB Atlas
+
+## Advanced Troubleshooting
+
+### Testing Direct MongoDB Connection
+
+Use the `test-mongodb.js` script to test your connection outside of the Vercel environment:
+
+```bash
+# Set your connection string as an environment variable
+export CONNECTION_URL="mongodb+srv://username:password@cluster.mongodb.net/database"
+
+# Run the test script
+node test-mongodb.js
+```
+
+### Debugging Connection Issues
+
+Add these environment variables to your Vercel project for additional debugging:
+
+```
+DEBUG=mongodb:*,mongoose:*
+DEBUG_DEPTH=5
+```
+
+### Checking Connection Status Programmatically
+
+```javascript
+// Check MongoDB connection state
+const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+const currentState = mongoose.connection.readyState;
+console.log(`MongoDB connection state: ${states[currentState]}`);
+
+// Test connection with a ping
+try {
+  await mongoose.connection.db.admin().ping();
+  console.log('MongoDB connection is healthy');
+} catch (error) {
+  console.error('MongoDB connection is not healthy:', error);
+}
+```
+
+## Vercel-Specific Optimizations
+
+### Function Duration
+
+Increase the function duration limit for endpoints that interact with MongoDB:
+
+```json
+{
+  "functions": {
+    "api/db-intensive-endpoint.js": {
+      "maxDuration": 60
+    }
+  }
+}
+```
+
+### Memory Allocation
+
+Increase memory allocation for database-intensive operations:
+
+```json
+{
+  "functions": {
+    "api/db-intensive-endpoint.js": {
+      "memory": 1024
+    }
+  }
+}
+```
+
+### Keep-Alive Strategy
+
+Use a cron job to keep your function warm:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
+```
+
+## MongoDB Atlas Specific Settings
+
+### Recommended Atlas Cluster Settings
+
+1. **M0 Sandbox or higher tier** (Free tier has limitations that can affect serverless deployments)
+2. **Enable Auto-Scale** if available on your plan
+3. **Set appropriate backup strategy** for production data
+
+### Network Settings
+
+1. **IP Whitelist**: Add `0.0.0.0/0` to allow connections from anywhere
+2. **Connection Security**: Enable TLS/SSL for all connections
+3. **Private Endpoint**: Consider using AWS PrivateLink for production environments
+
+## Best Practices for Serverless MongoDB
+
+1. **Use connection pooling wisely**
+   - Smaller pool sizes work better in serverless
+   - Cache connections between function invocations
+
+2. **Implement retry logic**
+   - Add exponential backoff for failed operations
+   - Use our `executeWithConnectionRetry` utility function
+
+3. **Optimize query performance**
+   - Create proper indexes for frequent queries
+   - Use projection to limit returned fields
+   - Set reasonable timeouts for operations
+
+4. **Handle connection failures gracefully**
+   - Return user-friendly error messages
+   - Implement circuit breakers for repeated failures
+
+5. **Monitor and log connection issues**
+   - Use detailed logging for connection events
+   - Set up alerts for connection failures
+
+## Testing Your Connection
+
+Visit these endpoints to test and monitor your MongoDB connection:
+
+1. **Connection Test**: `/api/db-test?key=your_db_test_key`
+2. **Keepalive Endpoint**: `/api/keepalive`
+3. **Health Check**: `/health`
+
+## Need More Help?
+
+If you're still experiencing issues after trying these solutions:
+
+1. Check MongoDB Atlas status page for any ongoing incidents
+2. Review Vercel logs for specific error messages
+3. Contact MongoDB Atlas support with your connection diagnostics
+4. Review the [MongoDB Node.js Driver documentation](https://docs.mongodb.com/drivers/node/) for additional troubleshooting steps 
