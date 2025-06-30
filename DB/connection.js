@@ -9,7 +9,16 @@ let mongoServer;
 const MAX_RETRIES = 5;
 const RETRY_INTERVAL = 3000; // 3 seconds
 
+// Cache the database connection
+let cachedConnection = null;
+
 export const connectDB = async (retryCount = 0) => {
+  // If we already have a connection, return it
+  if (cachedConnection && mongoose.connection.readyState === 1) {
+    console.log("✅ Using cached MongoDB connection");
+    return cachedConnection;
+  }
+
   try {
     // نهج مختلف للاتصال بناءً على البيئة
     if (process.env.NODE_ENV === "production") {
@@ -28,14 +37,28 @@ export const connectDB = async (retryCount = 0) => {
       }
 
       console.log("Connecting to production MongoDB...");
-      await mongoose.connect(process.env.CONNECTION_URL, {
-        serverSelectionTimeoutMS: 10000, // Increased from 5000
-        socketTimeoutMS: 45000,
-        maxPoolSize: 10,
-        connectTimeoutMS: 10000,
+      
+      // Serverless-optimized connection options
+      const options = {
+        serverSelectionTimeoutMS: 5000, // Reduced for serverless
+        socketTimeoutMS: 30000,
+        maxPoolSize: 5, // Reduced for serverless
+        minPoolSize: 1, // Ensure at least one connection
+        connectTimeoutMS: 5000, // Reduced for serverless
         bufferCommands: true,
-        bufferTimeoutMS: 30000, // Added buffer timeout setting
-      });
+        bufferTimeoutMS: 10000, // Reduced for serverless
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      };
+      
+      // For Vercel serverless, we need to handle connection differently
+      if (process.env.VERCEL) {
+        console.log("Running in Vercel environment, using optimized connection");
+        // Don't wait for DNS seedlist discovery
+        options.directConnection = true;
+      }
+      
+      await mongoose.connect(process.env.CONNECTION_URL, options);
     } else {
       // بيئة التطوير: استخدام mongodb-memory-server إذا لم يتم توفير URL الاتصال
       if (!process.env.CONNECTION_URL) {
@@ -71,7 +94,8 @@ export const connectDB = async (retryCount = 0) => {
     }
 
     console.log("✅ MongoDB connected successfully!");
-    return mongoose.connection;
+    cachedConnection = mongoose.connection;
+    return cachedConnection;
   } catch (error) {
     console.error("❌ Database connection error:", error.message);
     
@@ -121,6 +145,7 @@ export const closeDatabase = async () => {
         await mongoose.connection.close();
         console.log("✅ MongoDB connection closed successfully");
       }
+      cachedConnection = null;
     }
   } catch (error) {
     console.error("❌ Error closing database connection:", error);

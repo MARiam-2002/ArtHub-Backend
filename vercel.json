@@ -12,6 +12,12 @@
       "dest": "index.js"
     }
   ],
+  "functions": {
+    "index.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "env": {
     "NODE_ENV": "production",
     "CONNECTION_URL": "mongodb+srv://your_username:your_password@your_cluster.mongodb.net/arthubdb?retryWrites=true&w=majority",

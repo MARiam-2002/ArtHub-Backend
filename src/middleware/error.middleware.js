@@ -1,4 +1,3 @@
-
 /**
  * Global error handling middleware
  * Provides consistent error response format for the API
@@ -10,6 +9,23 @@ export function errorHandler(err, req, res, next) {
   // Default error information
   const statusCode = err.status || err.statusCode || err.cause || 500;
   const message = err.message || 'Internal Server Error';
+  
+  // Handle MongoDB connection errors specifically
+  if (
+    err.name === 'MongoServerSelectionError' || 
+    err.name === 'MongooseServerSelectionError' ||
+    (err.message && err.message.includes('ECONNREFUSED')) ||
+    (err.message && err.message.includes('connection timed out'))
+  ) {
+    return res.status(503).json({
+      success: false,
+      status: 503,
+      message: "الخدمة غير متوفرة",
+      error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
+      errorCode: "DB_CONNECTION_ERROR",
+      timestamp: new Date().toISOString()
+    });
+  }
   
   // Validation errors handling
   let validationErrors = null;
@@ -86,7 +102,8 @@ function getErrorCode(statusCode, message) {
     409: 'CONFLICT',
     422: 'VALIDATION_ERROR',
     429: 'TOO_MANY_REQUESTS',
-    500: 'SERVER_ERROR'
+    500: 'SERVER_ERROR',
+    503: 'SERVICE_UNAVAILABLE'
   };
   
   // Default to status-based code
@@ -102,6 +119,8 @@ function getErrorCode(statusCode, message) {
       code = 'INVALID_TOKEN';
     } else if (/upload/i.test(message) || /file/i.test(message)) {
       code = 'FILE_ERROR';
+    } else if (/mongo|database|connection/i.test(message)) {
+      code = 'DB_CONNECTION_ERROR';
     }
   }
   

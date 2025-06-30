@@ -13,19 +13,47 @@ const MAX_PORT_ATTEMPTS = 10; // Try up to 10 consecutive ports if needed
 let server;
 let io;
 
-// Connect to MongoDB with improved error handling
-connectDB()
-  .then(() => console.log("✅ Connected to MongoDB successfully"))
-  .catch(err => {
-    console.error("❌ MongoDB Connection Error:", err);
-    if (process.env.NODE_ENV === 'production') {
-      console.error("⚠️ Application may not function correctly without database connection");
-      // In production, we continue running but log the error
-      // This allows the server to start even with temporary DB connection issues
-    } else {
-      console.log("⚠️ Application will continue without database connection - some features may not work properly");
+// Connect to MongoDB with improved error handling for serverless environments
+const initializeDatabase = async () => {
+  try {
+    await connectDB();
+    console.log("✅ Database connection initialized");
+  } catch (err) {
+    console.error("❌ Database initialization error:", err);
+    // In serverless, we don't want to crash the app on DB connection failure
+    // The connection will be retried on subsequent requests
+  }
+};
+
+// Initialize database connection
+initializeDatabase();
+
+// Add middleware to check database connection on each request
+app.use(async (req, res, next) => {
+  // Skip database check for non-API routes and health checks
+  if (!req.path.startsWith('/api') || req.path === '/health' || req.path === '/api-docs') {
+    return next();
+  }
+  
+  try {
+    // Check if we have a valid MongoDB connection
+    if (mongoose.connection.readyState !== 1) {
+      // Try to reconnect
+      await connectDB();
     }
-  });
+    next();
+  } catch (err) {
+    console.error("❌ Database connection error during request:", err);
+    return res.status(503).json({
+      success: false,
+      status: 503,
+      message: "الخدمة غير متوفرة",
+      error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
+      errorCode: "ERROR_503",
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // Initialize routes and middleware
 bootstrap(app, express);

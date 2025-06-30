@@ -27,67 +27,176 @@ MongooseError: Operation `users.findOne()` buffering timed out after 1000ms
        serverSelectionTimeoutMS: 10000,
        socketTimeoutMS: 45000,
        connectTimeoutMS: 10000,
-       bufferCommands: true,
        bufferTimeoutMS: 30000
      }
      ```
 
-3. **Check network connectivity**
-   - Ensure your server can reach MongoDB Atlas or your MongoDB server
-   - For MongoDB Atlas, check if your IP is whitelisted in the Network Access settings
+3. **Check MongoDB Atlas whitelist**
+   - Ensure your IP address or 0.0.0.0/0 is in the IP Access List
+   - For Vercel deployments, you must allow access from all IPs (0.0.0.0/0)
 
-4. **Verify MongoDB server status**
-   - For self-hosted MongoDB, check if the MongoDB service is running
-   - For MongoDB Atlas, check the cluster status in the Atlas dashboard
+### 2. Service Unavailable (503) on Vercel
 
-### 2. Authentication Failed
+**Error Message:**
+```json
+{
+  "success": false,
+  "status": 503,
+  "message": "الخدمة غير متوفرة",
+  "error": "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
+  "errorCode": "ERROR_503",
+  "timestamp": "2025-06-30T21:27:01.488Z"
+}
+```
+
+**Causes:**
+- Serverless cold starts causing connection timeouts
+- MongoDB connection not optimized for serverless environments
+- Missing or incorrect environment variables in Vercel
+
+**Solutions:**
+1. **Update Vercel configuration**
+   - Add the following to your `vercel.json` file:
+     ```json
+     "functions": {
+       "index.js": {
+         "memory": 1024,
+         "maxDuration": 10
+       }
+     }
+     ```
+
+2. **Optimize MongoDB connection for serverless**
+   - Use connection pooling with lower values for serverless:
+     ```javascript
+     {
+       maxPoolSize: 5,
+       minPoolSize: 1,
+       serverSelectionTimeoutMS: 5000,
+       socketTimeoutMS: 30000,
+       connectTimeoutMS: 5000
+     }
+     ```
+
+3. **Implement connection caching**
+   - Cache the MongoDB connection between function invocations
+   - Add a connection check middleware for each API request
+
+4. **Set up proper environment variables in Vercel**
+   - Go to your Vercel project dashboard
+   - Navigate to Settings > Environment Variables
+   - Add your MongoDB connection string as CONNECTION_URL
+   - Make sure to use the correct format: `mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority`
+
+### 3. Authentication Failed
 
 **Error Message:**
 ```
 MongoServerError: Authentication failed
 ```
 
+**Causes:**
+- Incorrect username or password in connection string
+- Special characters in password not properly URL encoded
+- User doesn't have access to the specified database
+
 **Solutions:**
 1. **Check credentials**
-   - Verify username and password in your connection string
-   - Ensure the user has appropriate permissions for the database
+   - Verify username and password are correct
+   - URL encode special characters in your password
 
-2. **Database user permissions**
-   - Make sure the user has read/write access to the database
+2. **Check database permissions**
+   - Ensure the user has appropriate roles for the database
    - In MongoDB Atlas, check Database Access settings
 
-### 3. Network Connectivity Issues
+### 4. Connection Timeout in Production
 
 **Error Message:**
 ```
-MongooseServerSelectionError: getaddrinfo ENOTFOUND cluster0.example.mongodb.net
+MongoServerSelectionError: connection timed out
 ```
 
+**Causes:**
+- Network latency between your server and MongoDB
+- Firewall or security group restrictions
+- MongoDB server under heavy load
+
 **Solutions:**
-1. **Check DNS resolution**
-   - Verify that the hostname in your connection string is correct
-   - Try pinging the MongoDB host to check connectivity
+1. **Check network connectivity**
+   - Ensure your hosting provider can reach MongoDB Atlas
+   - Test with a simple connection script
 
-2. **Firewall settings**
-   - Ensure your firewall allows outbound connections to MongoDB (port 27017)
-   - For cloud hosting, check security group settings
+2. **Adjust timeout settings**
+   - Increase serverSelectionTimeoutMS and connectTimeoutMS
+   - Add connection retry logic
 
-3. **IP Whitelist**
-   - For MongoDB Atlas, add your server's IP address to the IP whitelist
+3. **Check MongoDB Atlas status**
+   - Visit MongoDB Atlas status page for any ongoing issues
 
-## Quick Fixes
+## Vercel Deployment Specific Issues
 
-1. **Restart the application**
-   - Sometimes a simple restart can resolve temporary connection issues
+### 1. Cold Start Connection Problems
 
-2. **Use connection pooling**
-   - Set appropriate `maxPoolSize` in connection options (default is 5)
+**Symptoms:**
+- First request after inactivity fails with 503 error
+- Subsequent requests work normally
 
-3. **Enable automatic reconnection**
-   - Set `autoReconnect: true` in connection options
+**Solutions:**
+1. **Implement connection caching**
+   - Store the mongoose connection in a variable outside the serverless function
+   - Check and reuse the connection on each request
 
-4. **Use retry mechanism**
-   - The application now includes automatic retry logic for connection failures
+2. **Use connection pooling optimized for serverless**
+   - Lower maxPoolSize (5 is recommended)
+   - Set minPoolSize to 1
+   - Enable directConnection option for Vercel
+
+3. **Add keep-alive mechanism**
+   - Set up a scheduled task to ping your API every 5 minutes
+   - This prevents cold starts by keeping the function warm
+
+### 2. Environment Variables Not Working
+
+**Symptoms:**
+- Connection fails even with correct configuration
+- Logs show "Missing CONNECTION_URL" error
+
+**Solutions:**
+1. **Check Vercel dashboard**
+   - Verify environment variables are set correctly
+   - Environment variables are case-sensitive
+
+2. **Use Vercel CLI to debug**
+   - Run `vercel env ls` to list environment variables
+   - Add missing variables with `vercel env add`
+
+3. **Check for placeholder values**
+   - Make sure you've replaced placeholder values in vercel.json
+   - The connection.js file checks for placeholders like "your_username"
+
+## Best Practices for MongoDB in Serverless
+
+1. **Connection pooling**
+   - Use appropriate pool sizes for serverless (smaller is better)
+   - Set minPoolSize to ensure at least one connection is maintained
+
+2. **Connection caching**
+   - Store and reuse database connections between invocations
+   - Check connection state before reusing
+
+3. **Error handling**
+   - Implement robust error handling and retry mechanisms
+   - Return user-friendly error messages
+
+4. **Monitoring**
+   - Set up monitoring for database connection issues
+   - Use MongoDB Atlas monitoring tools
+
+5. **Performance optimization**
+   - Create appropriate indexes for your queries
+   - Use MongoDB Atlas performance advisor
+
+By following these troubleshooting steps and best practices, you should be able to resolve most MongoDB connection issues in both development and production environments.
 
 ## Environment Variables Setup
 
