@@ -10,12 +10,16 @@ export function errorHandler(err, req, res, next) {
   const statusCode = err.status || err.statusCode || err.cause || 500;
   const message = err.message || 'Internal Server Error';
   
-  // Handle MongoDB connection errors specifically
+  // Handle MongoDB connection errors specifically with more detailed checks
   if (
     err.name === 'MongoServerSelectionError' || 
     err.name === 'MongooseServerSelectionError' ||
+    err.name === 'MongoNetworkError' ||
+    err.name === 'MongooseError' && err.message.includes('buffering timed out') ||
     (err.message && err.message.includes('ECONNREFUSED')) ||
-    (err.message && err.message.includes('connection timed out'))
+    (err.message && err.message.includes('connection timed out')) ||
+    (err.message && err.message.includes('failed to connect')) ||
+    (err.message && err.message.includes('getaddrinfo'))
   ) {
     return res.status(503).json({
       success: false,
@@ -23,6 +27,21 @@ export function errorHandler(err, req, res, next) {
       message: "الخدمة غير متوفرة",
       error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
       errorCode: "DB_CONNECTION_ERROR",
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Handle MongoDB operation errors (timeouts, etc.)
+  if (
+    (err.name === 'MongooseError' && err.message.includes('Operation')) ||
+    (err.message && err.message.includes('cursor') && err.message.includes('timed out'))
+  ) {
+    return res.status(503).json({
+      success: false,
+      status: 503,
+      message: "الخدمة غير متوفرة مؤقتًا",
+      error: "انتهت مهلة العملية، يرجى المحاولة مرة أخرى",
+      errorCode: "DB_OPERATION_TIMEOUT",
       timestamp: new Date().toISOString()
     });
   }
@@ -121,6 +140,8 @@ function getErrorCode(statusCode, message) {
       code = 'FILE_ERROR';
     } else if (/mongo|database|connection/i.test(message)) {
       code = 'DB_CONNECTION_ERROR';
+    } else if (/timeout|timed out/i.test(message)) {
+      code = 'OPERATION_TIMEOUT';
     }
   }
   

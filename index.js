@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import { bootstrap } from "./src/index.router.js";
-import { connectDB, closeDatabase } from "./DB/connection.js";
+import { connectDB, closeDatabase, checkDatabaseConnection } from "./DB/connection.js";
 import mongoose from "mongoose";
 import http from 'http';
 import { initializeSocketIO } from "./src/utils/socketService.js";
@@ -13,7 +13,7 @@ const MAX_PORT_ATTEMPTS = 10; // Try up to 10 consecutive ports if needed
 let server;
 let io;
 
-// Connect to MongoDB with improved error handling for serverless environments
+// Initial database connection attempt - don't block serverless cold start
 const initializeDatabase = async () => {
   try {
     await connectDB();
@@ -26,7 +26,10 @@ const initializeDatabase = async () => {
 };
 
 // Initialize database connection
-initializeDatabase();
+initializeDatabase().catch(err => {
+  console.error("❌ Initial database connection failed:", err.message);
+  // Don't crash the app, we'll retry per-request
+});
 
 // Add middleware to check database connection on each request
 app.use(async (req, res, next) => {
@@ -36,11 +39,21 @@ app.use(async (req, res, next) => {
   }
   
   try {
-    // Check if we have a valid MongoDB connection
-    if (mongoose.connection.readyState !== 1) {
-      // Try to reconnect
-      await connectDB();
+    // Enhanced connection check with ping
+    const isConnected = await checkDatabaseConnection();
+    
+    if (!isConnected) {
+      console.error("❌ Database connection check failed during request");
+      return res.status(503).json({
+        success: false,
+        status: 503,
+        message: "الخدمة غير متوفرة",
+        error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
+        errorCode: "DB_CONNECTION_ERROR",
+        timestamp: new Date().toISOString()
+      });
     }
+    
     next();
   } catch (err) {
     console.error("❌ Database connection error during request:", err);
@@ -49,7 +62,7 @@ app.use(async (req, res, next) => {
       status: 503,
       message: "الخدمة غير متوفرة",
       error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
-      errorCode: "ERROR_503",
+      errorCode: "DB_CONNECTION_ERROR",
       timestamp: new Date().toISOString()
     });
   }
@@ -70,17 +83,51 @@ app.get("/api", (req, res) => {
   });
 });
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? "Connected" : "Disconnected";
+// Enhanced health check endpoint with detailed MongoDB status
+app.get("/health", async (req, res) => {
+  let dbStatus = "Unknown";
+  let dbDetails = {};
+  
+  try {
+    // Check MongoDB connection status
+    if (mongoose.connection.readyState === 1) {
+      dbStatus = "Connected";
+      
+      // Get additional MongoDB status info if connected
+      try {
+        const adminDb = mongoose.connection.db.admin();
+        const serverStatus = await adminDb.serverStatus();
+        dbDetails = {
+          version: serverStatus.version,
+          uptime: serverStatus.uptime,
+          connections: serverStatus.connections?.current || 0,
+          ok: serverStatus.ok === 1
+        };
+      } catch (dbError) {
+        console.error("Error getting MongoDB server status:", dbError);
+        dbDetails = { error: "Could not retrieve detailed status" };
+      }
+    } else {
+      // Map readyState to human-readable status
+      const states = ["Disconnected", "Connected", "Connecting", "Disconnecting"];
+      dbStatus = states[mongoose.connection.readyState] || "Unknown";
+    }
+  } catch (error) {
+    dbStatus = "Error";
+    dbDetails = { error: error.message };
+  }
   
   res.status(200).json({
     status: "UP",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
-    database: dbStatus,
+    database: {
+      status: dbStatus,
+      details: dbDetails
+    },
     memory: process.memoryUsage(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV
   });
 });
 

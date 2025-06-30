@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "vercel-build": "echo 'Building ArtHub Backend...'"
+    "vercel-build": "echo 'Building ArtHub Backend...'",
+    "test-db": "node -e \"import('mongoose').then(mongoose => mongoose.connect(process.env.CONNECTION_URL).then(() => console.log('✅ Database connection successful')).catch(err => console.error('❌ Database connection failed:', err.message)))\"",
+    "test-db-native": "node -e \"const mongoose = require('mongoose'); mongoose.connect(process.env.CONNECTION_URL).then(() => console.log('✅ Database connection successful')).catch(err => console.error('❌ Database connection failed:', err.message))\""
   },
   "engines": {
     "node": "18.x || >= 16"

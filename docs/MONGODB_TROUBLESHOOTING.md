@@ -174,6 +174,52 @@ MongoServerSelectionError: connection timed out
    - Make sure you've replaced placeholder values in vercel.json
    - The connection.js file checks for placeholders like "your_username"
 
+### 3. Vercel Function Timeout Issues
+
+**Symptoms:**
+- Requests taking longer than 10 seconds fail with 504 Gateway Timeout
+- Database operations time out during peak load
+
+**Solutions:**
+1. **Increase function timeout**
+   - Update `vercel.json` with:
+     ```json
+     "functions": {
+       "index.js": {
+         "maxDuration": 30
+       }
+     }
+     ```
+
+2. **Optimize database queries**
+   - Add proper indexes to MongoDB collections
+   - Use projection to limit returned fields
+   - Implement pagination for large result sets
+
+3. **Use serverless-friendly connection settings**
+   - Set `directConnection: true` for more reliable connections
+   - Use `bufferCommands: true` with reasonable timeout
+   - Implement connection pooling with small pool size
+
+### 4. Keeping Connections Alive
+
+**Symptoms:**
+- Frequent reconnections causing performance degradation
+- Inconsistent connection behavior
+
+**Solutions:**
+1. **Create a keep-alive endpoint**
+   - Add a simple endpoint that checks database connection
+   - Use an external service to ping this endpoint every 5 minutes
+
+2. **Implement connection events**
+   - Listen for disconnection events and reconnect automatically
+   - Log connection state changes for debugging
+
+3. **Use a connection manager**
+   - Implement a singleton connection manager
+   - Track connection state and handle reconnection logic
+
 ## Best Practices for MongoDB in Serverless
 
 1. **Connection pooling**

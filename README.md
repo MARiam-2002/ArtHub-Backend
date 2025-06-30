@@ -223,3 +223,51 @@ FIREBASE_DATABASE_URL=https://your-project-id.firebaseio.com
 - للـ `FIREBASE_PRIVATE_KEY`، قم بنسخ المفتاح الخاص بأكمله مع علامات الاقتباس
 - تأكد من أن قاعدة بيانات MongoDB يمكن الوصول إليها من الإنترنت (أي أنها مستضافة على Atlas أو خدمة مماثلة)
 - إذا واجهت أي مشاكل في النشر، تحقق من سجلات Vercel للحصول على معلومات حول الأخطاء 
+
+## MongoDB Connection Troubleshooting
+
+If you're experiencing 503 Service Unavailable errors with database connection issues, follow these steps:
+
+### For Local Development
+
+1. **Check your .env file**:
+   ```
+   CONNECTION_URL=mongodb+srv://username:password@cluster.mongodb.net/arthubdb?retryWrites=true&w=majority
+   ```
+   Make sure to replace with your actual MongoDB Atlas credentials.
+
+2. **Verify MongoDB Atlas settings**:
+   - Ensure your IP address is whitelisted in MongoDB Atlas
+   - Check that your database user has the correct permissions
+   - Verify the cluster is active and running
+
+3. **Test connection directly**:
+   ```bash
+   node -e "const mongoose = require('mongoose'); mongoose.connect('your_connection_string').then(() => console.log('Connected')).catch(err => console.error(err))"
+   ```
+
+### For Vercel Deployment
+
+1. **Set environment variables in Vercel**:
+   - Go to your project dashboard in Vercel
+   - Navigate to Settings > Environment Variables
+   - Add `CONNECTION_URL` with your MongoDB connection string
+   - Ensure all other required environment variables are set
+
+2. **Optimize for serverless**:
+   - In Vercel, set function duration to at least 30 seconds:
+     ```json
+     // vercel.json
+     "functions": {
+       "index.js": {
+         "memory": 1024,
+         "maxDuration": 30
+       }
+     }
+     ```
+
+3. **Keep functions warm**:
+   - Set up a cron job to ping your API every 5 minutes
+   - Use a service like [cron-job.org](https://cron-job.org) to call your `/api/keepalive` endpoint
+
+For more detailed troubleshooting, see [MONGODB_TROUBLESHOOTING.md](./docs/MONGODB_TROUBLESHOOTING.md) 

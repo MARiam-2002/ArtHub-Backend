@@ -22,6 +22,7 @@ import jwt from "jsonwebtoken";
 import reviewRouter from './modules/review/review.router.js';
 import followRouter from './modules/follow/follow.router.js';
 import notificationRouter from './modules/notification/notification.router.js';
+import mongoose from 'mongoose';
 
 export const bootstrap = (app, express) => {
   if (process.env.NODE_ENV == "dev") {
@@ -95,6 +96,59 @@ export const bootstrap = (app, express) => {
       version: process.env.npm_package_version || '1.0.0',
       environment: process.env.NODE_ENV || 'development'
     }, 'API is running properly');
+  });
+
+  // Add keepalive endpoint for preventing cold starts
+  app.get("/keepalive", async (req, res) => {
+    try {
+      const isConnected = mongoose.connection.readyState === 1;
+      
+      if (isConnected) {
+        res.status(200).json({
+          status: 'ok',
+          message: 'Server is alive',
+          database: 'connected',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // Try to reconnect
+        try {
+          await mongoose.connect(process.env.CONNECTION_URL, {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 5000,
+            maxPoolSize: 5,
+            minPoolSize: 1,
+            bufferCommands: true,
+            bufferTimeoutMS: 30000,
+            directConnection: true
+          });
+          
+          res.status(200).json({
+            status: 'ok',
+            message: 'Server is alive, reconnected to database',
+            database: 'reconnected',
+            timestamp: new Date().toISOString()
+          });
+        } catch (reconnectError) {
+          res.status(503).json({
+            status: 'degraded',
+            message: 'Server is alive but database connection failed',
+            database: 'disconnected',
+            error: reconnectError.message,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error in keepalive endpoint:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Error checking server status',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   // 404 handler
