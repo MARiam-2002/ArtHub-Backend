@@ -7,22 +7,41 @@ export const globalErrorHandling = (err, req, res, next) => {
   // Log the error for debugging
   console.error(`ERROR 💥: ${err.stack}`);
   
-  // Check if it's a MongoDB connection error
+  // Enhanced MongoDB connection error detection
   const isMongoConnectionError = 
     err.name === 'MongoNetworkError' ||
     err.name === 'MongoServerSelectionError' ||
-    (err.name === 'MongooseError' && err.message.includes('buffering timed out')) ||
+    err.name === 'MongooseError' && (
+      err.message.includes('buffering timed out') ||
+      err.message.includes('operation timed out')
+    ) ||
     err.message.includes('failed to connect') ||
     err.message.includes('connection timed out') ||
+    err.message.includes('getaddrinfo ENOTFOUND') ||
+    err.message.includes('connection closed') ||
+    err.message.includes('topology was destroyed') ||
     err.cause === 503;
 
   // Handle MongoDB connection errors with a specific error response
   if (isMongoConnectionError) {
+    console.error("❌ MongoDB connection error detected:", err.message);
+    
+    // Try to provide more specific error information
+    let specificError = "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا";
+    
+    if (err.message.includes('buffering timed out')) {
+      specificError = "انتهت مهلة عملية قاعدة البيانات، يرجى المحاولة مرة أخرى";
+    } else if (err.message.includes('ENOTFOUND')) {
+      specificError = "تعذر العثور على خادم قاعدة البيانات";
+    } else if (err.message.includes('Authentication failed')) {
+      specificError = "فشل المصادقة مع قاعدة البيانات";
+    }
+    
     return res.status(503).json({
       success: false,
       status: 503,
       message: "الخدمة غير متوفرة",
-      error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
+      error: specificError,
       errorCode: "DB_CONNECTION_ERROR",
       timestamp: new Date().toISOString()
     });

@@ -13,6 +13,8 @@ const RETRY_INTERVAL = 3000; // 3 seconds
 let cachedConnection = null;
 let isConnecting = false;
 let connectionPromise = null;
+let lastConnectionAttempt = 0;
+const CONNECTION_COOLDOWN = 1000; // 1 second between connection attempts
 
 // Serverless-optimized connection options
 const getConnectionOptions = (isServerless = false) => {
@@ -28,10 +30,6 @@ const getConnectionOptions = (isServerless = false) => {
     bufferCommands: false, // Disable buffering when not connected
     autoIndex: false, // Don't build indexes on connection
     family: 4, // Force IPv4
-    // Auto reconnect settings
-    autoReconnect: true,
-    reconnectTries: Number.MAX_VALUE,
-    reconnectInterval: 1000,
     // Heartbeat to keep connection alive
     heartbeatFrequencyMS: 10000
   };
@@ -40,6 +38,12 @@ const getConnectionOptions = (isServerless = false) => {
     // Additional serverless optimizations
     baseOptions.serverSelectionTimeoutMS = 5000; // Faster server selection timeout
     baseOptions.connectTimeoutMS = 5000; // Faster connect timeout
+    baseOptions.socketTimeoutMS = 30000; // Shorter socket timeout
+    baseOptions.maxPoolSize = 1; // Smaller connection pool for serverless
+    baseOptions.minPoolSize = 0; // No minimum pool size
+    baseOptions.maxIdleTimeMS = 10000; // Close idle connections faster
+    baseOptions.keepAlive = true; // Keep connections alive
+    baseOptions.keepAliveInitialDelay = 30000; // 30 seconds
     
     // Only add directConnection for non-SRV URIs
     const connectionUrl = process.env.CONNECTION_URL || '';
@@ -57,15 +61,32 @@ const getConnectionOptions = (isServerless = false) => {
  * @returns {Promise<mongoose.Connection>} MongoDB connection
  */
 export const connectDB = async (retryCount = 0) => {
+  // Implement connection throttling to prevent connection storms
+  const now = Date.now();
+  if (now - lastConnectionAttempt < CONNECTION_COOLDOWN) {
+    console.log("⏱️ Connection attempt throttled, waiting for cooldown");
+    await new Promise(resolve => setTimeout(resolve, CONNECTION_COOLDOWN));
+  }
+  lastConnectionAttempt = Date.now();
+  
   // If already connecting, return the existing promise to prevent multiple connection attempts
   if (isConnecting && connectionPromise) {
+    console.log("🔄 Already attempting to connect, reusing connection promise");
     return connectionPromise;
   }
   
   // If we already have a valid connection, return it immediately
   if (cachedConnection && mongoose.connection.readyState === 1) {
-    console.log("✅ Using cached MongoDB connection");
-    return cachedConnection;
+    try {
+      // Verify connection with a quick ping
+      await mongoose.connection.db.admin().ping();
+      console.log("✅ Using cached MongoDB connection");
+      return cachedConnection;
+    } catch (pingError) {
+      console.log("⚠️ Cached connection failed ping check, will reconnect");
+      // Connection is stale, continue to reconnect
+      cachedConnection = null;
+    }
   }
 
   // Set connecting flag and create a new connection promise
@@ -74,9 +95,21 @@ export const connectDB = async (retryCount = 0) => {
     try {
       // Check if mongoose is already connected
       if (mongoose.connection.readyState === 1) {
-        console.log("✅ Mongoose already connected");
-        cachedConnection = mongoose.connection;
-        return mongoose.connection;
+        try {
+          // Verify with ping
+          await mongoose.connection.db.admin().ping();
+          console.log("✅ Mongoose already connected");
+          cachedConnection = mongoose.connection;
+          return mongoose.connection;
+        } catch (pingError) {
+          console.log("⚠️ Existing connection failed ping check, will reconnect");
+          // Force close the stale connection
+          try {
+            await mongoose.connection.close();
+          } catch (closeError) {
+            console.error("⚠️ Error closing stale connection:", closeError.message);
+          }
+        }
       }
       
       // Different connection approach based on environment
@@ -106,8 +139,30 @@ export const connectDB = async (retryCount = 0) => {
         // Get appropriate connection options
         const options = getConnectionOptions(isServerless);
         
-        // Connect with optimized settings
-        await mongoose.connect(process.env.CONNECTION_URL, options);
+        // Connect with optimized settings and exponential backoff
+        let lastError = null;
+        let backoffTime = RETRY_INTERVAL;
+        
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            if (attempt > 0) {
+              console.log(`🔄 Connection attempt ${attempt} of ${MAX_RETRIES}...`);
+              await new Promise(resolve => setTimeout(resolve, backoffTime));
+              backoffTime = backoffTime * 1.5; // Exponential backoff
+            }
+            
+            await mongoose.connect(process.env.CONNECTION_URL, options);
+            break; // Connection successful, exit the loop
+          } catch (err) {
+            lastError = err;
+            console.error(`❌ Connection attempt ${attempt + 1} failed:`, err.message);
+            
+            // If this was the last attempt, throw the error
+            if (attempt === MAX_RETRIES) {
+              throw err;
+            }
+          }
+        }
       } else {
         // Development environment: use in-memory MongoDB if no CONNECTION_URL
         if (!process.env.CONNECTION_URL) {
@@ -124,9 +179,24 @@ export const connectDB = async (retryCount = 0) => {
           // Connect to in-memory database with appropriate options
           await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
         } else {
-          // Use CONNECTION_URL from environment variables for development
-          console.log("🔄 Connecting to development MongoDB with provided URL...");
-          await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
+          // Try to connect with the provided URL
+          try {
+            console.log("🔄 Connecting to development MongoDB with provided URL...");
+            await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
+          } catch (connectionError) {
+            // If connection fails, fall back to in-memory database
+            console.log("⚠️ Connection to provided MongoDB URL failed, falling back to in-memory database");
+            
+            if (!mongoServer) {
+              mongoServer = await MongoMemoryServer.create();
+              const mongoUri = mongoServer.getUri();
+              console.log(`🧪 In-memory MongoDB server started at ${mongoUri}`);
+              process.env.CONNECTION_URL = mongoUri;
+            }
+            
+            // Connect to in-memory database
+            await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
+          }
         }
       }
 
@@ -165,13 +235,18 @@ export const connectDB = async (retryCount = 0) => {
         console.error("  - MongoDB server is running and accessible");
         console.error("  - Connection URL is correct (username, password, cluster name)");
         console.error("  - Network allows connection to MongoDB (firewall/security groups)");
-        console.error("  - MongoDB Atlas IP whitelist includes your server's IP");
+        console.error("  - MongoDB Atlas IP whitelist includes your server's IP (add 0.0.0.0/0 for testing)");
       } else if (error.name === 'MongoParseError') {
         console.error("⚠️ Invalid MongoDB connection string format");
       } else if (error.message.includes('Authentication failed')) {
         console.error("⚠️ MongoDB authentication failed. Check username and password");
       } else if (error.message.includes('ENOTFOUND')) {
         console.error("⚠️ Could not resolve MongoDB host. Check cluster address");
+      } else if (error.message.includes('buffering timed out')) {
+        console.error("⚠️ MongoDB operation buffering timed out. This typically happens when:");
+        console.error("  - The connection to MongoDB is unstable or has high latency");
+        console.error("  - The MongoDB server is under heavy load");
+        console.error("  - The IP whitelist in MongoDB Atlas doesn't include your server's IP");
       }
       
       // Implement retry mechanism with exponential backoff
@@ -213,24 +288,61 @@ export const connectDB = async (retryCount = 0) => {
  */
 export const checkDatabaseConnection = async () => {
   try {
-    // If no connection or disconnected, try to connect
+    // If no connection exists, try to connect
     if (!cachedConnection || mongoose.connection.readyState !== 1) {
+      console.log("🔄 No active connection, attempting to connect...");
       await connectDB();
+      return mongoose.connection.readyState === 1;
     }
     
-    // Verify connection with a simple ping
-    await mongoose.connection.db.admin().ping();
-    return true;
+    // Verify connection with a simple ping with timeout
+    try {
+      // Use a promise with timeout for the ping
+      const pingPromise = mongoose.connection.db.admin().ping();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Ping timeout')), 2000);
+      });
+      
+      // Race the ping against the timeout
+      await Promise.race([pingPromise, timeoutPromise]);
+      return true;
+    } catch (pingError) {
+      console.error("❌ Database ping failed:", pingError.message);
+      
+      // If ping fails, the connection might be stale
+      console.log("🔄 Ping failed, attempting to reconnect...");
+      
+      // Close the existing connection first
+      try {
+        await mongoose.connection.close();
+      } catch (closeError) {
+        console.error("⚠️ Error closing stale connection:", closeError.message);
+      }
+      
+      // Reset cache
+      cachedConnection = null;
+      
+      // Try to reconnect
+      await connectDB();
+      
+      // Verify the new connection
+      return mongoose.connection.readyState === 1;
+    }
   } catch (error) {
     console.error("❌ Database connection check failed:", error.message);
     
     // Reset cache on failed check
     cachedConnection = null;
     
-    // Try to reconnect once
+    // Try to reconnect once with a fresh connection
     try {
+      // Force a fresh connection
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+      }
+      
       await connectDB();
-      return true;
+      return mongoose.connection.readyState === 1;
     } catch (reconnectError) {
       console.error("❌ Database reconnection failed:", reconnectError.message);
       return false;

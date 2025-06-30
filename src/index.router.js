@@ -1,12 +1,12 @@
 import authRouter from "./modules/auth/auth.router.js";
-import { globalErrorHandling } from "./utils/asyncHandler.js";
+import { asyncHandler } from "./utils/asyncHandler.js";
 import corsMiddleware, { corsOptions } from "./middleware/cors.js";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import imageRouter from './modules/image/image.router.js';
 import chatRouter from './modules/chat/chat.router.js';
 import { responseMiddleware } from './middleware/response.middleware.js';
-import { errorHandler } from './middleware/error.middleware.js';
+import { globalErrorHandling } from './middleware/error.middleware.js';
 import artworkRouter from './modules/artwork/artwork.router.js';
 import homeRouter from './modules/home/home.router.js';
 import swaggerRoutes from './swagger/swagger.js';
@@ -157,5 +157,5 @@ export const bootstrap = (app, express) => {
   });
 
   // Global error handler
-  app.use(errorHandler);
+  app.use(globalErrorHandling);
 };

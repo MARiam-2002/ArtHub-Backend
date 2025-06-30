@@ -15,6 +15,12 @@ let io;
 
 // Initial database connection attempt - don't block serverless cold start
 const initializeDatabase = async () => {
+  // Skip database connection in development if MOCK_DB is set
+  if (process.env.NODE_ENV === 'development' && process.env.MOCK_DB === 'true') {
+    console.log("🧪 Running in mock database mode - skipping MongoDB connection");
+    return;
+  }
+  
   try {
     await connectDB();
     console.log("✅ Database connection initialized");
@@ -34,7 +40,16 @@ initializeDatabase().catch(err => {
 // Add middleware to check database connection on each request
 app.use(async (req, res, next) => {
   // Skip database check for non-API routes and health checks
-  if (!req.path.startsWith('/api') || req.path === '/health' || req.path === '/api-docs') {
+  if (!req.path.startsWith('/api') || 
+      req.path === '/health' || 
+      req.path === '/api/keepalive' || 
+      req.path === '/api/db-test' ||
+      req.path === '/api-docs') {
+    return next();
+  }
+  
+  // Skip database check in development with mock mode
+  if (process.env.NODE_ENV === 'development' && process.env.MOCK_DB === 'true') {
     return next();
   }
   
@@ -97,20 +112,43 @@ app.get("/health", async (req, res) => {
       try {
         const adminDb = mongoose.connection.db.admin();
         const serverStatus = await adminDb.serverStatus();
+        const pingResult = await adminDb.ping();
+        
         dbDetails = {
           version: serverStatus.version,
           uptime: serverStatus.uptime,
           connections: serverStatus.connections?.current || 0,
-          ok: serverStatus.ok === 1
+          ok: serverStatus.ok === 1,
+          ping: pingResult.ok === 1,
+          host: mongoose.connection.host,
+          port: mongoose.connection.port,
+          name: mongoose.connection.name,
+          options: {
+            maxPoolSize: mongoose.connection.options?.maxPoolSize,
+            socketTimeoutMS: mongoose.connection.options?.socketTimeoutMS,
+            connectTimeoutMS: mongoose.connection.options?.connectTimeoutMS,
+          }
         };
       } catch (dbError) {
         console.error("Error getting MongoDB server status:", dbError);
-        dbDetails = { error: "Could not retrieve detailed status" };
+        dbDetails = { error: "Could not retrieve detailed status", message: dbError.message };
       }
     } else {
       // Map readyState to human-readable status
       const states = ["Disconnected", "Connected", "Connecting", "Disconnecting"];
       dbStatus = states[mongoose.connection.readyState] || "Unknown";
+      
+      // Include connection URL info (without credentials)
+      if (process.env.CONNECTION_URL) {
+        try {
+          const url = new URL(process.env.CONNECTION_URL);
+          dbDetails.host = url.hostname;
+          dbDetails.protocol = url.protocol;
+          dbDetails.database = url.pathname.substring(1);
+        } catch (e) {
+          dbDetails.error = "Invalid connection URL format";
+        }
+      }
     }
   } catch (error) {
     dbStatus = "Error";
@@ -123,11 +161,13 @@ app.get("/health", async (req, res) => {
     environment: process.env.NODE_ENV || "development",
     database: {
       status: dbStatus,
+      readyState: mongoose.connection.readyState,
       details: dbDetails
     },
     memory: process.memoryUsage(),
     uptime: process.uptime(),
-    serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV
+    serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV,
+    region: process.env.VERCEL_REGION || process.env.AWS_REGION || 'unknown'
   });
 });
 
