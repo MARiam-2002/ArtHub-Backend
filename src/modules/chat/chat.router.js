@@ -77,9 +77,9 @@ router.get(
  *           schema:
  *             type: object
  *             required:
- *               - text
+ *               - content
  *             properties:
- *               text:
+ *               content:
  *                 type: string
  *                 description: نص الرسالة
  *     responses:
@@ -158,6 +158,45 @@ router.post(
   isAuthenticated,
   isValidation(chatValidation.markAsReadSchema),
   chatController.markAsRead
+);
+
+/**
+ * @swagger
+ * /api/chat/socket-token:
+ *   get:
+ *     tags:
+ *       - Chat
+ *     summary: الحصول على رمز للاتصال بالسوكت
+ *     description: الحصول على رمز مؤقت للاتصال بخدمة Socket.io
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: تم إنشاء الرمز بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   description: رمز الاتصال
+ *                 userId:
+ *                   type: string
+ *                   description: معرف المستخدم
+ */
+router.get(
+  '/socket-token',
+  isAuthenticated,
+  (req, res) => {
+    // رمز بسيط للاتصال بالسوكت - يمكن تحسينه باستخدام JWT
+    const token = Buffer.from(`${req.user._id}:${Date.now()}`).toString('base64');
+    
+    res.success({ 
+      token,
+      userId: req.user._id 
+    }, 'تم إنشاء رمز الاتصال بنجاح');
+  }
 );
 
 export default router; 

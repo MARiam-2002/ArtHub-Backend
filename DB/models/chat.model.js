@@ -1,4 +1,3 @@
-
 import mongoose, { Schema, Types, model } from "mongoose";
 
 /**
@@ -17,23 +16,17 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *             type: string
  *           description: Array of user IDs participating in this chat
  *         lastMessage:
- *           type: object
- *           properties:
- *             _id:
- *               type: string
- *             text:
- *               type: string
- *             sender:
- *               type: string
- *             createdAt:
- *               type: string
- *               format: date-time
- *           description: Last message sent in this chat
- *         unreadCounts:
- *           type: object
- *           additionalProperties:
- *             type: number
- *           description: Number of unread messages per user
+ *           type: string
+ *           description: Reference to the last message in this chat
+ *         sender:
+ *           type: string
+ *           description: User who initiated the chat
+ *         receiver:
+ *           type: string
+ *           description: Initial recipient of the chat
+ *         isDeleted:
+ *           type: boolean
+ *           description: Indicates if the chat has been deleted
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -48,20 +41,21 @@ const chatSchema = new Schema({
     required: true
   }],
   lastMessage: {
-    text: String,
-    sender: {
-      type: Types.ObjectId,
-      ref: "User"
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now
-    }
+    type: Types.ObjectId,
+    ref: "Message"
   },
-  unreadCounts: {
-    type: Map,
-    of: Number,
-    default: {}
+  // Store the original sender and receiver for reference
+  sender: {
+    type: Types.ObjectId,
+    ref: "User"
+  },
+  receiver: {
+    type: Types.ObjectId,
+    ref: "User"
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 
@@ -71,59 +65,45 @@ chatSchema.pre('save', function(next) {
     const error = new Error('Chat must have at least 2 members');
     return next(error);
   }
+  
+  // Set sender and receiver if not already set
+  if (this.isNew && this.members.length >= 2 && !this.sender) {
+    this.sender = this.members[0];
+    this.receiver = this.members[1];
+  }
+  
   next();
 });
 
 // Create compound index for faster chat lookup
 chatSchema.index({ members: 1 });
-
-// Method to update last message
-chatSchema.methods.updateLastMessage = function(message) {
-  this.lastMessage = {
-    text: message.text,
-    sender: message.sender,
-    createdAt: message.createdAt
-  };
-  return this.save();
-};
-
-// Method to increment unread count for users
-chatSchema.methods.incrementUnreadCount = function(messageId, senderId) {
-  this.members.forEach(memberId => {
-    // Don't increment for the sender
-    if (memberId.toString() !== senderId.toString()) {
-      const currentCount = this.unreadCounts.get(memberId.toString()) || 0;
-      this.unreadCounts.set(memberId.toString(), currentCount + 1);
-    }
-  });
-  return this.save();
-};
-
-// Method to reset unread count for a user
-chatSchema.methods.resetUnreadCount = function(userId) {
-  this.unreadCounts.set(userId.toString(), 0);
-  return this.save();
-};
+chatSchema.index({ sender: 1, receiver: 1 }, { unique: true });
+chatSchema.index({ updatedAt: -1 }); // For sorting chats by most recent
 
 /**
  * Static method to find or create chat between users
- * @param {Array} memberIds - Array of user IDs
+ * @param {String} senderId - ID of the user initiating the chat
+ * @param {String} receiverId - ID of the recipient
  * @returns {Promise} - Promise with chat object
  */
-chatSchema.statics.findOrCreateChat = async function(memberIds) {
-  // Sort IDs to ensure consistent lookup
-  const sortedIds = [...memberIds].sort();
-  
-  // Try to find existing chat
+chatSchema.statics.findOrCreateChat = async function(senderId, receiverId) {
+  // Try to find existing chat between these users
   let chat = await this.findOne({
-    members: { $all: sortedIds, $size: sortedIds.length }
+    members: { 
+      $all: [
+        mongoose.Types.ObjectId(senderId), 
+        mongoose.Types.ObjectId(receiverId)
+      ] 
+    },
+    isDeleted: { $ne: true }
   });
   
   // Create new chat if none exists
   if (!chat) {
     chat = await this.create({
-      members: sortedIds,
-      unreadCounts: new Map(sortedIds.map(id => [id.toString(), 0]))
+      members: [senderId, receiverId],
+      sender: senderId,
+      receiver: receiverId
     });
   }
   
@@ -136,11 +116,39 @@ chatSchema.statics.findOrCreateChat = async function(memberIds) {
  * @returns {Promise} - Promise with array of populated chats
  */
 chatSchema.statics.findUserChats = function(userId) {
-  return this.find({ members: userId })
-    .populate('members', 'email displayName profileImage')
-    .populate('lastMessage.sender', 'email displayName profileImage')
-    .sort({ 'lastMessage.createdAt': -1 })
+  return this.find({ 
+    members: userId,
+    isDeleted: { $ne: true }
+  })
+    .populate({
+      path: 'members',
+      match: { _id: { $ne: userId } },
+      select: 'displayName profileImage'
+    })
+    .populate({
+      path: 'lastMessage',
+      populate: {
+        path: 'sender',
+        select: 'displayName profileImage'
+      }
+    })
+    .sort({ updatedAt: -1 })
     .exec();
+};
+
+/**
+ * Static method to count unread messages in a chat
+ * @param {ObjectId} chatId - Chat ID
+ * @param {ObjectId} userId - User ID
+ * @returns {Promise<Number>} - Promise with count of unread messages
+ */
+chatSchema.statics.countUnreadMessages = async function(chatId, userId) {
+  const messageModel = mongoose.model('Message');
+  return messageModel.countDocuments({
+    chat: chatId,
+    sender: { $ne: userId },
+    isRead: false
+  });
 };
 
 const chatModel = mongoose.models.Chat || model("Chat", chatSchema);

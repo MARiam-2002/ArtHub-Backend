@@ -12,97 +12,136 @@ import { updateUserFCMToken } from '../../../utils/pushNotifications.js';
 export const register = asyncHandler(async (req, res, next) => {
   const { email, password, job } = req.body;
 
-  const user = await userModel.findOne({ email });
-
-  const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
-
-  if (user) {
-    return next(new Error(invalidMessage, { cause: 400 }));
-  }
-
-  const hashPassword = await bcryptjs.hash(
-    password,
-    Number(process.env.SALT_ROUND)
-  );
-
-  const newUser = await userModel.create({
-    email,
-    password: hashPassword,
-    job: job || "مستخدم",
-  });
-
-  const token = jwt.sign(
-    {
-      id: newUser._id,
-      email: newUser.email,
-      role: newUser.role,
-    },
-    process.env.TOKEN_KEY
-  );
-
-  await tokenModel.findOneAndDelete({ user: newUser._id });
-
-  await tokenModel.create({
-    token,
-    user: newUser._id,
-    agent: req.headers["user-agent"],
-  });
-
-  return res.status(201).json({
-    success: true,
-    message: "تم التسجيل بنجاح!",
-    data: {
-      email: newUser.email,
-      role: newUser.role,
-      job: newUser.job,
+  try {
+    const user = await userModel.findOne({ email });
+    
+    const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+  
+    if (user) {
+      return next(new Error(invalidMessage, { cause: 400 }));
+    }
+  
+    const hashPassword = await bcryptjs.hash(
+      password,
+      Number(process.env.SALT_ROUND)
+    );
+  
+    const newUser = await userModel.create({
+      email,
+      password: hashPassword,
+      job: job || "مستخدم",
+    });
+  
+    const token = jwt.sign(
+      {
+        id: newUser._id,
+        email: newUser.email,
+        role: newUser.role,
+      },
+      process.env.TOKEN_KEY
+    );
+  
+    await tokenModel.findOneAndDelete({ user: newUser._id });
+  
+    await tokenModel.create({
       token,
-    },
-  });
+      user: newUser._id,
+      agent: req.headers["user-agent"],
+    });
+  
+    return res.status(201).json({
+      success: true,
+      message: "تم التسجيل بنجاح!",
+      data: {
+        email: newUser.email,
+        role: newUser.role,
+        job: newUser.job,
+        token,
+      },
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    
+    // Handle database connection errors
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+    }
+    
+    // Handle duplicate key errors (email already exists)
+    if (error.code === 11000) {
+      return next(new Error("البريد الإلكتروني مستخدم بالفعل", { cause: 409 }));
+    }
+    
+    // Handle other database errors
+    if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+      return next(new Error("خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 500 }));
+    }
+    
+    // Pass other errors to the error handler
+    return next(error);
+  }
 });
 
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
-  const user = await userModel.findOne({ email }).select("+password");;
-
-  const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
-
-  if (!user) {
-    return next(new Error(invalidMessage, { cause: 400 }));
-  }
-
-  const isPasswordValid = await bcryptjs.compare(password, user.password);
-  if (!isPasswordValid) {
-    return next(new Error(invalidMessage, { cause: 400 }));
-  }
-
-  const token = jwt.sign(
-    {
-      id: user._id,
-      email: user.email,
-      role: user.role,
-    },
-    process.env.TOKEN_KEY
-  );
-
-  await tokenModel.findOneAndDelete({ user: user._id });
-
-  await tokenModel.create({
-    token,
-    user: user._id,
-    agent: req.headers["user-agent"] || "unknown",
-  });
-
-  return res.status(200).json({
-    success: true,
-    message: "تم تسجيل الدخول بنجاح.",
-    data: {
-      email: user.email,
-      role: user.role,
-      job: user.job,
+  try {
+    const user = await userModel.findOne({ email }).select("+password");
+    
+    const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+  
+    if (!user) {
+      return next(new Error(invalidMessage, { cause: 400 }));
+    }
+  
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+    if (!isPasswordValid) {
+      return next(new Error(invalidMessage, { cause: 400 }));
+    }
+  
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.TOKEN_KEY
+    );
+  
+    await tokenModel.findOneAndDelete({ user: user._id });
+  
+    await tokenModel.create({
       token,
-    },
-  });
+      user: user._id,
+      agent: req.headers["user-agent"] || "unknown",
+    });
+  
+    return res.status(200).json({
+      success: true,
+      message: "تم تسجيل الدخول بنجاح.",
+      data: {
+        email: user.email,
+        role: user.role,
+        job: user.job,
+        token,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    
+    // Handle database connection errors specifically
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+    }
+    
+    // Handle other database errors
+    if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+      return next(new Error("خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 500 }));
+    }
+    
+    // Pass other errors to the error handler
+    return next(error);
+  }
 });
 
 export const sendForgetCode = asyncHandler(async (req, res, next) => {

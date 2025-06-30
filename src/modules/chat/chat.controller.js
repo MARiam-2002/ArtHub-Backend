@@ -5,6 +5,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import mongoose from 'mongoose';
 import { sendChatMessageNotification } from '../../utils/pushNotifications.js';
 import { sendNotification } from '../notification/notification.controller.js';
+import { sendToChat, sendToUser } from '../../utils/socketService.js';
 
 /**
  * جلب قائمة المحادثات للمستخدم الحالي
@@ -37,14 +38,18 @@ export const getUserChats = asyncHandler(async (req, res) => {
     if (!lastMessage) {
       lastMessage = await messageModel.findOne({ chat: chat._id })
         .sort({ createdAt: -1 })
-        .select('sender text createdAt');
+        .select('sender content createdAt');
     }
       
     // المستخدم الآخر في المحادثة
     const otherUser = chat.members[0]; // هذا سيكون المستخدم الآخر لأننا استبعدنا المستخدم الحالي في الاستعلام
     
     // عدد الرسائل غير المقروءة
-    const unreadCount = chat.unreadCounts?.get(userId.toString()) || 0;
+    const unreadCount = await messageModel.countDocuments({
+      chat: chat._id,
+      sender: { $ne: userId },
+      isRead: false
+    });
     
     return {
       _id: chat._id,
@@ -54,7 +59,7 @@ export const getUserChats = asyncHandler(async (req, res) => {
         profileImage: otherUser?.profileImage
       },
       lastMessage: lastMessage ? {
-        text: lastMessage.text,
+        content: lastMessage.content || lastMessage.text, // دعم الاصدارات القديمة والجديدة
         isFromMe: lastMessage.sender.toString() === userId.toString(),
         createdAt: lastMessage.createdAt
       } : null,
@@ -87,12 +92,6 @@ export const getMessages = asyncHandler(async (req, res) => {
     return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
   }
   
-  // إعادة تعيين عدد الرسائل غير المقروءة
-  if (chat.unreadCounts && chat.unreadCounts.get(userId.toString()) > 0) {
-    chat.unreadCounts.set(userId.toString(), 0);
-    await chat.save();
-  }
-  
   // جلب الرسائل
   const messages = await messageModel.find({ chat: chatId })
     .sort({ createdAt: 1 })
@@ -101,18 +100,22 @@ export const getMessages = asyncHandler(async (req, res) => {
   // تنسيق الرسائل
   const formattedMessages = messages.map(msg => ({
     _id: msg._id,
-    text: msg.text,
+    content: msg.content || msg.text, // دعم الاصدارات القديمة والجديدة
     isFromMe: msg.sender._id.toString() === userId.toString(),
     sender: {
       _id: msg.sender._id,
       displayName: msg.sender.displayName,
       profileImage: msg.sender.profileImage
     },
+    isRead: msg.isRead,
     createdAt: msg.createdAt
   }));
   
   // معلومات المستخدم الآخر في المحادثة
   const otherUser = chat.members[0]; // هذا سيكون المستخدم الآخر لأننا استبعدنا المستخدم الحالي في الاستعلام
+  
+  // تحديث حالة قراءة الرسائل
+  await markAsRead(req, res, false); // تمرير false لمنع الرد المباشر
   
   res.success({
     chat: {
@@ -132,7 +135,7 @@ export const getMessages = asyncHandler(async (req, res) => {
  */
 export const sendMessage = asyncHandler(async (req, res) => {
   const { chatId } = req.params;
-  const { text } = req.body;
+  const { content } = req.body;
   const userId = req.user._id;
   
   // تحقق من وجود المحادثة ومن أن المستخدم عضو فيها
@@ -150,51 +153,57 @@ export const sendMessage = asyncHandler(async (req, res) => {
     });
   }
   
+  // الحصول على معرف المستخدم الآخر
+  const receiverId = chat.members.find(
+    member => member.toString() !== userId.toString()
+  );
+  
   // إنشاء رسالة جديدة
   const message = await messageModel.create({
     chat: chatId,
     sender: userId,
-    text: text,
-    read: false
+    content: content, // استخدام حقل content بدلاً من text
+    isRead: false,
+    sentAt: new Date()
   });
   
   // تحديث آخر رسالة في المحادثة
   chat.lastMessage = message._id;
+  chat.updatedAt = new Date();
   await chat.save();
   
   // إعادة قراءة الرسالة مع معلومات المرسل
   const populatedMessage = await messageModel.findById(message._id)
-    .populate('sender', 'displayName userName profileImage');
+    .populate('sender', 'displayName profileImage');
   
-  // إرسال إشعار للمستخدم الآخر في المحادثة
-  const otherUserId = chat.members.find(member => member.toString() !== userId.toString());
+  // إعداد الرسالة المنسقة للرد
+  const formattedMessage = {
+    _id: populatedMessage._id,
+    content: populatedMessage.content,
+    isFromMe: true,
+    sender: {
+      _id: populatedMessage.sender._id,
+      displayName: populatedMessage.sender.displayName,
+      profileImage: populatedMessage.sender.profileImage
+    },
+    isRead: populatedMessage.isRead,
+    createdAt: populatedMessage.createdAt
+  };
   
-  if (otherUserId) {
-    const senderUser = await userModel.findById(userId);
-    const senderName = senderUser.displayName || senderUser.userName || 'مستخدم';
-    
-    // التحقق مما إذا كان المستخدم قد قام بكتم الإشعارات
-    const otherUser = await userModel.findById(otherUserId);
-    const shouldSendNotification = !(otherUser.notificationSettings?.muteChat === true);
-    
-    if (shouldSendNotification) {
-      await sendNotification(
-        otherUserId,
-        `رسالة جديدة من ${senderName}`,
-        text.length > 50 ? `${text.substring(0, 50)}...` : text,
-        {
-          type: 'chat',
-          chatId: chatId.toString(),
-          senderId: userId.toString()
-        }
-      );
-    }
-  }
+  // إرسال الرسالة عبر Socket.io
+  sendToChat(chatId, 'new_message', {
+    ...formattedMessage,
+    isFromMe: false, // سيتم عكسها للمستلم
+    chatId
+  });
+  
+  // إرسال تحديث للمحادثات للمستلم
+  sendToUser(receiverId, 'update_chat_list', { chatId });
   
   res.status(201).json({
     success: true,
     message: "تم إرسال الرسالة بنجاح",
-    data: populatedMessage
+    data: formattedMessage
   });
 });
 
@@ -234,13 +243,20 @@ export const createChat = asyncHandler(async (req, res) => {
   }
   
   // إنشاء محادثة جديدة
-  const unreadCounts = new Map();
-  unreadCounts.set(userId.toString(), 0);
-  unreadCounts.set(otherUserId.toString(), 0);
-  
   const chat = await chatModel.create({
     members: [userId, otherUserId],
-    unreadCounts
+    createdAt: new Date(),
+    updatedAt: new Date()
+  });
+  
+  // إرسال إشعار للمستخدم الآخر
+  sendToUser(otherUserId, 'new_chat', { 
+    chatId: chat._id,
+    user: {
+      _id: req.user._id,
+      displayName: req.user.displayName,
+      profileImage: req.user.profileImage
+    }
   });
   
   res.status(201).success({
@@ -256,7 +272,7 @@ export const createChat = asyncHandler(async (req, res) => {
 /**
  * تحديث حالة قراءة الرسائل
  */
-export const markAsRead = asyncHandler(async (req, res) => {
+export const markAsRead = asyncHandler(async (req, res, shouldRespond = true) => {
   const { chatId } = req.params;
   const userId = req.user._id;
   
@@ -267,18 +283,39 @@ export const markAsRead = asyncHandler(async (req, res) => {
   });
   
   if (!chat) {
-    return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
+    if (shouldRespond) {
+      return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
+    }
+    return;
   }
   
-  // إعادة تعيين عدد الرسائل غير المقروءة
-  if (!chat.unreadCounts) {
-    chat.unreadCounts = new Map();
+  // تحديث حالة قراءة الرسائل
+  const result = await messageModel.updateMany(
+    { 
+      chat: chatId, 
+      sender: { $ne: userId }, 
+      isRead: false 
+    },
+    { isRead: true }
+  );
+  
+  // إرسال إشعار بالقراءة عبر Socket.io
+  if (result.modifiedCount > 0) {
+    sendToChat(chatId, 'messages_read', { 
+      chatId, 
+      readBy: userId 
+    });
+    
+    // إعلام المستخدم الآخر أيضًا
+    const otherUserId = chat.members.find(member => member.toString() !== userId.toString());
+    if (otherUserId) {
+      sendToUser(otherUserId, 'update_chat_list', { chatId });
+    }
   }
   
-  chat.unreadCounts.set(userId.toString(), 0);
-  await chat.save();
-  
-  res.success(null, 'تم تحديث حالة قراءة الرسائل بنجاح');
+  if (shouldRespond) {
+    res.success({ modifiedCount: result.modifiedCount }, 'تم تحديث حالة قراءة الرسائل بنجاح');
+  }
 });
 
 /**

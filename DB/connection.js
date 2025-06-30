@@ -6,8 +6,10 @@ dotenv.config();
 
 // سيستخدم لتخزين مثيل خادم MongoDB في الذاكرة
 let mongoServer;
+const MAX_RETRIES = 5;
+const RETRY_INTERVAL = 3000; // 3 seconds
 
-export const connectDB = async () => {
+export const connectDB = async (retryCount = 0) => {
   try {
     // نهج مختلف للاتصال بناءً على البيئة
     if (process.env.NODE_ENV === "production") {
@@ -27,10 +29,12 @@ export const connectDB = async () => {
 
       console.log("Connecting to production MongoDB...");
       await mongoose.connect(process.env.CONNECTION_URL, {
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 10000, // Increased from 5000
         socketTimeoutMS: 45000,
         maxPoolSize: 10,
         connectTimeoutMS: 10000,
+        bufferCommands: true,
+        bufferTimeoutMS: 30000, // Added buffer timeout setting
       });
     } else {
       // بيئة التطوير: استخدام mongodb-memory-server إذا لم يتم توفير URL الاتصال
@@ -49,15 +53,19 @@ export const connectDB = async () => {
         
         // الاتصال بقاعدة البيانات في الذاكرة
         await mongoose.connect(process.env.CONNECTION_URL, {
-          serverSelectionTimeoutMS: 5000,
+          serverSelectionTimeoutMS: 10000,
           connectTimeoutMS: 10000,
+          bufferCommands: true,
+          bufferTimeoutMS: 30000,
         });
       } else {
         // استخدام URL الاتصال من المتغيرات البيئية لبيئة التطوير
         console.log("Connecting to development MongoDB with provided URL...");
         await mongoose.connect(process.env.CONNECTION_URL, {
-          serverSelectionTimeoutMS: 5000,
+          serverSelectionTimeoutMS: 10000,
           connectTimeoutMS: 10000,
+          bufferCommands: true,
+          bufferTimeoutMS: 30000,
         });
       }
     }
@@ -79,6 +87,13 @@ export const connectDB = async () => {
       console.error("⚠️ MongoDB authentication failed. Please check your username and password.");
     } else if (error.message.includes('ENOTFOUND')) {
       console.error("⚠️ Could not resolve MongoDB host. Please check your cluster address.");
+    }
+    
+    // Implement retry mechanism
+    if (retryCount < MAX_RETRIES) {
+      console.log(`Retrying connection in ${RETRY_INTERVAL/1000} seconds... (Attempt ${retryCount + 1} of ${MAX_RETRIES})`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+      return connectDB(retryCount + 1);
     }
     
     if (process.env.NODE_ENV === "production") {

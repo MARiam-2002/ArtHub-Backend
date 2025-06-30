@@ -27,7 +27,7 @@ export const sendMessageSchema = {
       })
   }),
   body: Joi.object({
-    text: Joi.string()
+    content: Joi.string()
       .required()
       .min(1)
       .max(500)
@@ -36,8 +36,17 @@ export const sendMessageSchema = {
         'string.min': 'الرسالة قصيرة جدًا',
         'string.max': 'الرسالة طويلة جدًا، الحد الأقصى هو 500 حرف',
         'any.required': 'نص الرسالة مطلوب'
+      }),
+    // للتوافق مع الإصدارات القديمة
+    text: Joi.string()
+      .min(1)
+      .max(500)
+      .messages({
+        'string.empty': 'لا يمكن إرسال رسالة فارغة',
+        'string.min': 'الرسالة قصيرة جدًا',
+        'string.max': 'الرسالة طويلة جدًا، الحد الأقصى هو 500 حرف'
       })
-  })
+  }).xor('content', 'text') // إما content أو text يجب أن يكون موجودًا
 };
 
 // مخطط التحقق لجلب رسائل محادثة
@@ -64,6 +73,18 @@ export const markAsReadSchema = {
         'string.empty': 'يجب تحديد معرف المحادثة',
         'string.pattern.base': 'معرف المحادثة غير صالح',
         'any.required': 'معرف المحادثة مطلوب'
+      })
+  })
+};
+
+// مخطط التحقق لاتصال Socket.io
+export const socketAuthSchema = {
+  query: Joi.object({
+    token: Joi.string()
+      .required()
+      .messages({
+        'string.empty': 'رمز الاتصال مطلوب',
+        'any.required': 'رمز الاتصال مطلوب'
       })
   })
 }; 

@@ -130,6 +130,14 @@ The project includes a `vercel.json` file with proper configuration for serverle
 ├── DB
 │   ├── connection.js
 │   └── models/
+├── docs
+│   ├── CLIENT_INTEGRATION.md
+│   ├── FLUTTER_INTEGRATION.md
+│   ├── IMPROVEMENTS.md
+│   ├── MONGODB_TROUBLESHOOTING.md
+│   ├── SCREEN_API_MAPPING.md
+│   ├── SOCKET_CHAT.md
+│   └── guides/
 ├── src
 │   ├── middleware/
 │   ├── modules/
@@ -152,6 +160,17 @@ The project includes a `vercel.json` file with proper configuration for serverle
 ├── index.js
 └── package.json
 ```
+
+### Documentation
+
+The project includes comprehensive documentation in the `docs` directory:
+
+- `CLIENT_INTEGRATION.md`: Guide for integrating client applications with the API
+- `FLUTTER_INTEGRATION.md`: Specific instructions for Flutter client integration
+- `IMPROVEMENTS.md`: List of implemented improvements and future recommendations
+- `MONGODB_TROUBLESHOOTING.md`: Guide for troubleshooting MongoDB connection issues
+- `SCREEN_API_MAPPING.md`: Mapping between frontend screens and API endpoints
+- `SOCKET_CHAT.md`: Documentation for the Socket.io chat implementation
 
 ### Running Tests
 

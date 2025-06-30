@@ -19,22 +19,31 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *         sender:
  *           type: string
  *           description: ID of the user who sent this message
- *         text:
+ *         content:
  *           type: string
  *           description: Message content
+ *         text:
+ *           type: string
+ *           description: Legacy message content (for backward compatibility)
  *         images:
  *           type: array
  *           items:
  *             type: string
  *           description: Array of image URLs attached to this message
+ *         isRead:
+ *           type: boolean
+ *           description: Indicates if message has been read by recipient
  *         readBy:
  *           type: array
  *           items:
  *             type: string
- *           description: Array of user IDs who have read this message
+ *           description: Array of user IDs who have read this message (legacy field)
  *         isDeleted:
  *           type: boolean
  *           description: Indicates if message was deleted
+ *         sentAt:
+ *           type: date
+ *           description: Timestamp when message was sent
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -54,12 +63,22 @@ const messageSchema = new Schema({
     ref: "User",
     required: true
   },
+  content: {
+    type: String
+  },
+  // Legacy field for backward compatibility
   text: {
     type: String
   },
   images: [{
     type: String
   }],
+  // New field for Socket.io implementation
+  isRead: {
+    type: Boolean,
+    default: false
+  },
+  // Legacy field for backward compatibility
   readBy: [{
     type: Types.ObjectId,
     ref: "User"
@@ -68,22 +87,42 @@ const messageSchema = new Schema({
   isDeleted: {
     type: Boolean,
     default: false
+  },
+  // Explicit timestamp for when the message was sent
+  sentAt: {
+    type: Date,
+    default: Date.now
   }
 }, { timestamps: true });
 
-// Ensure a message has either text or images
+// Ensure a message has either content or images
 messageSchema.pre('save', function(next) {
-  if (!this.text && (!this.images || this.images.length === 0)) {
-    const error = new Error('Message must have either text or images');
+  // Handle backward compatibility - copy text to content if content is missing
+  if (!this.content && this.text) {
+    this.content = this.text;
+  }
+  
+  // Copy content to text for backward compatibility
+  if (this.content && !this.text) {
+    this.text = this.content;
+  }
+  
+  if (!this.content && (!this.images || this.images.length === 0)) {
+    const error = new Error('Message must have either content or images');
     return next(error);
   }
   next();
 });
 
-// Add sender to readBy automatically
+// Add sender to readBy automatically for backward compatibility
 messageSchema.pre('save', function(next) {
   if (this.isNew) {
     this.readBy = [this.sender];
+    
+    // Mark as read by the sender
+    if (this.sender) {
+      this.isRead = false;
+    }
   }
   next();
 });
@@ -99,6 +138,7 @@ messageSchema.methods.toJSON = function() {
   
   // If message is deleted, redact the content but keep metadata
   if (messageObject.isDeleted) {
+    messageObject.content = "تم حذف هذه الرسالة";
     messageObject.text = "تم حذف هذه الرسالة";
     messageObject.images = [];
   }
@@ -128,10 +168,12 @@ messageSchema.statics.markAsRead = function(chatId, userId) {
   return this.updateMany(
     { 
       chat: chatId, 
-      readBy: { $ne: userId }
+      sender: { $ne: userId },
+      isRead: false 
     },
     { 
-      $addToSet: { readBy: userId } 
+      isRead: true,
+      $addToSet: { readBy: userId } // Keep legacy field updated
     }
   ).exec();
 };

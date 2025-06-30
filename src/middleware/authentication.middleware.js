@@ -16,17 +16,34 @@ export const isAuthenticated = asyncHandler(async (req, res, next) => {
     return next(new Error("التوكن غير صالح أو منتهي الصلاحية", { cause: 401 }));
   }
 
-  const tokenDB = await tokenModel.findOne({ token, isValid: true });
-  if (!tokenDB) {
-    return next(
-      new Error("هذا التوكن غير صالح أو تم تسجيل الخروج", { cause: 403 })
-    );
+  try {
+    const tokenDB = await tokenModel.findOne({ token, isValid: true });
+    if (!tokenDB) {
+      return next(
+        new Error("هذا التوكن غير صالح أو تم تسجيل الخروج", { cause: 403 })
+      );
+    }
+  
+    const user = await userModel.findById(decode.id);
+    if (!user) {
+      return next(new Error("المستخدم غير موجود", { cause: 404 }));
+    }
+    req.user = user;
+    return next();
+  } catch (error) {
+    console.error("Authentication error:", error);
+    
+    // Handle database connection errors
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+    }
+    
+    // Handle other database errors
+    if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+      return next(new Error("خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 500 }));
+    }
+    
+    // Pass other errors to the error handler
+    return next(error);
   }
-
-  const user = await userModel.findById(decode.id);
-  if (!user) {
-    return next(new Error("المستخدم غير موجود", { cause: 404 }));
-  }
-  req.user = user;
-  return next();
 });

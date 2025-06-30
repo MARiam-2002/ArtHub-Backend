@@ -3,19 +3,26 @@ import dotenv from "dotenv";
 import { bootstrap } from "./src/index.router.js";
 import { connectDB, closeDatabase } from "./DB/connection.js";
 import mongoose from "mongoose";
+import http from 'http';
+import { initializeSocketIO } from "./src/utils/socketService.js";
 
 dotenv.config();
 const app = express();
 const port = parseInt(process.env.PORT || '3000');
 const MAX_PORT_ATTEMPTS = 10; // Try up to 10 consecutive ports if needed
 let server;
+let io;
 
 // Connect to MongoDB with improved error handling
 connectDB()
   .then(() => console.log("✅ Connected to MongoDB successfully"))
   .catch(err => {
     console.error("❌ MongoDB Connection Error:", err);
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'production') {
+      console.error("⚠️ Application may not function correctly without database connection");
+      // In production, we continue running but log the error
+      // This allows the server to start even with temporary DB connection issues
+    } else {
       console.log("⚠️ Application will continue without database connection - some features may not work properly");
     }
   });
@@ -59,7 +66,14 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     }
 
     try {
-      server = app.listen(portToUse);
+      // Create HTTP server from Express app
+      const httpServer = http.createServer(app);
+      server = httpServer;
+      
+      // Initialize Socket.io with the HTTP server
+      io = initializeSocketIO(server);
+      
+      server.listen(portToUse);
       
       server.on('listening', () => {
         const serverEnv = process.env.NODE_ENV || 'development';
@@ -70,6 +84,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     ✅ ArtHub API Server Running!
     🌐 Environment: ${serverEnv}
     🚪 Port: ${actualPort}
+    🔌 Socket.IO: Enabled
     📚 API Docs: http://localhost:${actualPort}/api-docs
     ⏱️ Started at: ${new Date().toLocaleString()}
         `);
