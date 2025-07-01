@@ -28,28 +28,40 @@ const ensureConnection = async (next) => {
 
 export const register = async (req, res, next) => {
   try {
-    // Ensure database connection first
-    if (!await ensureConnection(next)) {
-      return; // Connection failed, error already sent
+    // Ensure database connection first with increased timeout
+    try {
+      if (!await ensureConnection(next)) {
+        return; // Connection failed, error already sent
+      }
+    } catch (connError) {
+      console.error("Registration connection error:", connError);
+      return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
     }
 
     // Extract data from request body
     const { displayName, email, password, phoneNumber } = req.body;
     
-    // Check if user already exists with timeout handling
+    // Check if user already exists with increased timeout
     let existingUser;
     try {
       existingUser = await Promise.race([
-        userModel.findOne({ email }).maxTimeMS(5000),
+        userModel.findOne({ email }).maxTimeMS(15000), // Increased from 5000
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Database operation timed out")), 5000)
+          setTimeout(() => reject(new Error("Database operation timed out")), 15000) // Increased from 5000
         )
       ]);
     } catch (findError) {
       console.error("Registration error:", findError);
+      
+      // Enhanced error handling for different MongoDB error types
       if (findError.message.includes("timed out")) {
         return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
       }
+      
+      if (findError.name === 'MongoNetworkError' || findError.name === 'MongoServerSelectionError') {
+        return next(new Error("تعذر الاتصال بخادم قاعدة البيانات", { cause: 503 }));
+      }
+      
       return next(new Error("حدث خطأ أثناء التحقق من البريد الإلكتروني", { cause: 500 }));
     }
 
@@ -60,7 +72,7 @@ export const register = async (req, res, next) => {
     // Hash password
     const hashedPassword = await bcryptjs.hash(password, parseInt(process.env.SALT_ROUND));
 
-    // Create new user with explicit timeout handling
+    // Create new user with increased timeout
     let newUser;
     try {
       newUser = await Promise.race([
@@ -72,14 +84,21 @@ export const register = async (req, res, next) => {
           role: "User",
         }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("User creation timed out")), 5000)
+          setTimeout(() => reject(new Error("User creation timed out")), 15000) // Increased from 5000
         )
       ]);
     } catch (createError) {
       console.error("User creation error:", createError);
+      
+      // Enhanced error handling for different MongoDB error types
       if (createError.message.includes("timed out")) {
         return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
       }
+      
+      if (createError.name === 'MongoNetworkError' || createError.name === 'MongoServerSelectionError') {
+        return next(new Error("تعذر الاتصال بخادم قاعدة البيانات", { cause: 503 }));
+      }
+      
       return next(new Error("حدث خطأ أثناء إنشاء الحساب", { cause: 500 }));
     }
 
@@ -105,6 +124,18 @@ export const register = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Registration error:", error);
+    
+    // Enhanced error handling for MongoDB connection errors
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+    }
+    
+    // Handle other database errors
+    if (error.name === 'MongoError' || error.name === 'MongoServerError' || 
+        error.name === 'MongoNetworkError' || error.name === 'MongoServerSelectionError') {
+      return next(new Error("خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+    }
+    
     return next(new Error("حدث خطأ أثناء إنشاء الحساب", { cause: 500 }));
   }
 };

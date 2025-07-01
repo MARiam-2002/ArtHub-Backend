@@ -25,6 +25,14 @@
       "memory": 512,
       "maxDuration": 5
     },
+    "api/mongo-debug.js": {
+      "memory": 512,
+      "maxDuration": 10
+    },
+    "api/direct-connect.js": {
+      "memory": 1024,
+      "maxDuration": 15
+    },
     "index.js": {
       "memory": 1536,
       "maxDuration": 60
@@ -46,8 +54,10 @@
   ],
   "env": {
     "NODE_ENV": "production",
-    "MONGODB_CONNECTION_TIMEOUT": "10000",
-    "MONGODB_SOCKET_TIMEOUT": "30000",
-    "MONGODB_SERVER_SELECTION_TIMEOUT": "10000"
+    "MONGODB_CONNECTION_TIMEOUT": "15000",
+    "MONGODB_SOCKET_TIMEOUT": "45000",
+    "MONGODB_SERVER_SELECTION_TIMEOUT": "15000",
+    "MONGODB_MAX_RETRY_ATTEMPTS": "5",
+    "MONGODB_BASE_RETRY_DELAY": "1000"
   }
 }
