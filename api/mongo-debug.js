@@ -6,10 +6,31 @@ dotenv.config();
 /**
  * MongoDB connection debug endpoint for Vercel
  * This endpoint helps diagnose MongoDB connection issues
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
+ * @param {import('http').IncomingMessage} req - HTTP request
+ * @param {import('http').ServerResponse} res - HTTP response
  */
 export default async function handler(req, res) {
+  // Set CORS headers for API endpoint
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle OPTIONS request for CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    res.status(405).json({
+      success: false,
+      message: 'Method Not Allowed',
+      timestamp: new Date().toISOString()
+    });
+    return;
+  }
+  
   try {
     // Get current connection state
     const currentState = mongoose.connection.readyState;
@@ -81,7 +102,7 @@ export default async function handler(req, res) {
     console.error('Debug endpoint error:', error);
     res.status(500).json({
       error: error.message,
-      stack: error.stack
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 } 

@@ -6,10 +6,31 @@ dotenv.config();
 /**
  * Direct MongoDB connection test endpoint for Vercel
  * This endpoint attempts a direct connection to MongoDB with minimal configuration
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
+ * @param {import('http').IncomingMessage} req - HTTP request
+ * @param {import('http').ServerResponse} res - HTTP response
  */
 export default async function handler(req, res) {
+  // Set CORS headers for API endpoint
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle OPTIONS request for CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    res.status(405).json({
+      success: false,
+      message: 'Method Not Allowed',
+      timestamp: new Date().toISOString()
+    });
+    return;
+  }
+  
   try {
     // Check if we have a connection string
     if (!process.env.CONNECTION_URL) {

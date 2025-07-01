@@ -6,10 +6,31 @@ dotenv.config();
 /**
  * Database test endpoint for Vercel
  * This endpoint tests the MongoDB connection and returns detailed diagnostics
- * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object
+ * @param {import('http').IncomingMessage} req - HTTP request
+ * @param {import('http').ServerResponse} res - HTTP response
  */
 export default async function handler(req, res) {
+  // Set CORS headers for API endpoint
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle OPTIONS request for CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    res.status(405).json({
+      success: false,
+      message: 'Method Not Allowed',
+      timestamp: new Date().toISOString()
+    });
+    return;
+  }
+  
   // Only allow this endpoint in development or with special auth header
   const isAuthorized = 
     process.env.NODE_ENV !== 'production' || 
@@ -70,9 +91,9 @@ export default async function handler(req, res) {
     
     // Connection options optimized for test
     const options = {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 10000, // Increased from 5000
+      connectTimeoutMS: 10000, // Increased from 5000
+      socketTimeoutMS: 15000, // Increased from 10000
       maxPoolSize: 1,
       bufferCommands: false,
       family: 4
@@ -110,7 +131,7 @@ export default async function handler(req, res) {
         const queryResult = await mongoose.connection.db.collection(firstCollection)
           .find({})
           .limit(1)
-          .maxTimeMS(2000)
+          .maxTimeMS(5000) // Increased from 2000
           .toArray();
         
         queryInfo = {
@@ -253,37 +274,19 @@ function getDiagnosisFromError(error) {
         'URL encode special characters in password'
       ]
     };
-  } else if (error.message.includes('ENOTFOUND')) {
-    return {
-      issue: 'Host Not Found Error',
-      possibleCauses: [
-        'MongoDB host address is incorrect',
-        'DNS resolution issues'
-      ],
-      recommendations: [
-        'Check MongoDB host address',
-        'Verify DNS resolution'
-      ]
-    };
-  } else if (error.message.includes('timed out')) {
-    return {
-      issue: 'Timeout Error',
-      possibleCauses: [
-        'MongoDB server is too slow to respond',
-        'Network latency issues',
-        'Firewall or security group blocking connection'
-      ],
-      recommendations: [
-        'Increase timeouts in connection options',
-        'Check network connectivity',
-        'Verify firewall settings'
-      ]
-    };
   } else {
     return {
       issue: 'Unknown Error',
-      errorType: error.name,
-      errorMessage: error.message
+      possibleCauses: [
+        'Connection configuration issue',
+        'Server-side problem',
+        'Network latency or timeout'
+      ],
+      recommendations: [
+        'Check MongoDB Atlas status',
+        'Verify environment variables',
+        'Try increasing timeout values'
+      ]
     };
   }
 } 
