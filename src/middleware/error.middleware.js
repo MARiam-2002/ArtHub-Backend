@@ -7,7 +7,7 @@ export const globalErrorHandling = (err, req, res, next) => {
   // Log the error for debugging
   console.error(`ERROR 💥: ${err.stack}`);
   
-  // Enhanced MongoDB connection error detection
+  // Enhanced MongoDB connection error detection with more specific patterns
   const isMongoConnectionError = 
     err.name === 'MongoNetworkError' ||
     err.name === 'MongoServerSelectionError' ||
@@ -20,6 +20,10 @@ export const globalErrorHandling = (err, req, res, next) => {
     err.message.includes('getaddrinfo ENOTFOUND') ||
     err.message.includes('connection closed') ||
     err.message.includes('topology was destroyed') ||
+    err.message.includes('no primary found') ||
+    err.message.includes('server selection error') ||
+    err.message.includes('ECONNREFUSED') ||
+    err.message.includes('Operation `users.findOne()` buffering timed out') ||
     err.cause === 503;
 
   // Handle MongoDB connection errors with a specific error response
@@ -28,13 +32,28 @@ export const globalErrorHandling = (err, req, res, next) => {
     
     // Try to provide more specific error information
     let specificError = "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا";
+    let errorCode = "DB_CONNECTION_ERROR";
     
     if (err.message.includes('buffering timed out')) {
       specificError = "انتهت مهلة عملية قاعدة البيانات، يرجى المحاولة مرة أخرى";
+      errorCode = "DB_BUFFERING_TIMEOUT";
+      
+      // Log additional diagnostic info for buffering timeouts
+      console.error("⚠️ Buffering timeout error. This typically happens when:");
+      console.error("  - MongoDB Atlas IP whitelist doesn't include your server's IP");
+      console.error("  - For Vercel deployments, add 0.0.0.0/0 to your MongoDB Atlas IP whitelist");
     } else if (err.message.includes('ENOTFOUND')) {
       specificError = "تعذر العثور على خادم قاعدة البيانات";
+      errorCode = "DB_HOST_NOT_FOUND";
     } else if (err.message.includes('Authentication failed')) {
       specificError = "فشل المصادقة مع قاعدة البيانات";
+      errorCode = "DB_AUTH_FAILED";
+    } else if (err.message.includes('ECONNREFUSED')) {
+      specificError = "تم رفض الاتصال بقاعدة البيانات";
+      errorCode = "DB_CONNECTION_REFUSED";
+    } else if (err.message.includes('server selection error') || err.message.includes('no primary found')) {
+      specificError = "تعذر الاتصال بخادم قاعدة البيانات، قد تكون الخدمة غير متاحة حاليًا";
+      errorCode = "DB_SERVER_SELECTION_ERROR";
     }
     
     return res.status(503).json({
@@ -42,7 +61,7 @@ export const globalErrorHandling = (err, req, res, next) => {
       status: 503,
       message: "الخدمة غير متوفرة",
       error: specificError,
-      errorCode: "DB_CONNECTION_ERROR",
+      errorCode: errorCode,
       timestamp: new Date().toISOString()
     });
   }

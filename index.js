@@ -5,6 +5,7 @@ import { connectDB, closeDatabase, checkDatabaseConnection } from "./DB/connecti
 import mongoose from "mongoose";
 import http from 'http';
 import { initializeSocketIO } from "./src/utils/socketService.js";
+import { ensureDatabaseConnection } from "./src/utils/mongodbUtils.js";
 
 dotenv.config();
 const app = express();
@@ -54,19 +55,25 @@ app.use(async (req, res, next) => {
   }
   
   try {
-    // Enhanced connection check with ping
+    // Enhanced connection check with ping and retry
     const isConnected = await checkDatabaseConnection();
     
     if (!isConnected) {
       console.error("❌ Database connection check failed during request");
-      return res.status(503).json({
-        success: false,
-        status: 503,
-        message: "الخدمة غير متوفرة",
-        error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
-        errorCode: "DB_CONNECTION_ERROR",
-        timestamp: new Date().toISOString()
-      });
+      
+      // Try one more time with force reconnect
+      const reconnected = await ensureDatabaseConnection(true);
+      
+      if (!reconnected) {
+        return res.status(503).json({
+          success: false,
+          status: 503,
+          message: "الخدمة غير متوفرة",
+          error: "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا",
+          errorCode: "DB_CONNECTION_ERROR",
+          timestamp: new Date().toISOString()
+        });
+      }
     }
     
     next();
@@ -169,6 +176,129 @@ app.get("/health", async (req, res) => {
     serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV,
     region: process.env.VERCEL_REGION || process.env.AWS_REGION || 'unknown'
   });
+});
+
+// Add database test endpoint
+app.get("/api/db-test", async (req, res) => {
+  try {
+    // Test database connection
+    const isConnected = mongoose.connection.readyState === 1;
+    
+    if (!isConnected) {
+      // Try to connect
+      console.log("🔄 Database not connected, attempting to connect...");
+      await connectDB();
+    }
+    
+    // Verify connection with a simple find operation
+    const collections = await mongoose.connection.db.listCollections().toArray();
+    
+    // Test a simple find operation on the users collection
+    let userTestResult = { status: "skipped" };
+    try {
+      const usersCollection = mongoose.connection.db.collection('users');
+      const userCount = await usersCollection.countDocuments({}, { maxTimeMS: 5000 });
+      userTestResult = { 
+        status: "success", 
+        count: userCount,
+        message: "Successfully queried users collection"
+      };
+    } catch (userError) {
+      userTestResult = { 
+        status: "error", 
+        message: userError.message,
+        error: userError.name
+      };
+    }
+    
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: mongoose.connection.readyState === 1,
+        readyState: mongoose.connection.readyState,
+        host: mongoose.connection.host,
+        name: mongoose.connection.db.databaseName,
+        collections: collections.length,
+        collectionNames: collections.map(c => c.name),
+        userTest: userTestResult
+      },
+      environment: {
+        node: process.version,
+        platform: process.platform,
+        env: process.env.NODE_ENV,
+        serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV
+      }
+    });
+  } catch (error) {
+    console.error("❌ Database test failed:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      errorName: error.name,
+      timestamp: new Date().toISOString(),
+      connectionState: mongoose.connection.readyState
+    });
+  }
+});
+
+// Add keepalive endpoint for preventing cold starts
+app.get("/api/keepalive", async (req, res) => {
+  try {
+    const isConnected = mongoose.connection.readyState === 1;
+    
+    if (isConnected) {
+      // Test connection with a ping
+      try {
+        await mongoose.connection.db.admin().ping();
+        res.status(200).json({
+          status: 'ok',
+          message: 'Server is alive',
+          database: 'connected',
+          timestamp: new Date().toISOString()
+        });
+      } catch (pingError) {
+        // Ping failed, try to reconnect
+        console.log("⚠️ Database ping failed, attempting to reconnect");
+        await ensureDatabaseConnection(true);
+        
+        res.status(200).json({
+          status: 'ok',
+          message: 'Server is alive, reconnected to database after ping failure',
+          database: 'reconnected',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      // Try to reconnect
+      try {
+        await ensureDatabaseConnection(true);
+        
+        res.status(200).json({
+          status: 'ok',
+          message: 'Server is alive, reconnected to database',
+          database: 'reconnected',
+          timestamp: new Date().toISOString()
+        });
+      } catch (reconnectError) {
+        res.status(503).json({
+          status: 'degraded',
+          message: 'Server is alive but database connection failed',
+          database: 'disconnected',
+          error: reconnectError.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error in keepalive endpoint:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error checking server status',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Start the server for non-serverless environments

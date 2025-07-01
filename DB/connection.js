@@ -151,6 +151,11 @@ export const connectDB = async (retryCount = 0) => {
               backoffTime = backoffTime * 1.5; // Exponential backoff
             }
             
+            // For Vercel, add a special flag to help with debugging
+            if (isServerless) {
+              console.log(`🔄 Connecting to MongoDB with URL pattern: ${process.env.CONNECTION_URL.split('@')[1].split('/')[0]}`);
+            }
+            
             await mongoose.connect(process.env.CONNECTION_URL, options);
             break; // Connection successful, exit the loop
           } catch (err) {
@@ -236,6 +241,13 @@ export const connectDB = async (retryCount = 0) => {
         console.error("  - Connection URL is correct (username, password, cluster name)");
         console.error("  - Network allows connection to MongoDB (firewall/security groups)");
         console.error("  - MongoDB Atlas IP whitelist includes your server's IP (add 0.0.0.0/0 for testing)");
+        
+        // Check if this is a Vercel deployment
+        if (process.env.VERCEL || process.env.VERCEL_ENV) {
+          console.error("⚠️ IMPORTANT: For Vercel deployments, you MUST add 0.0.0.0/0 to your MongoDB Atlas IP whitelist");
+          console.error("  - Vercel uses dynamic IPs for serverless functions");
+          console.error("  - Go to MongoDB Atlas > Network Access and add 0.0.0.0/0");
+        }
       } else if (error.name === 'MongoParseError') {
         console.error("⚠️ Invalid MongoDB connection string format");
       } else if (error.message.includes('Authentication failed')) {
@@ -247,6 +259,11 @@ export const connectDB = async (retryCount = 0) => {
         console.error("  - The connection to MongoDB is unstable or has high latency");
         console.error("  - The MongoDB server is under heavy load");
         console.error("  - The IP whitelist in MongoDB Atlas doesn't include your server's IP");
+        
+        if (process.env.VERCEL || process.env.VERCEL_ENV) {
+          console.error("⚠️ For Vercel deployments, this is often caused by IP whitelist restrictions");
+          console.error("  - Add 0.0.0.0/0 to your MongoDB Atlas IP whitelist");
+        }
       }
       
       // Implement retry mechanism with exponential backoff

@@ -1,23 +1,46 @@
-# Vercel Deployment Guide for ArtHub Backend
+# Deploying ArtHub Backend on Vercel
 
-This guide provides step-by-step instructions for deploying the ArtHub Backend on Vercel with a focus on MongoDB connection optimization.
+This guide provides step-by-step instructions for deploying the ArtHub Backend API on Vercel with MongoDB Atlas integration.
 
 ## Prerequisites
 
-- A [Vercel](https://vercel.com/) account
-- A [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) account with a cluster set up
-- Your project code in a Git repository (GitHub, GitLab, or Bitbucket)
+Before you begin, make sure you have:
 
-## Step 1: Prepare Your Project
+1. A [Vercel](https://vercel.com/) account
+2. A [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) account with a cluster set up
+3. The ArtHub Backend codebase on your local machine or in a GitHub repository
 
-### Ensure Vercel Compatibility
+## Step 1: Prepare Your MongoDB Atlas Cluster
 
-1. Make sure your project has:
-   - A `package.json` file with all dependencies
-   - An `index.js` file as the entry point
-   - A `vercel.json` configuration file
+1. **Create a MongoDB Atlas Cluster** (or use an existing one)
+   - Log in to [MongoDB Atlas](https://cloud.mongodb.com/)
+   - Create a new project if needed
+   - Build a new cluster (the M0 free tier is sufficient for development)
 
-2. Check that your `vercel.json` file includes:
+2. **Configure Database Access**
+   - Go to "Database Access" in the left sidebar
+   - Click "Add New Database User"
+   - Create a user with password authentication
+   - Set appropriate permissions (readWrite to your database)
+   - Save the username and password for later
+
+3. **Configure Network Access**
+   - Go to "Network Access" in the left sidebar
+   - Click "Add IP Address"
+   - Click "ALLOW ACCESS FROM ANYWHERE" (important for Vercel deployment)
+   - This adds `0.0.0.0/0` to your IP whitelist
+   - Click "Confirm"
+
+4. **Get Your Connection String**
+   - Go to "Clusters" in the left sidebar
+   - Click "Connect" on your cluster
+   - Choose "Connect your application"
+   - Copy the connection string
+   - Replace `<username>`, `<password>`, and `<dbname>` with your actual values
+
+## Step 2: Prepare Your Code for Deployment
+
+1. **Ensure your `vercel.json` file is configured correctly**
 
 ```json
 {
@@ -52,158 +75,210 @@ This guide provides step-by-step instructions for deploying the ArtHub Backend o
     {
       "path": "/api/keepalive",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/health",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/db-test",
+      "schedule": "*/15 * * * *"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
 ```
 
-### Optimize MongoDB Connection
+2. **Check your `package.json` file**
+   - Ensure all dependencies are listed correctly
+   - Make sure the "type" field is set to "module" for ES modules
+   - Verify that the "engines" field includes the Node.js version you want to use
 
-1. Update your MongoDB connection code to handle serverless environments:
-   - Use connection pooling with appropriate limits
-   - Implement connection caching
-   - Add retry logic for failed connections
-   - Set appropriate timeouts
-
-2. Our `DB/connection.js` file already includes these optimizations:
-   - Connection caching
-   - Exponential backoff for reconnection
-   - Serverless-specific connection options
-   - Proper error handling
-
-## Step 2: Configure MongoDB Atlas
-
-### Set Up Network Access
-
-1. Log in to [MongoDB Atlas](https://cloud.mongodb.com/)
-2. Navigate to your cluster
-3. Go to **Network Access** under the Security section
-4. Click **ADD IP ADDRESS**
-5. Add `0.0.0.0/0` to allow access from anywhere (required for Vercel's dynamic IPs)
-6. Click **Confirm**
-
-### Create a Database User
-
-1. Go to **Database Access** under the Security section
-2. Click **ADD NEW DATABASE USER**
-3. Choose **Password** authentication
-4. Enter a username and password
-5. Set **Database User Privileges** to **Read and Write to Any Database**
-6. Click **Add User**
-
-### Get Your Connection String
-
-1. Go to your cluster's overview page
-2. Click **Connect**
-3. Choose **Connect your application**
-4. Select **Node.js** as the driver and the appropriate version
-5. Copy the connection string
-6. Replace `<password>` with your database user's password
-7. Replace `myFirstDatabase` with your database name
+```json
+{
+  "name": "arthub-backend",
+  "version": "1.0.0",
+  "description": "ArtHub Backend API",
+  "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  // other fields...
+}
+```
 
 ## Step 3: Deploy to Vercel
 
-### Connect Your Repository
+### Option 1: Deploy from GitHub
 
-1. Log in to [Vercel](https://vercel.com/)
-2. Click **New Project**
-3. Import your Git repository
-4. Select the repository containing your ArtHub Backend code
+1. **Push your code to GitHub**
+   - Create a new repository or use an existing one
+   - Push your code to the repository
 
-### Configure Project Settings
+2. **Import your project to Vercel**
+   - Log in to [Vercel](https://vercel.com/)
+   - Click "New Project"
+   - Import your GitHub repository
+   - Configure the project settings:
+     - Framework Preset: Other
+     - Root Directory: ./
+     - Build Command: (leave empty)
+     - Output Directory: (leave empty)
 
-1. Set the **Framework Preset** to **Other**
-2. Set the **Root Directory** if your code is not in the repository root
-3. Set the **Build Command** to `npm install`
-4. Set the **Output Directory** to `.`
-5. Set the **Install Command** to `npm install`
+3. **Configure Environment Variables**
+   - Expand the "Environment Variables" section
+   - Add the following variables:
+     - `CONNECTION_URL`: Your MongoDB Atlas connection string
+     - `TOKEN_KEY`: A secure random string for JWT signing
+     - `SALT_ROUND`: 10 (or your preferred value)
+     - Add any other environment variables your application needs
 
-### Configure Environment Variables
+4. **Deploy**
+   - Click "Deploy"
+   - Wait for the deployment to complete
 
-Add the following environment variables:
+### Option 2: Deploy using Vercel CLI
 
-1. `CONNECTION_URL`: Your MongoDB Atlas connection string
-2. `TOKEN_KEY`: A secure random string for JWT signing
-3. `SALT_ROUND`: Number of salt rounds for password hashing (e.g., `10`)
-4. `NODE_ENV`: Set to `production`
-5. `DB_TEST_KEY`: A secure random string for accessing the database test endpoint
-6. Any other environment variables your application needs
-
-### Deploy
-
-1. Click **Deploy**
-2. Wait for the deployment to complete
-3. Once deployed, Vercel will provide a URL for your application
-
-## Step 4: Verify Deployment
-
-### Test API Endpoints
-
-1. Test the base API endpoint:
-   ```
-   https://your-app-url.vercel.app/api
+1. **Install Vercel CLI**
+   ```bash
+   npm install -g vercel
    ```
 
-2. Test the MongoDB connection using the db-test endpoint:
-   ```
-   https://your-app-url.vercel.app/api/db-test?key=your_db_test_key
-   ```
-
-3. Check the health endpoint:
-   ```
-   https://your-app-url.vercel.app/health
+2. **Log in to Vercel**
+   ```bash
+   vercel login
    ```
 
-### Monitor Logs
+3. **Configure Environment Variables**
+   - Create a `.env.production` file with your environment variables
+   - Or set them using the CLI:
+   ```bash
+   vercel env add CONNECTION_URL
+   # Enter your MongoDB connection string when prompted
+   
+   vercel env add TOKEN_KEY
+   # Enter your JWT secret when prompted
+   
+   # Add other environment variables as needed
+   ```
 
-1. Go to your project on Vercel
-2. Click **Deployments**
-3. Select your latest deployment
-4. Click **Functions**
-5. Select a function to view its logs
-6. Look for any MongoDB connection errors
+4. **Deploy**
+   ```bash
+   vercel --prod
+   ```
 
-## Step 5: Optimize Performance
+## Step 4: Verify Your Deployment
 
-### Enable Cron Jobs
+1. **Check the deployment status**
+   - Vercel will provide a URL for your deployed application
+   - Visit the URL to verify that the deployment was successful
 
-Vercel's cron jobs will automatically ping your keepalive endpoint to prevent cold starts. Verify that the cron job is set up correctly:
+2. **Test the API endpoints**
+   - Test the base endpoint: `https://your-app-url.vercel.app/api`
+   - Check the health endpoint: `https://your-app-url.vercel.app/health`
+   - Test the database connection: `https://your-app-url.vercel.app/api/db-test`
 
-1. Go to your project settings
-2. Click on **Cron Jobs**
-3. Verify that the `/api/keepalive` job is scheduled to run every 5 minutes
+3. **Monitor the logs**
+   - Go to your Vercel dashboard
+   - Click on your project
+   - Go to "Deployments" and select the latest deployment
+   - Click "Functions" and select a function to view its logs
 
-### Monitor Performance
+## Troubleshooting Common Issues
 
-1. Go to your project on Vercel
-2. Click **Analytics**
-3. Monitor function execution times and error rates
-4. Look for any performance issues related to MongoDB connections
+### Database Connection Issues
 
-## Troubleshooting
+If you see a 503 Service Unavailable error or database connection errors:
 
-If you encounter MongoDB connection issues, refer to the [MongoDB Troubleshooting Guide](MONGODB_TROUBLESHOOTING.md) for detailed solutions.
+1. **Check MongoDB Atlas IP Whitelist**
+   - Ensure `0.0.0.0/0` is in your IP whitelist
+   - Vercel uses dynamic IPs, so you need to allow all IPs
 
-Common issues include:
+2. **Verify Environment Variables**
+   - Check that `CONNECTION_URL` is set correctly in Vercel
+   - Make sure there are no typos or special characters that need URL encoding
 
-1. **IP Whitelist**: Ensure `0.0.0.0/0` is added to your MongoDB Atlas IP Access List
-2. **Connection String**: Verify your connection string format and credentials
-3. **Environment Variables**: Check that all environment variables are correctly set in Vercel
-4. **Function Timeout**: Increase the function duration limit if operations are timing out
+3. **Check MongoDB Atlas User Permissions**
+   - Ensure the user has appropriate permissions for the database
 
-## Best Practices for Vercel Deployment
+4. **Test Your Connection String**
+   - Use the `test-mongodb.js` script locally to verify your connection string works
 
-1. **Use Edge Functions** for improved performance when possible
-2. **Implement proper error handling** for database operations
-3. **Set up monitoring and alerts** for critical functions
-4. **Use appropriate caching strategies** to reduce database load
-5. **Implement rate limiting** to prevent abuse
-6. **Regularly update dependencies** to address security vulnerabilities
-7. **Set up preview deployments** for testing changes before production
+For detailed troubleshooting steps, see [MONGODB_TROUBLESHOOTING.md](./MONGODB_TROUBLESHOOTING.md) and [VERCEL_MONGODB_FIX.md](./VERCEL_MONGODB_FIX.md).
+
+### Function Timeout Issues
+
+If your functions are timing out:
+
+1. **Increase Function Duration**
+   - Update the `maxDuration` in `vercel.json` for the affected functions
+   - Note that Vercel has a maximum limit of 60 seconds for the Hobby plan
+
+2. **Optimize Database Queries**
+   - Add proper indexes to your MongoDB collections
+   - Use projection to limit returned fields
+   - Implement pagination for large result sets
+
+### Cold Start Issues
+
+If the first request after inactivity is slow or fails:
+
+1. **Use Cron Jobs to Keep Functions Warm**
+   - We've already configured cron jobs in `vercel.json`
+   - These ping the API every few minutes to keep it warm
+
+2. **Optimize Your Code for Cold Starts**
+   - Minimize dependencies
+   - Use lazy loading for heavy modules
+   - Implement connection caching (already done in our code)
+
+## Monitoring and Maintenance
+
+### Monitoring Your Deployment
+
+1. **Set up Monitoring**
+   - Use Vercel Analytics to monitor your API performance
+   - Consider setting up external monitoring with tools like UptimeRobot
+
+2. **Check Logs Regularly**
+   - Review function logs in the Vercel dashboard
+   - Look for errors or performance issues
+
+### Updating Your Deployment
+
+1. **Push Changes to GitHub**
+   - If you deployed from GitHub, Vercel will automatically deploy new changes
+
+2. **Manual Deployment**
+   - If you're using the CLI, run `vercel --prod` to deploy updates
+
+## Scaling Considerations
+
+As your application grows, consider the following:
+
+1. **Upgrade MongoDB Atlas Tier**
+   - The M0 free tier has limitations that can affect performance
+   - Consider upgrading to M10 or higher for production use
+
+2. **Optimize Database Performance**
+   - Create proper indexes for your queries
+   - Use MongoDB Atlas Performance Advisor
+
+3. **Consider Vercel Pro Plan**
+   - Longer function execution times
+   - More generous build execution limits
+   - Team collaboration features
 
 ## Additional Resources
 
 - [Vercel Documentation](https://vercel.com/docs)
 - [MongoDB Atlas Documentation](https://docs.atlas.mongodb.com/)
-- [Node.js MongoDB Driver Documentation](https://docs.mongodb.com/drivers/node/)
-- [Mongoose Documentation](https://mongoosejs.com/docs/) 
+- [Node.js on Vercel](https://vercel.com/docs/runtimes#official-runtimes/node-js)
+- [Vercel Serverless Functions](https://vercel.com/docs/functions) 
