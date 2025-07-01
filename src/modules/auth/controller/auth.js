@@ -9,35 +9,38 @@ import tokenModel from "../../../../DB/models/token.model.js";
 import admin from '../../../utils/firebaseAdmin.js';
 import { updateUserFCMToken } from '../../../utils/pushNotifications.js';
 import mongoose from "mongoose";
+import { ensureDatabaseConnection } from "../../../utils/mongodbUtils.js";
+
+// Helper function to ensure database connection before operations
+const ensureConnection = async (next) => {
+  try {
+    const isConnected = await ensureDatabaseConnection(true);
+    if (!isConnected) {
+      throw new Error("Database connection failed");
+    }
+    return true;
+  } catch (error) {
+    console.error("Database connection error:", error);
+    next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+    return false;
+  }
+};
 
 export const register = async (req, res, next) => {
   try {
-    // Check MongoDB connection first
-    if (mongoose.connection.readyState !== 1) {
-      console.log("MongoDB connection is not ready during registration. Current state:", mongoose.connection.readyState);
-      try {
-        // Try to reconnect
-        await mongoose.connect(process.env.CONNECTION_URL, {
-          serverSelectionTimeoutMS: 5000,
-          socketTimeoutMS: 30000,
-          connectTimeoutMS: 5000,
-          bufferCommands: false // Prevent operation buffering
-        });
-        console.log("MongoDB reconnected during registration");
-      } catch (connErr) {
-        console.error("Failed to reconnect to MongoDB during registration:", connErr);
-        return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
-      }
+    // Ensure database connection first
+    if (!await ensureConnection(next)) {
+      return; // Connection failed, error already sent
     }
 
     // Extract data from request body
     const { displayName, email, password, phoneNumber } = req.body;
     
-    // Check if user already exists - with timeout handling
+    // Check if user already exists with timeout handling
     let existingUser;
     try {
       existingUser = await Promise.race([
-        userModel.findOne({ email }),
+        userModel.findOne({ email }).maxTimeMS(5000),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error("Database operation timed out")), 5000)
         )
@@ -106,11 +109,31 @@ export const register = async (req, res, next) => {
   }
 };
 
-export const login = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
-
+export const login = async (req, res, next) => {
   try {
-    const user = await userModel.findOne({ email }).select("+password");
+    // Ensure database connection first
+    if (!await ensureConnection(next)) {
+      return; // Connection failed, error already sent
+    }
+
+    const { email, password } = req.body;
+
+    // Find user with timeout
+    let user;
+    try {
+      user = await Promise.race([
+        userModel.findOne({ email }).select("+password").maxTimeMS(5000),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Database operation timed out")), 5000)
+        )
+      ]);
+    } catch (findError) {
+      console.error("Login error:", findError);
+      if (findError.message.includes("timed out")) {
+        return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
+      }
+      return next(new Error("حدث خطأ أثناء تسجيل الدخول", { cause: 500 }));
+    }
     
     const invalidMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
   
@@ -132,13 +155,35 @@ export const login = asyncHandler(async (req, res, next) => {
       process.env.TOKEN_KEY
     );
   
-    await tokenModel.findOneAndDelete({ user: user._id });
+    // Delete previous token with timeout handling
+    try {
+      await Promise.race([
+        tokenModel.findOneAndDelete({ user: user._id }).maxTimeMS(3000),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Token deletion timed out")), 3000)
+        )
+      ]);
+    } catch (tokenError) {
+      console.warn("Failed to delete previous token:", tokenError);
+      // Continue anyway, this is not critical
+    }
   
-    await tokenModel.create({
-      token,
-      user: user._id,
-      agent: req.headers["user-agent"] || "unknown",
-    });
+    // Create new token with timeout handling
+    try {
+      await Promise.race([
+        tokenModel.create({
+          token,
+          user: user._id,
+          agent: req.headers["user-agent"] || "unknown",
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Token creation timed out")), 3000)
+        )
+      ]);
+    } catch (tokenError) {
+      console.warn("Failed to create token:", tokenError);
+      // Continue anyway, the token is still valid
+    }
   
     return res.status(200).json({
       success: true,
@@ -166,9 +211,14 @@ export const login = asyncHandler(async (req, res, next) => {
     // Pass other errors to the error handler
     return next(error);
   }
-});
+};
 
 export const sendForgetCode = asyncHandler(async (req, res, next) => {
+  // Ensure database connection first
+  if (!await ensureConnection(next)) {
+    return; // Connection failed, error already sent
+  }
+
   const user = await userModel.findOne({ email: req.body.email });
 
   if (!user) {

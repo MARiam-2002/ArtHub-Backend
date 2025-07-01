@@ -23,6 +23,7 @@ import reviewRouter from './modules/review/review.router.js';
 import followRouter from './modules/follow/follow.router.js';
 import notificationRouter from './modules/notification/notification.router.js';
 import mongoose from 'mongoose';
+import { checkDatabaseHealth, ensureDatabaseConnection } from './utils/mongodbUtils.js';
 
 export const bootstrap = (app, express) => {
   if (process.env.NODE_ENV == "dev") {
@@ -98,47 +99,142 @@ export const bootstrap = (app, express) => {
     }, 'API is running properly');
   });
 
+  // MongoDB connection test endpoint
+  app.get('/api/db-test', async (req, res) => {
+    try {
+      // Check current connection state
+      const currentState = mongoose.connection.readyState;
+      const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+      
+      // Get detailed health check
+      const healthCheck = await checkDatabaseHealth();
+      
+      // Try a simple find operation on users collection
+      let userTestResult = { status: "skipped" };
+      if (currentState === 1) {
+        try {
+          const usersCollection = mongoose.connection.db.collection('users');
+          const userCount = await usersCollection.countDocuments({}, { maxTimeMS: 3000 });
+          userTestResult = { 
+            status: "success", 
+            count: userCount,
+            message: "Successfully queried users collection"
+          };
+        } catch (userError) {
+          userTestResult = { 
+            status: "error", 
+            message: userError.message,
+            error: userError.name
+          };
+        }
+      }
+      
+      // Try to force reconnect if not connected
+      let reconnectResult = null;
+      if (currentState !== 1) {
+        try {
+          const reconnected = await ensureDatabaseConnection(true);
+          reconnectResult = {
+            success: reconnected,
+            message: reconnected ? "Successfully reconnected" : "Failed to reconnect"
+          };
+        } catch (reconnectError) {
+          reconnectResult = {
+            success: false,
+            error: reconnectError.message
+          };
+        }
+      }
+      
+      // Get connection string info (without credentials)
+      let connectionInfo = {};
+      if (process.env.CONNECTION_URL) {
+        try {
+          const url = new URL(process.env.CONNECTION_URL);
+          connectionInfo = {
+            protocol: url.protocol,
+            host: url.hostname,
+            port: url.port || (url.protocol === 'mongodb:' ? '27017' : 'N/A'),
+            database: url.pathname.substring(1),
+            options: url.search
+          };
+        } catch (urlError) {
+          connectionInfo = { 
+            error: "Invalid connection URL format",
+            message: urlError.message
+          };
+        }
+      }
+      
+      res.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        database: {
+          currentState: states[currentState] || 'unknown',
+          readyState: currentState,
+          healthCheck,
+          userTest: userTestResult,
+          reconnectAttempt: reconnectResult,
+          connectionInfo
+        },
+        environment: {
+          node: process.version,
+          platform: process.platform,
+          env: process.env.NODE_ENV,
+          serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV,
+          region: process.env.VERCEL_REGION || 'unknown'
+        }
+      });
+    } catch (error) {
+      console.error("Database test error:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Add keepalive endpoint for preventing cold starts
-  app.get("/keepalive", async (req, res) => {
+  app.get("/api/keepalive", async (req, res) => {
     try {
       const isConnected = mongoose.connection.readyState === 1;
       
       if (isConnected) {
-        res.status(200).json({
-          status: 'ok',
-          message: 'Server is alive',
-          database: 'connected',
-          timestamp: new Date().toISOString()
-        });
-      } else {
-        // Try to reconnect
+        // Test connection with a ping
         try {
-          await mongoose.connect(process.env.CONNECTION_URL, {
-            serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000,
-            connectTimeoutMS: 5000,
-            maxPoolSize: 5,
-            minPoolSize: 1,
-            bufferCommands: true,
-            bufferTimeoutMS: 30000,
-            directConnection: true
-          });
-          
+          await mongoose.connection.db.admin().ping();
           res.status(200).json({
             status: 'ok',
-            message: 'Server is alive, reconnected to database',
-            database: 'reconnected',
+            message: 'Server is alive',
+            database: 'connected',
             timestamp: new Date().toISOString()
           });
-        } catch (reconnectError) {
-          res.status(503).json({
-            status: 'degraded',
-            message: 'Server is alive but database connection failed',
-            database: 'disconnected',
-            error: reconnectError.message,
+        } catch (pingError) {
+          console.log("Database ping failed:", pingError.message);
+          
+          // Try to reconnect
+          const reconnected = await ensureDatabaseConnection(true);
+          
+          res.status(reconnected ? 200 : 503).json({
+            status: reconnected ? 'ok' : 'degraded',
+            message: reconnected ? 'Server is alive, reconnected after ping failure' : 'Server is alive but database connection failed',
+            database: reconnected ? 'reconnected' : 'disconnected',
+            error: reconnected ? undefined : pingError.message,
             timestamp: new Date().toISOString()
           });
         }
+      } else {
+        // Try to reconnect
+        const reconnected = await ensureDatabaseConnection(true);
+        
+        res.status(reconnected ? 200 : 503).json({
+          status: reconnected ? 'ok' : 'degraded',
+          message: reconnected ? 'Server is alive, reconnected to database' : 'Server is alive but database connection failed',
+          database: reconnected ? 'reconnected' : 'disconnected',
+          timestamp: new Date().toISOString()
+        });
       }
     } catch (error) {
       console.error('Error in keepalive endpoint:', error);

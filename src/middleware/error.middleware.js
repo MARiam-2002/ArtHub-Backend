@@ -24,38 +24,76 @@ export const globalErrorHandling = (err, req, res, next) => {
     err.message.includes('server selection error') ||
     err.message.includes('ECONNREFUSED') ||
     err.message.includes('Operation `users.findOne()` buffering timed out') ||
+    err.message.includes('Operation buffering timed out') ||
+    err.message.includes('Could not connect to any servers') ||
+    err.message.includes('Server selection timed out') ||
+    err.message.includes('MongoServerError') ||
+    err.message.includes('MongoError') ||
     err.cause === 503;
 
   // Handle MongoDB connection errors with a specific error response
   if (isMongoConnectionError) {
     console.error("❌ MongoDB connection error detected:", err.message);
     
+    // Log detailed diagnostic information
+    console.error("📊 MongoDB Connection Diagnostic Information:");
+    console.error(`  - Error name: ${err.name}`);
+    console.error(`  - Error message: ${err.message}`);
+    console.error(`  - Error code: ${err.code || 'N/A'}`);
+    console.error(`  - Connection state: ${req.mongoConnectionState || 'unknown'}`);
+    console.error(`  - Server environment: ${process.env.NODE_ENV || 'development'}`);
+    console.error(`  - Serverless: ${!!process.env.VERCEL || !!process.env.VERCEL_ENV ? 'Yes' : 'No'}`);
+    console.error(`  - Request path: ${req.path}`);
+    console.error(`  - Request method: ${req.method}`);
+    
     // Try to provide more specific error information
     let specificError = "خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا";
     let errorCode = "DB_CONNECTION_ERROR";
+    let troubleshootingInfo = "";
     
     if (err.message.includes('buffering timed out')) {
       specificError = "انتهت مهلة عملية قاعدة البيانات، يرجى المحاولة مرة أخرى";
       errorCode = "DB_BUFFERING_TIMEOUT";
+      troubleshootingInfo = "This typically happens when MongoDB Atlas IP whitelist doesn't include your server's IP. For Vercel deployments, add 0.0.0.0/0 to your MongoDB Atlas IP whitelist.";
       
       // Log additional diagnostic info for buffering timeouts
       console.error("⚠️ Buffering timeout error. This typically happens when:");
       console.error("  - MongoDB Atlas IP whitelist doesn't include your server's IP");
       console.error("  - For Vercel deployments, add 0.0.0.0/0 to your MongoDB Atlas IP whitelist");
+      console.error("  - Check network connectivity between your server and MongoDB");
+      console.error("  - Verify MongoDB Atlas is not in maintenance mode");
     } else if (err.message.includes('ENOTFOUND')) {
       specificError = "تعذر العثور على خادم قاعدة البيانات";
       errorCode = "DB_HOST_NOT_FOUND";
+      troubleshootingInfo = "Check your MongoDB connection string and ensure the hostname is correct.";
     } else if (err.message.includes('Authentication failed')) {
       specificError = "فشل المصادقة مع قاعدة البيانات";
       errorCode = "DB_AUTH_FAILED";
+      troubleshootingInfo = "Verify your MongoDB username and password in the connection string.";
     } else if (err.message.includes('ECONNREFUSED')) {
       specificError = "تم رفض الاتصال بقاعدة البيانات";
       errorCode = "DB_CONNECTION_REFUSED";
+      troubleshootingInfo = "Check if MongoDB is running and accessible from your server.";
     } else if (err.message.includes('server selection error') || err.message.includes('no primary found')) {
       specificError = "تعذر الاتصال بخادم قاعدة البيانات، قد تكون الخدمة غير متاحة حاليًا";
       errorCode = "DB_SERVER_SELECTION_ERROR";
+      troubleshootingInfo = "MongoDB Atlas might be experiencing issues or your IP might be blocked.";
+    } else if (err.message.includes('topology was destroyed')) {
+      specificError = "تم قطع الاتصال بقاعدة البيانات";
+      errorCode = "DB_CONNECTION_DESTROYED";
+      troubleshootingInfo = "The MongoDB connection was closed unexpectedly. This can happen in serverless environments.";
+    } else if (err.message.includes('Could not connect to any servers')) {
+      specificError = "تعذر الاتصال بأي من خوادم قاعدة البيانات";
+      errorCode = "DB_NO_SERVERS_AVAILABLE";
+      troubleshootingInfo = "None of the MongoDB servers in your cluster are reachable.";
     }
     
+    // Log troubleshooting info
+    if (troubleshootingInfo) {
+      console.error(`⚠️ Troubleshooting: ${troubleshootingInfo}`);
+    }
+    
+    // Return a user-friendly error response
     return res.status(503).json({
       success: false,
       status: 503,
