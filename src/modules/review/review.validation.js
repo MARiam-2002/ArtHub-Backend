@@ -52,4 +52,4 @@ export const addArtistReviewSchema = {
       'string.max': 'يجب ألا يتجاوز التعليق 500 حرف'
     })
   })
-}; 
+};

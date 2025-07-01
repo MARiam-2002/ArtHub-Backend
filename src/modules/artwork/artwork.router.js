@@ -4,7 +4,7 @@ import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import { createArtworkSchema, updateArtworkSchema } from './artwork.validation.js';
 import * as reviewController from '../review/review.controller.js';
-import { verifyFirebaseToken } from '../../middleware/firebase.middleware.js';
+import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 
 const router = Router();
 
@@ -316,7 +316,12 @@ router.get('/:id/reviews', reviewController.getArtworkReviewsWithStats);
  *       400:
  *         description: بيانات غير صالحة
  */
-router.post('/', isAuthenticated, isValidation(createArtworkSchema), artworkController.createArtwork);
+router.post(
+  '/',
+  isAuthenticated,
+  isValidation(createArtworkSchema),
+  artworkController.createArtwork
+);
 
 /**
  * @swagger
@@ -369,7 +374,12 @@ router.post('/', isAuthenticated, isValidation(createArtworkSchema), artworkCont
  *       404:
  *         description: العمل الفني غير موجود أو غير مصرح
  */
-router.patch('/:id', isAuthenticated, isValidation(updateArtworkSchema), artworkController.updateArtwork);
+router.patch(
+  '/:id',
+  isAuthenticated,
+  isValidation(updateArtworkSchema),
+  artworkController.updateArtwork
+);
 
 /**
  * @swagger
@@ -506,4 +516,4 @@ router.get('/search', artworkController.searchArtworks);
  */
 router.get('/search/firebase', verifyFirebaseToken, artworkController.searchArtworks);
 
-export default router; 
+export default router;

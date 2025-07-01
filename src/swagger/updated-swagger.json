@@ -60,9 +60,7 @@
   "paths": {
     "/auth/register": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Register a new user",
         "description": "Create a new user account",
         "requestBody": {
@@ -71,12 +69,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "password",
-                  "confirmPassword",
-                  "job"
-                ],
+                "required": ["email", "password", "confirmPassword", "job"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -147,9 +140,7 @@
     },
     "/auth/login": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Login user",
         "description": "Authenticate user and get token",
         "requestBody": {
@@ -158,10 +149,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "password"
-                ],
+                "required": ["email", "password"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -222,9 +210,7 @@
     },
     "/auth/login-with-fingerprint": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Login with fingerprint",
         "description": "Login with device fingerprint",
         "security": [
@@ -251,9 +237,7 @@
     },
     "/auth/social-login": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Social login with Firebase",
         "description": "Authenticate user using Firebase token from social login",
         "requestBody": {
@@ -291,9 +275,7 @@
     },
     "/auth/forgetCode": {
       "patch": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Send password reset code",
         "description": "Send a verification code to user's email for password reset",
         "requestBody": {
@@ -302,9 +284,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email"
-                ],
+                "required": ["email"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -327,9 +307,7 @@
     },
     "/auth/resetPassword": {
       "patch": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Reset password",
         "description": "Reset user password when authenticated",
         "security": [
@@ -343,10 +321,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "oldPassword",
-                  "newPassword"
-                ],
+                "required": ["oldPassword", "newPassword"],
                 "properties": {
                   "oldPassword": {
                     "type": "string",
@@ -376,9 +351,7 @@
     },
     "/auth/VerifyCode": {
       "patch": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Verify account code",
         "description": "Verify the account verification code sent to email",
         "security": [
@@ -392,9 +365,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "code"
-                ],
+                "required": ["code"],
                 "properties": {
                   "code": {
                     "type": "string"
@@ -419,9 +390,7 @@
     },
     "/auth/verifyForgetCode": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Verify forget password code",
         "description": "Verify the code sent for password reset",
         "requestBody": {
@@ -430,10 +399,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "code"
-                ],
+                "required": ["email", "code"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -459,9 +425,7 @@
     },
     "/auth/resetPasswordByCode": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "summary": "Reset password by code",
         "description": "Reset password using the verification code",
         "requestBody": {
@@ -470,11 +434,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "code",
-                  "newPassword"
-                ],
+                "required": ["email", "code", "newPassword"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -504,9 +464,7 @@
     },
     "/image/upload": {
       "post": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Upload images",
         "description": "Upload one or more images to Cloudinary",
         "security": [
@@ -568,9 +526,7 @@
     },
     "/chat": {
       "get": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Get user chats",
         "description": "Get all chats for the authenticated user",
         "security": [
@@ -609,9 +565,7 @@
     },
     "/chat/{chatId}/messages": {
       "get": {
-        "tags": [
-          "Chat"
-        ],
+        "tags": ["Chat"],
         "summary": "Get messages in a chat",
         "description": "Get all messages in a specific chat",
         "security": [
@@ -663,9 +617,7 @@
     },
     "/artwork": {
       "get": {
-        "tags": [
-          "Artwork"
-        ],
+        "tags": ["Artwork"],
         "summary": "Get all artworks",
         "description": "Get all artworks with pagination",
         "parameters": [
@@ -729,9 +681,7 @@
     },
     "/home": {
       "get": {
-        "tags": [
-          "Home"
-        ],
+        "tags": ["Home"],
         "summary": "Get home page data",
         "description": "Get data for home page including featured artworks and categories",
         "responses": {
@@ -785,9 +735,7 @@
     },
     "/home/search": {
       "get": {
-        "tags": [
-          "Home"
-        ],
+        "tags": ["Home"],
         "summary": "Search artworks and artists",
         "description": "Search for artworks and artists by query term",
         "parameters": [
@@ -858,9 +806,7 @@
     },
     "/transactions/artwork": {
       "post": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Purchase artwork",
         "description": "Create a transaction to purchase an artwork",
         "security": [
@@ -874,11 +820,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "artworkId",
-                  "paymentMethod",
-                  "shippingAddress"
-                ],
+                "required": ["artworkId", "paymentMethod", "shippingAddress"],
                 "properties": {
                   "artworkId": {
                     "type": "string",
@@ -902,13 +844,7 @@
                   },
                   "shippingAddress": {
                     "type": "object",
-                    "required": [
-                      "fullName",
-                      "addressLine1",
-                      "city",
-                      "country",
-                      "phoneNumber"
-                    ],
+                    "required": ["fullName", "addressLine1", "city", "country", "phoneNumber"],
                     "properties": {
                       "fullName": {
                         "type": "string",
@@ -964,9 +900,7 @@
     },
     "/transactions/special-request": {
       "post": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Pay for special request",
         "description": "Create a transaction to pay for an accepted special request",
         "security": [
@@ -980,11 +914,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "specialRequestId",
-                  "paymentMethod",
-                  "shippingAddress"
-                ],
+                "required": ["specialRequestId", "paymentMethod", "shippingAddress"],
                 "properties": {
                   "specialRequestId": {
                     "type": "string",
@@ -1030,9 +960,7 @@
     },
     "/transactions/{transactionId}": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Get transaction details",
         "description": "Get details of a specific transaction",
         "security": [
@@ -1063,9 +991,7 @@
     },
     "/transactions/{transactionId}/status": {
       "patch": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Update transaction status",
         "description": "Update status of a transaction (admin or seller only)",
         "security": [
@@ -1090,18 +1016,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "pending",
-                      "completed",
-                      "failed",
-                      "refunded"
-                    ],
+                    "enum": ["pending", "completed", "failed", "refunded"],
                     "description": "New transaction status"
                   },
                   "notes": {
@@ -1132,9 +1051,7 @@
     },
     "/transactions/{transactionId}/tracking": {
       "patch": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Update shipping tracking",
         "description": "Update shipping and tracking information for a transaction (seller only)",
         "security": [
@@ -1159,10 +1076,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "provider",
-                  "trackingNumber"
-                ],
+                "required": ["provider", "trackingNumber"],
                 "properties": {
                   "provider": {
                     "type": "string",
@@ -1201,9 +1115,7 @@
     },
     "/transactions/buyer/history": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Get purchase history",
         "description": "Get user's purchase transaction history",
         "security": [
@@ -1235,12 +1147,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "completed",
-                "failed",
-                "refunded"
-              ]
+              "enum": ["pending", "completed", "failed", "refunded"]
             },
             "description": "Filter by status"
           }
@@ -1254,9 +1161,7 @@
     },
     "/transactions/seller/history": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Get sales history",
         "description": "Get seller's sales transaction history",
         "security": [
@@ -1288,12 +1193,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "completed",
-                "failed",
-                "refunded"
-              ]
+              "enum": ["pending", "completed", "failed", "refunded"]
             },
             "description": "Filter by status"
           }
@@ -1307,9 +1207,7 @@
     },
     "/transactions/seller/stats": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "Get seller stats",
         "description": "Get sales statistics for seller",
         "security": [
@@ -1329,10 +1227,7 @@
     },
     "/transactions/admin/stats": {
       "get": {
-        "tags": [
-          "Transactions",
-          "Admin"
-        ],
+        "tags": ["Transactions", "Admin"],
         "summary": "Get admin transaction stats",
         "description": "Get platform-wide transaction statistics (admin only)",
         "security": [
@@ -1352,9 +1247,7 @@
     },
     "/special-requests": {
       "post": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "إنشاء طلب خاص",
         "description": "إرسال طلب خاص لفنان محدد",
         "security": [
@@ -1368,12 +1261,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "artist",
-                  "requestType",
-                  "description",
-                  "budget"
-                ],
+                "required": ["artist", "requestType", "description", "budget"],
                 "properties": {
                   "artist": {
                     "type": "string",
@@ -1424,9 +1312,7 @@
     },
     "/special-requests/my": {
       "get": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "عرض طلباتي الخاصة",
         "description": "عرض الطلبات الخاصة التي أرسلها المستخدم",
         "security": [
@@ -1456,12 +1342,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "accepted",
-                "rejected",
-                "completed"
-              ]
+              "enum": ["pending", "accepted", "rejected", "completed"]
             },
             "description": "تصفية حسب الحالة"
           }
@@ -1475,9 +1356,7 @@
     },
     "/special-requests/artist": {
       "get": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "عرض الطلبات الموجهة للفنان",
         "description": "عرض الطلبات الخاصة المرسلة إلى الفنان",
         "security": [
@@ -1507,12 +1386,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "accepted",
-                "rejected",
-                "completed"
-              ]
+              "enum": ["pending", "accepted", "rejected", "completed"]
             },
             "description": "تصفية حسب الحالة"
           }
@@ -1529,9 +1403,7 @@
     },
     "/special-requests/artist/stats": {
       "get": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "إحصائيات الطلبات للفنان",
         "description": "عرض إحصائيات الطلبات الخاصة للفنان",
         "security": [
@@ -1551,9 +1423,7 @@
     },
     "/special-requests/{requestId}": {
       "get": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "تفاصيل طلب خاص",
         "description": "عرض تفاصيل طلب خاص محدد",
         "security": [
@@ -1584,9 +1454,7 @@
     },
     "/special-requests/{requestId}/status": {
       "patch": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "تحديث حالة الطلب",
         "description": "تحديث حالة طلب خاص (للفنان فقط)",
         "security": [
@@ -1611,16 +1479,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "accepted",
-                      "rejected"
-                    ],
+                    "enum": ["accepted", "rejected"],
                     "description": "الحالة الجديدة"
                   },
                   "response": {
@@ -1655,9 +1518,7 @@
     },
     "/special-requests/{requestId}/complete": {
       "patch": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "إكمال طلب خاص",
         "description": "تسليم وإكمال طلب خاص (للفنان فقط)",
         "security": [
@@ -1682,9 +1543,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "deliverables"
-                ],
+                "required": ["deliverables"],
                 "properties": {
                   "deliverables": {
                     "type": "array",
@@ -1721,9 +1580,7 @@
     },
     "/reports": {
       "post": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "إنشاء تقرير جديد",
         "description": "الإبلاغ عن محتوى غير مناسب",
         "security": [
@@ -1737,21 +1594,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "contentType",
-                  "contentId",
-                  "reason"
-                ],
+                "required": ["contentType", "contentId", "reason"],
                 "properties": {
                   "contentType": {
                     "type": "string",
-                    "enum": [
-                      "artwork",
-                      "image",
-                      "user",
-                      "comment",
-                      "message"
-                    ],
+                    "enum": ["artwork", "image", "user", "comment", "message"],
                     "description": "نوع المحتوى المبلغ عنه"
                   },
                   "contentId": {
@@ -1794,9 +1641,7 @@
     },
     "/reports/my": {
       "get": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "عرض تقاريري",
         "description": "عرض التقارير التي قام المستخدم بإنشائها",
         "security": [
@@ -1826,11 +1671,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "resolved",
-                "rejected"
-              ]
+              "enum": ["pending", "resolved", "rejected"]
             },
             "description": "تصفية حسب الحالة"
           }
@@ -1844,9 +1685,7 @@
     },
     "/reports/{reportId}": {
       "get": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "عرض تفاصيل تقرير",
         "description": "عرض تفاصيل تقرير محدد",
         "security": [
@@ -1875,9 +1714,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "حذف تقرير",
         "description": "حذف تقرير قام المستخدم بإنشائه (يمكن فقط إذا كان التقرير قيد الانتظار)",
         "security": [
@@ -1908,10 +1745,7 @@
     },
     "/reports/admin/stats": {
       "get": {
-        "tags": [
-          "Reports",
-          "Admin"
-        ],
+        "tags": ["Reports", "Admin"],
         "summary": "إحصائيات التقارير",
         "description": "عرض إحصائيات التقارير (للمدير فقط)",
         "security": [
@@ -1931,10 +1765,7 @@
     },
     "/reports/admin/all": {
       "get": {
-        "tags": [
-          "Reports",
-          "Admin"
-        ],
+        "tags": ["Reports", "Admin"],
         "summary": "قائمة جميع التقارير",
         "description": "عرض قائمة جميع التقارير (للمدير فقط)",
         "security": [
@@ -1964,11 +1795,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "resolved",
-                "rejected"
-              ]
+              "enum": ["pending", "resolved", "rejected"]
             },
             "description": "تصفية حسب الحالة"
           },
@@ -1977,13 +1804,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "artwork",
-                "image",
-                "user",
-                "comment",
-                "message"
-              ]
+              "enum": ["artwork", "image", "user", "comment", "message"]
             },
             "description": "تصفية حسب نوع المحتوى"
           }
@@ -2000,10 +1821,7 @@
     },
     "/reports/admin/{reportId}/status": {
       "patch": {
-        "tags": [
-          "Reports",
-          "Admin"
-        ],
+        "tags": ["Reports", "Admin"],
         "summary": "تحديث حالة تقرير",
         "description": "تحديث حالة تقرير (للمدير فقط)",
         "security": [
@@ -2028,16 +1846,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "resolved",
-                      "rejected"
-                    ],
+                    "enum": ["resolved", "rejected"],
                     "description": "الحالة الجديدة"
                   },
                   "adminNotes": {
@@ -2067,9 +1880,7 @@
     },
     "/api/artworks": {
       "get": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "قائمة الأعمال الفنية",
         "description": "الحصول على قائمة بجميع الأعمال الفنية مع دعم الصفحات",
         "parameters": [
@@ -2099,9 +1910,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "إنشاء عمل فني جديد",
         "description": "إضافة عمل فني جديد (للفنانين فقط)",
         "security": [
@@ -2115,13 +1924,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "title",
-                  "description",
-                  "image",
-                  "price",
-                  "category"
-                ],
+                "required": ["title", "description", "image", "price", "category"],
                 "properties": {
                   "title": {
                     "type": "string",
@@ -2168,9 +1971,7 @@
     },
     "/api/artworks/search": {
       "get": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "البحث المتقدم في الأعمال الفنية",
         "description": "البحث في الأعمال الفنية مع دعم التصفية المتقدمة",
         "parameters": [
@@ -2238,12 +2039,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "price",
-                "createdAt",
-                "title",
-                "rating"
-              ]
+              "enum": ["price", "createdAt", "title", "rating"]
             },
             "description": "ترتيب حسب"
           },
@@ -2252,10 +2048,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             },
             "description": "ترتيب تصاعدي أو تنازلي"
@@ -2288,9 +2081,7 @@
     },
     "/api/artworks/artist/{artistId}": {
       "get": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "أعمال الفنان",
         "description": "الحصول على الأعمال الفنية لفنان محدد",
         "parameters": [
@@ -2334,9 +2125,7 @@
     },
     "/api/artworks/category/{categoryId}": {
       "get": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "أعمال حسب الفئة",
         "description": "الحصول على الأعمال الفنية في فئة محددة",
         "parameters": [
@@ -2377,9 +2166,7 @@
     },
     "/api/artworks/{id}": {
       "get": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "تفاصيل عمل فني",
         "description": "الحصول على تفاصيل عمل فني محدد",
         "parameters": [
@@ -2403,9 +2190,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "تحديث عمل فني",
         "description": "تحديث بيانات عمل فني (للفنان المالك فقط)",
         "security": [
@@ -2474,9 +2259,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "حذف عمل فني",
         "description": "حذف عمل فني (للفنان المالك فقط)",
         "security": [
@@ -2507,9 +2290,7 @@
     },
     "/api/artworks/{id}/similar": {
       "get": {
-        "tags": [
-          "Artworks"
-        ],
+        "tags": ["Artworks"],
         "summary": "الأعمال الفنية المشابهة",
         "description": "الحصول على أعمال فنية مشابهة لعمل فني محدد",
         "parameters": [
@@ -2544,10 +2325,7 @@
     },
     "/api/artworks/{id}/reviews": {
       "get": {
-        "tags": [
-          "Artworks",
-          "Reviews"
-        ],
+        "tags": ["Artworks", "Reviews"],
         "summary": "مراجعات العمل الفني",
         "description": "الحصول على مراجعات وتقييمات عمل فني محدد",
         "parameters": [
@@ -2588,9 +2366,7 @@
     },
     "/api/home": {
       "get": {
-        "tags": [
-          "Home"
-        ],
+        "tags": ["Home"],
         "summary": "Get home page data",
         "description": "Retrieve data for the home page including featured artworks, artists, and categories",
         "responses": {
@@ -2644,9 +2420,7 @@
     },
     "/api/home/search": {
       "get": {
-        "tags": [
-          "Home"
-        ],
+        "tags": ["Home"],
         "summary": "Search artworks, artists and images",
         "description": "Search for artworks, artists and images by query term with filters",
         "parameters": [
@@ -2663,12 +2437,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "all",
-                "artworks",
-                "artists",
-                "images"
-              ],
+              "enum": ["all", "artworks", "artists", "images"],
               "default": "all"
             },
             "description": "Type of results to return"
@@ -2764,9 +2533,7 @@
     },
     "/api/home/trending": {
       "get": {
-        "tags": [
-          "Home"
-        ],
+        "tags": ["Home"],
         "summary": "Get trending content",
         "description": "Retrieve trending artworks, artists, and images",
         "parameters": [
@@ -2775,12 +2542,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "all",
-                "artworks",
-                "artists",
-                "images"
-              ],
+              "enum": ["all", "artworks", "artists", "images"],
               "default": "all"
             }
           },
@@ -2802,9 +2564,7 @@
     },
     "/api/home/explore": {
       "get": {
-        "tags": [
-          "Home"
-        ],
+        "tags": ["Home"],
         "summary": "Explore content for discovery",
         "description": "Get curated content for the explore section",
         "parameters": [
@@ -2834,9 +2594,7 @@
     },
     "/api/image/upload": {
       "post": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Upload images",
         "description": "Upload one or more images with metadata",
         "security": [
@@ -2909,9 +2667,7 @@
     },
     "/api/image/upload/firebase": {
       "post": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Upload images with Firebase auth",
         "description": "Upload one or more images using Firebase authentication",
         "security": [
@@ -2962,9 +2718,7 @@
     },
     "/api/image/my-images": {
       "get": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Get user images",
         "description": "Get all images uploaded by the authenticated user",
         "security": [
@@ -3006,9 +2760,7 @@
     },
     "/api/image/my-images/firebase": {
       "get": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Get user images with Firebase auth",
         "description": "Get all images uploaded by the user authenticated with Firebase",
         "security": [
@@ -3050,9 +2802,7 @@
     },
     "/api/image/{imageId}": {
       "get": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Get image details",
         "description": "Get details of a specific image",
         "parameters": [
@@ -3075,9 +2825,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Update image metadata",
         "description": "Update metadata of a specific image",
         "security": [
@@ -3134,9 +2882,7 @@
     },
     "/api/image/{imageId}/firebase": {
       "patch": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Update image metadata with Firebase auth",
         "description": "Update metadata of a specific image using Firebase authentication",
         "security": [
@@ -3193,9 +2939,7 @@
     },
     "/api/image/{publicId}": {
       "delete": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Delete image",
         "description": "Delete a specific image",
         "security": [
@@ -3225,9 +2969,7 @@
     },
     "/api/image/{publicId}/firebase": {
       "delete": {
-        "tags": [
-          "Image"
-        ],
+        "tags": ["Image"],
         "summary": "Delete image with Firebase auth",
         "description": "Delete a specific image using Firebase authentication",
         "security": [
@@ -3257,10 +2999,7 @@
     },
     "/api/image/categories/popular": {
       "get": {
-        "tags": [
-          "Image",
-          "Categories"
-        ],
+        "tags": ["Image", "Categories"],
         "summary": "Get popular image categories",
         "description": "Get a list of popular image categories with counts",
         "responses": {
@@ -3272,9 +3011,7 @@
     },
     "/api/reports": {
       "post": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "إنشاء تقرير جديد",
         "description": "الإبلاغ عن محتوى غير مناسب",
         "security": [
@@ -3288,21 +3025,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "contentType",
-                  "contentId",
-                  "reason"
-                ],
+                "required": ["contentType", "contentId", "reason"],
                 "properties": {
                   "contentType": {
                     "type": "string",
-                    "enum": [
-                      "artwork",
-                      "image",
-                      "user",
-                      "comment",
-                      "message"
-                    ],
+                    "enum": ["artwork", "image", "user", "comment", "message"],
                     "description": "نوع المحتوى المبلغ عنه"
                   },
                   "contentId": {
@@ -3345,9 +3072,7 @@
     },
     "/api/reports/my": {
       "get": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "عرض تقاريري",
         "description": "عرض التقارير التي قام المستخدم بإنشائها",
         "security": [
@@ -3377,11 +3102,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "resolved",
-                "rejected"
-              ]
+              "enum": ["pending", "resolved", "rejected"]
             },
             "description": "تصفية حسب الحالة"
           }
@@ -3395,9 +3116,7 @@
     },
     "/api/reports/{reportId}": {
       "get": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "عرض تفاصيل تقرير",
         "description": "عرض تفاصيل تقرير محدد",
         "security": [
@@ -3426,9 +3145,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Reports"
-        ],
+        "tags": ["Reports"],
         "summary": "حذف تقرير",
         "description": "حذف تقرير قام المستخدم بإنشائه (يمكن فقط إذا كان التقرير قيد الانتظار)",
         "security": [
@@ -3459,10 +3176,7 @@
     },
     "/api/reports/admin/stats": {
       "get": {
-        "tags": [
-          "Reports",
-          "Admin"
-        ],
+        "tags": ["Reports", "Admin"],
         "summary": "إحصائيات التقارير",
         "description": "عرض إحصائيات التقارير (للمدير فقط)",
         "security": [
@@ -3482,10 +3196,7 @@
     },
     "/api/reports/admin/all": {
       "get": {
-        "tags": [
-          "Reports",
-          "Admin"
-        ],
+        "tags": ["Reports", "Admin"],
         "summary": "قائمة جميع التقارير",
         "description": "عرض قائمة جميع التقارير (للمدير فقط)",
         "security": [
@@ -3515,11 +3226,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "resolved",
-                "rejected"
-              ]
+              "enum": ["pending", "resolved", "rejected"]
             },
             "description": "تصفية حسب الحالة"
           },
@@ -3528,13 +3235,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "artwork",
-                "image",
-                "user",
-                "comment",
-                "message"
-              ]
+              "enum": ["artwork", "image", "user", "comment", "message"]
             },
             "description": "تصفية حسب نوع المحتوى"
           }
@@ -3551,10 +3252,7 @@
     },
     "/api/reports/admin/{reportId}/status": {
       "patch": {
-        "tags": [
-          "Reports",
-          "Admin"
-        ],
+        "tags": ["Reports", "Admin"],
         "summary": "تحديث حالة تقرير",
         "description": "تحديث حالة تقرير محدد (للمدير فقط)",
         "security": [
@@ -3579,17 +3277,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "pending",
-                      "resolved",
-                      "rejected"
-                    ],
+                    "enum": ["pending", "resolved", "rejected"],
                     "description": "الحالة الجديدة"
                   },
                   "adminNotes": {
@@ -3617,9 +3309,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "حذف طلب خاص",
         "description": "حذف طلب خاص (للمرسل فقط وفقط إذا كان الطلب قيد الانتظار أو مرفوضًا)",
         "security": [
@@ -3653,9 +3343,7 @@
     },
     "/api/special-requests/{requestId}/status": {
       "patch": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "تحديث حالة الطلب",
         "description": "تحديث حالة طلب خاص (للفنان فقط)",
         "security": [
@@ -3680,18 +3368,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "pending",
-                      "accepted",
-                      "rejected",
-                      "completed"
-                    ]
+                    "enum": ["pending", "accepted", "rejected", "completed"]
                   },
                   "response": {
                     "type": "string",
@@ -3714,9 +3395,7 @@
     },
     "/api/special-requests/{requestId}/response": {
       "post": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "إضافة رد للطلب",
         "description": "إضافة رد أو تعليق على طلب خاص",
         "security": [
@@ -3741,9 +3420,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "response"
-                ],
+                "required": ["response"],
                 "properties": {
                   "response": {
                     "type": "string",
@@ -3766,9 +3443,7 @@
     },
     "/api/special-requests/{requestId}/complete": {
       "patch": {
-        "tags": [
-          "Special Requests"
-        ],
+        "tags": ["Special Requests"],
         "summary": "إكمال الطلب الخاص",
         "description": "تحديث حالة الطلب إلى مكتمل مع إضافة روابط التسليم (للفنان فقط)",
         "security": [
@@ -3825,9 +3500,7 @@
     },
     "/api/transactions/artwork": {
       "post": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "شراء عمل فني",
         "description": "إنشاء معاملة لشراء عمل فني",
         "security": [
@@ -3841,11 +3514,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "artworkId",
-                  "paymentMethod",
-                  "shippingAddress"
-                ],
+                "required": ["artworkId", "paymentMethod", "shippingAddress"],
                 "properties": {
                   "artworkId": {
                     "type": "string",
@@ -3917,9 +3586,7 @@
     },
     "/api/transactions/special-request": {
       "post": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "الدفع لطلب خاص",
         "description": "إنشاء معاملة لدفع قيمة طلب خاص",
         "security": [
@@ -3933,11 +3600,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "specialRequestId",
-                  "paymentMethod",
-                  "shippingAddress"
-                ],
+                "required": ["specialRequestId", "paymentMethod", "shippingAddress"],
                 "properties": {
                   "specialRequestId": {
                     "type": "string",
@@ -3983,9 +3646,7 @@
     },
     "/api/transactions/{transactionId}": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "تفاصيل المعاملة",
         "description": "عرض تفاصيل معاملة محددة",
         "security": [
@@ -4016,9 +3677,7 @@
     },
     "/api/transactions/{transactionId}/status": {
       "patch": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "تحديث حالة المعاملة",
         "description": "تحديث حالة معاملة محددة (للمدير أو البائع فقط)",
         "security": [
@@ -4043,18 +3702,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "status"
-                ],
+                "required": ["status"],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "pending",
-                      "completed",
-                      "failed",
-                      "refunded"
-                    ],
+                    "enum": ["pending", "completed", "failed", "refunded"],
                     "description": "حالة المعاملة الجديدة"
                   },
                   "notes": {
@@ -4085,9 +3737,7 @@
     },
     "/api/transactions/{transactionId}/tracking": {
       "patch": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "تحديث معلومات الشحن",
         "description": "تحديث معلومات شحن وتتبع معاملة (للبائع فقط)",
         "security": [
@@ -4112,10 +3762,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "provider",
-                  "trackingNumber"
-                ],
+                "required": ["provider", "trackingNumber"],
                 "properties": {
                   "provider": {
                     "type": "string",
@@ -4154,9 +3801,7 @@
     },
     "/api/transactions/buyer/history": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "سجل المشتريات",
         "description": "عرض سجل معاملات الشراء للمستخدم",
         "security": [
@@ -4186,12 +3831,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "completed",
-                "failed",
-                "refunded"
-              ]
+              "enum": ["pending", "completed", "failed", "refunded"]
             },
             "description": "تصفية حسب الحالة"
           }
@@ -4205,9 +3845,7 @@
     },
     "/api/transactions/seller/history": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "سجل المبيعات",
         "description": "عرض سجل معاملات البيع للفنان",
         "security": [
@@ -4237,12 +3875,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "completed",
-                "failed",
-                "refunded"
-              ]
+              "enum": ["pending", "completed", "failed", "refunded"]
             },
             "description": "تصفية حسب الحالة"
           }
@@ -4256,9 +3889,7 @@
     },
     "/api/transactions/seller/stats": {
       "get": {
-        "tags": [
-          "Transactions"
-        ],
+        "tags": ["Transactions"],
         "summary": "إحصائيات المبيعات",
         "description": "عرض إحصائيات البيع للفنان",
         "security": [
@@ -4278,10 +3909,7 @@
     },
     "/api/transactions/admin/stats": {
       "get": {
-        "tags": [
-          "Transactions",
-          "Admin"
-        ],
+        "tags": ["Transactions", "Admin"],
         "summary": "إحصائيات المعاملات للمدير",
         "description": "عرض إحصائيات جميع المعاملات في المنصة (للمدير فقط)",
         "security": [
@@ -4301,9 +3929,7 @@
     },
     "/api/user/wishlist/toggle": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Toggle artwork in wishlist",
         "description": "Add or remove an artwork from user's wishlist",
         "security": [
@@ -4317,9 +3943,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "artworkId"
-                ],
+                "required": ["artworkId"],
                 "properties": {
                   "artworkId": {
                     "type": "string",
@@ -4343,10 +3967,7 @@
                     },
                     "action": {
                       "type": "string",
-                      "enum": [
-                        "added",
-                        "removed"
-                      ]
+                      "enum": ["added", "removed"]
                     }
                   }
                 }
@@ -4358,9 +3979,7 @@
     },
     "/api/user/wishlist/toggle/firebase": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Toggle artwork in wishlist with Firebase auth",
         "description": "Add or remove an artwork from user's wishlist using Firebase authentication",
         "security": [
@@ -4374,9 +3993,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "artworkId"
-                ],
+                "required": ["artworkId"],
                 "properties": {
                   "artworkId": {
                     "type": "string"
@@ -4395,9 +4012,7 @@
     },
     "/api/user/wishlist": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Get user wishlist",
         "description": "Get all artworks in the user's wishlist",
         "security": [
@@ -4414,9 +4029,7 @@
     },
     "/api/user/wishlist/firebase": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Get user wishlist with Firebase auth",
         "description": "Get all artworks in the user's wishlist using Firebase authentication",
         "security": [
@@ -4433,9 +4046,7 @@
     },
     "/api/user/profile": {
       "put": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Update user profile",
         "description": "Update user profile information",
         "security": [
@@ -4495,9 +4106,7 @@
     },
     "/api/user/profile/firebase": {
       "put": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Update user profile with Firebase auth",
         "description": "Update user profile information using Firebase authentication",
         "security": [
@@ -4538,9 +4147,7 @@
     },
     "/api/user/change-password": {
       "patch": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Change password",
         "description": "Change user password",
         "security": [
@@ -4554,10 +4161,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "oldPassword",
-                  "newPassword"
-                ],
+                "required": ["oldPassword", "newPassword"],
                 "properties": {
                   "oldPassword": {
                     "type": "string"
@@ -4579,9 +4183,7 @@
     },
     "/api/user/artist-profile/{artistId}": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Get artist profile",
         "description": "Get detailed profile information for an artist",
         "parameters": [
@@ -4606,9 +4208,7 @@
     },
     "/api/user/profile/{artistId}": {
       "get": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Get artist profile (alias)",
         "description": "Get detailed profile information for an artist (alias of /artist-profile/{artistId})",
         "parameters": [
@@ -4633,9 +4233,7 @@
     },
     "/api/user/follow/{artistId}": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Follow artist",
         "description": "Follow an artist",
         "security": [
@@ -4662,9 +4260,7 @@
     },
     "/api/user/follow/{artistId}/firebase": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Follow artist with Firebase auth",
         "description": "Follow an artist using Firebase authentication",
         "security": [
@@ -4691,9 +4287,7 @@
     },
     "/api/user/unfollow/{artistId}": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Unfollow artist",
         "description": "Unfollow an artist",
         "security": [
@@ -4720,9 +4314,7 @@
     },
     "/api/user/unfollow/{artistId}/firebase": {
       "post": {
-        "tags": [
-          "User"
-        ],
+        "tags": ["User"],
         "summary": "Unfollow artist with Firebase auth",
         "description": "Unfollow an artist using Firebase authentication",
         "security": [
@@ -4900,12 +4492,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "completed",
-              "failed",
-              "refunded"
-            ]
+            "enum": ["pending", "completed", "failed", "refunded"]
           },
           "createdAt": {
             "type": "string",
@@ -4952,12 +4539,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "accepted",
-              "rejected",
-              "completed"
-            ],
+            "enum": ["pending", "accepted", "rejected", "completed"],
             "description": "حالة الطلب"
           },
           "response": {
@@ -5096,13 +4678,7 @@
           },
           "contentType": {
             "type": "string",
-            "enum": [
-              "artwork",
-              "image",
-              "user",
-              "comment",
-              "message"
-            ],
+            "enum": ["artwork", "image", "user", "comment", "message"],
             "description": "نوع المحتوى المبلغ عنه"
           },
           "contentId": {
@@ -5115,14 +4691,7 @@
           },
           "reason": {
             "type": "string",
-            "enum": [
-              "inappropriate",
-              "copyright",
-              "spam",
-              "offensive",
-              "harassment",
-              "other"
-            ],
+            "enum": ["inappropriate", "copyright", "spam", "offensive", "harassment", "other"],
             "description": "سبب الإبلاغ"
           },
           "description": {
@@ -5131,11 +4700,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "resolved",
-              "rejected"
-            ],
+            "enum": ["pending", "resolved", "rejected"],
             "description": "حالة الإبلاغ"
           },
           "adminNotes": {
@@ -5172,12 +4737,7 @@
           },
           "linkType": {
             "type": "string",
-            "enum": [
-              "artwork",
-              "artist",
-              "category",
-              "external"
-            ]
+            "enum": ["artwork", "artist", "category", "external"]
           },
           "linkId": {
             "type": "string"

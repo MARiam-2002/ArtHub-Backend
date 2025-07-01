@@ -9,4 +9,4 @@ router.delete('/:id', isAuthenticated, controller.deleteCategory);
 router.get('/', controller.getCategories);
 router.get('/:id', controller.getCategory);
 
-export default router; 
+export default router;

@@ -7,15 +7,15 @@ import { getPaginationParams } from '../../utils/pagination.js';
 export const followArtist = asyncHandler(async (req, res, next) => {
   const follower = req.user._id;
   const { artistId } = req.body;
-  
+
   // التحقق من أن المستخدم لا يحاول متابعة نفسه
   if (follower.toString() === artistId) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'لا يمكنك متابعة نفسك.' 
+    return res.status(400).json({
+      success: false,
+      message: 'لا يمكنك متابعة نفسك.'
     });
   }
-  
+
   // التحقق من وجود الفنان
   const artist = await userModel.findById(artistId);
   if (!artist) {
@@ -24,55 +24,55 @@ export const followArtist = asyncHandler(async (req, res, next) => {
       message: 'الفنان غير موجود.'
     });
   }
-  
+
   // التحقق من عدم وجود متابعة مسبقة
   const exists = await followModel.findOne({ follower, following: artistId });
   if (exists) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'أنت تتابع هذا الفنان بالفعل.' 
+    return res.status(400).json({
+      success: false,
+      message: 'أنت تتابع هذا الفنان بالفعل.'
     });
   }
-  
+
   // إنشاء علاقة متابعة جديدة
   await followModel.create({ follower, following: artistId });
-  
+
   // إرسال إشعار للفنان
   await sendFollowNotification(
     artistId,
     follower.toString(),
     req.user.displayName || req.user.userName
   );
-  
-  res.status(201).json({ 
-    success: true, 
-    message: 'تمت المتابعة بنجاح.' 
+
+  res.status(201).json({
+    success: true,
+    message: 'تمت المتابعة بنجاح.'
   });
 });
 
 export const unfollowArtist = asyncHandler(async (req, res, next) => {
   const follower = req.user._id;
   const { artistId } = req.body;
-  
+
   // التحقق من وجود متابعة
-  const followRelation = await followModel.findOne({ 
-    follower, 
-    following: artistId 
+  const followRelation = await followModel.findOne({
+    follower,
+    following: artistId
   });
-  
+
   if (!followRelation) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'أنت لا تتابع هذا الفنان.' 
+    return res.status(400).json({
+      success: false,
+      message: 'أنت لا تتابع هذا الفنان.'
     });
   }
-  
+
   // حذف علاقة المتابعة
   await followModel.deleteOne({ follower, following: artistId });
-  
-  res.json({ 
-    success: true, 
-    message: 'تم إلغاء المتابعة بنجاح.' 
+
+  res.json({
+    success: true,
+    message: 'تم إلغاء المتابعة بنجاح.'
   });
 });
 
@@ -80,7 +80,7 @@ export const getFollowers = asyncHandler(async (req, res, next) => {
   const { artistId } = req.params;
   const { page = 1, limit = 20 } = req.query;
   const skip = (page - 1) * limit;
-  
+
   // التحقق من وجود الفنان
   const artist = await userModel.findById(artistId);
   if (!artist) {
@@ -89,17 +89,18 @@ export const getFollowers = asyncHandler(async (req, res, next) => {
       message: 'الفنان غير موجود.'
     });
   }
-  
+
   // جلب المتابعين مع التصفح
   const [followers, totalCount] = await Promise.all([
-    followModel.find({ following: artistId })
+    followModel
+      .find({ following: artistId })
       .populate('follower', 'displayName userName profileImage job')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
     followModel.countDocuments({ following: artistId })
   ]);
-  
+
   // تنسيق البيانات
   const formattedFollowers = followers.map(f => ({
     _id: f.follower._id,
@@ -108,12 +109,12 @@ export const getFollowers = asyncHandler(async (req, res, next) => {
     job: f.follower.job,
     followedAt: f.createdAt
   }));
-  
+
   // معلومات الصفحات
   const totalPages = Math.ceil(totalCount / limit);
-  
-  res.json({ 
-    success: true, 
+
+  res.json({
+    success: true,
     message: 'تم جلب المتابعين بنجاح',
     data: {
       followers: formattedFollowers,
@@ -132,7 +133,7 @@ export const getFollowing = asyncHandler(async (req, res, next) => {
   const { userId } = req.params;
   const { page = 1, limit = 20 } = req.query;
   const skip = (page - 1) * limit;
-  
+
   // التحقق من وجود المستخدم
   const user = await userModel.findById(userId);
   if (!user) {
@@ -141,17 +142,18 @@ export const getFollowing = asyncHandler(async (req, res, next) => {
       message: 'المستخدم غير موجود.'
     });
   }
-  
+
   // جلب الفنانين المتابعين مع التصفح
   const [following, totalCount] = await Promise.all([
-    followModel.find({ follower: userId })
+    followModel
+      .find({ follower: userId })
       .populate('following', 'displayName userName profileImage job')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
     followModel.countDocuments({ follower: userId })
   ]);
-  
+
   // تنسيق البيانات
   const formattedFollowing = following.map(f => ({
     _id: f.following._id,
@@ -160,12 +162,12 @@ export const getFollowing = asyncHandler(async (req, res, next) => {
     job: f.following.job,
     followedAt: f.createdAt
   }));
-  
+
   // معلومات الصفحات
   const totalPages = Math.ceil(totalCount / limit);
-  
-  res.json({ 
-    success: true, 
+
+  res.json({
+    success: true,
     message: 'تم جلب المتابَعين بنجاح',
     data: {
       following: formattedFollowing,
@@ -182,21 +184,21 @@ export const getFollowing = asyncHandler(async (req, res, next) => {
 
 export const checkFollowStatus = asyncHandler(async (req, res, next) => {
   const { artistId } = req.params;
-  
+
   if (!req.user) {
-    return res.json({ 
-      success: true, 
-      data: { isFollowing: false } 
+    return res.json({
+      success: true,
+      data: { isFollowing: false }
     });
   }
-  
-  const isFollowing = await followModel.findOne({ 
-    follower: req.user._id, 
-    following: artistId 
+
+  const isFollowing = await followModel.findOne({
+    follower: req.user._id,
+    following: artistId
   });
-  
-  res.json({ 
-    success: true, 
+
+  res.json({
+    success: true,
     data: { isFollowing: !!isFollowing }
   });
-}); 
+});

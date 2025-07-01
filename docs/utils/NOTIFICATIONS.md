@@ -18,25 +18,25 @@ The deprecated files have been marked with warnings and will be removed in a fut
 
 The unified module provides the following core functions:
 
-| Function | Description |
-|----------|-------------|
-| `sendPushNotificationToUser` | Send a notification to a single user |
-| `sendPushNotificationToMultipleUsers` | Send a notification to multiple users |
-| `sendPushNotificationToTopic` | Send a notification to all users subscribed to a topic |
-| `subscribeToTopic` | Subscribe user FCM tokens to a topic |
-| `unsubscribeFromTopic` | Unsubscribe user FCM tokens from a topic |
-| `updateUserFCMToken` | Update a user's FCM token in the database |
+| Function                              | Description                                            |
+| ------------------------------------- | ------------------------------------------------------ |
+| `sendPushNotificationToUser`          | Send a notification to a single user                   |
+| `sendPushNotificationToMultipleUsers` | Send a notification to multiple users                  |
+| `sendPushNotificationToTopic`         | Send a notification to all users subscribed to a topic |
+| `subscribeToTopic`                    | Subscribe user FCM tokens to a topic                   |
+| `unsubscribeFromTopic`                | Unsubscribe user FCM tokens from a topic               |
+| `updateUserFCMToken`                  | Update a user's FCM token in the database              |
 
 ## Predefined Notification Types
 
 For common notification scenarios, we provide specialized helper functions:
 
-| Function | Description |
-|----------|-------------|
-| `sendChatMessageNotification` | Notify a user about a new chat message |
-| `sendCommentNotification` | Notify an artist about a new comment on their artwork |
-| `sendFollowNotification` | Notify an artist about a new follower |
-| `sendTransactionNotification` | Notify a user about a transaction (purchase/sale) |
+| Function                      | Description                                           |
+| ----------------------------- | ----------------------------------------------------- |
+| `sendChatMessageNotification` | Notify a user about a new chat message                |
+| `sendCommentNotification`     | Notify an artist about a new comment on their artwork |
+| `sendFollowNotification`      | Notify an artist about a new follower                 |
+| `sendTransactionNotification` | Notify a user about a transaction (purchase/sale)     |
 
 ## Notification Data Structure
 
@@ -57,9 +57,9 @@ import { sendPushNotificationToUser } from '../utils/pushNotifications.js';
 // Basic notification
 await sendPushNotificationToUser(
   userId,
-  { 
-    title: 'Notification Title', 
-    body: 'Notification message content' 
+  {
+    title: 'Notification Title',
+    body: 'Notification message content'
   },
   {
     screen: 'SCREEN_NAME',
@@ -71,13 +71,7 @@ await sendPushNotificationToUser(
 // Using predefined notification
 import { sendChatMessageNotification } from '../utils/pushNotifications.js';
 
-await sendChatMessageNotification(
-  receiverId, 
-  senderId, 
-  'Sender Name', 
-  'Message content', 
-  chatId
-);
+await sendChatMessageNotification(receiverId, senderId, 'Sender Name', 'Message content', chatId);
 ```
 
 ## Mobile App Integration
@@ -86,7 +80,7 @@ The notification system is optimized for Flutter mobile applications. When imple
 
 1. Use the `data.screen` value to determine which screen to navigate to
 2. Pass the relevant IDs from the data payload to the screen
-3. For Android, ensure you have a notification channel with ID `arthub_channel` 
+3. For Android, ensure you have a notification channel with ID `arthub_channel`
 4. For iOS, handle the badge and sound preferences correctly
 
 ## Environment Setup
@@ -99,4 +93,4 @@ FIREBASE_CLIENT_EMAIL=your-client-email
 FIREBASE_PRIVATE_KEY=your-private-key
 ```
 
-The Firebase admin SDK is initialized in `src/utils/firebaseAdmin.js`. 
+The Firebase admin SDK is initialized in `src/utils/firebaseAdmin.js`.

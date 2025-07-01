@@ -109,7 +109,7 @@ Before you begin, make sure you have:
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
-  },
+  }
   // other fields...
 }
 ```
@@ -147,11 +147,13 @@ Before you begin, make sure you have:
 ### Option 2: Deploy using Vercel CLI
 
 1. **Install Vercel CLI**
+
    ```bash
    npm install -g vercel
    ```
 
 2. **Log in to Vercel**
+
    ```bash
    vercel login
    ```
@@ -159,13 +161,14 @@ Before you begin, make sure you have:
 3. **Configure Environment Variables**
    - Create a `.env.production` file with your environment variables
    - Or set them using the CLI:
+
    ```bash
    vercel env add CONNECTION_URL
    # Enter your MongoDB connection string when prompted
-   
+
    vercel env add TOKEN_KEY
    # Enter your JWT secret when prompted
-   
+
    # Add other environment variables as needed
    ```
 
@@ -281,4 +284,4 @@ As your application grows, consider the following:
 - [Vercel Documentation](https://vercel.com/docs)
 - [MongoDB Atlas Documentation](https://docs.atlas.mongodb.com/)
 - [Node.js on Vercel](https://vercel.com/docs/runtimes#official-runtimes/node-js)
-- [Vercel Serverless Functions](https://vercel.com/docs/functions) 
+- [Vercel Serverless Functions](https://vercel.com/docs/functions)

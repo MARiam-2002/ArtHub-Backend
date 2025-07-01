@@ -2,8 +2,8 @@ import { Router } from 'express';
 import * as controller from './transaction.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import { 
-  createArtworkTransactionSchema, 
+import {
+  createArtworkTransactionSchema,
   createSpecialRequestTransactionSchema,
   updateTransactionStatusSchema,
   updateTrackingInfoSchema
@@ -70,9 +70,10 @@ const router = Router();
  *       404:
  *         description: العمل الفني غير موجود
  */
-router.post('/artwork', 
-  isAuthenticated, 
-  isValidation(createArtworkTransactionSchema), 
+router.post(
+  '/artwork',
+  isAuthenticated,
+  isValidation(createArtworkTransactionSchema),
   controller.createArtworkTransaction
 );
 
@@ -118,9 +119,10 @@ router.post('/artwork',
  *       404:
  *         description: الطلب الخاص غير موجود
  */
-router.post('/special-request', 
-  isAuthenticated, 
-  isValidation(createSpecialRequestTransactionSchema), 
+router.post(
+  '/special-request',
+  isAuthenticated,
+  isValidation(createSpecialRequestTransactionSchema),
   controller.createSpecialRequestTransaction
 );
 
@@ -147,10 +149,7 @@ router.post('/special-request',
  *       404:
  *         description: المعاملة غير موجودة
  */
-router.get('/:transactionId', 
-  isAuthenticated, 
-  controller.getTransactionById
-);
+router.get('/:transactionId', isAuthenticated, controller.getTransactionById);
 
 /**
  * @swagger
@@ -196,9 +195,10 @@ router.get('/:transactionId',
  *       404:
  *         description: المعاملة غير موجودة
  */
-router.patch('/:transactionId/status', 
-  isAuthenticated, 
-  isValidation(updateTransactionStatusSchema), 
+router.patch(
+  '/:transactionId/status',
+  isAuthenticated,
+  isValidation(updateTransactionStatusSchema),
   controller.updateTransactionStatus
 );
 
@@ -250,9 +250,10 @@ router.patch('/:transactionId/status',
  *       404:
  *         description: المعاملة غير موجودة
  */
-router.patch('/:transactionId/tracking', 
-  isAuthenticated, 
-  isValidation(updateTrackingInfoSchema), 
+router.patch(
+  '/:transactionId/tracking',
+  isAuthenticated,
+  isValidation(updateTrackingInfoSchema),
   controller.updateTrackingInfo
 );
 
@@ -287,10 +288,7 @@ router.patch('/:transactionId/tracking',
  *       200:
  *         description: تم جلب سجل المشتريات بنجاح
  */
-router.get('/buyer/history', 
-  isAuthenticated, 
-  controller.getBuyerTransactions
-);
+router.get('/buyer/history', isAuthenticated, controller.getBuyerTransactions);
 
 /**
  * @swagger
@@ -323,10 +321,7 @@ router.get('/buyer/history',
  *       200:
  *         description: تم جلب سجل المبيعات بنجاح
  */
-router.get('/seller/history', 
-  isAuthenticated, 
-  controller.getSellerTransactions
-);
+router.get('/seller/history', isAuthenticated, controller.getSellerTransactions);
 
 /**
  * @swagger
@@ -344,10 +339,7 @@ router.get('/seller/history',
  *       403:
  *         description: غير مصرح لك بعرض إحصائيات المبيعات
  */
-router.get('/seller/stats', 
-  isAuthenticated, 
-  controller.getSellerStats
-);
+router.get('/seller/stats', isAuthenticated, controller.getSellerStats);
 
 /**
  * @swagger
@@ -366,9 +358,6 @@ router.get('/seller/stats',
  *       403:
  *         description: غير مصرح لك بعرض إحصائيات المعاملات
  */
-router.get('/admin/stats', 
-  isAuthenticated, 
-  controller.getAdminStats
-);
+router.get('/admin/stats', isAuthenticated, controller.getAdminStats);
 
-export default router; 
+export default router;

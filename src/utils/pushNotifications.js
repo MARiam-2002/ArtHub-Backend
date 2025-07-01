@@ -22,29 +22,31 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
   try {
     // Get user's FCM token and language preference
     const user = await userModel.findById(userId).select('fcmToken preferredLanguage');
-    
+
     if (!user || !user.fcmToken) {
       console.log(`User ${userId} doesn't have an FCM token`);
       return { success: false, message: 'No FCM token found for user' };
     }
-    
+
     const preferredLanguage = user.preferredLanguage || 'ar';
-    
+
     // Determine notification title and body based on language preference
-    const notificationTitle = typeof notification.title === 'object' 
-      ? (notification.title[preferredLanguage] || notification.title.ar) 
-      : notification.title;
-      
-    const notificationBody = typeof notification.body === 'object' 
-      ? (notification.body[preferredLanguage] || notification.body.ar) 
-      : notification.body;
-    
+    const notificationTitle =
+      typeof notification.title === 'object'
+        ? notification.title[preferredLanguage] || notification.title.ar
+        : notification.title;
+
+    const notificationBody =
+      typeof notification.body === 'object'
+        ? notification.body[preferredLanguage] || notification.body.ar
+        : notification.body;
+
     // Send notification to the device
     const message = {
       token: user.fcmToken,
       notification: {
         title: notificationTitle,
-        body: notificationBody,
+        body: notificationBody
       },
       data: {
         ...data,
@@ -78,7 +80,7 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
         }
       }
     };
-    
+
     // Save notification to database if requested
     if (options.saveToDatabase !== false) {
       try {
@@ -104,7 +106,7 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
         console.error('Error saving notification to database:', dbError);
       }
     }
-    
+
     const response = await admin.messaging().send(message);
     console.log('Notification sent successfully:', response);
     return { success: true, messageId: response };
@@ -124,17 +126,24 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
  * @param {Object} options - Additional options
  * @returns {Promise} - Results of the notification send operations
  */
-export const sendPushNotificationToMultipleUsers = async (userIds, notification, data = {}, options = {}) => {
+export const sendPushNotificationToMultipleUsers = async (
+  userIds,
+  notification,
+  data = {},
+  options = {}
+) => {
   try {
     // Get users' FCM tokens and language preferences
-    const users = await userModel.find({ _id: { $in: userIds } }).select('fcmToken preferredLanguage');
-    
+    const users = await userModel
+      .find({ _id: { $in: userIds } })
+      .select('fcmToken preferredLanguage');
+
     // Group users by language preference for batch notifications
     const usersByLanguage = {
       ar: [],
       en: []
     };
-    
+
     users.forEach(user => {
       if (user.fcmToken) {
         const lang = user.preferredLanguage || 'ar';
@@ -144,14 +153,14 @@ export const sendPushNotificationToMultipleUsers = async (userIds, notification,
         });
       }
     });
-    
+
     const results = {
       success: true,
       successCount: 0,
       failureCount: 0,
       byLanguage: {}
     };
-    
+
     // Save notifications to database if requested
     if (options.saveToDatabase !== false) {
       const notificationsToInsert = users.map(user => ({
@@ -172,33 +181,37 @@ export const sendPushNotificationToMultipleUsers = async (userIds, notification,
           screen: data.screen || 'default'
         }
       }));
-      
+
       try {
         await notificationModel.insertMany(notificationsToInsert);
       } catch (dbError) {
         console.error('Error saving notifications to database:', dbError);
       }
     }
-    
+
     // Send notifications for each language group
     for (const lang of ['ar', 'en']) {
       const tokens = usersByLanguage[lang].map(u => u.token);
-      
-      if (tokens.length === 0) continue;
-      
-      const notificationTitle = typeof notification.title === 'object' 
-        ? notification.title[lang] || notification.title.ar 
-        : notification.title;
-        
-      const notificationBody = typeof notification.body === 'object' 
-        ? notification.body[lang] || notification.body.ar 
-        : notification.body;
-      
+
+      if (tokens.length === 0) {
+        continue;
+      }
+
+      const notificationTitle =
+        typeof notification.title === 'object'
+          ? notification.title[lang] || notification.title.ar
+          : notification.title;
+
+      const notificationBody =
+        typeof notification.body === 'object'
+          ? notification.body[lang] || notification.body.ar
+          : notification.body;
+
       // Send notification to multiple devices
       const message = {
         notification: {
           title: notificationTitle,
-          body: notificationBody,
+          body: notificationBody
         },
         data: {
           ...data,
@@ -231,19 +244,19 @@ export const sendPushNotificationToMultipleUsers = async (userIds, notification,
         },
         tokens: tokens
       };
-      
+
       const response = await admin.messaging().sendMulticast(message);
       console.log(`${response.successCount} notifications sent successfully for language: ${lang}`);
-      
+
       results.successCount += response.successCount;
       results.failureCount += response.failureCount;
-      
+
       results.byLanguage[lang] = {
         sent: tokens.length,
         success: response.successCount,
         failure: response.failureCount
       };
-      
+
       if (response.failureCount > 0) {
         const failedTokens = [];
         response.responses.forEach((resp, idx) => {
@@ -258,7 +271,7 @@ export const sendPushNotificationToMultipleUsers = async (userIds, notification,
         results.byLanguage[lang].failedTokens = failedTokens;
       }
     }
-    
+
     return results;
   } catch (error) {
     console.error('Error sending push notifications:', error);
@@ -280,17 +293,17 @@ export const sendPushNotificationToTopic = async (topic, notification, data = {}
     const message = {
       notification: {
         title: notification.title,
-        body: notification.body,
+        body: notification.body
       },
       data: {
         ...data,
         click_action: 'FLUTTER_NOTIFICATION_CLICK',
         screen: data.screen || 'default',
-        timestamp: data.timestamp || Date.now().toString(),
+        timestamp: data.timestamp || Date.now().toString()
       },
       topic: topic
     };
-    
+
     const response = await admin.messaging().send(message);
     console.log('Notification to topic sent successfully:', response);
     return { success: true, messageId: response };
@@ -345,7 +358,7 @@ export const updateUserFCMToken = async (userId, fcmToken) => {
     if (!userId || !fcmToken) {
       return false;
     }
-    
+
     await userModel.findByIdAndUpdate(userId, { fcmToken });
     return true;
   } catch (error) {
@@ -365,8 +378,14 @@ export const updateUserFCMToken = async (userId, fcmToken) => {
  * @param {string} chatId - Chat ID
  * @returns {Promise} - Notification result
  */
-export const sendChatMessageNotification = async (receiverId, senderId, senderName, messageText, chatId) => {
-  return sendPushNotificationToUser(
+export const sendChatMessageNotification = async (
+  receiverId,
+  senderId,
+  senderName,
+  messageText,
+  chatId
+) =>
+  sendPushNotificationToUser(
     receiverId,
     {
       title: senderName || 'رسالة جديدة',
@@ -380,7 +399,6 @@ export const sendChatMessageNotification = async (receiverId, senderId, senderNa
       timestamp: Date.now().toString()
     }
   );
-};
 
 /**
  * Send notification for new artwork comment
@@ -391,8 +409,14 @@ export const sendChatMessageNotification = async (receiverId, senderId, senderNa
  * @param {string} artworkTitle - Title of the artwork
  * @returns {Promise} - Notification result
  */
-export const sendCommentNotification = async (artistId, commenterId, commenterName, artworkId, artworkTitle) => {
-  return sendPushNotificationToUser(
+export const sendCommentNotification = async (
+  artistId,
+  commenterId,
+  commenterName,
+  artworkId,
+  artworkTitle
+) =>
+  sendPushNotificationToUser(
     artistId,
     {
       title: 'تعليق جديد',
@@ -406,7 +430,6 @@ export const sendCommentNotification = async (artistId, commenterId, commenterNa
       timestamp: Date.now().toString()
     }
   );
-};
 
 /**
  * Send notification for new follower
@@ -415,8 +438,8 @@ export const sendCommentNotification = async (artistId, commenterId, commenterNa
  * @param {string} followerName - Name of the follower
  * @returns {Promise} - Notification result
  */
-export const sendFollowNotification = async (artistId, followerId, followerName) => {
-  return sendPushNotificationToUser(
+export const sendFollowNotification = async (artistId, followerId, followerName) =>
+  sendPushNotificationToUser(
     artistId,
     {
       title: 'متابع جديد',
@@ -429,7 +452,6 @@ export const sendFollowNotification = async (artistId, followerId, followerName)
       timestamp: Date.now().toString()
     }
   );
-};
 
 /**
  * Send transaction notification
@@ -441,10 +463,11 @@ export const sendFollowNotification = async (artistId, followerId, followerName)
  */
 export const sendTransactionNotification = async (userId, transactionType, amount, itemName) => {
   const title = transactionType === 'purchase' ? 'عملية شراء ناجحة' : 'عملية بيع ناجحة';
-  const body = transactionType === 'purchase' 
-    ? `تم شراء "${itemName}" بنجاح بمبلغ ${amount}`
-    : `تم بيع "${itemName}" بنجاح بمبلغ ${amount}`;
-    
+  const body =
+    transactionType === 'purchase'
+      ? `تم شراء "${itemName}" بنجاح بمبلغ ${amount}`
+      : `تم بيع "${itemName}" بنجاح بمبلغ ${amount}`;
+
   return sendPushNotificationToUser(
     userId,
     { title, body },
@@ -477,18 +500,16 @@ export const sendChatNotification = sendChatMessageNotification;
  * @param {string} bodyEn - English body
  * @returns {Object} - Notification object with language support
  */
-export const createMultilingualNotification = (titleAr, titleEn, bodyAr, bodyEn) => {
-  return {
-    title: {
-      ar: titleAr,
-      en: titleEn || titleAr // Fallback to Arabic if English not provided
-    },
-    body: {
-      ar: bodyAr,
-      en: bodyEn || bodyAr // Fallback to Arabic if English not provided
-    }
-  };
-};
+export const createMultilingualNotification = (titleAr, titleEn, bodyAr, bodyEn) => ({
+  title: {
+    ar: titleAr,
+    en: titleEn || titleAr // Fallback to Arabic if English not provided
+  },
+  body: {
+    ar: bodyAr,
+    en: bodyEn || bodyAr // Fallback to Arabic if English not provided
+  }
+});
 
 // Default export with all functions
 export default {
@@ -499,17 +520,17 @@ export default {
   subscribeToTopic,
   unsubscribeFromTopic,
   updateUserFCMToken,
-  
+
   // Predefined notification types
   sendChatMessageNotification,
   sendCommentNotification,
   sendFollowNotification,
   sendTransactionNotification,
-  
+
   // Aliases for backward compatibility
   sendPushToUser,
   sendChatNotification,
-  
+
   // New functions
   createMultilingualNotification
 };

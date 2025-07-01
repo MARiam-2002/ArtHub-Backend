@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -67,52 +67,60 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           format: date-time
  *           description: تاريخ إلغاء الطلب
  */
-const specialRequestSchema = new Schema({
-  sender: { type: Types.ObjectId, ref: "User", required: true },
-  artist: { type: Types.ObjectId, ref: "User", required: true },
-  requestType: { type: String, required: true },
-  description: { type: String, required: true },
-  budget: { type: Number, required: true },
-  status: { 
-    type: String, 
-    enum: ["pending", "accepted", "rejected", "completed", "cancelled"], 
-    default: "pending"
+const specialRequestSchema = new Schema(
+  {
+    sender: { type: Types.ObjectId, ref: 'User', required: true },
+    artist: { type: Types.ObjectId, ref: 'User', required: true },
+    requestType: { type: String, required: true },
+    description: { type: String, required: true },
+    budget: { type: Number, required: true },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled'],
+      default: 'pending'
+    },
+    response: { type: String },
+    deadline: { type: Date },
+    attachments: [{ type: String }],
+    deliverables: [{ type: String }],
+    finalNote: { type: String },
+    completedAt: { type: Date },
+    cancellationReason: { type: String },
+    cancelledAt: { type: Date }
   },
-  response: { type: String },
-  deadline: { type: Date },
-  attachments: [{ type: String }],
-  deliverables: [{ type: String }],
-  finalNote: { type: String },
-  completedAt: { type: Date },
-  cancellationReason: { type: String },
-  cancelledAt: { type: Date }
-}, { 
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
+);
 
 // إضافة حقل افتراضي لحساب المدة المتبقية حتى الموعد النهائي
-specialRequestSchema.virtual('remainingDays').get(function() {
-  if (!this.deadline) return null;
-  
+specialRequestSchema.virtual('remainingDays').get(function () {
+  if (!this.deadline) {
+    return null;
+  }
+
   const today = new Date();
   const deadline = new Date(this.deadline);
   const diffTime = deadline - today;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   return diffDays > 0 ? diffDays : 0;
 });
 
 // إضافة حقل افتراضي للتحقق مما إذا كان الموعد النهائي قد انقضى
-specialRequestSchema.virtual('isOverdue').get(function() {
-  if (!this.deadline) return false;
-  
+specialRequestSchema.virtual('isOverdue').get(function () {
+  if (!this.deadline) {
+    return false;
+  }
+
   const today = new Date();
   const deadline = new Date(this.deadline);
-  
+
   return today > deadline && this.status !== 'completed' && this.status !== 'rejected';
 });
 
-const specialRequestModel = mongoose.models.SpecialRequest || model("SpecialRequest", specialRequestSchema);
-export default specialRequestModel; 
+const specialRequestModel =
+  mongoose.models.SpecialRequest || model('SpecialRequest', specialRequestSchema);
+export default specialRequestModel;

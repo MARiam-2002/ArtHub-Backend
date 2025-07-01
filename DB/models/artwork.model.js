@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -75,75 +75,82 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           format: date-time
  *           description: تاريخ إضافة العمل الفني
  */
-const artworkSchema = new Schema({
-  title: { 
-    type: String, 
-    required: true,
-    trim: true
-  },
-  description: { 
-    type: String, 
-    required: true 
-  },
-  price: { 
-    type: Number, 
-    required: true,
-    min: 0
-  },
-  image: { 
-    type: String, 
-    required: true 
-  },
-  images: [{ 
-    type: String 
-  }],
-  artist: { 
-    type: Types.ObjectId, 
-    ref: "User", 
-    required: true 
-  },
-  category: { 
-    type: Types.ObjectId, 
-    ref: "Category", 
-    required: true 
-  },
-  tags: [{ 
-    type: String,
-    trim: true
-  }],
-  dimensions: {
-    width: Number,
-    height: Number,
-    unit: {
+const artworkSchema = new Schema(
+  {
+    title: {
       type: String,
-      enum: ['cm', 'in', 'mm', 'ft'],
-      default: 'cm'
+      required: true,
+      trim: true
+    },
+    description: {
+      type: String,
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    image: {
+      type: String,
+      required: true
+    },
+    images: [
+      {
+        type: String
+      }
+    ],
+    artist: {
+      type: Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    category: {
+      type: Types.ObjectId,
+      ref: 'Category',
+      required: true
+    },
+    tags: [
+      {
+        type: String,
+        trim: true
+      }
+    ],
+    dimensions: {
+      width: Number,
+      height: Number,
+      unit: {
+        type: String,
+        enum: ['cm', 'in', 'mm', 'ft'],
+        default: 'cm'
+      }
+    },
+    medium: {
+      type: String,
+      trim: true
+    },
+    year: {
+      type: Number
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true
+    },
+    viewCount: {
+      type: Number,
+      default: 0
     }
   },
-  medium: {
-    type: String,
-    trim: true
-  },
-  year: {
-    type: Number
-  },
-  isFeatured: {
-    type: Boolean,
-    default: false
-  },
-  isAvailable: {
-    type: Boolean,
-    default: true
-  },
-  viewCount: {
-    type: Number,
-    default: 0
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+);
 
 // إنشاء فهارس لتحسين أداء البحث
 artworkSchema.index({ title: 'text', description: 'text' });
@@ -155,7 +162,7 @@ artworkSchema.index({ createdAt: -1 });
 artworkSchema.index({ isFeatured: 1, createdAt: -1 });
 
 // دالة لزيادة عداد المشاهدات
-artworkSchema.methods.incrementViewCount = async function() {
+artworkSchema.methods.incrementViewCount = async function () {
   this.viewCount += 1;
   return this.save();
 };
@@ -167,5 +174,5 @@ artworkSchema.virtual('reviews', {
   foreignField: 'artwork'
 });
 
-const artworkModel = mongoose.models.Artwork || model("Artwork", artworkSchema);
-export default artworkModel; 
+const artworkModel = mongoose.models.Artwork || model('Artwork', artworkSchema);
+export default artworkModel;

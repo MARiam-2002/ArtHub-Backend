@@ -1,8 +1,8 @@
-import fs from "fs";
-import PDFDocument from "pdfkit";
+import fs from 'fs';
+import PDFDocument from 'pdfkit';
 
 export function createInvoice(invoice, path) {
-  let doc = new PDFDocument({ size: "A4", margin: 50 });
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
   generateHeader(doc);
   generateCustomerInformation(doc, invoice);
@@ -15,18 +15,18 @@ export function createInvoice(invoice, path) {
 
 function generateHeader(doc) {
   doc
-    .fillColor("#444444")
+    .fillColor('#444444')
     .fontSize(20)
-    .text("ACME Inc.", 110, 57)
+    .text('ACME Inc.', 110, 57)
     .fontSize(10)
-    .text("ACME Inc.", 200, 50, { align: "right" })
-    .text("123 Main Street", 200, 65, { align: "right" })
-    .text("New York, NY, 10025", 200, 80, { align: "right" })
+    .text('ACME Inc.', 200, 50, { align: 'right' })
+    .text('123 Main Street', 200, 65, { align: 'right' })
+    .text('New York, NY, 10025', 200, 80, { align: 'right' })
     .moveDown();
 }
 
 function generateCustomerInformation(doc, invoice) {
-  doc.fillColor("#444444").fontSize(20).text("Invoice", 50, 160);
+  doc.fillColor('#444444').fontSize(20).text('Invoice', 50, 160);
 
   generateHr(doc, 185);
 
@@ -34,18 +34,18 @@ function generateCustomerInformation(doc, invoice) {
 
   doc
     .fontSize(10)
-    .text("Invoice Number:", 50, customerInformationTop)
-    .font("Helvetica-Bold")
+    .text('Invoice Number:', 50, customerInformationTop)
+    .font('Helvetica-Bold')
     .text(invoice.invoice_nr, 150, customerInformationTop)
-    .font("Helvetica")
-    .text("Invoice Date:", 50, customerInformationTop + 15)
+    .font('Helvetica')
+    .text('Invoice Date:', 50, customerInformationTop + 15)
     .text(formatDate(new Date()), 150, customerInformationTop + 15)
-    .text("Order Price:", 50, customerInformationTop + 30)
+    .text('Order Price:', 50, customerInformationTop + 30)
     .text(formatCurrency(invoice.paid), 150, customerInformationTop + 30)
 
-    .font("Helvetica-Bold")
+    .font('Helvetica-Bold')
     .text(invoice.shipping.name, 300, customerInformationTop)
-    .font("Helvetica")
+    .font('Helvetica')
     .text(invoice.shipping.address, 300, customerInformationTop + 15)
     .text(invoice.shipping.country, 300, customerInformationTop + 30)
     .moveDown();
@@ -57,17 +57,10 @@ function generateInvoiceTable(doc, invoice) {
   let i;
   const invoiceTableTop = 330;
 
-  doc.font("Helvetica-Bold");
-  generateTableRow(
-    doc,
-    invoiceTableTop,
-    "Item",
-    "Item Price",
-    "Quantity",
-    "Item Total Price"
-  );
+  doc.font('Helvetica-Bold');
+  generateTableRow(doc, invoiceTableTop, 'Item', 'Item Price', 'Quantity', 'Item Total Price');
   generateHr(doc, invoiceTableTop + 20);
-  doc.font("Helvetica");
+  doc.font('Helvetica');
 
   for (i = 0; i < invoice.items.length; i++) {
     const item = invoice.items[i];
@@ -85,64 +78,48 @@ function generateInvoiceTable(doc, invoice) {
   }
 
   const subtotalPosition = invoiceTableTop + (i + 1) * 30;
-  generateTableRow(
-    doc,
-    subtotalPosition,
-    "",
-    "Subtotal",
-    "",
-    formatCurrency(invoice.subtotal)
-  );
+  generateTableRow(doc, subtotalPosition, '', 'Subtotal', '', formatCurrency(invoice.subtotal));
 
   const paidToDatePosition = subtotalPosition + 20;
   generateTableRow(
     doc,
     paidToDatePosition,
-    "",
-    "Discount",
-    "",
+    '',
+    'Discount',
+    '',
     formatCurrency(invoice.subtotal - invoice.paid)
   );
 
   const duePosition = paidToDatePosition + 25;
-  doc.font("Helvetica-Bold");
-  generateTableRow(
-    doc,
-    duePosition,
-    "",
-    "Order Final Price",
-    "",
-    formatCurrency(invoice.paid)
-  );
-  doc.font("Helvetica");
+  doc.font('Helvetica-Bold');
+  generateTableRow(doc, duePosition, '', 'Order Final Price', '', formatCurrency(invoice.paid));
+  doc.font('Helvetica');
 }
 
 function generateFooter(doc) {
   doc
     .fontSize(10)
-    .text(
-      "Payment is due within 15 days. Thank you for your business.",
-      50,
-      780,
-      { align: "center", width: 500 }
-    );
+    .text('Payment is due within 15 days. Thank you for your business.', 50, 780, {
+      align: 'center',
+      width: 500
+    });
 }
 
 function generateTableRow(doc, y, item, unitCost, quantity, lineTotal) {
   doc
     .fontSize(10)
     .text(item, 50, y)
-    .text(unitCost, 280, y, { width: 90, align: "right" })
-    .text(quantity, 370, y, { width: 90, align: "right" })
-    .text(lineTotal, 0, y, { align: "right" });
+    .text(unitCost, 280, y, { width: 90, align: 'right' })
+    .text(quantity, 370, y, { width: 90, align: 'right' })
+    .text(lineTotal, 0, y, { align: 'right' });
 }
 
 function generateHr(doc, y) {
-  doc.strokeColor("#aaaaaa").lineWidth(1).moveTo(50, y).lineTo(550, y).stroke();
+  doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(50, y).lineTo(550, y).stroke();
 }
 
 function formatCurrency(cents) {
-  return "EG " + cents;
+  return `EG ${cents}`;
 }
 
 function formatDate(date) {
@@ -150,5 +127,5 @@ function formatDate(date) {
   const month = date.getMonth() + 1;
   const year = date.getFullYear();
 
-  return year + "/" + month + "/" + day;
+  return `${year}/${month}/${day}`;
 }

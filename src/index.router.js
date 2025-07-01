@@ -1,8 +1,8 @@
-import authRouter from "./modules/auth/auth.router.js";
-import { asyncHandler } from "./utils/asyncHandler.js";
-import corsMiddleware, { corsOptions } from "./middleware/cors.js";
-import morgan from "morgan";
-import dotenv from "dotenv";
+import authRouter from './modules/auth/auth.router.js';
+import { asyncHandler } from './utils/asyncHandler.js';
+import corsMiddleware, { corsOptions } from './middleware/cors.js';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
 import imageRouter from './modules/image/image.router.js';
 import chatRouter from './modules/chat/chat.router.js';
 import { responseMiddleware } from './middleware/response.middleware.js';
@@ -18,32 +18,35 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
 dotenv.config();
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
 import reviewRouter from './modules/review/review.router.js';
 import followRouter from './modules/follow/follow.router.js';
 import notificationRouter from './modules/notification/notification.router.js';
 import mongoose from 'mongoose';
 import { checkDatabaseHealth, ensureDatabaseConnection } from './utils/mongodbUtils.js';
+import { verifyFirebaseToken, optionalFirebaseAuth } from './middleware/firebase-auth.middleware.js';
 
 export const bootstrap = (app, express) => {
-  if (process.env.NODE_ENV == "dev") {
-    app.use(morgan("common"));
+  if (process.env.NODE_ENV == 'dev') {
+    app.use(morgan('common'));
   }
 
   // Apply simple CORS middleware for all environments
-  app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true
-  }));
+  app.use(
+    cors({
+      origin: '*',
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      credentials: true
+    })
+  );
 
   // Use Express JSON to parse data
   app.use(express.json());
 
   // JWT authentication middleware
   app.use((req, res, next) => {
-    const token = req.headers["authorization"]?.split(" ")[1]; 
+    const token = req.headers['authorization']?.split(' ')[1];
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.TOKEN_KEY);
@@ -69,14 +72,20 @@ export const bootstrap = (app, express) => {
   app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 
   // 1. خدمة ملفات swagger.json و swagger.yaml كـ static قبل swaggerRoutes
-  app.use('/api-docs/swagger.json', express.static(path.join(__dirname, 'swagger', 'swagger.json')));
-  app.use('/api-docs/swagger.yaml', express.static(path.join(__dirname, 'swagger', 'swagger.yaml')));
+  app.use(
+    '/api-docs/swagger.json',
+    express.static(path.join(__dirname, 'swagger', 'swagger.json'))
+  );
+  app.use(
+    '/api-docs/swagger.yaml',
+    express.static(path.join(__dirname, 'swagger', 'swagger.yaml'))
+  );
 
   // 2. راوتر Swagger UI (لا تغيره)
-  app.use("/api-docs", swaggerRoutes);
+  app.use('/api-docs', swaggerRoutes);
 
   // API routes
-  app.use("/api/auth", authRouter);
+  app.use('/api/auth', authRouter);
   app.use('/api/image', imageRouter);
   app.use('/api/chat', chatRouter);
   app.use('/api/artworks', artworkRouter);
@@ -88,15 +97,18 @@ export const bootstrap = (app, express) => {
   app.use('/api/reviews', reviewRouter);
   app.use('/api/follow', followRouter);
   app.use('/api/notifications', notificationRouter);
- 
+
   // Health check endpoint
   app.get('/api/health', (req, res) => {
-    res.success({
-      status: 'UP',
-      timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development'
-    }, 'API is running properly');
+    res.success(
+      {
+        status: 'UP',
+        timestamp: new Date().toISOString(),
+        version: process.env.npm_package_version || '1.0.0',
+        environment: process.env.NODE_ENV || 'development'
+      },
+      'API is running properly'
+    );
   });
 
   // MongoDB connection test endpoint
@@ -105,30 +117,30 @@ export const bootstrap = (app, express) => {
       // Check current connection state
       const currentState = mongoose.connection.readyState;
       const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-      
+
       // Get detailed health check
       const healthCheck = await checkDatabaseHealth();
-      
+
       // Try a simple find operation on users collection
-      let userTestResult = { status: "skipped" };
+      let userTestResult = { status: 'skipped' };
       if (currentState === 1) {
         try {
           const usersCollection = mongoose.connection.db.collection('users');
           const userCount = await usersCollection.countDocuments({}, { maxTimeMS: 3000 });
-          userTestResult = { 
-            status: "success", 
+          userTestResult = {
+            status: 'success',
             count: userCount,
-            message: "Successfully queried users collection"
+            message: 'Successfully queried users collection'
           };
         } catch (userError) {
-          userTestResult = { 
-            status: "error", 
+          userTestResult = {
+            status: 'error',
             message: userError.message,
             error: userError.name
           };
         }
       }
-      
+
       // Try to force reconnect if not connected
       let reconnectResult = null;
       if (currentState !== 1) {
@@ -136,7 +148,7 @@ export const bootstrap = (app, express) => {
           const reconnected = await ensureDatabaseConnection(true);
           reconnectResult = {
             success: reconnected,
-            message: reconnected ? "Successfully reconnected" : "Failed to reconnect"
+            message: reconnected ? 'Successfully reconnected' : 'Failed to reconnect'
           };
         } catch (reconnectError) {
           reconnectResult = {
@@ -145,7 +157,7 @@ export const bootstrap = (app, express) => {
           };
         }
       }
-      
+
       // Get connection string info (without credentials)
       let connectionInfo = {};
       if (process.env.CONNECTION_URL) {
@@ -159,13 +171,13 @@ export const bootstrap = (app, express) => {
             options: url.search
           };
         } catch (urlError) {
-          connectionInfo = { 
-            error: "Invalid connection URL format",
+          connectionInfo = {
+            error: 'Invalid connection URL format',
             message: urlError.message
           };
         }
       }
-      
+
       res.json({
         success: true,
         timestamp: new Date().toISOString(),
@@ -186,7 +198,7 @@ export const bootstrap = (app, express) => {
         }
       });
     } catch (error) {
-      console.error("Database test error:", error);
+      console.error('Database test error:', error);
       res.status(500).json({
         success: false,
         error: error.message,
@@ -197,10 +209,10 @@ export const bootstrap = (app, express) => {
   });
 
   // Add keepalive endpoint for preventing cold starts
-  app.get("/api/keepalive", async (req, res) => {
+  app.get('/api/keepalive', async (req, res) => {
     try {
       const isConnected = mongoose.connection.readyState === 1;
-      
+
       if (isConnected) {
         // Test connection with a ping
         try {
@@ -212,14 +224,16 @@ export const bootstrap = (app, express) => {
             timestamp: new Date().toISOString()
           });
         } catch (pingError) {
-          console.log("Database ping failed:", pingError.message);
-          
+          console.log('Database ping failed:', pingError.message);
+
           // Try to reconnect
           const reconnected = await ensureDatabaseConnection(true);
-          
+
           res.status(reconnected ? 200 : 503).json({
             status: reconnected ? 'ok' : 'degraded',
-            message: reconnected ? 'Server is alive, reconnected after ping failure' : 'Server is alive but database connection failed',
+            message: reconnected
+              ? 'Server is alive, reconnected after ping failure'
+              : 'Server is alive but database connection failed',
             database: reconnected ? 'reconnected' : 'disconnected',
             error: reconnected ? undefined : pingError.message,
             timestamp: new Date().toISOString()
@@ -228,10 +242,12 @@ export const bootstrap = (app, express) => {
       } else {
         // Try to reconnect
         const reconnected = await ensureDatabaseConnection(true);
-        
+
         res.status(reconnected ? 200 : 503).json({
           status: reconnected ? 'ok' : 'degraded',
-          message: reconnected ? 'Server is alive, reconnected to database' : 'Server is alive but database connection failed',
+          message: reconnected
+            ? 'Server is alive, reconnected to database'
+            : 'Server is alive but database connection failed',
           database: reconnected ? 'reconnected' : 'disconnected',
           timestamp: new Date().toISOString()
         });
@@ -248,9 +264,7 @@ export const bootstrap = (app, express) => {
   });
 
   // 404 handler
-  app.all("*", (req, res, next) => {
-    return next(new Error("not found page", { cause: 404 }));
-  });
+  app.all('*', (req, res, next) => next(new Error('not found page', { cause: 404 })));
 
   // Global error handler
   app.use(globalErrorHandling);

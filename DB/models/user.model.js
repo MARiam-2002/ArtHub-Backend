@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -124,114 +124,114 @@ const userSchema = new Schema(
       required: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, "يرجى إدخال بريد إلكتروني صالح"],
+      match: [/^\S+@\S+\.\S+$/, 'يرجى إدخال بريد إلكتروني صالح']
     },
-    job:{
+    job: {
       type: String,
-      default: "مستخدم",
+      default: 'مستخدم'
     },
 
     forgetCode: {
-      type: String,
+      type: String
     },
 
     isForgetCodeVerified: {
       type: Boolean,
-      default: false,
+      default: false
     },
 
     password: {
       type: String,
-      select: false,
+      select: false
     },
 
     role: {
       type: String,
-      enum: ["user", "artist"],
-      default: "user",
+      enum: ['user', 'artist'],
+      default: 'user'
     },
 
     wishlist: [
       {
         type: Types.ObjectId,
-        ref: "Product",
-      },
+        ref: 'Product'
+      }
     ],
 
     profileImage: {
       url: {
         type: String,
         default:
-          "https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png",
+          'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png'
       },
       id: {
         type: String,
         default:
-          "ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc",
-      },
+          'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
+      }
     },
 
     coverImages: [
       {
         url: {
           type: String,
-          required: true,
+          required: true
         },
         id: {
           type: String,
-          required: true,
-        },
-      },
+          required: true
+        }
+      }
     ],
 
     firebaseUid: {
       type: String,
       unique: true,
-      sparse: true,
+      sparse: true
     },
     displayName: String,
     photoURL: String,
 
     isVerified: {
       type: Boolean,
-      default: false,
+      default: false
     },
-    
+
     preferredLanguage: {
       type: String,
-      enum: ["ar", "en"],
-      default: "ar",
+      enum: ['ar', 'en'],
+      default: 'ar'
     },
-    
+
     notificationSettings: {
       enablePush: {
         type: Boolean,
-        default: true,
+        default: true
       },
       enableEmail: {
         type: Boolean,
-        default: true,
+        default: true
       },
       muteChat: {
         type: Boolean,
-        default: false,
-      },
+        default: false
+      }
     },
-    
+
     isActive: {
       type: Boolean,
       default: true,
       index: true
     },
-    
+
     isDeleted: {
       type: Boolean,
       default: false,
       index: true
     },
-    
+
     fcmTokens: [String],
-    
+
     lastActive: {
       type: Date,
       default: Date.now
@@ -240,5 +240,5 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-const userModel = mongoose.models.User || model("User", userSchema);
+const userModel = mongoose.models.User || model('User', userSchema);
 export default userModel;

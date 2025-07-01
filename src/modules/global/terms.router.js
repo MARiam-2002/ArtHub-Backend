@@ -1,7 +1,7 @@
-import { Router } from "express";
-import { getTerms } from "./terms.controller.js";
+import { Router } from 'express';
+import { getTerms } from './terms.controller.js';
 const router = Router();
 
-router.get("/", getTerms);
+router.get('/', getTerms);
 
-export default router; 
+export default router;

@@ -7,7 +7,7 @@ export const createArtworkSchema = Joi.object({
   price: Joi.number().required(),
   status: Joi.string().valid('available', 'sold').default('available'),
   tags: Joi.array().items(Joi.string()),
-  category: Joi.string().hex().length(24),
+  category: Joi.string().hex().length(24)
 });
 
 export const updateArtworkSchema = Joi.object({
@@ -17,5 +17,5 @@ export const updateArtworkSchema = Joi.object({
   price: Joi.number(),
   status: Joi.string().valid('available', 'sold'),
   tags: Joi.array().items(Joi.string()),
-  category: Joi.string().hex().length(24),
-}); 
+  category: Joi.string().hex().length(24)
+});

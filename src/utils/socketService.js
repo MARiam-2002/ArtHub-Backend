@@ -11,7 +11,7 @@ let io;
  * Initialize Socket.io server
  * @param {http.Server} server - HTTP server to attach Socket.io to
  */
-export const initializeSocketIO = (server) => {
+export const initializeSocketIO = server => {
   io = new Server(server, {
     cors: {
       origin: '*', // Update with your frontend origins in production
@@ -23,11 +23,11 @@ export const initializeSocketIO = (server) => {
   // Map to track active users and their socket connections
   const userSocketMap = new Map();
 
-  io.on('connection', (socket) => {
+  io.on('connection', socket => {
     console.log(`New socket connection: ${socket.id}`);
 
     // Authenticate socket connection
-    socket.on('authenticate', async (data) => {
+    socket.on('authenticate', async data => {
       try {
         const { userId } = data;
         if (!userId) {
@@ -51,17 +51,14 @@ export const initializeSocketIO = (server) => {
     });
 
     // Handle joining a chat room
-    socket.on('join_chat', async (data) => {
+    socket.on('join_chat', async data => {
       try {
         const { chatId, userId } = data;
-        
+
         // Verify user belongs to this chat
         const chat = await chatModel.findOne({
           _id: chatId,
-          $or: [
-            { sender: userId },
-            { receiver: userId }
-          ]
+          $or: [{ sender: userId }, { receiver: userId }]
         });
 
         if (!chat) {
@@ -72,21 +69,21 @@ export const initializeSocketIO = (server) => {
         // Join the chat room
         socket.join(`chat:${chatId}`);
         console.log(`User ${userId} joined chat ${chatId}`);
-        
+
         // Mark messages as read when joining chat
         await messageModel.updateMany(
-          { 
-            chat: chatId, 
-            sender: { $ne: userId }, 
-            isRead: false 
+          {
+            chat: chatId,
+            sender: { $ne: userId },
+            isRead: false
           },
           { isRead: true }
         );
-        
+
         // Notify about read status
-        io.to(`chat:${chatId}`).emit('messages_read', { 
-          chatId, 
-          readBy: userId 
+        io.to(`chat:${chatId}`).emit('messages_read', {
+          chatId,
+          readBy: userId
         });
       } catch (error) {
         console.error('Error joining chat:', error);
@@ -95,10 +92,10 @@ export const initializeSocketIO = (server) => {
     });
 
     // Handle new message
-    socket.on('send_message', async (data) => {
+    socket.on('send_message', async data => {
       try {
         const { chatId, content, senderId, receiverId } = data;
-        
+
         if (!chatId || !content || !senderId) {
           socket.emit('error', { message: 'Invalid message data' });
           return;
@@ -111,7 +108,7 @@ export const initializeSocketIO = (server) => {
           content,
           sentAt: new Date()
         });
-        
+
         // Update chat's last message
         await chatModel.findByIdAndUpdate(chatId, {
           lastMessage: newMessage._id,
@@ -119,23 +116,25 @@ export const initializeSocketIO = (server) => {
         });
 
         // Populate sender info before emitting
-        const populatedMessage = await messageModel.findById(newMessage._id)
+        const populatedMessage = await messageModel
+          .findById(newMessage._id)
           .populate('sender', 'displayName profileImage');
 
         // Emit to the chat room
         io.to(`chat:${chatId}`).emit('new_message', populatedMessage);
-        
+
         // Send notification to receiver if they're not in the chat room
         if (receiverId) {
           const receiverSocketId = userSocketMap.get(receiverId);
-          const receiverInRoom = receiverSocketId && 
-                               io.sockets.adapter.rooms.get(`chat:${chatId}`)?.has(receiverSocketId);
-          
+          const receiverInRoom =
+            receiverSocketId &&
+            io.sockets.adapter.rooms.get(`chat:${chatId}`)?.has(receiverSocketId);
+
           if (!receiverInRoom) {
             // Get sender name for the notification
             const sender = await userModel.findById(senderId).select('displayName');
             const senderName = sender?.displayName || 'مستخدم';
-            
+
             // Send push notification
             try {
               await sendPushNotificationToUser(
@@ -164,35 +163,35 @@ export const initializeSocketIO = (server) => {
     });
 
     // Handle typing indicators
-    socket.on('typing', (data) => {
+    socket.on('typing', data => {
       const { chatId, userId } = data;
       socket.to(`chat:${chatId}`).emit('user_typing', { chatId, userId });
     });
 
-    socket.on('stop_typing', (data) => {
+    socket.on('stop_typing', data => {
       const { chatId, userId } = data;
       socket.to(`chat:${chatId}`).emit('user_stopped_typing', { chatId, userId });
     });
 
     // Handle read receipts
-    socket.on('mark_read', async (data) => {
+    socket.on('mark_read', async data => {
       try {
         const { chatId, userId } = data;
-        
+
         // Update messages as read
         await messageModel.updateMany(
-          { 
-            chat: chatId, 
-            sender: { $ne: userId }, 
-            isRead: false 
+          {
+            chat: chatId,
+            sender: { $ne: userId },
+            isRead: false
           },
           { isRead: true }
         );
-        
+
         // Broadcast read status to the chat
-        io.to(`chat:${chatId}`).emit('messages_read', { 
-          chatId, 
-          readBy: userId 
+        io.to(`chat:${chatId}`).emit('messages_read', {
+          chatId,
+          readBy: userId
         });
       } catch (error) {
         console.error('Error marking messages as read:', error);
@@ -233,7 +232,7 @@ export const sendToUser = (userId, event, data) => {
   if (!io) {
     throw new Error('Socket.IO not initialized');
   }
-  
+
   io.to(`user:${userId}`).emit(event, data);
 };
 
@@ -247,7 +246,7 @@ export const sendToChat = (chatId, event, data) => {
   if (!io) {
     throw new Error('Socket.IO not initialized');
   }
-  
+
   io.to(`chat:${chatId}`).emit(event, data);
 };
 
@@ -256,4 +255,4 @@ export default {
   getIO,
   sendToUser,
   sendToChat
-}; 
+};

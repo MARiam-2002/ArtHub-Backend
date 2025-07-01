@@ -1,4 +1,4 @@
-export const signupTemp = (link) => `<!DOCTYPE html>
+export const signupTemp = link => `<!DOCTYPE html>
 <html>
 <head>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"></head>
@@ -83,7 +83,7 @@ body{background-color: #88BDBF;margin: 0px;}
 </body>
 </html>`;
 
-export const resetPassword = (code) => `<!DOCTYPE html>
+export const resetPassword = code => `<!DOCTYPE html>
 <html>
 
     <head>

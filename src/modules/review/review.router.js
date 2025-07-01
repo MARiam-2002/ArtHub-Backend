@@ -38,8 +38,8 @@ const router = Router();
  *         description: تم إضافة التقييم بنجاح
  */
 router.post(
-  '/artwork', 
-  isAuthenticated, 
+  '/artwork',
+  isAuthenticated,
   isValidation(Validators.addReviewSchema),
   controller.addArtworkReview
 );
@@ -77,8 +77,8 @@ router.post(
  *         description: تم تحديث التقييم بنجاح
  */
 router.put(
-  '/artwork/update', 
-  isAuthenticated, 
+  '/artwork/update',
+  isAuthenticated,
   isValidation(Validators.updateReviewSchema),
   controller.updateArtworkReview
 );
@@ -146,8 +146,8 @@ router.get('/artwork/:artworkId', controller.getArtworkReviews);
  *         description: تم إضافة التقييم بنجاح
  */
 router.post(
-  '/artist', 
-  isAuthenticated, 
+  '/artist',
+  isAuthenticated,
   isValidation(Validators.addArtistReviewSchema),
   controller.addArtistReview
 );
@@ -182,4 +182,4 @@ router.post(
  */
 router.get('/artist/:artistId', controller.getArtistReviews);
 
-export default router; 
+export default router;

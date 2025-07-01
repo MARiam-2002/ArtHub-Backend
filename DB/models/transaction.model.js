@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -64,96 +64,99 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           format: date-time
  *           description: تاريخ إتمام المعاملة
  */
-const transactionSchema = new Schema({
-  buyer: { 
-    type: Types.ObjectId, 
-    ref: "User", 
-    required: true 
-  },
-  seller: { 
-    type: Types.ObjectId, 
-    ref: "User", 
-    required: true 
-  },
-  artwork: { 
-    type: Types.ObjectId, 
-    ref: "Artwork"
-  },
-  specialRequest: { 
-    type: Types.ObjectId, 
-    ref: "SpecialRequest"
-  },
-  amount: { 
-    type: Number, 
-    required: true,
-    min: 0
-  },
-  commissionAmount: { 
-    type: Number, 
-    default: 0
-  },
-  netAmount: { 
-    type: Number, 
-    default: function() {
-      return this.amount - this.commissionAmount;
+const transactionSchema = new Schema(
+  {
+    buyer: {
+      type: Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    seller: {
+      type: Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    artwork: {
+      type: Types.ObjectId,
+      ref: 'Artwork'
+    },
+    specialRequest: {
+      type: Types.ObjectId,
+      ref: 'SpecialRequest'
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    commissionAmount: {
+      type: Number,
+      default: 0
+    },
+    netAmount: {
+      type: Number,
+      default: function () {
+        return this.amount - this.commissionAmount;
+      }
+    },
+    currency: {
+      type: String,
+      default: 'SAR'
+    },
+    paymentMethod: {
+      type: String,
+      enum: ['credit_card', 'debit_card', 'bank_transfer', 'paypal', 'stripe', 'other'],
+      required: true
+    },
+    paymentId: {
+      type: String
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed', 'refunded'],
+      default: 'pending'
+    },
+    shippingAddress: {
+      fullName: String,
+      addressLine1: String,
+      addressLine2: String,
+      city: String,
+      state: String,
+      postalCode: String,
+      country: String,
+      phoneNumber: String
+    },
+    trackingInfo: {
+      provider: String,
+      trackingNumber: String,
+      trackingUrl: String,
+      estimatedDelivery: Date,
+      shippedAt: Date
+    },
+    completedAt: {
+      type: Date
+    },
+    notes: {
+      type: String
     }
   },
-  currency: { 
-    type: String, 
-    default: "SAR"
-  },
-  paymentMethod: { 
-    type: String,
-    enum: ["credit_card", "debit_card", "bank_transfer", "paypal", "stripe", "other"],
-    required: true
-  },
-  paymentId: { 
-    type: String
-  },
-  status: { 
-    type: String,
-    enum: ["pending", "completed", "failed", "refunded"],
-    default: "pending"
-  },
-  shippingAddress: {
-    fullName: String,
-    addressLine1: String,
-    addressLine2: String,
-    city: String,
-    state: String,
-    postalCode: String,
-    country: String,
-    phoneNumber: String
-  },
-  trackingInfo: {
-    provider: String,
-    trackingNumber: String,
-    trackingUrl: String,
-    estimatedDelivery: Date,
-    shippedAt: Date
-  },
-  completedAt: {
-    type: Date
-  },
-  notes: {
-    type: String
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
-}, { 
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+);
 
 // عند إكمال معاملة، تحديث حالة العمل الفني إلى "مباع"
-transactionSchema.pre('save', async function(next) {
+transactionSchema.pre('save', async function (next) {
   try {
     if (this.isModified('status') && this.status === 'completed' && this.artwork) {
       this.completedAt = new Date();
-      
+
       // تحديث العمل الفني إلى "مباع"
       const artworkModel = mongoose.model('Artwork');
-      await artworkModel.findByIdAndUpdate(this.artwork, { 
-        isAvailable: false 
+      await artworkModel.findByIdAndUpdate(this.artwork, {
+        isAvailable: false
       });
     }
     next();
@@ -162,5 +165,5 @@ transactionSchema.pre('save', async function(next) {
   }
 });
 
-const transactionModel = mongoose.models.Transaction || model("Transaction", transactionSchema);
-export default transactionModel; 
+const transactionModel = mongoose.models.Transaction || model('Transaction', transactionSchema);
+export default transactionModel;

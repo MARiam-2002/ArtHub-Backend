@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { fileUpload, filterObject } from '../../utils/multer.js';
 import * as imageController from './controller/image.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
-import { verifyFirebaseToken } from '../../middleware/firebase.middleware.js';
+import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import { createImageSchema, updateImageSchema } from './image.validation.js';
 
@@ -56,8 +56,9 @@ const router = Router();
  *       401:
  *         description: غير مصرح به
  */
-router.post('/upload', 
-  isAuthenticated, 
+router.post(
+  '/upload',
+  isAuthenticated,
   fileUpload(filterObject.image).array('images', 10),
   isValidation(createImageSchema),
   imageController.uploadImages
@@ -111,8 +112,9 @@ router.post('/upload',
  *       401:
  *         description: غير مصرح به
  */
-router.post('/upload/firebase', 
-  verifyFirebaseToken, 
+router.post(
+  '/upload/firebase',
+  verifyFirebaseToken,
   fileUpload(filterObject.image).array('images', 10),
   isValidation(createImageSchema),
   imageController.uploadImages
@@ -155,9 +157,10 @@ router.post('/upload/firebase',
  *       401:
  *         description: غير مصرح به
  */
-router.post('/upload/album', 
-  isAuthenticated, 
-  fileUpload(filterObject.image).array('images', 30), 
+router.post(
+  '/upload/album',
+  isAuthenticated,
+  fileUpload(filterObject.image).array('images', 30),
   imageController.uploadMultipleImages
 );
 
@@ -198,9 +201,10 @@ router.post('/upload/album',
  *       401:
  *         description: غير مصرح به
  */
-router.post('/upload/album/firebase', 
-  verifyFirebaseToken, 
-  fileUpload(filterObject.image).array('images', 30), 
+router.post(
+  '/upload/album/firebase',
+  verifyFirebaseToken,
+  fileUpload(filterObject.image).array('images', 30),
   imageController.uploadMultipleImages
 );
 
@@ -323,10 +327,7 @@ router.get('/albums/:albumName/firebase', verifyFirebaseToken, imageController.g
  *       200:
  *         description: Images retrieved successfully
  */
-router.get('/my-images', 
-  isAuthenticated, 
-  imageController.getUserImages
-);
+router.get('/my-images', isAuthenticated, imageController.getUserImages);
 
 /**
  * @swagger
@@ -357,10 +358,7 @@ router.get('/my-images',
  *       200:
  *         description: Images retrieved successfully
  */
-router.get('/my-images/firebase', 
-  verifyFirebaseToken, 
-  imageController.getUserImages
-);
+router.get('/my-images/firebase', verifyFirebaseToken, imageController.getUserImages);
 
 /**
  * @swagger
@@ -382,9 +380,7 @@ router.get('/my-images/firebase',
  *       404:
  *         description: Image not found
  */
-router.get('/:imageId', 
-  imageController.getImageById
-);
+router.get('/:imageId', imageController.getImageById);
 
 /**
  * @swagger
@@ -425,7 +421,8 @@ router.get('/:imageId',
  *       404:
  *         description: Image not found
  */
-router.patch('/:imageId', 
+router.patch(
+  '/:imageId',
   isAuthenticated,
   isValidation(updateImageSchema),
   imageController.updateImageMetadata
@@ -470,7 +467,8 @@ router.patch('/:imageId',
  *       404:
  *         description: Image not found
  */
-router.patch('/:imageId/firebase', 
+router.patch(
+  '/:imageId/firebase',
   verifyFirebaseToken,
   isValidation(updateImageSchema),
   imageController.updateImageMetadata
@@ -498,10 +496,7 @@ router.patch('/:imageId/firebase',
  *       404:
  *         description: Image not found
  */
-router.delete('/:publicId', 
-  isAuthenticated, 
-  imageController.deleteImage
-);
+router.delete('/:publicId', isAuthenticated, imageController.deleteImage);
 
 /**
  * @swagger
@@ -525,10 +520,7 @@ router.delete('/:publicId',
  *       404:
  *         description: Image not found
  */
-router.delete('/:publicId/firebase', 
-  verifyFirebaseToken, 
-  imageController.deleteImage
-);
+router.delete('/:publicId/firebase', verifyFirebaseToken, imageController.deleteImage);
 
 /**
  * @swagger
@@ -543,9 +535,7 @@ router.delete('/:publicId/firebase',
  *       200:
  *         description: Categories retrieved successfully
  */
-router.get('/categories/popular', 
-  imageController.getImageCategories
-);
+router.get('/categories/popular', imageController.getImageCategories);
 
 /**
  * @swagger

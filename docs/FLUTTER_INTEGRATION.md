@@ -13,7 +13,7 @@
 dependencies:
   socket_io_client: ^2.0.0
   http: ^0.13.5
-  shared_preferences: ^2.0.15  # لتخزين رمز الجلسة
+  shared_preferences: ^2.0.15 # لتخزين رمز الجلسة
 ```
 
 ثم تحديث الحزم:
@@ -55,8 +55,8 @@ class Message {
       senderId: json['sender']['_id'],
       isFromMe: json['isFromMe'] ?? false,
       isRead: json['isRead'] ?? false,
-      createdAt: json['createdAt'] != null 
-        ? DateTime.parse(json['createdAt']) 
+      createdAt: json['createdAt'] != null
+        ? DateTime.parse(json['createdAt'])
         : DateTime.now(),
     );
   }
@@ -111,7 +111,7 @@ class ChatService {
       Uri.parse('$baseUrl/api/chat/socket-token'),
       headers: {'Authorization': 'Bearer $authToken'},
     );
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data['data']['token'];
@@ -123,45 +123,45 @@ class ChatService {
   // إنشاء اتصال بالسوكت
   Future<void> connect(String authToken, String uid) async {
     if (isConnected) return;
-    
+
     try {
       userId = uid;
       final socketToken = await getSocketToken(authToken);
-      
+
       socket = IO.io(baseUrl, {
         'transports': ['websocket'],
         'query': {'token': socketToken}
       });
-      
+
       socket.on('connect', (_) {
         print('تم الاتصال بنجاح');
         isConnected = true;
         _connectionController.add('connected');
-        
+
         // المصادقة بعد الاتصال
         socket.emit('authenticate', {'userId': userId});
       });
-      
+
       socket.on('authenticated', (_) {
         print('تم التوثيق بنجاح');
-        
+
         // إعادة الانضمام للمحادثة الحالية إذا كانت موجودة
         if (currentChatId != null) {
           joinChat(currentChatId!);
         }
       });
-      
+
       socket.on('error', (error) {
         print('خطأ في السوكت: $error');
         _connectionController.add('error');
       });
-      
+
       socket.on('disconnect', (_) {
         print('تم قطع الاتصال');
         isConnected = false;
         _connectionController.add('disconnected');
       });
-      
+
       // إعداد جميع المستمعين
       _setupSocketListeners();
     } catch (e) {
@@ -178,12 +178,12 @@ class ChatService {
       final message = Message.fromJson(data);
       _messageController.add(message);
     });
-    
+
     // تحديث حالة القراءة
     socket.on('messages_read', (data) {
       _readController.add(data);
     });
-    
+
     // مؤشرات الكتابة
     socket.on('user_typing', (data) {
       if (data['chatId'] == currentChatId && data['userId'] != userId) {
@@ -195,7 +195,7 @@ class ChatService {
         });
       }
     });
-    
+
     socket.on('user_stopped_typing', (data) {
       if (data['chatId'] == currentChatId && data['userId'] != userId) {
         typingUsers[data['userId']] = false;
@@ -206,12 +206,12 @@ class ChatService {
         });
       }
     });
-    
+
     // تحديثات قائمة المحادثات
     socket.on('update_chat_list', (data) {
       // يمكن معالجتها في المستقبل
     });
-    
+
     socket.on('new_chat', (data) {
       // يمكن معالجتها في المستقبل
     });
@@ -220,7 +220,7 @@ class ChatService {
   // الانضمام إلى محادثة
   void joinChat(String chatId) {
     if (!isConnected) return;
-    
+
     currentChatId = chatId;
     socket.emit('join_chat', {
       'chatId': chatId,
@@ -231,7 +231,7 @@ class ChatService {
   // إرسال رسالة
   void sendMessage(String chatId, String content, String receiverId) {
     if (!isConnected) return;
-    
+
     socket.emit('send_message', {
       'chatId': chatId,
       'content': content,
@@ -243,7 +243,7 @@ class ChatService {
   // وضع علامة مقروء
   void markAsRead(String chatId) {
     if (!isConnected) return;
-    
+
     socket.emit('mark_read', {
       'chatId': chatId,
       'userId': userId
@@ -253,7 +253,7 @@ class ChatService {
   // إرسال مؤشر الكتابة
   void sendTypingStatus(String chatId, bool isTyping) {
     if (!isConnected) return;
-    
+
     final event = isTyping ? 'typing' : 'stop_typing';
     socket.emit(event, {
       'chatId': chatId,
@@ -267,7 +267,7 @@ class ChatService {
       Uri.parse('$baseUrl/api/chat'),
       headers: {'Authorization': 'Bearer $authToken'},
     );
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data['data'];
@@ -282,7 +282,7 @@ class ChatService {
       Uri.parse('$baseUrl/api/chat/$chatId/messages'),
       headers: {'Authorization': 'Bearer $authToken'},
     );
-    
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data['data'];
@@ -301,7 +301,7 @@ class ChatService {
       },
       body: jsonEncode({'userId': otherUserId}),
     );
-    
+
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body);
       return data['data'];
@@ -341,7 +341,7 @@ class ChatScreen extends StatefulWidget {
   final String chatId;
   final String receiverId;
   final String authToken;
-  
+
   const ChatScreen({
     Key? key,
     required this.chatId,
@@ -370,24 +370,24 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _initChatService() async {
     // افتراض أن userId مخزن في مكان ما
     final userId = getUserId(); // استبدل بدالة حقيقية
-    
+
     // اتصال بخدمة السوكت
     await _chatService.connect(widget.authToken, userId);
-    
+
     // الاستماع للرسائل الجديدة
     _chatService.messageStream.listen((message) {
       if (message.chatId == widget.chatId) {
         setState(() {
           _messages.add(message);
         });
-        
+
         // تحديث حالة القراءة إذا كانت الرسالة من المستخدم الآخر
         if (!message.isFromMe) {
           _chatService.markAsRead(widget.chatId);
         }
       }
     });
-    
+
     // الاستماع لحالة الكتابة
     _chatService.typingStream.listen((data) {
       if (data['chatId'] == widget.chatId && data['userId'] == widget.receiverId) {
@@ -396,13 +396,13 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
     });
-    
+
     // الانضمام للمحادثة
     _chatService.joinChat(widget.chatId);
-    
+
     // جلب الرسائل السابقة
     await _loadPreviousMessages();
-    
+
     // تحديث حالة القراءة
     _chatService.markAsRead(widget.chatId);
   }
@@ -412,12 +412,12 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _isLoading = true;
       });
-      
+
       final chatData = await _chatService.getChatMessages(
         widget.chatId,
         widget.authToken
       );
-      
+
       setState(() {
         _messages.clear();
         for (var msg in chatData['messages']) {
@@ -436,17 +436,17 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendMessage() {
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
-    
+
     // إرسال الرسالة
     _chatService.sendMessage(
       widget.chatId,
       content,
       widget.receiverId
     );
-    
+
     // مسح حقل الإدخال
     _messageController.clear();
-    
+
     // إيقاف مؤشر الكتابة
     _chatService.sendTypingStatus(widget.chatId, false);
   }
@@ -455,7 +455,7 @@ class _ChatScreenState extends State<ChatScreen> {
     // إدارة مؤشر الكتابة
     if (text.isNotEmpty) {
       _chatService.sendTypingStatus(widget.chatId, true);
-      
+
       // إعادة ضبط المؤقت
       _typingTimer?.cancel();
       _typingTimer = Timer(const Duration(seconds: 3), () {
@@ -504,7 +504,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
           ),
-          
+
           // حقل إدخال الرسائل
           Container(
             padding: EdgeInsets.all(8),
@@ -572,7 +572,7 @@ import '../services/chat_service.dart';
 
 class ChatsListScreen extends StatefulWidget {
   final String authToken;
-  
+
   const ChatsListScreen({
     Key? key,
     required this.authToken,
@@ -598,9 +598,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       setState(() {
         _isLoading = true;
       });
-      
+
       final chats = await _chatService.getChats(widget.authToken);
-      
+
       setState(() {
         _chats = chats;
         _isLoading = false;
@@ -704,13 +704,13 @@ void sendMessageWithRetry(String chatId, String content, String receiverId) {
     'receiverId': receiverId,
     'timestamp': DateTime.now().toIso8601String()
   };
-  
+
   if (isConnected) {
     socket.emit('send_message', pendingMessage);
   } else {
     // تخزين الرسالة للإرسال لاحقًا
     _pendingMessages.add(pendingMessage);
-    
+
     // محاولة إعادة الاتصال
     reconnect();
   }
@@ -719,10 +719,10 @@ void sendMessageWithRetry(String chatId, String content, String receiverId) {
 // إعادة إرسال الرسائل المعلقة
 void _resendPendingMessages() {
   if (_pendingMessages.isEmpty || !isConnected) return;
-  
+
   final messagesToSend = List<Map<String, dynamic>>.from(_pendingMessages);
   _pendingMessages.clear();
-  
+
   for (final message in messagesToSend) {
     socket.emit('send_message', message);
   }
@@ -733,15 +733,15 @@ socket.io.on('reconnect', (_) {
   print('تم إعادة الاتصال');
   isConnected = true;
   _connectionController.add('connected');
-  
+
   // إعادة المصادقة
   socket.emit('authenticate', {'userId': userId});
-  
+
   // إعادة الانضمام للمحادثة الحالية
   if (currentChatId != null) {
     joinChat(currentChatId!);
   }
-  
+
   // إعادة إرسال الرسائل المعلقة
   _resendPendingMessages();
 });
@@ -758,7 +758,7 @@ Future<void> loadMoreMessages(String chatId, String authToken, {int page = 1, in
     Uri.parse('$baseUrl/api/chat/$chatId/messages?page=$page&limit=$limit'),
     headers: {'Authorization': 'Bearer $authToken'},
   );
-  
+
   if (response.statusCode == 200) {
     final data = jsonDecode(response.body);
     return data['data'];
@@ -785,7 +785,7 @@ void enableSocketLogging() {
   socket.onDisconnect((_) => print('🔴 Socket disconnected'));
   socket.onConnectError((err) => print('🟠 Connect error: $err'));
   socket.onError((err) => print('🔴 Socket error: $err'));
-  
+
   socket.on('new_message', (data) => print('📩 New message: ${jsonEncode(data)}'));
   socket.on('messages_read', (data) => print('👁️ Messages read: ${jsonEncode(data)}'));
   socket.on('user_typing', (data) => print('⌨️ User typing: ${jsonEncode(data)}'));
@@ -801,4 +801,4 @@ void enableSocketLogging() {
 
 ## خاتمة
 
-يوفر هذا الدليل الأساس لدمج نظام الدردشة الجديد القائم على Socket.io في تطبيقات Flutter. من خلال اتباع هذه الإرشادات، يمكنك إنشاء تجربة دردشة سلسة وآنية مع ميزات متقدمة مثل إشعارات الكتابة وتأكيدات القراءة. 
+يوفر هذا الدليل الأساس لدمج نظام الدردشة الجديد القائم على Socket.io في تطبيقات Flutter. من خلال اتباع هذه الإرشادات، يمكنك إنشاء تجربة دردشة سلسة وآنية مع ميزات متقدمة مثل إشعارات الكتابة وتأكيدات القراءة.

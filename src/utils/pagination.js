@@ -10,12 +10,12 @@ export function getPaginationParams(query, defaultLimit = 10, maxLimit = 100) {
   const requestedLimit = parseInt(query.limit) || defaultLimit;
   const limit = Math.min(Math.max(1, requestedLimit), maxLimit);
   const skip = (page - 1) * limit;
-  
-  return { 
-    page, 
-    limit, 
+
+  return {
+    page,
+    limit,
     skip,
-    getPaginationMetadata: (totalCount) => ({
+    getPaginationMetadata: totalCount => ({
       currentPage: page,
       itemsPerPage: limit,
       totalItems: totalCount,
@@ -24,4 +24,4 @@ export function getPaginationParams(query, defaultLimit = 10, maxLimit = 100) {
       hasPrevPage: page > 1
     })
   };
-} 
+}

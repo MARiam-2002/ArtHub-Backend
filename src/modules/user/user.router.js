@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as controller from './user.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
-import { verifyFirebaseToken } from '../../middleware/firebase.middleware.js';
+import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 const router = Router();
 
 /**
@@ -550,7 +550,11 @@ router.put('/settings/notifications', isAuthenticated, controller.updateNotifica
  *       200:
  *         description: تم تحديث إعدادات الإشعارات بنجاح
  */
-router.put('/settings/notifications/firebase', verifyFirebaseToken, controller.updateNotificationSettings);
+router.put(
+  '/settings/notifications/firebase',
+  verifyFirebaseToken,
+  controller.updateNotificationSettings
+);
 
 /**
  * @swagger

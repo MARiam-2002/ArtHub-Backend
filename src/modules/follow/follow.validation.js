@@ -16,4 +16,4 @@ export const unfollowArtistSchema = {
       'any.required': 'معرف الفنان مطلوب'
     })
   })
-}; 
+};

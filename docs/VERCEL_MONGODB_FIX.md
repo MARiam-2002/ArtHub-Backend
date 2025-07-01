@@ -68,6 +68,7 @@ Common error patterns and their solutions:
 This occurs when MongoDB operations are queued while waiting for a connection, but the connection isn't established within the timeout period.
 
 **Solution:**
+
 - Add `0.0.0.0/0` to MongoDB Atlas IP whitelist
 - Increase connection timeouts in `DB/connection.js`
 - Ensure your MongoDB Atlas cluster is running
@@ -77,6 +78,7 @@ This occurs when MongoDB operations are queued while waiting for a connection, b
 MongoDB driver couldn't select a server to connect to within the specified timeout.
 
 **Solution:**
+
 - Check MongoDB Atlas status (https://status.mongodb.com/)
 - Verify your connection string is correct
 - Add `0.0.0.0/0` to MongoDB Atlas IP whitelist
@@ -86,6 +88,7 @@ MongoDB driver couldn't select a server to connect to within the specified timeo
 Network-level connection failure.
 
 **Solution:**
+
 - Check if MongoDB Atlas is accessible from your network
 - Verify your connection string is correct
 - Check if MongoDB Atlas has any maintenance or outages
@@ -130,4 +133,4 @@ If you've tried all the steps above and are still experiencing connection issues
 
 - [MongoDB Atlas Documentation](https://docs.atlas.mongodb.com/)
 - [Vercel Serverless Functions Documentation](https://vercel.com/docs/functions)
-- [MongoDB Node.js Driver Documentation](https://docs.mongodb.com/drivers/node/current/) 
+- [MongoDB Node.js Driver Documentation](https://docs.mongodb.com/drivers/node/current/)

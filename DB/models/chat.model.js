@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -34,44 +34,49 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           type: string
  *           format: date-time
  */
-const chatSchema = new Schema({
-  members: [{
-    type: Types.ObjectId,
-    ref: "User",
-    required: true
-  }],
-  lastMessage: {
-    type: Types.ObjectId,
-    ref: "Message"
+const chatSchema = new Schema(
+  {
+    members: [
+      {
+        type: Types.ObjectId,
+        ref: 'User',
+        required: true
+      }
+    ],
+    lastMessage: {
+      type: Types.ObjectId,
+      ref: 'Message'
+    },
+    // Store the original sender and receiver for reference
+    sender: {
+      type: Types.ObjectId,
+      ref: 'User'
+    },
+    receiver: {
+      type: Types.ObjectId,
+      ref: 'User'
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    }
   },
-  // Store the original sender and receiver for reference
-  sender: {
-    type: Types.ObjectId,
-    ref: "User"
-  },
-  receiver: {
-    type: Types.ObjectId,
-    ref: "User"
-  },
-  isDeleted: {
-    type: Boolean,
-    default: false
-  }
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 // Ensure at least 2 members in the chat
-chatSchema.pre('save', function(next) {
+chatSchema.pre('save', function (next) {
   if (this.members.length < 2) {
     const error = new Error('Chat must have at least 2 members');
     return next(error);
   }
-  
+
   // Set sender and receiver if not already set
   if (this.isNew && this.members.length >= 2 && !this.sender) {
     this.sender = this.members[0];
     this.receiver = this.members[1];
   }
-  
+
   next();
 });
 
@@ -86,18 +91,15 @@ chatSchema.index({ updatedAt: -1 }); // For sorting chats by most recent
  * @param {String} receiverId - ID of the recipient
  * @returns {Promise} - Promise with chat object
  */
-chatSchema.statics.findOrCreateChat = async function(senderId, receiverId) {
+chatSchema.statics.findOrCreateChat = async function (senderId, receiverId) {
   // Try to find existing chat between these users
   let chat = await this.findOne({
-    members: { 
-      $all: [
-        mongoose.Types.ObjectId(senderId), 
-        mongoose.Types.ObjectId(receiverId)
-      ] 
+    members: {
+      $all: [mongoose.Types.ObjectId(senderId), mongoose.Types.ObjectId(receiverId)]
     },
     isDeleted: { $ne: true }
   });
-  
+
   // Create new chat if none exists
   if (!chat) {
     chat = await this.create({
@@ -106,7 +108,7 @@ chatSchema.statics.findOrCreateChat = async function(senderId, receiverId) {
       receiver: receiverId
     });
   }
-  
+
   return chat;
 };
 
@@ -115,8 +117,8 @@ chatSchema.statics.findOrCreateChat = async function(senderId, receiverId) {
  * @param {ObjectId} userId - User ID
  * @returns {Promise} - Promise with array of populated chats
  */
-chatSchema.statics.findUserChats = function(userId) {
-  return this.find({ 
+chatSchema.statics.findUserChats = function (userId) {
+  return this.find({
     members: userId,
     isDeleted: { $ne: true }
   })
@@ -142,7 +144,7 @@ chatSchema.statics.findUserChats = function(userId) {
  * @param {ObjectId} userId - User ID
  * @returns {Promise<Number>} - Promise with count of unread messages
  */
-chatSchema.statics.countUnreadMessages = async function(chatId, userId) {
+chatSchema.statics.countUnreadMessages = async function (chatId, userId) {
   const messageModel = mongoose.model('Message');
   return messageModel.countDocuments({
     chat: chatId,
@@ -151,5 +153,5 @@ chatSchema.statics.countUnreadMessages = async function(chatId, userId) {
   });
 };
 
-const chatModel = mongoose.models.Chat || model("Chat", chatSchema);
+const chatModel = mongoose.models.Chat || model('Chat', chatSchema);
 export default chatModel;

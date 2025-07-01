@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as chatController from './chat.controller.js';
-import { verifyFirebaseToken } from '../../middleware/firebase.middleware.js';
+import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as chatValidation from './chat.validation.js';
@@ -47,7 +47,7 @@ router.get('/', isAuthenticated, chatController.getUserChats);
  *         description: المحادثة غير موجودة
  */
 router.get(
-  '/:chatId/messages', 
+  '/:chatId/messages',
   isAuthenticated,
   isValidation(chatValidation.getMessagesSchema),
   chatController.getMessages
@@ -89,7 +89,7 @@ router.get(
  *         description: المحادثة غير موجودة
  */
 router.post(
-  '/:chatId/messages', 
+  '/:chatId/messages',
   isAuthenticated,
   isValidation(chatValidation.sendMessageSchema),
   chatController.sendMessage
@@ -124,7 +124,7 @@ router.post(
  *         description: المستخدم غير موجود
  */
 router.post(
-  '/create', 
+  '/create',
   isAuthenticated,
   isValidation(chatValidation.createChatSchema),
   chatController.createChat
@@ -154,7 +154,7 @@ router.post(
  *         description: المحادثة غير موجودة
  */
 router.post(
-  '/:chatId/read', 
+  '/:chatId/read',
   isAuthenticated,
   isValidation(chatValidation.markAsReadSchema),
   chatController.markAsRead
@@ -185,18 +185,17 @@ router.post(
  *                   type: string
  *                   description: معرف المستخدم
  */
-router.get(
-  '/socket-token',
-  isAuthenticated,
-  (req, res) => {
-    // رمز بسيط للاتصال بالسوكت - يمكن تحسينه باستخدام JWT
-    const token = Buffer.from(`${req.user._id}:${Date.now()}`).toString('base64');
-    
-    res.success({ 
-      token,
-      userId: req.user._id 
-    }, 'تم إنشاء رمز الاتصال بنجاح');
-  }
-);
+router.get('/socket-token', isAuthenticated, (req, res) => {
+  // رمز بسيط للاتصال بالسوكت - يمكن تحسينه باستخدام JWT
+  const token = Buffer.from(`${req.user._id}:${Date.now()}`).toString('base64');
 
-export default router; 
+  res.success(
+    {
+      token,
+      userId: req.user._id
+    },
+    'تم إنشاء رمز الاتصال بنجاح'
+  );
+});
+
+export default router;

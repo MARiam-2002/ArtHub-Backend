@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -111,123 +111,130 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           format: date-time
  *           description: Date the image was last updated
  */
-const imageSchema = new Schema({
-  user: { 
-    type: Types.ObjectId, 
-    ref: "User", 
-    required: true,
-    index: true
+const imageSchema = new Schema(
+  {
+    user: {
+      type: Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
+    },
+    url: {
+      type: String,
+      required: true
+    },
+    publicId: {
+      type: String,
+      required: true
+    },
+    title: {
+      ar: { type: String, default: 'صورة بدون عنوان' },
+      en: { type: String, default: 'Untitled Image' }
+    },
+    description: {
+      ar: { type: String, default: '' },
+      en: { type: String, default: '' }
+    },
+    tags: [
+      {
+        type: String,
+        trim: true
+      }
+    ],
+    category: {
+      type: Types.ObjectId,
+      ref: 'Category'
+    },
+    size: {
+      type: Number
+    },
+    format: {
+      type: String
+    },
+    width: {
+      type: Number
+    },
+    height: {
+      type: Number
+    },
+    hasWatermark: {
+      type: Boolean,
+      default: false
+    },
+    album: {
+      type: String,
+      trim: true,
+      index: true
+    },
+    views: {
+      type: Number,
+      default: 0
+    },
+    isPublic: {
+      type: Boolean,
+      default: true
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    viewCount: {
+      type: Number,
+      default: 0
+    },
+    likeCount: {
+      type: Number,
+      default: 0
+    },
+    price: {
+      type: Number,
+      default: 0
+    },
+    forSale: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    colors: [
+      {
+        type: String
+      }
+    ],
+    optimizedUrl: {
+      type: String
+    },
+    optimizationLevel: {
+      type: String,
+      enum: ['low', 'medium', 'high'],
+      default: 'medium'
+    },
+    variants: {
+      thumbnail: { type: String },
+      small: { type: String },
+      medium: { type: String },
+      large: { type: String }
+    },
+    metadata: {
+      type: Object,
+      default: {}
+    }
   },
-  url: { 
-    type: String, 
-    required: true 
-  },
-  publicId: { 
-    type: String, 
-    required: true 
-  },
-  title: {
-    ar: { type: String, default: 'صورة بدون عنوان' },
-    en: { type: String, default: 'Untitled Image' }
-  },
-  description: {
-    ar: { type: String, default: '' },
-    en: { type: String, default: '' }
-  },
-  tags: [{ 
-    type: String,
-    trim: true
-  }],
-  category: { 
-    type: Types.ObjectId, 
-    ref: "Category" 
-  },
-  size: { 
-    type: Number 
-  },
-  format: { 
-    type: String 
-  },
-  width: { 
-    type: Number 
-  },
-  height: { 
-    type: Number 
-  },
-  hasWatermark: {
-    type: Boolean,
-    default: false
-  },
-  album: {
-    type: String,
-    trim: true,
-    index: true
-  },
-  views: {
-    type: Number,
-    default: 0
-  },
-  isPublic: {
-    type: Boolean,
-    default: true
-  },
-  isFeatured: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  viewCount: {
-    type: Number,
-    default: 0
-  },
-  likeCount: {
-    type: Number,
-    default: 0
-  },
-  price: {
-    type: Number,
-    default: 0
-  },
-  forSale: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  colors: [{ 
-    type: String 
-  }],
-  optimizedUrl: {
-    type: String
-  },
-  optimizationLevel: {
-    type: String,
-    enum: ['low', 'medium', 'high'],
-    default: 'medium'
-  },
-  variants: {
-    thumbnail: { type: String },
-    small: { type: String },
-    medium: { type: String },
-    large: { type: String }
-  },
-  metadata: {
-    type: Object,
-    default: {}
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
-}, { 
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
+);
 
 // Virtual for computed image URL with transformations
-imageSchema.virtual('thumbnailUrl').get(function() {
+imageSchema.virtual('thumbnailUrl').get(function () {
   // Replace the original URL with a thumbnail version
   return this.url.replace('/upload/', '/upload/c_thumb,w_200,h_200/');
 });
 
 // Virtual for medium sized image
-imageSchema.virtual('mediumUrl').get(function() {
+imageSchema.virtual('mediumUrl').get(function () {
   return this.url.replace('/upload/', '/upload/c_scale,w_600/');
 });
 
@@ -239,16 +246,22 @@ imageSchema.index({ isFeatured: 1, createdAt: -1 });
 imageSchema.index({ forSale: 1, price: 1 });
 imageSchema.index({ viewCount: -1 });
 imageSchema.index({ publicId: 1 });
-imageSchema.index({ "title.ar": "text", "title.en": "text", "description.ar": "text", "description.en": "text", tags: "text" });
+imageSchema.index({
+  'title.ar': 'text',
+  'title.en': 'text',
+  'description.ar': 'text',
+  'description.en': 'text',
+  tags: 'text'
+});
 
 // Method to increment view count
-imageSchema.methods.incrementViewCount = async function() {
+imageSchema.methods.incrementViewCount = async function () {
   this.viewCount += 1;
   return this.save();
 };
 
 // Method to get localized content
-imageSchema.methods.getLocalizedContent = function(language = 'ar') {
+imageSchema.methods.getLocalizedContent = function (language = 'ar') {
   const result = this.toObject();
   result.title = this.title[language] || this.title.ar;
   result.description = this.description[language] || this.description.ar;
@@ -256,13 +269,11 @@ imageSchema.methods.getLocalizedContent = function(language = 'ar') {
 };
 
 // Virtual for stats
-imageSchema.virtual('stats').get(function() {
-  return {
-    views: 0,
-    downloads: 0,
-    likes: 0
-  };
-});
+imageSchema.virtual('stats').get(() => ({
+  views: 0,
+  downloads: 0,
+  likes: 0
+}));
 
-const imageModel = mongoose.models.Image || model("Image", imageSchema);
+const imageModel = mongoose.models.Image || model('Image', imageSchema);
 export default imageModel;

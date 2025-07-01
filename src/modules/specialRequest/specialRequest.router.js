@@ -2,7 +2,12 @@ import { Router } from 'express';
 import * as controller from './specialRequest.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import { createSpecialRequestSchema, updateRequestStatusSchema, completeRequestSchema, cancelSpecialRequestSchema } from './specialRequest.validation.js';
+import {
+  createSpecialRequestSchema,
+  updateRequestStatusSchema,
+  completeRequestSchema,
+  cancelSpecialRequestSchema
+} from './specialRequest.validation.js';
 
 const router = Router();
 
@@ -58,7 +63,12 @@ const router = Router();
  *       404:
  *         description: الفنان غير موجود
  */
-router.post('/', isAuthenticated, isValidation(createSpecialRequestSchema), controller.createSpecialRequest);
+router.post(
+  '/',
+  isAuthenticated,
+  isValidation(createSpecialRequestSchema),
+  controller.createSpecialRequest
+);
 
 /**
  * @swagger
@@ -220,7 +230,12 @@ router.get('/:requestId', isAuthenticated, controller.getRequestById);
  *       404:
  *         description: الطلب غير موجود
  */
-router.patch('/:requestId/status', isAuthenticated, isValidation(updateRequestStatusSchema), controller.updateRequestStatus);
+router.patch(
+  '/:requestId/status',
+  isAuthenticated,
+  isValidation(updateRequestStatusSchema),
+  controller.updateRequestStatus
+);
 
 /**
  * @swagger
@@ -299,7 +314,12 @@ router.post('/:requestId/response', isAuthenticated, controller.addResponseToReq
  *       404:
  *         description: الطلب غير موجود
  */
-router.patch('/:requestId/complete', isAuthenticated, isValidation(completeRequestSchema), controller.completeRequest);
+router.patch(
+  '/:requestId/complete',
+  isAuthenticated,
+  isValidation(completeRequestSchema),
+  controller.completeRequest
+);
 
 /**
  * @swagger
@@ -337,7 +357,12 @@ router.patch('/:requestId/complete', isAuthenticated, isValidation(completeReque
  *       404:
  *         description: الطلب غير موجود
  */
-router.patch('/:requestId/cancel', isAuthenticated, isValidation(cancelSpecialRequestSchema), controller.cancelSpecialRequest);
+router.patch(
+  '/:requestId/cancel',
+  isAuthenticated,
+  isValidation(cancelSpecialRequestSchema),
+  controller.cancelSpecialRequest
+);
 
 /**
  * @swagger
@@ -366,4 +391,4 @@ router.patch('/:requestId/cancel', isAuthenticated, isValidation(cancelSpecialRe
  */
 router.delete('/:requestId', isAuthenticated, controller.deleteRequest);
 
-export default router; 
+export default router;

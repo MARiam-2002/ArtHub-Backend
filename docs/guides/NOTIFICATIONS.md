@@ -23,38 +23,38 @@ const notificationSchema = new Schema(
   {
     user: {
       type: Types.ObjectId,
-      ref: "User",
-      required: true,
+      ref: 'User',
+      required: true
     },
     title: {
       ar: { type: String, required: true },
-      en: { type: String },
+      en: { type: String }
     },
     message: {
       ar: { type: String, required: true },
-      en: { type: String },
+      en: { type: String }
     },
     type: {
       type: String,
-      enum: ["system", "chat", "order", "follow", "like", "comment", "mention", "offer"],
-      default: "system",
+      enum: ['system', 'chat', 'order', 'follow', 'like', 'comment', 'mention', 'offer'],
+      default: 'system'
     },
     isRead: {
       type: Boolean,
-      default: false,
+      default: false
     },
     ref: {
       type: Types.ObjectId,
-      refPath: "refModel",
+      refPath: 'refModel'
     },
     refModel: {
       type: String,
-      enum: ["User", "Product", "Order", "Chat", "Image", "Comment"],
+      enum: ['User', 'Product', 'Order', 'Chat', 'Image', 'Comment']
     },
     data: {
       type: Object,
-      default: {},
-    },
+      default: {}
+    }
   },
   { timestamps: true }
 );
@@ -128,13 +128,15 @@ The notification system automatically detects and respects user language prefere
 // From pushNotifications.js
 const preferredLanguage = user.preferredLanguage || 'ar';
 
-const notificationTitle = typeof notification.title === 'object' 
-  ? (notification.title[preferredLanguage] || notification.title.ar) 
-  : notification.title;
-  
-const notificationBody = typeof notification.body === 'object' 
-  ? (notification.body[preferredLanguage] || notification.body.ar) 
-  : notification.body;
+const notificationTitle =
+  typeof notification.title === 'object'
+    ? notification.title[preferredLanguage] || notification.title.ar
+    : notification.title;
+
+const notificationBody =
+  typeof notification.body === 'object'
+    ? notification.body[preferredLanguage] || notification.body.ar
+    : notification.body;
 ```
 
 ## Common Notification Types
@@ -205,24 +207,25 @@ export const getUserNotifications = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { page = 1, limit = 20, language } = req.query;
   const preferredLanguage = language || req.user.preferredLanguage || 'ar';
-  
+
   // Get total count for pagination
   const totalNotifications = await notificationModel.countDocuments({ user: userId });
-  
+
   // Calculate total pages
   const totalPages = Math.ceil(totalNotifications / limit);
-  
+
   // Fetch notifications with pagination
-  const notifications = await notificationModel.find({ user: userId })
+  const notifications = await notificationModel
+    .find({ user: userId })
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit);
-  
+
   // Map to localized content
-  const localizedNotifications = notifications.map(notification => 
+  const localizedNotifications = notifications.map(notification =>
     notification.getLocalizedContent(preferredLanguage)
   );
-  
+
   return res.status(200).json({
     success: true,
     data: {
@@ -245,13 +248,13 @@ export const getUserNotifications = asyncHandler(async (req, res) => {
 export const markNotificationAsRead = asyncHandler(async (req, res) => {
   const { notificationId } = req.params;
   const userId = req.user._id;
-  
+
   const notification = await notificationModel.findOneAndUpdate(
     { _id: notificationId, user: userId },
     { isRead: true },
     { new: true }
   );
-  
+
   if (!notification) {
     return res.status(404).json({
       success: false,
@@ -259,7 +262,7 @@ export const markNotificationAsRead = asyncHandler(async (req, res) => {
       error: 'لم يتم العثور على إشعار بهذا المعرف'
     });
   }
-  
+
   return res.status(200).json({
     success: true,
     message: 'تم تحديث حالة الإشعار',
@@ -299,7 +302,7 @@ For operations that might take time, notifications are sent after completion:
 process.nextTick(async () => {
   try {
     // Perform long operation...
-    
+
     // Send notification when complete
     await sendPushNotificationToUser(
       userId,
@@ -332,4 +335,4 @@ process.nextTick(async () => {
 4. Use concise and clear notification messages
 5. Respect user notification settings
 6. Include enough context in the notification for the user to understand without opening the app
-7. Use appropriate notification priority for urgent vs. informational notifications 
+7. Use appropriate notification priority for urgent vs. informational notifications

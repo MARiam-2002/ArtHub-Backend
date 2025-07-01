@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -51,62 +51,69 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           type: string
  *           format: date-time
  */
-const messageSchema = new Schema({
-  chat: {
-    type: Types.ObjectId,
-    ref: "Chat",
-    required: true,
-    index: true
+const messageSchema = new Schema(
+  {
+    chat: {
+      type: Types.ObjectId,
+      ref: 'Chat',
+      required: true,
+      index: true
+    },
+    sender: {
+      type: Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    content: {
+      type: String
+    },
+    // Legacy field for backward compatibility
+    text: {
+      type: String
+    },
+    images: [
+      {
+        type: String
+      }
+    ],
+    // New field for Socket.io implementation
+    isRead: {
+      type: Boolean,
+      default: false
+    },
+    // Legacy field for backward compatibility
+    readBy: [
+      {
+        type: Types.ObjectId,
+        ref: 'User'
+      }
+    ],
+    // Allow messages to be deleted
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    // Explicit timestamp for when the message was sent
+    sentAt: {
+      type: Date,
+      default: Date.now
+    }
   },
-  sender: {
-    type: Types.ObjectId,
-    ref: "User",
-    required: true
-  },
-  content: {
-    type: String
-  },
-  // Legacy field for backward compatibility
-  text: {
-    type: String
-  },
-  images: [{
-    type: String
-  }],
-  // New field for Socket.io implementation
-  isRead: {
-    type: Boolean,
-    default: false
-  },
-  // Legacy field for backward compatibility
-  readBy: [{
-    type: Types.ObjectId,
-    ref: "User"
-  }],
-  // Allow messages to be deleted
-  isDeleted: {
-    type: Boolean,
-    default: false
-  },
-  // Explicit timestamp for when the message was sent
-  sentAt: {
-    type: Date,
-    default: Date.now
-  }
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 // Ensure a message has either content or images
-messageSchema.pre('save', function(next) {
+messageSchema.pre('save', function (next) {
   // Handle backward compatibility - copy text to content if content is missing
   if (!this.content && this.text) {
     this.content = this.text;
   }
-  
+
   // Copy content to text for backward compatibility
   if (this.content && !this.text) {
     this.text = this.content;
   }
-  
+
   if (!this.content && (!this.images || this.images.length === 0)) {
     const error = new Error('Message must have either content or images');
     return next(error);
@@ -115,10 +122,10 @@ messageSchema.pre('save', function(next) {
 });
 
 // Add sender to readBy automatically for backward compatibility
-messageSchema.pre('save', function(next) {
+messageSchema.pre('save', function (next) {
   if (this.isNew) {
     this.readBy = [this.sender];
-    
+
     // Mark as read by the sender
     if (this.sender) {
       this.isRead = false;
@@ -133,16 +140,16 @@ messageSchema.index({ chat: 1, createdAt: -1 });
 /**
  * Helper method to get sanitized message for deleted messages
  */
-messageSchema.methods.toJSON = function() {
+messageSchema.methods.toJSON = function () {
   const messageObject = this.toObject();
-  
+
   // If message is deleted, redact the content but keep metadata
   if (messageObject.isDeleted) {
-    messageObject.content = "تم حذف هذه الرسالة";
-    messageObject.text = "تم حذف هذه الرسالة";
+    messageObject.content = 'تم حذف هذه الرسالة';
+    messageObject.text = 'تم حذف هذه الرسالة';
     messageObject.images = [];
   }
-  
+
   return messageObject;
 };
 
@@ -151,7 +158,7 @@ messageSchema.methods.toJSON = function() {
  * @param {ObjectId} chatId - The chat ID
  * @param {Number} limit - Max number of messages to return
  */
-messageSchema.statics.findRecentMessages = function(chatId, limit = 20) {
+messageSchema.statics.findRecentMessages = function (chatId, limit = 20) {
   return this.find({ chat: chatId })
     .sort({ createdAt: -1 })
     .limit(limit)
@@ -164,19 +171,19 @@ messageSchema.statics.findRecentMessages = function(chatId, limit = 20) {
  * @param {ObjectId} chatId - The chat ID
  * @param {ObjectId} userId - User ID marking messages as read
  */
-messageSchema.statics.markAsRead = function(chatId, userId) {
+messageSchema.statics.markAsRead = function (chatId, userId) {
   return this.updateMany(
-    { 
-      chat: chatId, 
+    {
+      chat: chatId,
       sender: { $ne: userId },
-      isRead: false 
+      isRead: false
     },
-    { 
+    {
       isRead: true,
       $addToSet: { readBy: userId } // Keep legacy field updated
     }
   ).exec();
 };
 
-const messageModel = mongoose.models.Message || model("Message", messageSchema);
+const messageModel = mongoose.models.Message || model('Message', messageSchema);
 export default messageModel;

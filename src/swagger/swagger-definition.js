@@ -75,7 +75,8 @@ export const swaggerDefinition = {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'أدخل رمز Firebase JWT الذي تم الحصول عليه من تسجيل الدخول بحساب Google/Facebook'
+        description:
+          'أدخل رمز Firebase JWT الذي تم الحصول عليه من تسجيل الدخول بحساب Google/Facebook'
       }
     },
     responses: {
@@ -666,11 +667,13 @@ export const swaggerDefinition = {
                 properties: {
                   thumbnail: {
                     type: 'string',
-                    example: 'https://res.cloudinary.com/demo/image/upload/c_thumb,w_200,h_200/v1612345678/artwork.jpg'
+                    example:
+                      'https://res.cloudinary.com/demo/image/upload/c_thumb,w_200,h_200/v1612345678/artwork.jpg'
                   },
                   medium: {
                     type: 'string',
-                    example: 'https://res.cloudinary.com/demo/image/upload/c_scale,w_800/v1612345678/artwork.jpg'
+                    example:
+                      'https://res.cloudinary.com/demo/image/upload/c_scale,w_800/v1612345678/artwork.jpg'
                   }
                 }
               }
@@ -746,11 +749,15 @@ export const swaggerDefinition = {
               ar: 'لوحة فنية جميلة',
               en: 'Beautiful Artwork'
             },
-            optimizedUrl: 'https://res.cloudinary.com/demo/image/upload/q_auto,f_auto/v1612345678/artwork.jpg',
+            optimizedUrl:
+              'https://res.cloudinary.com/demo/image/upload/q_auto,f_auto/v1612345678/artwork.jpg',
             variants: {
-              thumbnail: 'https://res.cloudinary.com/demo/image/upload/c_thumb,w_200,h_200/v1612345678/artwork.jpg',
-              small: 'https://res.cloudinary.com/demo/image/upload/c_scale,w_400/v1612345678/artwork.jpg',
-              medium: 'https://res.cloudinary.com/demo/image/upload/c_scale,w_800/v1612345678/artwork.jpg'
+              thumbnail:
+                'https://res.cloudinary.com/demo/image/upload/c_thumb,w_200,h_200/v1612345678/artwork.jpg',
+              small:
+                'https://res.cloudinary.com/demo/image/upload/c_scale,w_400/v1612345678/artwork.jpg',
+              medium:
+                'https://res.cloudinary.com/demo/image/upload/c_scale,w_800/v1612345678/artwork.jpg'
             }
           },
           status: 201,
@@ -783,7 +790,8 @@ export const swaggerDefinition = {
           success: true,
           message: 'تم تسجيل الدخول بنجاح',
           data: {
-            token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYwZDIxYjQ2NjdkMGQ4OTkyZTYxMGM4NSIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsImlhdCI6MTYyMzQ1Njc4OSwiZXhwIjoxNjIzNTQzMTg5fQ.K2j3iq4NpCN1NWIXIo0JLc1s8a0n3uY4f5YJJXiSN5Q',
+            token:
+              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYwZDIxYjQ2NjdkMGQ4OTkyZTYxMGM4NSIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsImlhdCI6MTYyMzQ1Njc4OSwiZXhwIjoxNjIzNTQzMTg5fQ.K2j3iq4NpCN1NWIXIo0JLc1s8a0n3uY4f5YJJXiSN5Q',
             user: {
               _id: '60d21b4667d0d8992e610c85',
               email: 'user@example.com',
@@ -993,4 +1001,4 @@ export const swaggerDefinition = {
       tags: ['Users', 'Settings']
     }
   ]
-}; 
+};

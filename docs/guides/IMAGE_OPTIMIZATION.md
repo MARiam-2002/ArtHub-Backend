@@ -19,16 +19,16 @@
 export const getOptimizationSettings = (level = 'medium') => {
   switch (level) {
     case 'low':
-      return { 
-        quality: 80, 
+      return {
+        quality: 80,
         fetch_format: 'auto',
         flags: 'lossy',
         loading: 'lazy'
       };
     case 'high':
-      return { 
-        quality: 'auto:best', 
-        fetch_format: 'auto', 
+      return {
+        quality: 'auto:best',
+        fetch_format: 'auto',
         flags: 'progressive',
         dpr: 'auto',
         responsive: true,
@@ -37,9 +37,9 @@ export const getOptimizationSettings = (level = 'medium') => {
       };
     case 'medium':
     default:
-      return { 
-        quality: 'auto:good', 
-        fetch_format: 'auto', 
+      return {
+        quality: 'auto:good',
+        fetch_format: 'auto',
         flags: 'progressive',
         loading: 'lazy'
       };
@@ -70,30 +70,22 @@ export const generateImageVariants = (publicId, options = {}) => {
     }),
     thumbnail: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
-      ],
+      transformation: [{ width: 200, height: 200, crop: 'thumb', gravity: 'auto' }],
       ...optimizationSettings
     }),
     small: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 400, crop: 'scale' },
-      ],
+      transformation: [{ width: 400, crop: 'scale' }],
       ...optimizationSettings
     }),
     medium: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 800, crop: 'scale' },
-      ],
+      transformation: [{ width: 800, crop: 'scale' }],
       ...optimizationSettings
     }),
     large: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 1200, crop: 'scale' },
-      ],
+      transformation: [{ width: 1200, crop: 'scale' }],
       ...optimizationSettings
     })
   };
@@ -111,17 +103,17 @@ export const addWatermark = (publicId, options = {}) => {
   const opacity = options.opacity || 50;
   const fontSize = options.fontSize || 20;
   const position = options.position || 'southeast';
-  
+
   return cloudinary.url(publicId, {
     secure: true,
     transformation: [
-      { 
-        overlay: { 
-          font_family: "Arial", 
-          font_size: fontSize, 
+      {
+        overlay: {
+          font_family: 'Arial',
+          font_size: fontSize,
           text: watermarkText
         },
-        color: "#FFFFFF",
+        color: '#FFFFFF',
         opacity: opacity,
         gravity: position,
         x: 10,
@@ -154,10 +146,10 @@ export const getOptimizedImageUrl = (publicId, options = {}) => {
   };
 
   const mergedOptions = { ...defaultOptions, ...options };
-  
+
   // إضافة هيدرز كاش-كنترول
   const cacheControl = options.cacheControl || 'max-age=31536000'; // سنة واحدة افتراضياً
-  
+
   return cloudinary.url(publicId, {
     ...mergedOptions,
     sign_url: true,
@@ -179,10 +171,10 @@ export const getOptimizedImageUrl = (publicId, options = {}) => {
 
 ```javascript
 // كاش الصور الشائعة (utils/cloudinary.js)
-export const cachePopularImages = async (publicIds) => {
+export const cachePopularImages = async publicIds => {
   try {
     if (!Array.isArray(publicIds) || publicIds.length === 0) return;
-    
+
     // تحميل النسخ المختلفة مسبقاً في كاش CDN
     const transformations = [
       { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
@@ -190,9 +182,9 @@ export const cachePopularImages = async (publicIds) => {
       { width: 800, crop: 'scale' },
       { width: 1200, crop: 'scale' }
     ];
-    
+
     const cachePromises = [];
-    
+
     for (const publicId of publicIds) {
       for (const transformation of transformations) {
         const url = cloudinary.url(publicId, {
@@ -200,15 +192,16 @@ export const cachePopularImages = async (publicIds) => {
           transformation: [transformation],
           ...getOptimizationSettings('medium')
         });
-        
+
         // إرسال طلب لتحميل الصورة في كاش CDN
         cachePromises.push(
-          fetch(url, { method: 'GET', cache: 'force-cache' })
-            .catch(err => console.error(`Failed to cache image ${publicId}:`, err))
+          fetch(url, { method: 'GET', cache: 'force-cache' }).catch(err =>
+            console.error(`Failed to cache image ${publicId}:`, err)
+          )
         );
       }
     }
-    
+
     await Promise.allSettled(cachePromises);
     console.log(`Successfully cached ${publicIds.length} images with variants`);
   } catch (error) {
@@ -235,16 +228,16 @@ export const uploadOptimizedImage = async (imagePath, options = {}) => {
     flags: 'progressive',
     eager: [
       // إنشاء نسخ متجاوبة أثناء الرفع
-      { width: 200, height: 200, crop: "thumb", gravity: "auto" },
-      { width: 400, crop: "scale" },
-      { width: 800, crop: "scale" },
-      { width: 1200, crop: "scale" }
+      { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
+      { width: 400, crop: 'scale' },
+      { width: 800, crop: 'scale' },
+      { width: 1200, crop: 'scale' }
     ],
     eager_async: true
   };
 
   const mergedOptions = { ...defaultOptions, ...options };
-  
+
   return await cloudinary.uploader.upload(imagePath, mergedOptions);
 };
 ```
@@ -281,18 +274,18 @@ router.post('/upload', upload.array('images', 10), async (req, res) => {
   try {
     const { title, description, optimizationLevel = 'medium' } = req.body;
     const uploadedImages = [];
-    
+
     for (const file of req.files) {
       // رفع الصورة مع التحسين
       const result = await uploadOptimizedImage(file.path, {
         optimizationLevel
       });
-      
+
       // إنشاء نسخ متعددة
       const variants = generateImageVariants(result.public_id, {
         optimizationLevel
       });
-      
+
       // حفظ معلومات الصورة في قاعدة البيانات
       const image = await imageModel.create({
         user: req.user._id,
@@ -313,10 +306,10 @@ router.post('/upload', upload.array('images', 10), async (req, res) => {
         optimizationLevel,
         variants
       });
-      
+
       uploadedImages.push(image);
     }
-    
+
     res.success(uploadedImages, 'تم رفع الصور بنجاح', 201);
   } catch (error) {
     console.error('Error uploading images:', error);
@@ -333,33 +326,33 @@ router.post('/optimize/:imageId', isAuthenticated, async (req, res) => {
   try {
     const { imageId } = req.params;
     const { optimizationLevel = 'medium' } = req.body;
-    
+
     // التحقق من وجود الصورة وملكيتها
     const image = await imageModel.findOne({
       _id: imageId,
       user: req.user._id
     });
-    
+
     if (!image) {
       return res.fail(null, 'الصورة غير موجودة أو ليست من ملكيتك', 404);
     }
-    
+
     // تحسين الصورة الموجودة
     const optimizedResult = await optimizeExistingImage(image.publicId, {
       optimizationLevel
     });
-    
+
     // إنشاء نسخ متعددة
     const variants = generateImageVariants(image.publicId, {
       optimizationLevel
     });
-    
+
     // تحديث معلومات الصورة
     image.optimizationLevel = optimizationLevel;
     image.variants = variants;
     image.optimizedUrl = optimizedResult.secure_url;
     await image.save();
-    
+
     res.success(image, 'تم تحسين الصورة بنجاح');
   } catch (error) {
     console.error('Error optimizing image:', error);
@@ -412,7 +405,7 @@ function getResponsiveImageUrl(image, screenWidth) {
 async function notifyUserAboutUploadedImages(userId, imageIds) {
   try {
     const images = await imageModel.find({ _id: { $in: imageIds } });
-    
+
     await sendPushNotificationToUser(
       userId,
       {
@@ -439,4 +432,4 @@ async function notifyUserAboutUploadedImages(userId, imageIds) {
 
 ## الخاتمة
 
-من خلال تنفيذ هذه التحسينات لإدارة الصور، يقدم نظام ArtHub تجربة مستخدم متميزة مع تحسين الأداء والسرعة. استخدام النسخ المتعددة والتخزين المؤقت المحسن يقلل من استهلاك البيانات ويحسن سرعة التحميل على مختلف الأجهزة وأحجام الشاشات. 
+من خلال تنفيذ هذه التحسينات لإدارة الصور، يقدم نظام ArtHub تجربة مستخدم متميزة مع تحسين الأداء والسرعة. استخدام النسخ المتعددة والتخزين المؤقت المحسن يقلل من استهلاك البيانات ويحسن سرعة التحميل على مختلف الأجهزة وأحجام الشاشات.

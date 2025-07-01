@@ -36,10 +36,10 @@ export const getOptimizedImageUrl = (publicId, options = {}) => {
   };
 
   const mergedOptions = { ...defaultOptions, ...options };
-  
+
   // إضافة هيدرز كاش-كنترول
   const cacheControl = options.cacheControl || 'max-age=31536000'; // سنة واحدة افتراضياً
-  
+
   return cloudinary.url(publicId, {
     ...mergedOptions,
     sign_url: true,
@@ -70,17 +70,17 @@ export const uploadOptimizedImage = async (imagePath, options = {}) => {
     flags: 'progressive',
     eager: [
       // Generate responsive variants during upload
-      { width: 200, height: 200, crop: "thumb", gravity: "auto" },
-      { width: 400, crop: "scale" },
-      { width: 800, crop: "scale" },
-      { width: 1200, crop: "scale" }
+      { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
+      { width: 400, crop: 'scale' },
+      { width: 800, crop: 'scale' },
+      { width: 1200, crop: 'scale' }
     ],
     eager_async: true,
     eager_notification_url: process.env.CLOUDINARY_NOTIFICATION_URL
   };
 
   const mergedOptions = { ...defaultOptions, ...options };
-  
+
   return await cloudinary.uploader.upload(imagePath, mergedOptions);
 };
 
@@ -92,16 +92,16 @@ export const uploadOptimizedImage = async (imagePath, options = {}) => {
 export const getOptimizationSettings = (level = 'medium') => {
   switch (level) {
     case 'low':
-      return { 
-        quality: 80, 
+      return {
+        quality: 80,
         fetch_format: 'auto',
         flags: 'lossy',
         loading: 'lazy'
       };
     case 'high':
-      return { 
-        quality: 'auto:best', 
-        fetch_format: 'auto', 
+      return {
+        quality: 'auto:best',
+        fetch_format: 'auto',
         flags: 'progressive',
         dpr: 'auto',
         responsive: true,
@@ -110,9 +110,9 @@ export const getOptimizationSettings = (level = 'medium') => {
       };
     case 'medium':
     default:
-      return { 
-        quality: 'auto:good', 
-        fetch_format: 'auto', 
+      return {
+        quality: 'auto:good',
+        fetch_format: 'auto',
         flags: 'progressive',
         loading: 'lazy'
       };
@@ -136,30 +136,22 @@ export const generateImageVariants = (publicId, options = {}) => {
     }),
     thumbnail: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
-      ],
+      transformation: [{ width: 200, height: 200, crop: 'thumb', gravity: 'auto' }],
       ...optimizationSettings
     }),
     small: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 400, crop: 'scale' },
-      ],
+      transformation: [{ width: 400, crop: 'scale' }],
       ...optimizationSettings
     }),
     medium: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 800, crop: 'scale' },
-      ],
+      transformation: [{ width: 800, crop: 'scale' }],
       ...optimizationSettings
     }),
     large: cloudinary.url(publicId, {
       secure: true,
-      transformation: [
-        { width: 1200, crop: 'scale' },
-      ],
+      transformation: [{ width: 1200, crop: 'scale' }],
       ...optimizationSettings
     })
   };
@@ -176,17 +168,17 @@ export const addWatermark = (publicId, options = {}) => {
   const opacity = options.opacity || 50;
   const fontSize = options.fontSize || 20;
   const position = options.position || 'southeast';
-  
+
   return cloudinary.url(publicId, {
     secure: true,
     transformation: [
-      { 
-        overlay: { 
-          font_family: "Arial", 
-          font_size: fontSize, 
+      {
+        overlay: {
+          font_family: 'Arial',
+          font_size: fontSize,
           text: watermarkText
         },
-        color: "#FFFFFF",
+        color: '#FFFFFF',
         opacity: opacity,
         gravity: position,
         x: 10,
@@ -205,11 +197,11 @@ export const addWatermark = (publicId, options = {}) => {
 export const optimizeExistingImage = async (publicId, options = {}) => {
   const optimizationLevel = options.optimizationLevel || 'medium';
   const optimizationSettings = getOptimizationSettings(optimizationLevel);
-  
+
   try {
     // جلب المعلومات الحالية للصورة
     const imageInfo = await cloudinary.api.resource(publicId);
-    
+
     // إنشاء نسخة محسنة
     const result = await cloudinary.uploader.explicit(publicId, {
       type: 'upload',
@@ -222,7 +214,7 @@ export const optimizeExistingImage = async (publicId, options = {}) => {
       eager_async: true,
       eager_notification_url: options.notificationUrl || null
     });
-    
+
     return {
       success: true,
       original: imageInfo,
@@ -243,10 +235,12 @@ export const optimizeExistingImage = async (publicId, options = {}) => {
  * @param {Array<string>} publicIds - قائمة معرفات الصور
  * @returns {Promise<void>}
  */
-export const cachePopularImages = async (publicIds) => {
+export const cachePopularImages = async publicIds => {
   try {
-    if (!Array.isArray(publicIds) || publicIds.length === 0) return;
-    
+    if (!Array.isArray(publicIds) || publicIds.length === 0) {
+      return;
+    }
+
     // تحميل النسخ المختلفة مسبقاً في كاش CDN
     const transformations = [
       { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
@@ -254,9 +248,9 @@ export const cachePopularImages = async (publicIds) => {
       { width: 800, crop: 'scale' },
       { width: 1200, crop: 'scale' }
     ];
-    
+
     const cachePromises = [];
-    
+
     for (const publicId of publicIds) {
       for (const transformation of transformations) {
         const url = cloudinary.url(publicId, {
@@ -264,15 +258,16 @@ export const cachePopularImages = async (publicIds) => {
           transformation: [transformation],
           ...getOptimizationSettings('medium')
         });
-        
+
         // إرسال طلب لتحميل الصورة في كاش CDN
         cachePromises.push(
-          fetch(url, { method: 'GET', cache: 'force-cache' })
-            .catch(err => console.error(`Failed to cache image ${publicId}:`, err))
+          fetch(url, { method: 'GET', cache: 'force-cache' }).catch(err =>
+            console.error(`Failed to cache image ${publicId}:`, err)
+          )
         );
       }
     }
-    
+
     await Promise.allSettled(cachePromises);
     console.log(`Successfully cached ${publicIds.length} images with variants`);
   } catch (error) {

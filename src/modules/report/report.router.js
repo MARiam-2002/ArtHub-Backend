@@ -237,6 +237,11 @@ router.get('/admin/all', isAuthenticated, controller.getAllReports);
  *       404:
  *         description: التقرير غير موجود
  */
-router.patch('/admin/:reportId/status', isAuthenticated, isValidation(updateReportStatusSchema), controller.updateReportStatus);
+router.patch(
+  '/admin/:reportId/status',
+  isAuthenticated,
+  isValidation(updateReportStatusSchema),
+  controller.updateReportStatus
+);
 
-export default router; 
+export default router;

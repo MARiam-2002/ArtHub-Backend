@@ -10,8 +10,14 @@ export const createCategory = asyncHandler(async (req, res) => {
 export const updateCategory = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name, description, image } = req.body;
-  const category = await categoryModel.findByIdAndUpdate(id, { name, description, image }, { new: true });
-  if (!category) return res.fail(null, 'التصنيف غير موجود', 404);
+  const category = await categoryModel.findByIdAndUpdate(
+    id,
+    { name, description, image },
+    { new: true }
+  );
+  if (!category) {
+    return res.fail(null, 'التصنيف غير موجود', 404);
+  }
   res.success(category, 'تم تحديث التصنيف بنجاح');
 });
 
@@ -29,6 +35,8 @@ export const getCategories = asyncHandler(async (req, res) => {
 export const getCategory = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const category = await categoryModel.findById(id);
-  if (!category) return res.fail(null, 'التصنيف غير موجود', 404);
+  if (!category) {
+    return res.fail(null, 'التصنيف غير موجود', 404);
+  }
   res.success(category, 'تم جلب التصنيف بنجاح');
-}); 
+});

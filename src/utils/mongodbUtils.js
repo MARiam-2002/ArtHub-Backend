@@ -65,12 +65,10 @@ const DEV_CONNECTION_OPTIONS = {
  */
 export const getConnectionOptions = () => {
   // Use serverless optimized options in production
-  if (process.env.NODE_ENV === 'production' || 
-      process.env.VERCEL || 
-      process.env.VERCEL_ENV) {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL || process.env.VERCEL_ENV) {
     return SERVERLESS_CONNECTION_OPTIONS;
   }
-  
+
   // Use development options otherwise
   return DEV_CONNECTION_OPTIONS;
 };
@@ -80,19 +78,19 @@ export const getConnectionOptions = () => {
  * @param {string} collectionName - Name of the collection to check
  * @returns {Promise<boolean>} - Whether the collection exists and is accessible
  */
-export const checkCollectionHealth = async (collectionName) => {
+export const checkCollectionHealth = async collectionName => {
   try {
     // Get list of collections
     const collections = await mongoose.connection.db.listCollections().toArray();
-    
+
     // Check if our collection exists
     const exists = collections.some(col => col.name === collectionName);
-    
+
     if (!exists) {
       console.warn(`⚠️ Collection "${collectionName}" does not exist`);
       return false;
     }
-    
+
     // Try a simple stats query to verify access
     const stats = await mongoose.connection.db.collection(collectionName).stats();
     return stats && stats.ok === 1;
@@ -110,10 +108,8 @@ export const checkCollectionHealth = async (collectionName) => {
  */
 export const checkIndex = async (collectionName, indexName) => {
   try {
-    const indexes = await mongoose.connection.db
-      .collection(collectionName)
-      .indexes();
-    
+    const indexes = await mongoose.connection.db.collection(collectionName).indexes();
+
     return indexes.some(index => index.name === indexName);
   } catch (error) {
     console.error(`❌ Error checking index "${indexName}":`, error);
@@ -128,9 +124,8 @@ export const checkIndex = async (collectionName, indexName) => {
  * @param {Array|Object} projection - Fields to include/exclude
  * @returns {mongoose.Query} - Optimized query
  */
-export const createOptimizedQuery = (model, filter, projection = {}) => {
-  return model.find(filter, projection).lean();
-};
+export const createOptimizedQuery = (model, filter, projection = {}) =>
+  model.find(filter, projection).lean();
 
 /**
  * Perform a paginated query with optimized settings
@@ -143,33 +138,34 @@ export const createOptimizedQuery = (model, filter, projection = {}) => {
  */
 export const paginatedQuery = async (model, filter = {}, options = {}, page = 1, limit = 10) => {
   const { sort = {}, projection = {} } = options;
-  
+
   // Calculate skip value
   const skip = (page - 1) * limit;
-  
+
   // Set reasonable timeout for serverless environment
   const maxTimeMS = 5000;
-  
+
   try {
     // Execute query with timeout and pagination
-    const query = model.find(filter, projection)
+    const query = model
+      .find(filter, projection)
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean()
       .maxTimeMS(maxTimeMS);
-    
+
     // Get total count with the same filter but without pagination
     const countQuery = model.countDocuments(filter).maxTimeMS(maxTimeMS);
-    
+
     // Execute both queries in parallel
     const [results, total] = await Promise.all([query, countQuery]);
-    
+
     // Calculate pagination metadata
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
-    
+
     return {
       results,
       pagination: {
@@ -203,11 +199,11 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
       await mongoose.connection.db.admin().ping();
       return true;
     } catch (pingError) {
-      console.warn("Connection ping failed, will attempt reconnection:", pingError.message);
+      console.warn('Connection ping failed, will attempt reconnection:', pingError.message);
       // Continue with reconnection
     }
   }
-  
+
   // If connection is in progress and not forcing reconnect, wait for it
   if (mongoose.connection.readyState === 2 && !forceReconnect) {
     try {
@@ -221,7 +217,7 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
             reject(new Error('Connection failed'));
           }
         }, 100);
-        
+
         // Timeout after 10 seconds (increased from 5)
         setTimeout(() => {
           clearInterval(checkInterval);
@@ -233,7 +229,7 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
       console.error('Error waiting for connection:', error);
     }
   }
-  
+
   // Close existing connection if forcing reconnect
   if (forceReconnect && mongoose.connection.readyState !== 0) {
     try {
@@ -242,14 +238,14 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
       console.error('Error closing existing connection:', closeError);
     }
   }
-  
+
   // Get connection options based on environment
   const connectionOptions = getConnectionOptions();
-  
+
   // Use environment variables for max retry attempts and base delay
   const MAX_RETRY_ATTEMPTS = parseInt(process.env.MONGODB_MAX_RETRY_ATTEMPTS || '5');
   const BASE_RETRY_DELAY = parseInt(process.env.MONGODB_BASE_RETRY_DELAY || '1000');
-  
+
   // Try to connect with exponential backoff
   for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
     try {
@@ -259,35 +255,41 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
         console.log(`Retry attempt ${attempt + 1}/${MAX_RETRY_ATTEMPTS} after ${delay}ms delay`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
-      
+
       // Log connection attempt with redacted URL
       if (process.env.CONNECTION_URL) {
         try {
           const url = new URL(process.env.CONNECTION_URL);
-          console.log(`Connecting to MongoDB at ${url.protocol}//${url.hostname}:${url.port || 'default'}${url.pathname}`);
+          console.log(
+            `Connecting to MongoDB at ${url.protocol}//${url.hostname}:${url.port || 'default'}${url.pathname}`
+          );
         } catch (urlError) {
-          console.log("Connecting to MongoDB with CONNECTION_URL");
+          console.log('Connecting to MongoDB with CONNECTION_URL');
         }
       }
-      
+
       // Connect to MongoDB
       await mongoose.connect(process.env.CONNECTION_URL, connectionOptions);
-      
+
       // Verify connection with ping
       await mongoose.connection.db.admin().ping();
-      
+
       console.log(`✅ MongoDB connected successfully on attempt ${attempt + 1}`);
       return true;
     } catch (error) {
       console.error(`❌ MongoDB connection attempt ${attempt + 1} failed:`, error.message);
-      
+
       // Log more detailed error information
       if (error.name === 'MongoServerSelectionError') {
-        console.error("Server selection timed out. Check network connectivity and MongoDB Atlas status.");
+        console.error(
+          'Server selection timed out. Check network connectivity and MongoDB Atlas status.'
+        );
       } else if (error.name === 'MongoNetworkError') {
-        console.error("Network error connecting to MongoDB. Check firewall settings and network connectivity.");
+        console.error(
+          'Network error connecting to MongoDB. Check firewall settings and network connectivity.'
+        );
       }
-      
+
       // If this is the last attempt, throw the error
       if (attempt === MAX_RETRY_ATTEMPTS - 1) {
         console.error('All connection attempts failed');
@@ -295,7 +297,7 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
       }
     }
   }
-  
+
   return false;
 };
 
@@ -308,7 +310,7 @@ export const checkDatabaseConnection = async () => {
     if (mongoose.connection.readyState !== 1) {
       return false;
     }
-    
+
     // Try to ping the database
     await mongoose.connection.db.admin().ping();
     return true;
@@ -326,16 +328,19 @@ export const checkDatabaseHealth = async () => {
   const result = {
     isConnected: mongoose.connection.readyState === 1,
     readyState: mongoose.connection.readyState,
-    status: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown'
+    status:
+      ['disconnected', 'connected', 'connecting', 'disconnecting'][
+        mongoose.connection.readyState
+      ] || 'unknown'
   };
-  
+
   if (result.isConnected) {
     try {
       // Get server status
       const adminDb = mongoose.connection.db.admin();
       const serverStatus = await adminDb.serverStatus();
       const pingResult = await adminDb.ping();
-      
+
       result.details = {
         version: serverStatus.version,
         uptime: serverStatus.uptime,
@@ -343,7 +348,7 @@ export const checkDatabaseHealth = async () => {
         ok: serverStatus.ok === 1,
         ping: pingResult.ok === 1
       };
-      
+
       // Get connection pool stats
       result.connectionPool = {
         host: mongoose.connection.host,
@@ -358,7 +363,7 @@ export const checkDatabaseHealth = async () => {
       };
     }
   }
-  
+
   return result;
 };
 
@@ -369,24 +374,24 @@ export const checkDatabaseHealth = async () => {
 export const optimizeForServerless = () => {
   // Set global mongoose options
   mongoose.set('strictQuery', true);
-  
+
   // Add connection event listeners
   mongoose.connection.on('connected', () => {
     console.log('✅ MongoDB connected');
   });
-  
-  mongoose.connection.on('error', (err) => {
+
+  mongoose.connection.on('error', err => {
     console.error('❌ MongoDB connection error:', err);
   });
-  
+
   mongoose.connection.on('disconnected', () => {
     console.log('⚠️ MongoDB disconnected');
   });
-  
+
   mongoose.connection.on('reconnected', () => {
     console.log('✅ MongoDB reconnected');
   });
-  
+
   // Handle process termination
   process.on('SIGINT', async () => {
     try {
@@ -398,7 +403,7 @@ export const optimizeForServerless = () => {
       process.exit(1);
     }
   });
-  
+
   // Return the connection options being used
   return getConnectionOptions();
 };
@@ -429,20 +434,20 @@ export const createIndex = async (model, indexSpec, options = {}) => {
  */
 export const safeDbOperation = async (operation, timeoutMs = 5000, retries = 2) => {
   let lastError;
-  
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       // Execute operation with timeout
       return await Promise.race([
         operation(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Operation timed out')), timeoutMs)
         )
       ]);
     } catch (error) {
       lastError = error;
       console.error(`Operation failed (attempt ${attempt + 1}/${retries + 1}):`, error.message);
-      
+
       // Check if we should retry
       if (attempt < retries) {
         // Check if we need to reconnect
@@ -453,14 +458,14 @@ export const safeDbOperation = async (operation, timeoutMs = 5000, retries = 2) 
             console.error('Failed to reconnect:', reconnectError);
           }
         }
-        
+
         // Wait before retrying
         const delay = BASE_RETRY_DELAY * Math.pow(2, attempt);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
-  
+
   // All attempts failed
   throw lastError;
 };
@@ -477,4 +482,4 @@ export default {
   createIndex,
   safeDbOperation,
   getConnectionOptions
-}; 
+};

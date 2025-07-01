@@ -27,25 +27,18 @@ export const sendMessageSchema = {
       })
   }),
   body: Joi.object({
-    content: Joi.string()
-      .required()
-      .min(1)
-      .max(500)
-      .messages({
-        'string.empty': 'لا يمكن إرسال رسالة فارغة',
-        'string.min': 'الرسالة قصيرة جدًا',
-        'string.max': 'الرسالة طويلة جدًا، الحد الأقصى هو 500 حرف',
-        'any.required': 'نص الرسالة مطلوب'
-      }),
+    content: Joi.string().required().min(1).max(500).messages({
+      'string.empty': 'لا يمكن إرسال رسالة فارغة',
+      'string.min': 'الرسالة قصيرة جدًا',
+      'string.max': 'الرسالة طويلة جدًا، الحد الأقصى هو 500 حرف',
+      'any.required': 'نص الرسالة مطلوب'
+    }),
     // للتوافق مع الإصدارات القديمة
-    text: Joi.string()
-      .min(1)
-      .max(500)
-      .messages({
-        'string.empty': 'لا يمكن إرسال رسالة فارغة',
-        'string.min': 'الرسالة قصيرة جدًا',
-        'string.max': 'الرسالة طويلة جدًا، الحد الأقصى هو 500 حرف'
-      })
+    text: Joi.string().min(1).max(500).messages({
+      'string.empty': 'لا يمكن إرسال رسالة فارغة',
+      'string.min': 'الرسالة قصيرة جدًا',
+      'string.max': 'الرسالة طويلة جدًا، الحد الأقصى هو 500 حرف'
+    })
   }).xor('content', 'text') // إما content أو text يجب أن يكون موجودًا
 };
 
@@ -80,11 +73,9 @@ export const markAsReadSchema = {
 // مخطط التحقق لاتصال Socket.io
 export const socketAuthSchema = {
   query: Joi.object({
-    token: Joi.string()
-      .required()
-      .messages({
-        'string.empty': 'رمز الاتصال مطلوب',
-        'any.required': 'رمز الاتصال مطلوب'
-      })
+    token: Joi.string().required().messages({
+      'string.empty': 'رمز الاتصال مطلوب',
+      'any.required': 'رمز الاتصال مطلوب'
+    })
   })
-}; 
+};

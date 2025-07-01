@@ -30,16 +30,13 @@ const userSchema = new Schema({
 // PATCH /api/user/settings/language
 router.patch('/settings/language', isAuthenticated, async (req, res) => {
   const { language } = req.body;
-  
+
   if (!['ar', 'en'].includes(language)) {
     return res.fail(null, 'اللغة غير مدعومة', 400);
   }
-  
-  await userModel.updateOne(
-    { _id: req.user._id },
-    { preferredLanguage: language }
-  );
-  
+
+  await userModel.updateOne({ _id: req.user._id }, { preferredLanguage: language });
+
   res.success(null, 'تم تحديث اللغة المفضلة بنجاح');
 });
 ```
@@ -61,20 +58,20 @@ export const detectLanguage = (req, res, next) => {
     req.language = req.query.language;
     return next();
   }
-  
+
   // 2. التحقق من ترويسة Accept-Language
   const acceptLanguage = req.header('Accept-Language');
   if (acceptLanguage && acceptLanguage.startsWith('en')) {
     req.language = 'en';
     return next();
   }
-  
+
   // 3. استخدام تفضيل المستخدم المخزن
   if (req.user && req.user.preferredLanguage) {
     req.language = req.user.preferredLanguage;
     return next();
   }
-  
+
   // 4. الافتراضي هو العربية
   req.language = 'ar';
   next();
@@ -90,25 +87,25 @@ export const detectLanguage = (req, res, next) => {
 ```javascript
 // نموذج الإشعارات (DB/models/notification.model.js)
 const notificationSchema = new Schema({
-  user: { type: Types.ObjectId, ref: "User", required: true },
-  title: { 
+  user: { type: Types.ObjectId, ref: 'User', required: true },
+  title: {
     ar: { type: String, required: true },
     en: { type: String }
   },
-  message: { 
+  message: {
     ar: { type: String, required: true },
     en: { type: String }
-  },
+  }
   // حقول أخرى...
 });
 
 // طريقة للحصول على المحتوى باللغة المفضلة
-notificationSchema.methods.getLocalizedContent = function(language = 'ar') {
+notificationSchema.methods.getLocalizedContent = function (language = 'ar') {
   return {
     _id: this._id,
     user: this.user,
     title: this.title[language] || this.title.ar,
-    message: this.message[language] || this.message.ar,
+    message: this.message[language] || this.message.ar
     // حقول أخرى...
   };
 };
@@ -133,7 +130,7 @@ const imageSchema = new Schema({
 });
 
 // طريقة للحصول على المحتوى باللغة المفضلة
-imageSchema.methods.getLocalizedContent = function(language = 'ar') {
+imageSchema.methods.getLocalizedContent = function (language = 'ar') {
   const result = this.toObject();
   result.title = this.title[language] || this.title.ar;
   result.description = this.description[language] || this.description.ar;
@@ -153,13 +150,13 @@ export const responseMiddleware = (req, res, next) => {
   // الطريقة الأصلية لإرسال استجابة ناجحة
   res.success = (data, message, statusCode = 200) => {
     const language = req.language || 'ar';
-    
+
     // اختيار الرسالة المناسبة باللغة المفضلة
     let localizedMessage = message;
     if (typeof message === 'object' && message !== null) {
       localizedMessage = message[language] || message.ar;
     }
-    
+
     return res.status(statusCode).json({
       success: true,
       message: localizedMessage,
@@ -168,17 +165,17 @@ export const responseMiddleware = (req, res, next) => {
       timestamp: new Date().toISOString()
     });
   };
-  
+
   // طريقة لإرسال استجابة خطأ
   res.fail = (errors, message, statusCode = 400) => {
     const language = req.language || 'ar';
-    
+
     // اختيار رسالة الخطأ المناسبة باللغة المفضلة
     let localizedMessage = message;
     if (typeof message === 'object' && message !== null) {
       localizedMessage = message[language] || message.ar;
     }
-    
+
     return res.status(statusCode).json({
       success: false,
       message: localizedMessage,
@@ -187,7 +184,7 @@ export const responseMiddleware = (req, res, next) => {
       timestamp: new Date().toISOString()
     });
   };
-  
+
   next();
 };
 ```
@@ -204,29 +201,31 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
   try {
     // الحصول على رمز FCM وتفضيل اللغة للمستخدم
     const user = await userModel.findById(userId).select('fcmToken preferredLanguage');
-    
+
     if (!user || !user.fcmToken) {
       console.log(`المستخدم ${userId} ليس لديه رمز FCM`);
       return { success: false, message: 'لم يتم العثور على رمز FCM للمستخدم' };
     }
-    
+
     const preferredLanguage = user.preferredLanguage || 'ar';
-    
+
     // تحديد عنوان ونص الإشعار بناءً على تفضيل اللغة
-    const notificationTitle = typeof notification.title === 'object' 
-      ? (notification.title[preferredLanguage] || notification.title.ar) 
-      : notification.title;
-      
-    const notificationBody = typeof notification.body === 'object' 
-      ? (notification.body[preferredLanguage] || notification.body.ar) 
-      : notification.body;
-    
+    const notificationTitle =
+      typeof notification.title === 'object'
+        ? notification.title[preferredLanguage] || notification.title.ar
+        : notification.title;
+
+    const notificationBody =
+      typeof notification.body === 'object'
+        ? notification.body[preferredLanguage] || notification.body.ar
+        : notification.body;
+
     // إرسال الإشعار للجهاز
     const message = {
       token: user.fcmToken,
       notification: {
         title: notificationTitle,
-        body: notificationBody,
+        body: notificationBody
       },
       data: {
         ...data,
@@ -234,7 +233,7 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
       }
       // إعدادات أخرى...
     };
-    
+
     // إرسال الإشعار
     const response = await admin.messaging().send(message);
     return { success: true, messageId: response };
@@ -285,14 +284,14 @@ await sendPushNotificationToUser(
 // اختبار جلب الإشعارات باللغة الإنجليزية
 const response = await fetch('/api/notifications?language=en', {
   headers: {
-    'Authorization': `Bearer ${token}`
+    Authorization: `Bearer ${token}`
   }
 });
 
 // اختبار جلب الإشعارات باللغة العربية
 const response = await fetch('/api/notifications?language=ar', {
   headers: {
-    'Authorization': `Bearer ${token}`
+    Authorization: `Bearer ${token}`
   }
 });
 ```
@@ -304,7 +303,7 @@ const response = await fetch('/api/notifications?language=ar', {
 const response = await fetch('/api/user/settings/language', {
   method: 'PATCH',
   headers: {
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({ language: 'en' })
@@ -313,4 +312,4 @@ const response = await fetch('/api/user/settings/language', {
 
 ## خاتمة
 
-من خلال تنفيذ دعم اللغات المتعددة في جميع مستويات النظام، يمكن لتطبيق ArtHub توفير تجربة مستخدم سلسة لكل من المستخدمين العرب والإنجليز. يمكن توسيع نفس النهج لدعم لغات إضافية في المستقبل. 
+من خلال تنفيذ دعم اللغات المتعددة في جميع مستويات النظام، يمكن لتطبيق ArtHub توفير تجربة مستخدم سلسة لكل من المستخدمين العرب والإنجليز. يمكن توسيع نفس النهج لدعم لغات إضافية في المستقبل.

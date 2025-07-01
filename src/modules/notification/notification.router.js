@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as notificationController from './notification.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
-import { verifyFirebaseToken } from '../../middleware/firebase.middleware.js';
+import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 
 const router = Router();
 
@@ -57,7 +57,11 @@ router.get('/', isAuthenticated, notificationController.getUserNotifications);
  *       404:
  *         description: الإشعار غير موجود
  */
-router.patch('/:notificationId/read', isAuthenticated, notificationController.markNotificationAsRead);
+router.patch(
+  '/:notificationId/read',
+  isAuthenticated,
+  notificationController.markNotificationAsRead
+);
 
 /**
  * @swagger
@@ -236,4 +240,4 @@ router.post('/token/firebase', verifyFirebaseToken, notificationController.regis
  */
 router.delete('/token/firebase', verifyFirebaseToken, notificationController.unregisterFCMToken);
 
-export default router; 
+export default router;

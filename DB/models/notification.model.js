@@ -1,24 +1,31 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
-const notificationSchema = new Schema({
-  user: { type: Types.ObjectId, ref: "User", required: true },
-  title: { 
-    ar: { type: String, required: true },
-    en: { type: String }
+const notificationSchema = new Schema(
+  {
+    user: { type: Types.ObjectId, ref: 'User', required: true },
+    title: {
+      ar: { type: String, required: true },
+      en: { type: String }
+    },
+    message: {
+      ar: { type: String, required: true },
+      en: { type: String }
+    },
+    type: {
+      type: String,
+      enum: ['request', 'message', 'review', 'system', 'other'],
+      default: 'other'
+    },
+    isRead: { type: Boolean, default: false },
+    ref: { type: Types.ObjectId, refPath: 'refModel' },
+    refModel: { type: String, enum: ['SpecialRequest', 'Artwork', 'Message', 'User'] },
+    data: { type: Object, default: {} }
   },
-  message: { 
-    ar: { type: String, required: true },
-    en: { type: String }
-  },
-  type: { type: String, enum: ["request", "message", "review", "system", "other"], default: "other" },
-  isRead: { type: Boolean, default: false },
-  ref: { type: Types.ObjectId, refPath: 'refModel' },
-  refModel: { type: String, enum: ["SpecialRequest", "Artwork", "Message", "User"] },
-  data: { type: Object, default: {} }
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 // إضافة طريقة لاسترجاع الإشعار باللغة المفضلة
-notificationSchema.methods.getLocalizedContent = function(language = 'ar') {
+notificationSchema.methods.getLocalizedContent = function (language = 'ar') {
   return {
     _id: this._id,
     user: this.user,
@@ -34,5 +41,5 @@ notificationSchema.methods.getLocalizedContent = function(language = 'ar') {
   };
 };
 
-const notificationModel = mongoose.models.Notification || model("Notification", notificationSchema);
-export default notificationModel; 
+const notificationModel = mongoose.models.Notification || model('Notification', notificationSchema);
+export default notificationModel;

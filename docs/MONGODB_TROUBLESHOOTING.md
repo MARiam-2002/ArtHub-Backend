@@ -5,17 +5,20 @@
 ### 1. Operation Buffering Timed Out
 
 **Error Message:**
+
 ```
 MongooseError: Operation `users.findOne()` buffering timed out after 1000ms
 ```
 
 **Causes:**
+
 - MongoDB server is unreachable
 - Connection string is incorrect
 - Network issues preventing connection
 - MongoDB Atlas IP whitelist restrictions
 
 **Solutions:**
+
 1. **Check your CONNECTION_URL environment variable**
    - Ensure the username, password, and cluster name are correct
    - Make sure there are no typos or special characters that need URL encoding
@@ -38,6 +41,7 @@ MongooseError: Operation `users.findOne()` buffering timed out after 1000ms
 ### 2. Service Unavailable (503) on Vercel
 
 **Error Message:**
+
 ```json
 {
   "success": false,
@@ -50,11 +54,13 @@ MongooseError: Operation `users.findOne()` buffering timed out after 1000ms
 ```
 
 **Causes:**
+
 - Serverless cold starts causing connection timeouts
 - MongoDB connection not optimized for serverless environments
 - Missing or incorrect environment variables in Vercel
 
 **Solutions:**
+
 1. **Update Vercel configuration**
    - Add the following to your `vercel.json` file:
      ```json
@@ -91,16 +97,19 @@ MongooseError: Operation `users.findOne()` buffering timed out after 1000ms
 ### 3. Authentication Failed
 
 **Error Message:**
+
 ```
 MongoServerError: Authentication failed
 ```
 
 **Causes:**
+
 - Incorrect username or password in connection string
 - Special characters in password not properly URL encoded
 - User doesn't have access to the specified database
 
 **Solutions:**
+
 1. **Check credentials**
    - Verify username and password are correct
    - URL encode special characters in your password
@@ -112,16 +121,19 @@ MongoServerError: Authentication failed
 ### 4. Connection Timeout in Production
 
 **Error Message:**
+
 ```
 MongoServerSelectionError: connection timed out
 ```
 
 **Causes:**
+
 - Network latency between your server and MongoDB
 - Firewall or security group restrictions
 - MongoDB server under heavy load
 
 **Solutions:**
+
 1. **Check network connectivity**
    - Ensure your hosting provider can reach MongoDB Atlas
    - Test with a simple connection script
@@ -138,10 +150,12 @@ MongoServerSelectionError: connection timed out
 ### 1. Cold Start Connection Problems
 
 **Symptoms:**
+
 - First request after inactivity fails with 503 error
 - Subsequent requests work normally
 
 **Solutions:**
+
 1. **Implement connection caching**
    - Store the mongoose connection in a variable outside the serverless function
    - Check and reuse the connection on each request
@@ -158,10 +172,12 @@ MongoServerSelectionError: connection timed out
 ### 2. Environment Variables Not Working
 
 **Symptoms:**
+
 - Connection fails even with correct configuration
 - Logs show "Missing CONNECTION_URL" error
 
 **Solutions:**
+
 1. **Check Vercel dashboard**
    - Verify environment variables are set correctly
    - Environment variables are case-sensitive
@@ -177,10 +193,12 @@ MongoServerSelectionError: connection timed out
 ### 3. Vercel Function Timeout Issues
 
 **Symptoms:**
+
 - Requests taking longer than 10 seconds fail with 504 Gateway Timeout
 - Database operations time out during peak load
 
 **Solutions:**
+
 1. **Increase function timeout**
    - Update `vercel.json` with:
      ```json
@@ -204,10 +222,12 @@ MongoServerSelectionError: connection timed out
 ### 4. Keeping Connections Alive
 
 **Symptoms:**
+
 - Frequent reconnections causing performance degradation
 - Inconsistent connection behavior
 
 **Solutions:**
+
 1. **Create a keep-alive endpoint**
    - Add a simple endpoint that checks database connection
    - Use an external service to ping this endpoint every 5 minutes
@@ -263,7 +283,8 @@ You can test your MongoDB connection using the following command:
 ```javascript
 // Run this in a Node.js REPL or script
 const mongoose = require('mongoose');
-mongoose.connect('your_connection_string')
+mongoose
+  .connect('your_connection_string')
   .then(() => console.log('Connected successfully'))
   .catch(err => console.error('Connection failed:', err));
 ```
@@ -343,14 +364,14 @@ Optimize your connection string for serverless environments:
 ```javascript
 // Optimized connection options for serverless
 const options = {
-  serverSelectionTimeoutMS: 5000,  // Reduce from default 30s
-  socketTimeoutMS: 45000,          // Keep socket alive longer
-  connectTimeoutMS: 5000,          // Connect faster or fail
-  maxPoolSize: 5,                  // Smaller connection pool for serverless
-  minPoolSize: 1,                  // Maintain at least one connection
-  bufferCommands: false,           // Don't buffer commands when disconnected
-  autoIndex: false,                // Don't build indexes on connection
-  family: 4                        // Force IPv4
+  serverSelectionTimeoutMS: 5000, // Reduce from default 30s
+  socketTimeoutMS: 45000, // Keep socket alive longer
+  connectTimeoutMS: 5000, // Connect faster or fail
+  maxPoolSize: 5, // Smaller connection pool for serverless
+  minPoolSize: 1, // Maintain at least one connection
+  bufferCommands: false, // Don't buffer commands when disconnected
+  autoIndex: false, // Don't build indexes on connection
+  family: 4 // Force IPv4
 };
 
 mongoose.connect(process.env.CONNECTION_URL, options);
@@ -361,6 +382,7 @@ mongoose.connect(process.env.CONNECTION_URL, options);
 Serverless functions may create too many connections that aren't properly closed.
 
 **Solutions**:
+
 - Use a smaller connection pool (`maxPoolSize: 5`)
 - Implement connection caching (already done in our `DB/connection.js`)
 - Use a connection management service like MongoDB Atlas Serverless
@@ -370,6 +392,7 @@ Serverless functions may create too many connections that aren't properly closed
 Serverless functions that haven't been used recently experience "cold starts" where the function container needs to be initialized.
 
 **Solutions**:
+
 - Use the `/api/keepalive` endpoint with a cron job (already configured in `vercel.json`)
 - Implement connection caching (already done in our code)
 - Use MongoDB Atlas Serverless for better cold start performance
@@ -377,6 +400,7 @@ Serverless functions that haven't been used recently experience "cold starts" wh
 ### 5. Authentication Issues
 
 **Solutions**:
+
 - Double-check username and password in connection string
 - Ensure special characters in password are URL encoded
 - Verify the user has appropriate permissions in MongoDB Atlas
@@ -518,4 +542,4 @@ If you're still experiencing issues after trying these solutions:
 1. Check MongoDB Atlas status page for any ongoing incidents
 2. Review Vercel logs for specific error messages
 3. Contact MongoDB Atlas support with your connection diagnostics
-4. Review the [MongoDB Node.js Driver documentation](https://docs.mongodb.com/drivers/node/) for additional troubleshooting steps 
+4. Review the [MongoDB Node.js Driver documentation](https://docs.mongodb.com/drivers/node/) for additional troubleshooting steps

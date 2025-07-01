@@ -21,7 +21,9 @@ console.log('Starting MongoDB connection test...');
 // Check if CONNECTION_URL is defined
 if (!process.env.CONNECTION_URL) {
   console.error('❌ ERROR: CONNECTION_URL environment variable is not defined');
-  console.log('Please set the CONNECTION_URL environment variable to your MongoDB connection string');
+  console.log(
+    'Please set the CONNECTION_URL environment variable to your MongoDB connection string'
+  );
   process.exit(1);
 }
 
@@ -48,34 +50,38 @@ if (process.env.CONNECTION_URL.includes('+srv')) {
 const startTime = Date.now();
 
 // Try to connect to MongoDB
-mongoose.connect(process.env.CONNECTION_URL, options)
+mongoose
+  .connect(process.env.CONNECTION_URL, options)
   .then(async () => {
     const connectionTime = Date.now() - startTime;
     console.log(`✅ Successfully connected to MongoDB in ${connectionTime}ms`);
-    
+
     // Test basic operations
     try {
       // Get database name
       const dbName = mongoose.connection.db.databaseName;
       console.log(`✅ Connected to database: ${dbName}`);
-      
+
       // List collections
       const collections = await mongoose.connection.db.listCollections().toArray();
       console.log(`✅ Found ${collections.length} collections`);
       console.log('Collections:', collections.map(c => c.name).join(', '));
-      
+
       // Test admin commands
       try {
         const serverStatus = await mongoose.connection.db.admin().serverStatus();
         console.log(`✅ MongoDB version: ${serverStatus.version}`);
         console.log(`✅ MongoDB connections: ${serverStatus.connections?.current || 'unknown'}`);
       } catch (adminError) {
-        console.log('⚠️ Could not get server status (requires admin privileges):', adminError.message);
+        console.log(
+          '⚠️ Could not get server status (requires admin privileges):',
+          adminError.message
+        );
       }
     } catch (testError) {
       console.error('❌ Error during database operations test:', testError);
     }
-    
+
     // Close connection
     await mongoose.connection.close();
     console.log('✅ Connection closed successfully');
@@ -83,7 +89,7 @@ mongoose.connect(process.env.CONNECTION_URL, options)
   })
   .catch(err => {
     console.error('❌ Failed to connect to MongoDB:', err);
-    
+
     // Provide more helpful error messages based on error type
     if (err.name === 'MongoServerSelectionError') {
       console.error('\n🔍 DIAGNOSIS: Could not reach MongoDB server');
@@ -102,6 +108,6 @@ mongoose.connect(process.env.CONNECTION_URL, options)
       console.error('\n🔍 DIAGNOSIS: Could not resolve hostname');
       console.error('Please check your MongoDB host address');
     }
-    
+
     process.exit(1);
-  }); 
+  });

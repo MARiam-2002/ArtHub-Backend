@@ -151,4 +151,4 @@ router.get('/following/:userId', controller.getFollowing);
  */
 router.get('/status/:artistId', isAuthenticated, controller.checkFollowStatus);
 
-export default router; 
+export default router;

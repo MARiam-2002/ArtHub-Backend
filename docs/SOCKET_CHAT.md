@@ -31,34 +31,34 @@ Headers: {
 
 ```javascript
 // استيراد المكتبة
-import { io } from "socket.io-client";
+import { io } from 'socket.io-client';
 
 // إنشاء اتصال مع إرسال الرمز
-const socket = io("https://your-api-url", {
+const socket = io('https://your-api-url', {
   query: {
-    token: "BASE64_ENCODED_TOKEN"
+    token: 'BASE64_ENCODED_TOKEN'
   },
-  transports: ["websocket", "polling"]
+  transports: ['websocket', 'polling']
 });
 
 // الاستماع لأحداث الاتصال
-socket.on("connect", () => {
-  console.log("تم الاتصال بنجاح");
-  
+socket.on('connect', () => {
+  console.log('تم الاتصال بنجاح');
+
   // مصادقة المستخدم بعد الاتصال
-  socket.emit("authenticate", { userId: "USER_ID" });
+  socket.emit('authenticate', { userId: 'USER_ID' });
 });
 
-socket.on("authenticated", ({ userId }) => {
-  console.log("تم توثيق المستخدم", userId);
+socket.on('authenticated', ({ userId }) => {
+  console.log('تم توثيق المستخدم', userId);
 });
 
-socket.on("error", (error) => {
-  console.error("خطأ في الاتصال:", error);
+socket.on('error', error => {
+  console.error('خطأ في الاتصال:', error);
 });
 
-socket.on("disconnect", () => {
-  console.log("تم قطع الاتصال");
+socket.on('disconnect', () => {
+  console.log('تم قطع الاتصال');
 });
 ```
 
@@ -68,9 +68,9 @@ socket.on("disconnect", () => {
 
 ```javascript
 // الانضمام إلى محادثة
-socket.emit("join_chat", {
-  chatId: "CHAT_ID",
-  userId: "USER_ID"
+socket.emit('join_chat', {
+  chatId: 'CHAT_ID',
+  userId: 'USER_ID'
 });
 ```
 
@@ -78,16 +78,16 @@ socket.emit("join_chat", {
 
 ```javascript
 // إرسال رسالة
-socket.emit("send_message", {
-  chatId: "CHAT_ID",
-  content: "مرحباً، كيف حالك؟",
-  senderId: "USER_ID",
-  receiverId: "RECEIVER_ID"
+socket.emit('send_message', {
+  chatId: 'CHAT_ID',
+  content: 'مرحباً، كيف حالك؟',
+  senderId: 'USER_ID',
+  receiverId: 'RECEIVER_ID'
 });
 
 // استقبال رسالة جديدة
-socket.on("new_message", (message) => {
-  console.log("رسالة جديدة:", message);
+socket.on('new_message', message => {
+  console.log('رسالة جديدة:', message);
   // {
   //   _id: "MESSAGE_ID",
   //   content: "مرحباً، كيف حالك؟",
@@ -107,13 +107,13 @@ socket.on("new_message", (message) => {
 
 ```javascript
 // وضع علامة "مقروء" على الرسائل
-socket.emit("mark_read", {
-  chatId: "CHAT_ID",
-  userId: "USER_ID"
+socket.emit('mark_read', {
+  chatId: 'CHAT_ID',
+  userId: 'USER_ID'
 });
 
 // استقبال تحديث حالة القراءة
-socket.on("messages_read", ({ chatId, readBy }) => {
+socket.on('messages_read', ({ chatId, readBy }) => {
   console.log(`تم قراءة الرسائل في المحادثة ${chatId} بواسطة ${readBy}`);
 });
 ```
@@ -122,24 +122,24 @@ socket.on("messages_read", ({ chatId, readBy }) => {
 
 ```javascript
 // إرسال مؤشر أن المستخدم يكتب حالياً
-socket.emit("typing", {
-  chatId: "CHAT_ID",
-  userId: "USER_ID"
+socket.emit('typing', {
+  chatId: 'CHAT_ID',
+  userId: 'USER_ID'
 });
 
 // إرسال مؤشر أن المستخدم توقف عن الكتابة
-socket.emit("stop_typing", {
-  chatId: "CHAT_ID",
-  userId: "USER_ID"
+socket.emit('stop_typing', {
+  chatId: 'CHAT_ID',
+  userId: 'USER_ID'
 });
 
 // استقبال مؤشر الكتابة
-socket.on("user_typing", ({ chatId, userId }) => {
+socket.on('user_typing', ({ chatId, userId }) => {
   console.log(`المستخدم ${userId} يكتب في المحادثة ${chatId}`);
 });
 
 // استقبال مؤشر توقف الكتابة
-socket.on("user_stopped_typing", ({ chatId, userId }) => {
+socket.on('user_stopped_typing', ({ chatId, userId }) => {
   console.log(`المستخدم ${userId} توقف عن الكتابة في المحادثة ${chatId}`);
 });
 ```
@@ -148,14 +148,14 @@ socket.on("user_stopped_typing", ({ chatId, userId }) => {
 
 ```javascript
 // استقبال تحديث لقائمة المحادثات
-socket.on("update_chat_list", ({ chatId }) => {
+socket.on('update_chat_list', ({ chatId }) => {
   console.log(`يجب تحديث المحادثة ${chatId} في القائمة`);
   // يمكن استخدام هذا الحدث لإعادة تحميل قائمة المحادثات
   // أو تحديث محادثة محددة في القائمة
 });
 
 // استقبال محادثة جديدة
-socket.on("new_chat", ({ chatId, user }) => {
+socket.on('new_chat', ({ chatId, user }) => {
   console.log(`محادثة جديدة ${chatId} من المستخدم ${user.displayName}`);
   // إعادة تحميل قائمة المحادثات
 });
@@ -355,7 +355,7 @@ Headers: {
 في حالة انقطاع الاتصال، يحاول Socket.io إعادة الاتصال تلقائيًا. يمكن ضبط إعدادات إعادة الاتصال:
 
 ```javascript
-const socket = io("https://your-api-url", {
+const socket = io('https://your-api-url', {
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
@@ -363,27 +363,27 @@ const socket = io("https://your-api-url", {
   randomizationFactor: 0.5
 });
 
-socket.io.on("reconnect", (attempt) => {
+socket.io.on('reconnect', attempt => {
   console.log(`تم إعادة الاتصال بعد ${attempt} محاولات`);
-  
+
   // إعادة المصادقة بعد إعادة الاتصال
-  socket.emit("authenticate", { userId: "USER_ID" });
-  
+  socket.emit('authenticate', { userId: 'USER_ID' });
+
   // إعادة الانضمام إلى غرف المحادثة النشطة
   if (currentChatId) {
-    socket.emit("join_chat", {
+    socket.emit('join_chat', {
       chatId: currentChatId,
-      userId: "USER_ID"
+      userId: 'USER_ID'
     });
   }
 });
 
-socket.io.on("reconnect_attempt", (attempt) => {
+socket.io.on('reconnect_attempt', attempt => {
   console.log(`محاولة إعادة الاتصال ${attempt}...`);
 });
 
-socket.io.on("reconnect_failed", () => {
-  console.error("فشلت جميع محاولات إعادة الاتصال");
+socket.io.on('reconnect_failed', () => {
+  console.error('فشلت جميع محاولات إعادة الاتصال');
   // إظهار رسالة للمستخدم بفقدان الاتصال
 });
 ```
@@ -391,10 +391,10 @@ socket.io.on("reconnect_failed", () => {
 ### التعامل مع الأخطاء
 
 ```javascript
-socket.on("error", (error) => {
-  console.error("خطأ في Socket.io:", error);
+socket.on('error', error => {
+  console.error('خطأ في Socket.io:', error);
   // معالجة الخطأ حسب النوع
-  if (error.message === "Authentication failed") {
+  if (error.message === 'Authentication failed') {
     // إعادة المصادقة أو تسجيل الخروج
   }
 });
@@ -425,166 +425,166 @@ class ChatService {
 
   async connect(token, userId) {
     this.userId = userId;
-    
-    this.socket = io("https://your-api-url", {
+
+    this.socket = io('https://your-api-url', {
       query: { token },
-      transports: ["websocket", "polling"]
+      transports: ['websocket', 'polling']
     });
-    
-    this.socket.on("connect", () => {
-      console.log("تم الاتصال بنجاح");
-      this.socket.emit("authenticate", { userId });
+
+    this.socket.on('connect', () => {
+      console.log('تم الاتصال بنجاح');
+      this.socket.emit('authenticate', { userId });
     });
-    
-    this.socket.on("authenticated", () => {
-      console.log("تم التوثيق بنجاح");
-      this._notifyListeners("authenticated");
-      
+
+    this.socket.on('authenticated', () => {
+      console.log('تم التوثيق بنجاح');
+      this._notifyListeners('authenticated');
+
       // إعادة الانضمام إلى المحادثة الحالية إذا كانت موجودة
       if (this.currentChatId) {
         this.joinChat(this.currentChatId);
       }
     });
-    
+
     // إعداد المستمعين للأحداث
     this._setupEventListeners();
-    
+
     return new Promise((resolve, reject) => {
-      this.socket.on("authenticated", () => resolve());
-      this.socket.on("error", (error) => reject(error));
-      
+      this.socket.on('authenticated', () => resolve());
+      this.socket.on('error', error => reject(error));
+
       // فترة انتهاء المهلة للاتصال
-      setTimeout(() => reject(new Error("Connection timeout")), 10000);
+      setTimeout(() => reject(new Error('Connection timeout')), 10000);
     });
   }
-  
+
   _setupEventListeners() {
     // استقبال الرسائل الجديدة
-    this.socket.on("new_message", (message) => {
-      this._notifyListeners("new_message", message);
+    this.socket.on('new_message', message => {
+      this._notifyListeners('new_message', message);
     });
-    
+
     // تحديثات حالة القراءة
-    this.socket.on("messages_read", (data) => {
-      this._notifyListeners("messages_read", data);
+    this.socket.on('messages_read', data => {
+      this._notifyListeners('messages_read', data);
     });
-    
+
     // مؤشرات الكتابة
-    this.socket.on("user_typing", (data) => {
-      this._notifyListeners("user_typing", data);
+    this.socket.on('user_typing', data => {
+      this._notifyListeners('user_typing', data);
     });
-    
-    this.socket.on("user_stopped_typing", (data) => {
-      this._notifyListeners("user_stopped_typing", data);
+
+    this.socket.on('user_stopped_typing', data => {
+      this._notifyListeners('user_stopped_typing', data);
     });
-    
+
     // تحديثات قائمة المحادثات
-    this.socket.on("update_chat_list", (data) => {
-      this._notifyListeners("update_chat_list", data);
+    this.socket.on('update_chat_list', data => {
+      this._notifyListeners('update_chat_list', data);
     });
-    
-    this.socket.on("new_chat", (data) => {
-      this._notifyListeners("new_chat", data);
+
+    this.socket.on('new_chat', data => {
+      this._notifyListeners('new_chat', data);
     });
-    
+
     // أحداث الاتصال
-    this.socket.on("disconnect", () => {
-      this._notifyListeners("disconnect");
+    this.socket.on('disconnect', () => {
+      this._notifyListeners('disconnect');
     });
-    
-    this.socket.on("error", (error) => {
-      this._notifyListeners("error", error);
+
+    this.socket.on('error', error => {
+      this._notifyListeners('error', error);
     });
   }
-  
+
   // الانضمام إلى غرفة محادثة
   joinChat(chatId) {
     if (!this.socket || !this.socket.connected) {
-      console.error("Socket غير متصل");
+      console.error('Socket غير متصل');
       return false;
     }
-    
+
     this.currentChatId = chatId;
-    this.socket.emit("join_chat", {
+    this.socket.emit('join_chat', {
       chatId,
       userId: this.userId
     });
-    
+
     return true;
   }
-  
+
   // إرسال رسالة
   sendMessage(chatId, content, receiverId) {
     if (!this.socket || !this.socket.connected) {
-      console.error("Socket غير متصل");
+      console.error('Socket غير متصل');
       return false;
     }
-    
-    this.socket.emit("send_message", {
+
+    this.socket.emit('send_message', {
       chatId,
       content,
       senderId: this.userId,
       receiverId
     });
-    
+
     return true;
   }
-  
+
   // وضع علامة "مقروء"
   markAsRead(chatId) {
     if (!this.socket || !this.socket.connected) {
-      console.error("Socket غير متصل");
+      console.error('Socket غير متصل');
       return false;
     }
-    
-    this.socket.emit("mark_read", {
+
+    this.socket.emit('mark_read', {
       chatId,
       userId: this.userId
     });
-    
+
     return true;
   }
-  
+
   // إرسال مؤشر الكتابة
   sendTyping(chatId, isTyping = true) {
     if (!this.socket || !this.socket.connected) {
       return false;
     }
-    
-    const event = isTyping ? "typing" : "stop_typing";
+
+    const event = isTyping ? 'typing' : 'stop_typing';
     this.socket.emit(event, {
       chatId,
       userId: this.userId
     });
-    
+
     return true;
   }
-  
+
   // إضافة مستمع للأحداث
   addListener(event, callback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
-    
+
     this.listeners.get(event).push(callback);
   }
-  
+
   // إزالة مستمع
   removeListener(event, callback) {
     if (!this.listeners.has(event)) return;
-    
+
     const callbacks = this.listeners.get(event);
     const index = callbacks.indexOf(callback);
-    
+
     if (index !== -1) {
       callbacks.splice(index, 1);
     }
   }
-  
+
   // إبلاغ المستمعين بحدث
   _notifyListeners(event, data) {
     if (!this.listeners.has(event)) return;
-    
+
     for (const callback of this.listeners.get(event)) {
       try {
         callback(data);
@@ -593,7 +593,7 @@ class ChatService {
       }
     }
   }
-  
+
   // قطع الاتصال
   disconnect() {
     if (this.socket) {
@@ -617,4 +617,4 @@ class ChatService {
 
 ## الخاتمة
 
-يوفر نظام المحادثات باستخدام Socket.io تجربة مستخدم متميزة مع تواصل فوري ومزامنة آنية بين الأجهزة. مع دعم ميزات مثل إشعارات الكتابة، تأكيد القراءة، والإشعارات، يقدم النظام تجربة محادثات كاملة للمستخدمين. 
+يوفر نظام المحادثات باستخدام Socket.io تجربة مستخدم متميزة مع تواصل فوري ومزامنة آنية بين الأجهزة. مع دعم ميزات مثل إشعارات الكتابة، تأكيد القراءة، والإشعارات، يقدم النظام تجربة محادثات كاملة للمستخدمين.

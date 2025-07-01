@@ -41,10 +41,12 @@ export const createArtworkTransactionSchema = {
         'string.empty': 'يجب تحديد رقم الهاتف',
         'any.required': 'يجب تحديد رقم الهاتف'
       })
-    }).required().messages({
-      'object.base': 'يجب توفير بيانات الشحن',
-      'any.required': 'يجب توفير بيانات الشحن'
     })
+      .required()
+      .messages({
+        'object.base': 'يجب توفير بيانات الشحن',
+        'any.required': 'يجب توفير بيانات الشحن'
+      })
   })
 };
 
@@ -89,23 +91,22 @@ export const createSpecialRequestTransactionSchema = {
         'string.empty': 'يجب تحديد رقم الهاتف',
         'any.required': 'يجب تحديد رقم الهاتف'
       })
-    }).required().messages({
-      'object.base': 'يجب توفير بيانات الشحن',
-      'any.required': 'يجب توفير بيانات الشحن'
     })
+      .required()
+      .messages({
+        'object.base': 'يجب توفير بيانات الشحن',
+        'any.required': 'يجب توفير بيانات الشحن'
+      })
   })
 };
 
 export const updateTransactionStatusSchema = {
   body: Joi.object({
-    status: Joi.string()
-      .valid('pending', 'completed', 'failed', 'refunded')
-      .required()
-      .messages({
-        'string.empty': 'يجب تحديد حالة المعاملة',
-        'any.required': 'يجب تحديد حالة المعاملة',
-        'any.only': 'حالة المعاملة غير صالحة'
-      }),
+    status: Joi.string().valid('pending', 'completed', 'failed', 'refunded').required().messages({
+      'string.empty': 'يجب تحديد حالة المعاملة',
+      'any.required': 'يجب تحديد حالة المعاملة',
+      'any.only': 'حالة المعاملة غير صالحة'
+    }),
     notes: Joi.string().max(500).allow('').optional().messages({
       'string.max': 'يجب ألا تتجاوز الملاحظات 500 حرف'
     }),
@@ -151,4 +152,4 @@ export const updateTrackingInfoSchema = {
       'any.required': 'يجب تحديد معرف المعاملة'
     })
   })
-}; 
+};

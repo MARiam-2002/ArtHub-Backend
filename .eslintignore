@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.vercel/
+.github/
+.vscode/
+.git/
+.env
+.env.*
+*.log
+*.lock
+*.md 

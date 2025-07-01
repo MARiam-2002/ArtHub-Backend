@@ -1,4 +1,4 @@
-import mongoose, { Schema, Types, model } from "mongoose";
+import mongoose, { Schema, Types, model } from 'mongoose';
 
 /**
  * @swagger
@@ -45,32 +45,35 @@ import mongoose, { Schema, Types, model } from "mongoose";
  *           format: date-time
  *           description: تاريخ حل الإبلاغ
  */
-const reportSchema = new Schema({
-  reporter: { type: Types.ObjectId, ref: "User", required: true },
-  contentType: { 
-    type: String, 
-    enum: ["artwork", "image", "user", "comment", "message"],
-    required: true 
+const reportSchema = new Schema(
+  {
+    reporter: { type: Types.ObjectId, ref: 'User', required: true },
+    contentType: {
+      type: String,
+      enum: ['artwork', 'image', 'user', 'comment', 'message'],
+      required: true
+    },
+    contentId: { type: Types.ObjectId, required: true },
+    targetUser: { type: Types.ObjectId, ref: 'User' },
+    reason: {
+      type: String,
+      enum: ['inappropriate', 'copyright', 'spam', 'offensive', 'harassment', 'other'],
+      required: true
+    },
+    description: { type: String },
+    status: {
+      type: String,
+      enum: ['pending', 'resolved', 'rejected'],
+      default: 'pending'
+    },
+    adminNotes: { type: String },
+    resolvedAt: { type: Date }
   },
-  contentId: { type: Types.ObjectId, required: true },
-  targetUser: { type: Types.ObjectId, ref: "User" },
-  reason: { 
-    type: String, 
-    enum: ["inappropriate", "copyright", "spam", "offensive", "harassment", "other"],
-    required: true 
-  },
-  description: { type: String },
-  status: { 
-    type: String, 
-    enum: ["pending", "resolved", "rejected"], 
-    default: "pending" 
-  },
-  adminNotes: { type: String },
-  resolvedAt: { type: Date }
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 // تحديث تاريخ الحل عند تغيير الحالة إلى resolved
-reportSchema.pre('save', function(next) {
+reportSchema.pre('save', function (next) {
   if (this.isModified('status') && this.status === 'resolved' && !this.resolvedAt) {
     this.resolvedAt = new Date();
   }
@@ -80,5 +83,5 @@ reportSchema.pre('save', function(next) {
 // إنشاء فهرس مركب على نوع المحتوى ومعرف المحتوى
 reportSchema.index({ contentType: 1, contentId: 1 });
 
-const reportModel = mongoose.models.Report || model("Report", reportSchema);
-export default reportModel; 
+const reportModel = mongoose.models.Report || model('Report', reportSchema);
+export default reportModel;

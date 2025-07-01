@@ -9,7 +9,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
     // التصنيفات
     const categories = await categoryModel.find({}).limit(10);
-    
+
     // أفضل الفنانين (حسب التقييمات وعدد الأعمال)
     const topArtists = await userModel.aggregate([
       { $match: { role: 'artist' } },
@@ -31,23 +31,19 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       },
       {
         $addFields: {
-          averageRating: { 
-            $cond: [
-              { $eq: [{ $size: '$reviews' }, 0] },
-              0,
-              { $avg: '$reviews.rating' }
-            ]
+          averageRating: {
+            $cond: [{ $eq: [{ $size: '$reviews' }, 0] }, 0, { $avg: '$reviews.rating' }]
           },
           artworksCount: { $size: '$artworks' },
           reviewsCount: { $size: '$reviews' }
         }
       },
-      { 
-        $sort: { 
-          averageRating: -1, 
+      {
+        $sort: {
+          averageRating: -1,
           reviewsCount: -1,
           artworksCount: -1
-        } 
+        }
       },
       { $limit: 4 },
       {
@@ -61,68 +57,74 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         }
       }
     ]);
-    
+
     // أعمال مميزة
-    const featuredArtworks = await artworkModel.find({})
+    const featuredArtworks = await artworkModel
+      .find({})
       .sort({ viewCount: -1, rating: -1 })
       .limit(8)
       .populate('artist', 'displayName profileImage job');
-    
+
     // أحدث الأعمال الفنية
-    const latestArtworks = await artworkModel.find({})
+    const latestArtworks = await artworkModel
+      .find({})
       .sort({ createdAt: -1 })
       .limit(6)
       .populate('artist', 'displayName profileImage job');
-    
+
     // أعمال مخصصة للمستخدم (إذا كان مسجل)
     let personalizedArtworks = [];
     if (req.user) {
       // هنا يمكن استخدام تفضيلات المستخدم أو سجل تصفحه لعرض أعمال مخصصة
       // مثال بسيط: عرض أعمال من نفس فئات الأعمال التي شاهدها
-      const userViewedCategories = await artworkModel.find({
-        _id: { $in: req.user.viewedArtworks || [] }
-      }).distinct('category');
-      
-      if (userViewedCategories.length > 0) {
-        personalizedArtworks = await artworkModel.find({
-          category: { $in: userViewedCategories }
+      const userViewedCategories = await artworkModel
+        .find({
+          _id: { $in: req.user.viewedArtworks || [] }
         })
+        .distinct('category');
+
+      if (userViewedCategories.length > 0) {
+        personalizedArtworks = await artworkModel
+          .find({
+            category: { $in: userViewedCategories }
+          })
           .sort({ createdAt: -1 })
           .limit(6)
           .populate('artist', 'displayName profileImage job');
       } else {
         // إذا لم يكن هناك سجل، نعرض أعمال عشوائية
-        personalizedArtworks = await artworkModel.aggregate([
-          { $sample: { size: 6 } }
-        ]);
-        
+        personalizedArtworks = await artworkModel.aggregate([{ $sample: { size: 6 } }]);
+
         // نضيف بيانات الفنان للأعمال العشوائية
         const artistIds = personalizedArtworks.map(a => a.artist);
-        const artists = await userModel.find({ 
-          _id: { $in: artistIds } 
-        }).select('displayName profileImage job');
-        
+        const artists = await userModel
+          .find({
+            _id: { $in: artistIds }
+          })
+          .select('displayName profileImage job');
+
         const artistsMap = artists.reduce((map, artist) => {
           map[artist._id.toString()] = artist;
           return map;
         }, {});
-        
-        personalizedArtworks = personalizedArtworks.map(artwork => {
-          return {
-            ...artwork,
-            artist: artistsMap[artwork.artist.toString()]
-          };
-        });
+
+        personalizedArtworks = personalizedArtworks.map(artwork => ({
+          ...artwork,
+          artist: artistsMap[artwork.artist.toString()]
+        }));
       }
     }
 
-    res.success({
-      categories,
-      topArtists,
-      featuredArtworks,
-      latestArtworks,
-      personalizedArtworks
-    }, 'تم جلب بيانات الصفحة الرئيسية بنجاح');
+    res.success(
+      {
+        categories,
+        topArtists,
+        featuredArtworks,
+        latestArtworks,
+        personalizedArtworks
+      },
+      'تم جلب بيانات الصفحة الرئيسية بنجاح'
+    );
   } catch (err) {
     next(err);
   }
@@ -131,7 +133,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
 export const search = asyncHandler(async (req, res, next) => {
   const { q, type = 'all', category, price_min, price_max, page = 1, limit = 10 } = req.query;
   const skip = (page - 1) * limit;
-  
+
   const query = {};
   if (q) {
     query.$or = [
@@ -139,56 +141,64 @@ export const search = asyncHandler(async (req, res, next) => {
       { description: { $regex: q, $options: 'i' } }
     ];
   }
-  
+
   if (category) {
     query.category = category;
   }
-  
+
   if (price_min || price_max) {
     query.price = {};
-    if (price_min) query.price.$gte = Number(price_min);
-    if (price_max) query.price.$lte = Number(price_max);
+    if (price_min) {
+      query.price.$gte = Number(price_min);
+    }
+    if (price_max) {
+      query.price.$lte = Number(price_max);
+    }
   }
-  
+
   try {
-    let results = {};
+    const results = {};
     let totalCount = 0;
-    
+
     if (type === 'all' || type === 'artworks') {
       const [artworks, artworksCount] = await Promise.all([
-        artworkModel.find(query)
+        artworkModel
+          .find(query)
           .populate('artist', 'displayName profileImage job')
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(Number(limit)),
         artworkModel.countDocuments(query)
       ]);
-      
+
       results.artworks = artworks;
       totalCount += artworksCount;
     }
-    
+
     if (type === 'all' || type === 'artists') {
-      const artistQuery = q ? { 
-        $or: [
-          { displayName: { $regex: q, $options: 'i' } },
-          { job: { $regex: q, $options: 'i' } }
-        ],
-        role: 'artist'
-      } : { role: 'artist' };
-      
+      const artistQuery = q
+        ? {
+            $or: [
+              { displayName: { $regex: q, $options: 'i' } },
+              { job: { $regex: q, $options: 'i' } }
+            ],
+            role: 'artist'
+          }
+        : { role: 'artist' };
+
       const [artists, artistsCount] = await Promise.all([
-        userModel.find(artistQuery)
+        userModel
+          .find(artistQuery)
           .select('displayName profileImage job')
           .skip(skip)
           .limit(Number(limit)),
         userModel.countDocuments(artistQuery)
       ]);
-      
+
       results.artists = artists;
       totalCount += artistsCount;
     }
-    
+
     const totalPages = Math.ceil(totalCount / limit);
     const pagination = {
       currentPage: Number(page),
@@ -197,11 +207,14 @@ export const search = asyncHandler(async (req, res, next) => {
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1
     };
-    
-    res.success({ 
-      ...results, 
-      pagination 
-    }, 'تم جلب نتائج البحث بنجاح');
+
+    res.success(
+      {
+        ...results,
+        pagination
+      },
+      'تم جلب نتائج البحث بنجاح'
+    );
   } catch (err) {
     next(err);
   }
@@ -209,18 +222,19 @@ export const search = asyncHandler(async (req, res, next) => {
 
 export const getTrendingContent = asyncHandler(async (req, res, next) => {
   const { type = 'all', limit = 10 } = req.query;
-  
+
   try {
     const results = {};
-    
+
     if (type === 'all' || type === 'artworks') {
       // أكثر الأعمال الفنية مشاهدة ومبيعًا
-      results.trendingArtworks = await artworkModel.find({})
+      results.trendingArtworks = await artworkModel
+        .find({})
         .sort({ viewCount: -1, salesCount: -1 })
         .limit(Number(limit))
         .populate('artist', 'displayName profileImage job');
     }
-    
+
     if (type === 'all' || type === 'artists') {
       // الفنانين الأكثر شهرة (الأعلى تقييمًا)
       results.trendingArtists = await userModel.aggregate([
@@ -235,12 +249,8 @@ export const getTrendingContent = asyncHandler(async (req, res, next) => {
         },
         {
           $addFields: {
-            averageRating: { 
-              $cond: [
-                { $eq: [{ $size: '$reviews' }, 0] },
-                0,
-                { $avg: '$reviews.rating' }
-              ]
+            averageRating: {
+              $cond: [{ $eq: [{ $size: '$reviews' }, 0] }, 0, { $avg: '$reviews.rating' }]
             },
             reviewsCount: { $size: '$reviews' }
           }
@@ -259,7 +269,7 @@ export const getTrendingContent = asyncHandler(async (req, res, next) => {
         }
       ]);
     }
-    
+
     res.success(results, 'تم جلب المحتوى الرائج بنجاح');
   } catch (err) {
     next(err);
@@ -269,28 +279,31 @@ export const getTrendingContent = asyncHandler(async (req, res, next) => {
 export const getExploreContent = asyncHandler(async (req, res, next) => {
   const { page = 1, limit = 20 } = req.query;
   const skip = (page - 1) * limit;
-  
+
   try {
     // مزيج من الأعمال الفنية والفنانين للاستكشاف
     const [artworks, artists, categories] = await Promise.all([
-      artworkModel.find({})
+      artworkModel
+        .find({})
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit) * 0.7) // 70% من النتائج ستكون أعمال فنية
         .populate('artist', 'displayName profileImage job'),
-      
-      userModel.find({ role: 'artist' })
+
+      userModel
+        .find({ role: 'artist' })
         .sort({ createdAt: -1 })
         .limit(Number(limit) * 0.3) // 30% من النتائج ستكون فنانين
         .select('displayName profileImage job'),
-      
-      categoryModel.find({})
-        .limit(10)
+
+      categoryModel.find({}).limit(10)
     ]);
-    
-    const totalCount = await artworkModel.countDocuments({}) + await userModel.countDocuments({ role: 'artist' });
+
+    const totalCount =
+      (await artworkModel.countDocuments({})) +
+      (await userModel.countDocuments({ role: 'artist' }));
     const totalPages = Math.ceil(totalCount / limit);
-    
+
     const pagination = {
       currentPage: Number(page),
       totalPages,
@@ -298,14 +311,17 @@ export const getExploreContent = asyncHandler(async (req, res, next) => {
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1
     };
-    
-    res.success({
-      artworks,
-      artists,
-      categories,
-      pagination
-    }, 'تم جلب محتوى الاستكشاف بنجاح');
+
+    res.success(
+      {
+        artworks,
+        artists,
+        categories,
+        pagination
+      },
+      'تم جلب محتوى الاستكشاف بنجاح'
+    );
   } catch (err) {
     next(err);
   }
-}); 
+});

@@ -3,34 +3,14 @@
   "builds": [
     {
       "src": "index.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "memory": 2048,
+        "maxDuration": 90
+      }
     }
   ],
   "routes": [
-    {
-      "src": "/api/direct-connect",
-      "dest": "/api/direct-connect.js"
-    },
-    {
-      "src": "/api/mongo-debug",
-      "dest": "/api/mongo-debug.js"
-    },
-    {
-      "src": "/api/db-test",
-      "dest": "/api/db-test.js"
-    },
-    {
-      "src": "/api/keepalive",
-      "dest": "/api/keepalive.js"
-    },
-    {
-      "src": "/api/api-routes",
-      "dest": "/api/api-routes.js"
-    },
     {
       "src": "/api/auth/(.*)",
       "dest": "/index.js"
@@ -88,48 +68,24 @@
       "dest": "/index.js"
     },
     {
+      "src": "/api/keepalive",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/mongo-debug",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/direct-connect",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/api-routes",
+      "dest": "/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.js"
-    }
-  ],
-  "functions": {
-    "api/db-test.js": {
-      "memory": 1024,
-      "maxDuration": 15
-    },
-    "api/keepalive.js": {
-      "memory": 512,
-      "maxDuration": 10
-    },
-    "api/mongo-debug.js": {
-      "memory": 512,
-      "maxDuration": 15
-    },
-    "api/direct-connect.js": {
-      "memory": 1024,
-      "maxDuration": 20
-    },
-    "api/api-routes.js": {
-      "memory": 256,
-      "maxDuration": 10
-    },
-    "index.js": {
-      "memory": 2048,
-      "maxDuration": 90
-    }
-  },
-  "crons": [
-    {
-      "path": "/api/keepalive",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/health",
-      "schedule": "*/10 * * * *"
-    },
-    {
-      "path": "/api/db-test",
-      "schedule": "*/15 * * * *"
     }
   ],
   "env": {
