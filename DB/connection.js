@@ -19,9 +19,9 @@ const CONNECTION_COOLDOWN = 1000; // 1 second between connection attempts
 // Serverless-optimized connection options
 const getConnectionOptions = (isServerless = false) => {
   const baseOptions = {
-    serverSelectionTimeoutMS: 10000,
-    socketTimeoutMS: 45000,
-    connectTimeoutMS: 10000,
+    serverSelectionTimeoutMS: parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '10000'),
+    socketTimeoutMS: parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '45000'),
+    connectTimeoutMS: parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '10000'),
     maxPoolSize: isServerless ? 5 : 10,
     minPoolSize: isServerless ? 1 : 2,
     useNewUrlParser: true,
@@ -36,9 +36,9 @@ const getConnectionOptions = (isServerless = false) => {
 
   if (isServerless) {
     // Additional serverless optimizations
-    baseOptions.serverSelectionTimeoutMS = 5000; // Faster server selection timeout
-    baseOptions.connectTimeoutMS = 5000; // Faster connect timeout
-    baseOptions.socketTimeoutMS = 30000; // Shorter socket timeout
+    baseOptions.serverSelectionTimeoutMS = parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '10000'); // Increased from 5000
+    baseOptions.connectTimeoutMS = parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '10000'); // Increased from 5000
+    baseOptions.socketTimeoutMS = parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '45000'); // Increased from 30000
     baseOptions.maxPoolSize = 1; // Smaller connection pool for serverless
     baseOptions.minPoolSize = 0; // No minimum pool size
     baseOptions.maxIdleTimeMS = 10000; // Close idle connections faster

@@ -198,7 +198,14 @@ export const paginatedQuery = async (model, filter = {}, options = {}, page = 1,
 export const ensureDatabaseConnection = async (forceReconnect = false) => {
   // If already connected and not forcing reconnect, return true
   if (mongoose.connection.readyState === 1 && !forceReconnect) {
-    return true;
+    try {
+      // Quick ping to verify connection is actually working
+      await mongoose.connection.db.admin().ping();
+      return true;
+    } catch (pingError) {
+      console.warn("Connection ping failed, will attempt reconnection:", pingError.message);
+      // Continue with reconnection
+    }
   }
   
   // If connection is in progress and not forcing reconnect, wait for it
@@ -215,11 +222,11 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
           }
         }, 100);
         
-        // Timeout after 5 seconds
+        // Timeout after 10 seconds (increased from 5)
         setTimeout(() => {
           clearInterval(checkInterval);
           reject(new Error('Connection timeout'));
-        }, 5000);
+        }, 10000);
       });
       return true;
     } catch (error) {
@@ -239,6 +246,10 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
   // Get connection options based on environment
   const connectionOptions = getConnectionOptions();
   
+  // Use environment variables for max retry attempts and base delay
+  const MAX_RETRY_ATTEMPTS = parseInt(process.env.MONGODB_MAX_RETRY_ATTEMPTS || '5');
+  const BASE_RETRY_DELAY = parseInt(process.env.MONGODB_BASE_RETRY_DELAY || '1000');
+  
   // Try to connect with exponential backoff
   for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
     try {
@@ -249,13 +260,33 @@ export const ensureDatabaseConnection = async (forceReconnect = false) => {
         await new Promise(resolve => setTimeout(resolve, delay));
       }
       
+      // Log connection attempt with redacted URL
+      if (process.env.CONNECTION_URL) {
+        try {
+          const url = new URL(process.env.CONNECTION_URL);
+          console.log(`Connecting to MongoDB at ${url.protocol}//${url.hostname}:${url.port || 'default'}${url.pathname}`);
+        } catch (urlError) {
+          console.log("Connecting to MongoDB with CONNECTION_URL");
+        }
+      }
+      
       // Connect to MongoDB
       await mongoose.connect(process.env.CONNECTION_URL, connectionOptions);
+      
+      // Verify connection with ping
+      await mongoose.connection.db.admin().ping();
       
       console.log(`✅ MongoDB connected successfully on attempt ${attempt + 1}`);
       return true;
     } catch (error) {
       console.error(`❌ MongoDB connection attempt ${attempt + 1} failed:`, error.message);
+      
+      // Log more detailed error information
+      if (error.name === 'MongoServerSelectionError') {
+        console.error("Server selection timed out. Check network connectivity and MongoDB Atlas status.");
+      } else if (error.name === 'MongoNetworkError') {
+        console.error("Network error connecting to MongoDB. Check firewall settings and network connectivity.");
+      }
       
       // If this is the last attempt, throw the error
       if (attempt === MAX_RETRY_ATTEMPTS - 1) {

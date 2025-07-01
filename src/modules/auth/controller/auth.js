@@ -111,27 +111,39 @@ export const register = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    // Ensure database connection first
-    if (!await ensureConnection(next)) {
-      return; // Connection failed, error already sent
+    // Ensure database connection first with increased timeout
+    try {
+      if (!await ensureConnection(next)) {
+        return; // Connection failed, error already sent
+      }
+    } catch (connError) {
+      console.error("Login connection error:", connError);
+      return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
     }
 
     const { email, password } = req.body;
 
-    // Find user with timeout
+    // Find user with increased timeout
     let user;
     try {
       user = await Promise.race([
-        userModel.findOne({ email }).select("+password").maxTimeMS(5000),
+        userModel.findOne({ email }).select("+password").maxTimeMS(15000), // Increased from 5000
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Database operation timed out")), 5000)
+          setTimeout(() => reject(new Error("Database operation timed out")), 15000) // Increased from 5000
         )
       ]);
     } catch (findError) {
       console.error("Login error:", findError);
+      
+      // Enhanced error handling for different MongoDB error types
       if (findError.message.includes("timed out")) {
         return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
       }
+      
+      if (findError.name === 'MongoNetworkError' || findError.name === 'MongoServerSelectionError') {
+        return next(new Error("تعذر الاتصال بخادم قاعدة البيانات", { cause: 503 }));
+      }
+      
       return next(new Error("حدث خطأ أثناء تسجيل الدخول", { cause: 500 }));
     }
     
@@ -155,12 +167,12 @@ export const login = async (req, res, next) => {
       process.env.TOKEN_KEY
     );
   
-    // Delete previous token with timeout handling
+    // Delete previous token with timeout handling and better error handling
     try {
       await Promise.race([
-        tokenModel.findOneAndDelete({ user: user._id }).maxTimeMS(3000),
+        tokenModel.findOneAndDelete({ user: user._id }).maxTimeMS(10000), // Increased from 3000
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Token deletion timed out")), 3000)
+          setTimeout(() => reject(new Error("Token deletion timed out")), 10000) // Increased from 3000
         )
       ]);
     } catch (tokenError) {
@@ -177,7 +189,7 @@ export const login = async (req, res, next) => {
           agent: req.headers["user-agent"] || "unknown",
         }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Token creation timed out")), 3000)
+          setTimeout(() => reject(new Error("Token creation timed out")), 10000) // Increased from 3000
         )
       ]);
     } catch (tokenError) {
@@ -198,14 +210,15 @@ export const login = async (req, res, next) => {
   } catch (error) {
     console.error("Login error:", error);
     
-    // Handle database connection errors specifically
+    // Enhanced error handling for MongoDB connection errors
     if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
       return next(new Error("خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
     }
     
     // Handle other database errors
-    if (error.name === 'MongoError' || error.name === 'MongoServerError') {
-      return next(new Error("خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 500 }));
+    if (error.name === 'MongoError' || error.name === 'MongoServerError' || 
+        error.name === 'MongoNetworkError' || error.name === 'MongoServerSelectionError') {
+      return next(new Error("خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا", { cause: 503 }));
     }
     
     // Pass other errors to the error handler

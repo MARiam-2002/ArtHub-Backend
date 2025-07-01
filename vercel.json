@@ -8,8 +8,12 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "index.js"
+      "dest": "/index.js"
     }
   ],
   "functions": {
@@ -22,7 +26,7 @@
       "maxDuration": 5
     },
     "index.js": {
-      "memory": 1024,
+      "memory": 1536,
       "maxDuration": 60
     }
   },
@@ -41,6 +45,9 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "MONGODB_CONNECTION_TIMEOUT": "10000",
+    "MONGODB_SOCKET_TIMEOUT": "30000",
+    "MONGODB_SERVER_SELECTION_TIMEOUT": "10000"
   }
 }
