@@ -4,12 +4,32 @@
     {
       "src": "index.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/direct-connect",
+      "dest": "/api/direct-connect.js"
+    },
+    {
+      "src": "/api/mongo-debug",
+      "dest": "/api/mongo-debug.js"
+    },
+    {
+      "src": "/api/db-test",
+      "dest": "/api/db-test.js"
+    },
+    {
+      "src": "/api/keepalive",
+      "dest": "/api/keepalive.js"
+    },
+    {
+      "src": "/api/api-routes",
+      "dest": "/api/api-routes.js"
     },
     {
       "src": "/(.*)",
@@ -32,6 +52,10 @@
     "api/direct-connect.js": {
       "memory": 1024,
       "maxDuration": 15
+    },
+    "api/api-routes.js": {
+      "memory": 256,
+      "maxDuration": 5
     },
     "index.js": {
       "memory": 1536,
