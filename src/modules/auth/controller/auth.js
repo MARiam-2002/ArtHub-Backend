@@ -45,9 +45,9 @@ export const register = async (req, res, next) => {
     let existingUser;
     try {
       existingUser = await Promise.race([
-        userModel.findOne({ email }).maxTimeMS(15000), // Increased from 5000
+        userModel.findOne({ email }).maxTimeMS(30000), // Increased from 15000
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Database operation timed out")), 15000) // Increased from 5000
+          setTimeout(() => reject(new Error("Database operation timed out")), 30000) // Increased from 15000
         )
       ]);
     } catch (findError) {
@@ -84,7 +84,7 @@ export const register = async (req, res, next) => {
           role: "User",
         }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("User creation timed out")), 15000) // Increased from 5000
+          setTimeout(() => reject(new Error("User creation timed out")), 30000) // Increased from 15000
         )
       ]);
     } catch (createError) {
@@ -158,9 +158,9 @@ export const login = async (req, res, next) => {
     let user;
     try {
       user = await Promise.race([
-        userModel.findOne({ email }).select("+password").maxTimeMS(15000), // Increased from 5000
+        userModel.findOne({ email }).select("+password").maxTimeMS(30000), // Increased from 15000
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Database operation timed out")), 15000) // Increased from 5000
+          setTimeout(() => reject(new Error("Database operation timed out")), 30000) // Increased from 15000
         )
       ]);
     } catch (findError) {

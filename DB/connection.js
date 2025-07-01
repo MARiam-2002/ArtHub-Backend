@@ -6,8 +6,8 @@ dotenv.config();
 
 // Variables for connection management
 let mongoServer;
-const MAX_RETRIES = 5;
-const RETRY_INTERVAL = 3000; // 3 seconds
+const MAX_RETRIES = parseInt(process.env.MONGODB_MAX_RETRY_ATTEMPTS || '5');
+const RETRY_INTERVAL = parseInt(process.env.MONGODB_BASE_RETRY_DELAY || '3000'); // 3 seconds
 
 // Global connection cache - critical for serverless
 let cachedConnection = null;
@@ -19,9 +19,9 @@ const CONNECTION_COOLDOWN = 1000; // 1 second between connection attempts
 // Serverless-optimized connection options
 const getConnectionOptions = (isServerless = false) => {
   const baseOptions = {
-    serverSelectionTimeoutMS: parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '10000'),
-    socketTimeoutMS: parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '45000'),
-    connectTimeoutMS: parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '10000'),
+    serverSelectionTimeoutMS: parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '20000'),
+    socketTimeoutMS: parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '60000'),
+    connectTimeoutMS: parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '20000'),
     maxPoolSize: isServerless ? 5 : 10,
     minPoolSize: isServerless ? 1 : 2,
     useNewUrlParser: true,
@@ -36,14 +36,16 @@ const getConnectionOptions = (isServerless = false) => {
 
   if (isServerless) {
     // Additional serverless optimizations
-    baseOptions.serverSelectionTimeoutMS = parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '10000'); // Increased from 5000
-    baseOptions.connectTimeoutMS = parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '10000'); // Increased from 5000
-    baseOptions.socketTimeoutMS = parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '45000'); // Increased from 30000
+    baseOptions.serverSelectionTimeoutMS = parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '20000'); // Increased from 10000
+    baseOptions.connectTimeoutMS = parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '20000'); // Increased from 10000
+    baseOptions.socketTimeoutMS = parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '60000'); // Increased from 45000
     baseOptions.maxPoolSize = 1; // Smaller connection pool for serverless
     baseOptions.minPoolSize = 0; // No minimum pool size
     baseOptions.maxIdleTimeMS = 10000; // Close idle connections faster
     baseOptions.keepAlive = true; // Keep connections alive
     baseOptions.keepAliveInitialDelay = 30000; // 30 seconds
+    baseOptions.retryWrites = true; // Enable retry for write operations
+    baseOptions.retryReads = true; // Enable retry for read operations
     
     // Only add directConnection for non-SRV URIs
     const connectionUrl = process.env.CONNECTION_URL || '';

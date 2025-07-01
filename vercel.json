@@ -32,6 +32,62 @@
       "dest": "/api/api-routes.js"
     },
     {
+      "src": "/api/auth/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/image/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/chat/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/artworks/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/home/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/terms/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/special-requests/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/reports/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/transactions/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/reviews/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/follow/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/notifications/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/db-test",
+      "dest": "/index.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.js"
     }
@@ -39,27 +95,27 @@
   "functions": {
     "api/db-test.js": {
       "memory": 1024,
-      "maxDuration": 10
+      "maxDuration": 15
     },
     "api/keepalive.js": {
       "memory": 512,
-      "maxDuration": 5
+      "maxDuration": 10
     },
     "api/mongo-debug.js": {
       "memory": 512,
-      "maxDuration": 10
+      "maxDuration": 15
     },
     "api/direct-connect.js": {
       "memory": 1024,
-      "maxDuration": 15
+      "maxDuration": 20
     },
     "api/api-routes.js": {
       "memory": 256,
-      "maxDuration": 5
+      "maxDuration": 10
     },
     "index.js": {
-      "memory": 1536,
-      "maxDuration": 60
+      "memory": 2048,
+      "maxDuration": 90
     }
   },
   "crons": [
@@ -68,7 +124,7 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/health",
+      "path": "/api/health",
       "schedule": "*/10 * * * *"
     },
     {
@@ -78,9 +134,9 @@
   ],
   "env": {
     "NODE_ENV": "production",
-    "MONGODB_CONNECTION_TIMEOUT": "15000",
-    "MONGODB_SOCKET_TIMEOUT": "45000",
-    "MONGODB_SERVER_SELECTION_TIMEOUT": "15000",
+    "MONGODB_CONNECTION_TIMEOUT": "30000",
+    "MONGODB_SOCKET_TIMEOUT": "60000",
+    "MONGODB_SERVER_SELECTION_TIMEOUT": "30000",
     "MONGODB_MAX_RETRY_ATTEMPTS": "5",
     "MONGODB_BASE_RETRY_DELAY": "1000"
   }

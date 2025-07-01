@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,134 +11,174 @@ dotenv.config();
  * @param {import('http').ServerResponse} res - HTTP response
  */
 export default async function handler(req, res) {
-  // Set CORS headers for API endpoint
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  // Handle OPTIONS request for CORS preflight
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  // Handle OPTIONS request
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
-  
+
   // Only allow GET requests
   if (req.method !== 'GET') {
-    res.status(405).json({
+    return res.status(405).json({
       success: false,
-      message: 'Method Not Allowed',
-      timestamp: new Date().toISOString()
+      message: 'Method not allowed',
+      status: 405
     });
-    return;
   }
-  
+
+  const results = {
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      VERCEL: process.env.VERCEL || 'not set',
+      VERCEL_ENV: process.env.VERCEL_ENV || 'not set',
+      VERCEL_REGION: process.env.VERCEL_REGION || 'not set'
+    },
+    connectionTests: {
+      mongoose: null,
+      nativeDriver: null
+    }
+  };
+
   try {
-    // Check if we have a connection string
-    if (!process.env.CONNECTION_URL) {
-      return res.status(500).json({
-        success: false,
-        message: 'CONNECTION_URL environment variable is not set',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Parse connection string to get database info (without exposing credentials)
-    let connectionInfo = {};
-    try {
-      const url = new URL(process.env.CONNECTION_URL);
-      connectionInfo = {
-        protocol: url.protocol,
-        host: url.hostname,
-        port: url.port || (url.protocol === 'mongodb:' ? '27017' : 'N/A'),
-        database: url.pathname.substring(1),
-        isSrv: url.protocol.includes('srv'),
-        isAtlas: url.hostname.includes('mongodb.net')
+    // Get connection string info (without credentials)
+    if (process.env.CONNECTION_URL) {
+      try {
+        const url = new URL(process.env.CONNECTION_URL);
+        results.connectionInfo = {
+          protocol: url.protocol,
+          host: url.hostname,
+          port: url.port || (url.protocol === 'mongodb:' ? '27017' : 'N/A'),
+          database: url.pathname.substring(1),
+          isSrv: url.protocol.includes('srv')
+        };
+      } catch (urlError) {
+        results.connectionInfo = { 
+          error: "Invalid connection URL format",
+          message: urlError.message
+        };
+      }
+    } else {
+      results.connectionInfo = {
+        error: "CONNECTION_URL environment variable not set"
       };
-    } catch (urlError) {
       return res.status(500).json({
         success: false,
-        message: 'Invalid MongoDB connection string format',
-        error: urlError.message,
-        timestamp: new Date().toISOString()
+        message: 'CONNECTION_URL environment variable not set',
+        results
       });
     }
-    
-    // Close existing connection if any
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-      console.log('Closed existing connection');
+
+    // Test 1: Mongoose connection
+    try {
+      const startTime = Date.now();
+      
+      // Only connect if not already connected
+      if (mongoose.connection.readyState !== 1) {
+        // Set connection options
+        const mongooseOptions = {
+          serverSelectionTimeoutMS: 10000,
+          socketTimeoutMS: 45000,
+          connectTimeoutMS: 10000,
+          maxPoolSize: 1,
+          minPoolSize: 0,
+          bufferCommands: false,
+          autoIndex: false
+        };
+        
+        await mongoose.connect(process.env.CONNECTION_URL, mongooseOptions);
+        
+        // Ping to verify connection
+        await mongoose.connection.db.admin().ping();
+        
+        const endTime = Date.now();
+        results.connectionTests.mongoose = {
+          success: true,
+          latency: endTime - startTime + 'ms',
+          readyState: mongoose.connection.readyState
+        };
+        
+        // Close connection to avoid keeping it open
+        await mongoose.connection.close();
+      } else {
+        results.connectionTests.mongoose = {
+          success: true,
+          message: 'Already connected',
+          readyState: mongoose.connection.readyState
+        };
+      }
+    } catch (mongooseError) {
+      results.connectionTests.mongoose = {
+        success: false,
+        error: mongooseError.message,
+        name: mongooseError.name,
+        stack: process.env.NODE_ENV === 'development' ? mongooseError.stack : undefined
+      };
     }
+
+    // Test 2: Native MongoDB driver connection
+    try {
+      const startTime = Date.now();
+      
+      // Create new client
+      const client = new MongoClient(process.env.CONNECTION_URL, {
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        maxPoolSize: 1,
+        minPoolSize: 0
+      });
+      
+      // Connect and ping
+      await client.connect();
+      await client.db().admin().ping();
+      
+      const endTime = Date.now();
+      results.connectionTests.nativeDriver = {
+        success: true,
+        latency: endTime - startTime + 'ms'
+      };
+      
+      // Close connection
+      await client.close();
+    } catch (nativeError) {
+      results.connectionTests.nativeDriver = {
+        success: false,
+        error: nativeError.message,
+        name: nativeError.name,
+        stack: process.env.NODE_ENV === 'development' ? nativeError.stack : undefined
+      };
+    }
+
+    // Return results
+    const overallSuccess = 
+      results.connectionTests.mongoose?.success || 
+      results.connectionTests.nativeDriver?.success;
     
-    // Minimal connection options for direct test
-    const options = {
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 10000,
-      socketTimeoutMS: 20000,
-      maxPoolSize: 1,
-      minPoolSize: 0,
-      bufferCommands: false,
-      autoIndex: false
-    };
-    
-    console.log(`Attempting direct connection to MongoDB at ${connectionInfo.protocol}//${connectionInfo.host}:${connectionInfo.port}/${connectionInfo.database}`);
-    
-    // Record start time to measure connection speed
-    const startTime = Date.now();
-    
-    // Attempt direct connection
-    await mongoose.connect(process.env.CONNECTION_URL, options);
-    
-    // Calculate connection time
-    const connectionTime = Date.now() - startTime;
-    
-    // Test with a simple ping
-    const pingStart = Date.now();
-    const pingResult = await mongoose.connection.db.admin().ping();
-    const pingTime = Date.now() - pingStart;
-    
-    // Get server info
-    const serverStatus = await mongoose.connection.db.admin().serverStatus();
-    
-    // Test a simple find operation
-    const findStart = Date.now();
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    const findTime = Date.now() - findStart;
-    
-    // Close the connection
-    await mongoose.connection.close();
-    
-    // Return success with detailed metrics
-    return res.status(200).json({
-      success: true,
-      message: 'Successfully connected to MongoDB',
-      connectionInfo,
-      metrics: {
-        connectionTime: `${connectionTime}ms`,
-        pingTime: `${pingTime}ms`,
-        findTime: `${findTime}ms`
-      },
-      serverInfo: {
-        version: serverStatus.version,
-        uptime: serverStatus.uptime,
-        connections: serverStatus.connections?.current || 0
-      },
-      collections: collections.length,
-      timestamp: new Date().toISOString()
+    return res.status(overallSuccess ? 200 : 500).json({
+      success: overallSuccess,
+      message: overallSuccess 
+        ? 'At least one connection test succeeded' 
+        : 'All connection tests failed',
+      results
     });
   } catch (error) {
-    console.error('Direct connection error:', error);
-    
-    // Return detailed error information
+    console.error('Direct connection test error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to connect to MongoDB',
-      error: {
-        name: error.name,
-        message: error.message,
-        code: error.code
-      },
-      diagnosis: getDiagnosisFromError(error),
-      timestamp: new Date().toISOString()
+      message: 'Error running connection tests',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      results
     });
   }
 }

@@ -1,7 +1,5 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { connectDB } from '../DB/connection.js';
 
 /**
  * MongoDB connection debug endpoint for Vercel
@@ -10,33 +8,56 @@ dotenv.config();
  * @param {import('http').ServerResponse} res - HTTP response
  */
 export default async function handler(req, res) {
-  // Set CORS headers for API endpoint
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  // Handle OPTIONS request for CORS preflight
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  // Handle OPTIONS request
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
-  
+
   // Only allow GET requests
   if (req.method !== 'GET') {
-    res.status(405).json({
+    return res.status(405).json({
       success: false,
-      message: 'Method Not Allowed',
-      timestamp: new Date().toISOString()
+      message: 'Method not allowed',
+      status: 405
     });
-    return;
   }
-  
+
   try {
     // Get current connection state
     const currentState = mongoose.connection.readyState;
     const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+    const connectionState = states[currentState] || 'unknown';
     
-    // Get connection string info (without exposing credentials)
+    // Try to connect if not connected
+    let connectionResult = null;
+    if (currentState !== 1) {
+      try {
+        console.log('Attempting to connect to MongoDB...');
+        await connectDB();
+        connectionResult = {
+          success: true,
+          message: 'Successfully connected to MongoDB'
+        };
+      } catch (error) {
+        connectionResult = {
+          success: false,
+          message: 'Failed to connect to MongoDB',
+          error: error.message
+        };
+      }
+    }
+    
+    // Get connection string info (without credentials)
     let connectionInfo = {};
     if (process.env.CONNECTION_URL) {
       try {
@@ -46,9 +67,7 @@ export default async function handler(req, res) {
           host: url.hostname,
           port: url.port || (url.protocol === 'mongodb:' ? '27017' : 'N/A'),
           database: url.pathname.substring(1),
-          options: Object.fromEntries(url.searchParams),
-          isSrv: url.protocol.includes('srv'),
-          isAtlas: url.hostname.includes('mongodb.net')
+          options: url.search
         };
       } catch (urlError) {
         connectionInfo = { 
@@ -58,49 +77,70 @@ export default async function handler(req, res) {
       }
     } else {
       connectionInfo = {
-        error: "CONNECTION_URL environment variable is not set"
+        error: "CONNECTION_URL environment variable not set"
       };
     }
     
-    // Get environment variables (excluding sensitive ones)
-    const envVars = Object.keys(process.env)
-      .filter(key => !key.includes('KEY') && !key.includes('SECRET') && !key.includes('PASSWORD') && !key.includes('TOKEN'))
-      .reduce((obj, key) => {
-        if (key === 'CONNECTION_URL') {
-          obj[key] = 'REDACTED';
-        } else {
-          obj[key] = process.env[key];
-        }
-        return obj;
-      }, {});
+    // Get MongoDB options from environment variables
+    const mongodbOptions = {
+      MONGODB_CONNECTION_TIMEOUT: process.env.MONGODB_CONNECTION_TIMEOUT || 'not set',
+      MONGODB_SOCKET_TIMEOUT: process.env.MONGODB_SOCKET_TIMEOUT || 'not set',
+      MONGODB_SERVER_SELECTION_TIMEOUT: process.env.MONGODB_SERVER_SELECTION_TIMEOUT || 'not set',
+      MONGODB_MAX_RETRY_ATTEMPTS: process.env.MONGODB_MAX_RETRY_ATTEMPTS || 'not set',
+      MONGODB_BASE_RETRY_DELAY: process.env.MONGODB_BASE_RETRY_DELAY || 'not set'
+    };
     
-    // Return diagnostic information
-    res.status(200).json({
+    // Get Vercel environment information
+    const vercelInfo = {
+      VERCEL: process.env.VERCEL || 'not set',
+      VERCEL_ENV: process.env.VERCEL_ENV || 'not set',
+      VERCEL_REGION: process.env.VERCEL_REGION || 'not set',
+      VERCEL_URL: process.env.VERCEL_URL || 'not set'
+    };
+    
+    // Try a simple ping if connected
+    let pingResult = null;
+    if (currentState === 1) {
+      try {
+        const startTime = Date.now();
+        await mongoose.connection.db.admin().ping();
+        const endTime = Date.now();
+        pingResult = {
+          success: true,
+          latency: endTime - startTime + 'ms'
+        };
+      } catch (pingError) {
+        pingResult = {
+          success: false,
+          error: pingError.message
+        };
+      }
+    }
+
+    // Return debug information
+    return res.status(200).json({
+      success: true,
       timestamp: new Date().toISOString(),
-      mongooseState: {
+      mongodb: {
+        connectionState,
         readyState: currentState,
-        status: states[currentState] || 'unknown'
+        connectionResult: connectionResult || 'Already connected',
+        connectionInfo,
+        ping: pingResult,
+        options: mongodbOptions
       },
-      connectionInfo,
       environment: {
-        node: process.version,
+        NODE_ENV: process.env.NODE_ENV || 'not set',
+        vercel: vercelInfo,
         platform: process.platform,
-        env: process.env.NODE_ENV,
-        serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV,
-        region: process.env.VERCEL_REGION || 'unknown',
-        memory: process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE,
-        timeout: process.env.AWS_LAMBDA_FUNCTION_TIMEOUT
-      },
-      timeoutSettings: {
-        serverSelectionTimeoutMS: process.env.MONGODB_SERVER_SELECTION_TIMEOUT || 'default',
-        socketTimeoutMS: process.env.MONGODB_SOCKET_TIMEOUT || 'default',
-        connectTimeoutMS: process.env.MONGODB_CONNECTION_TIMEOUT || 'default'
-      },
-      envVars
+        nodeVersion: process.version
+      }
     });
   } catch (error) {
-    console.error('Debug endpoint error:', error);
-    res.status(500).json({
+    console.error('MongoDB debug error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error getting MongoDB debug information',
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
