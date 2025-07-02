@@ -1,15 +1,263 @@
 import { Router } from 'express';
 import * as controller from './user.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
-import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
+import { isValidation } from '../../middleware/validation.middleware.js';
+import {
+  toggleWishlistSchema,
+  updateProfileSchema,
+  changePasswordSchema,
+  discoverArtistsQuerySchema,
+  languagePreferenceSchema,
+  notificationSettingsSchema,
+  deleteAccountSchema,
+  reactivateAccountSchema,
+  followersQuerySchema,
+  userIdParamSchema,
+  artistIdParamSchema,
+  searchUsersSchema,
+  privacySettingsSchema
+} from './user.validation.js';
+
 const router = Router();
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     UserProfile:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           description: معرف المستخدم
+ *         displayName:
+ *           type: string
+ *           description: اسم المستخدم للعرض
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: البريد الإلكتروني
+ *         role:
+ *           type: string
+ *           enum: [user, artist]
+ *           description: دور المستخدم
+ *         profileImage:
+ *           type: object
+ *           properties:
+ *             url:
+ *               type: string
+ *               format: uri
+ *         bio:
+ *           type: string
+ *           description: نبذة عن المستخدم
+ *         phoneNumber:
+ *           type: string
+ *           description: رقم الهاتف
+ *         location:
+ *           type: string
+ *           description: الموقع
+ *         isActive:
+ *           type: boolean
+ *           description: حالة النشاط
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         stats:
+ *           type: object
+ *           properties:
+ *             totalArtworks:
+ *               type: number
+ *             totalFollowers:
+ *               type: number
+ *             totalFollowing:
+ *               type: number
+ *             avgRating:
+ *               type: number
+ */
+
+// Profile Management
+/**
+ * @swagger
+ * /api/user/profile:
+ *   get:
+ *     tags: [User]
+ *     summary: Get current user profile
+ *     description: Get the authenticated user's profile information
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/UserProfile'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/profile', isAuthenticated, controller.getMyProfile);
+
+/**
+ * @swagger
+ * /api/user/profile:
+ *   put:
+ *     tags: [User]
+ *     summary: Update user profile
+ *     description: Update user profile information
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               displayName:
+ *                 type: string
+ *                 description: اسم المستخدم للعرض
+ *               bio:
+ *                 type: string
+ *                 description: نبذة شخصية
+ *               phoneNumber:
+ *                 type: string
+ *                 description: رقم الهاتف
+ *               location:
+ *                 type: string
+ *                 description: الموقع
+ *               profileImage:
+ *                 type: object
+ *                 properties:
+ *                   url:
+ *                     type: string
+ *                   id:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.put('/profile', isAuthenticated, isValidation(updateProfileSchema), controller.updateProfile);
+
+/**
+ * @swagger
+ * /api/user/change-password:
+ *   patch:
+ *     tags: [User]
+ *     summary: Change password
+ *     description: Change user password
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *               - confirmPassword
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *                 format: password
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *               confirmPassword:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.patch('/change-password', isAuthenticated, isValidation(changePasswordSchema), controller.changePassword);
+
+// Artist Profiles
+/**
+ * @swagger
+ * /api/user/artist/{artistId}:
+ *   get:
+ *     tags: [User]
+ *     summary: Get artist profile
+ *     description: Get detailed profile information for an artist
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: معرف الفنان
+ *     responses:
+ *       200:
+ *         description: Artist profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/UserProfile'
+ *       404:
+ *         description: Artist not found
+ */
+router.get('/artist/:artistId', isValidation(artistIdParamSchema), controller.getArtistProfile);
+
+// Wishlist Management
+/**
+ * @swagger
+ * /api/user/wishlist:
+ *   get:
+ *     tags: [User]
+ *     summary: Get user wishlist
+ *     description: Get all artworks in the user's wishlist
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Wishlist retrieved successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/wishlist', isAuthenticated, controller.getWishlist);
 
 /**
  * @swagger
  * /api/user/wishlist/toggle:
  *   post:
- *     tags:
- *       - User
+ *     tags: [User]
  *     summary: Toggle artwork in wishlist
  *     description: Add or remove an artwork from user's wishlist
  *     security:
@@ -25,7 +273,8 @@ const router = Router();
  *             properties:
  *               artworkId:
  *                 type: string
- *                 description: ID of the artwork to toggle in wishlist
+ *                 pattern: '^[0-9a-fA-F]{24}$'
+ *                 description: معرف العمل الفني
  *     responses:
  *       200:
  *         description: Artwork toggled in wishlist
@@ -39,222 +288,21 @@ const router = Router();
  *                 action:
  *                   type: string
  *                   enum: [added, removed]
+ *                 message:
+ *                   type: string
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/wishlist/toggle', isAuthenticated, controller.toggleWishlist);
+router.post('/wishlist/toggle', isAuthenticated, isValidation(toggleWishlistSchema), controller.toggleWishlist);
 
-/**
- * @swagger
- * /api/user/wishlist/toggle/firebase:
- *   post:
- *     tags:
- *       - User
- *     summary: Toggle artwork in wishlist with Firebase auth
- *     description: Add or remove an artwork from user's wishlist using Firebase authentication
- *     security:
- *       - FirebaseAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - artworkId
- *             properties:
- *               artworkId:
- *                 type: string
- *     responses:
- *       200:
- *         description: Artwork toggled in wishlist
- */
-router.post('/wishlist/toggle/firebase', verifyFirebaseToken, controller.toggleWishlist);
-
-/**
- * @swagger
- * /api/user/wishlist:
- *   get:
- *     tags:
- *       - User
- *     summary: Get user wishlist
- *     description: Get all artworks in the user's wishlist
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Wishlist retrieved successfully
- */
-router.get('/wishlist', isAuthenticated, controller.getWishlist);
-
-/**
- * @swagger
- * /api/user/wishlist/firebase:
- *   get:
- *     tags:
- *       - User
- *     summary: Get user wishlist with Firebase auth
- *     description: Get all artworks in the user's wishlist using Firebase authentication
- *     security:
- *       - FirebaseAuth: []
- *     responses:
- *       200:
- *         description: Wishlist retrieved successfully
- */
-router.get('/wishlist/firebase', verifyFirebaseToken, controller.getWishlist);
-
-/**
- * @swagger
- * /api/user/profile:
- *   put:
- *     tags:
- *       - User
- *     summary: Update user profile
- *     description: Update user profile information
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               displayName:
- *                 type: string
- *               job:
- *                 type: string
- *               profileImage:
- *                 type: object
- *                 properties:
- *                   url:
- *                     type: string
- *                   id:
- *                     type: string
- *               coverImages:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     url:
- *                       type: string
- *                     id:
- *                       type: string
- *     responses:
- *       200:
- *         description: Profile updated successfully
- */
-router.put('/profile', isAuthenticated, controller.updateProfile);
-
-/**
- * @swagger
- * /api/user/profile/firebase:
- *   put:
- *     tags:
- *       - User
- *     summary: Update user profile with Firebase auth
- *     description: Update user profile information using Firebase authentication
- *     security:
- *       - FirebaseAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               displayName:
- *                 type: string
- *               job:
- *                 type: string
- *               profileImage:
- *                 type: object
- *               coverImages:
- *                 type: array
- *     responses:
- *       200:
- *         description: Profile updated successfully
- */
-router.put('/profile/firebase', verifyFirebaseToken, controller.updateProfile);
-
-/**
- * @swagger
- * /api/user/change-password:
- *   patch:
- *     tags:
- *       - User
- *     summary: Change password
- *     description: Change user password
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - oldPassword
- *               - newPassword
- *             properties:
- *               oldPassword:
- *                 type: string
- *               newPassword:
- *                 type: string
- *     responses:
- *       200:
- *         description: Password changed successfully
- */
-router.patch('/change-password', isAuthenticated, controller.changePassword);
-
-/**
- * @swagger
- * /api/user/artist-profile/{artistId}:
- *   get:
- *     tags:
- *       - User
- *     summary: Get artist profile
- *     description: Get detailed profile information for an artist
- *     parameters:
- *       - in: path
- *         name: artistId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Artist profile retrieved successfully
- *       404:
- *         description: Artist not found
- */
-router.get('/artist-profile/:artistId', controller.getArtistProfile);
-
-/**
- * @swagger
- * /api/user/profile/{artistId}:
- *   get:
- *     tags:
- *       - User
- *     summary: Get artist profile (alias)
- *     description: Get detailed profile information for an artist (alias of /artist-profile/{artistId})
- *     parameters:
- *       - in: path
- *         name: artistId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Artist profile retrieved successfully
- *       404:
- *         description: Artist not found
- */
-router.get('/profile/:artistId', controller.getArtistProfile);
-
+// Following System
 /**
  * @swagger
  * /api/user/follow/{artistId}:
  *   post:
- *     tags:
- *       - User
+ *     tags: [User]
  *     summary: Follow artist
  *     description: Follow an artist
  *     security:
@@ -265,40 +313,22 @@ router.get('/profile/:artistId', controller.getArtistProfile);
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
  *     responses:
  *       200:
  *         description: Artist followed successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/follow/:artistId', isAuthenticated, controller.followArtist);
-
-/**
- * @swagger
- * /api/user/follow/{artistId}/firebase:
- *   post:
- *     tags:
- *       - User
- *     summary: Follow artist with Firebase auth
- *     description: Follow an artist using Firebase authentication
- *     security:
- *       - FirebaseAuth: []
- *     parameters:
- *       - in: path
- *         name: artistId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Artist followed successfully
- */
-router.post('/follow/:artistId/firebase', verifyFirebaseToken, controller.followArtist);
+router.post('/follow/:artistId', isAuthenticated, isValidation(artistIdParamSchema), controller.followArtist);
 
 /**
  * @swagger
  * /api/user/unfollow/{artistId}:
  *   post:
- *     tags:
- *       - User
+ *     tags: [User]
  *     summary: Unfollow artist
  *     description: Unfollow an artist
  *     security:
@@ -309,131 +339,163 @@ router.post('/follow/:artistId/firebase', verifyFirebaseToken, controller.follow
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
  *     responses:
  *       200:
  *         description: Artist unfollowed successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/unfollow/:artistId', isAuthenticated, controller.unfollowArtist);
+router.post('/unfollow/:artistId', isAuthenticated, isValidation(artistIdParamSchema), controller.unfollowArtist);
 
 /**
  * @swagger
- * /api/user/unfollow/{artistId}/firebase:
- *   post:
- *     tags:
- *       - User
- *     summary: Unfollow artist with Firebase auth
- *     description: Unfollow an artist using Firebase authentication
- *     security:
- *       - FirebaseAuth: []
- *     parameters:
- *       - in: path
- *         name: artistId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Artist unfollowed successfully
- */
-router.post('/unfollow/:artistId/firebase', verifyFirebaseToken, controller.unfollowArtist);
-
-/**
- * @swagger
- * /api/users/artists/{artistId}/profile:
+ * /api/user/following:
  *   get:
- *     tags:
- *       - Artists
- *     summary: الحصول على الملف الشخصي للفنان
- *     description: جلب بيانات الفنان مع أعماله وإحصائياته
- *     parameters:
- *       - name: artistId
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: معرف الفنان
- *     responses:
- *       200:
- *         description: تم جلب ملف الفنان بنجاح
- *       404:
- *         description: الفنان غير موجود
- */
-router.get('/artists/:artistId/profile', controller.getArtistProfile);
-
-/**
- * @swagger
- * /api/user/favorites:
- *   get:
- *     tags:
- *       - User
- *     summary: جلب الأعمال الفنية المفضلة
- *     description: جلب قائمة الأعمال الفنية المفضلة للمستخدم
+ *     tags: [User]
+ *     summary: Get following list
+ *     description: Get list of artists the user is following
  *     security:
  *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: تم جلب الأعمال الفنية المفضلة بنجاح
- */
-router.get('/favorites', isAuthenticated, controller.getFavoriteArtworks);
-
-/**
- * @swagger
- * /api/user/favorites/firebase:
- *   get:
- *     tags:
- *       - User
- *     summary: جلب الأعمال الفنية المفضلة باستخدام Firebase
- *     description: جلب قائمة الأعمال الفنية المفضلة للمستخدم المصادق عبر Firebase
- *     security:
- *       - FirebaseAuth: []
- *     responses:
- *       200:
- *         description: تم جلب الأعمال الفنية المفضلة بنجاح
- */
-router.get('/favorites/firebase', verifyFirebaseToken, controller.getFavoriteArtworks);
-
-/**
- * @swagger
- * /api/user/discover-artists:
- *   get:
- *     tags:
- *       - User
- *     summary: Discover new artists
- *     description: Get a list of new or popular artists with pagination
  *     parameters:
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
+ *           minimum: 1
  *           default: 1
- *         description: Page number for pagination
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *           maximum: 50
  *           default: 10
- *         description: Number of artists per page
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum: [newest, popular, recommended]
- *           default: newest
- *         description: Sort order for artists
  *     responses:
  *       200:
- *         description: Artists retrieved successfully
+ *         description: Following list retrieved successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/discover-artists', controller.discoverArtists);
+router.get('/following', isAuthenticated, controller.getFollowing);
 
+/**
+ * @swagger
+ * /api/user/followers:
+ *   get:
+ *     tags: [User]
+ *     summary: Get followers list
+ *     description: Get list of users following the current user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Followers list retrieved successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ */
+router.get('/followers', isAuthenticated, controller.getFollowers);
+
+// Discovery
+/**
+ * @swagger
+ * /api/user/discover/artists:
+ *   get:
+ *     tags: [User]
+ *     summary: Discover artists
+ *     description: Discover new artists based on preferences
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Artists discovered successfully
+ */
+router.get('/discover/artists', isValidation(discoverArtistsQuerySchema), controller.discoverArtists);
+
+/**
+ * @swagger
+ * /api/user/search:
+ *   get:
+ *     tags: [User]
+ *     summary: Search users
+ *     description: Search for users by name or email
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *         description: Search query
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [all, artist, user]
+ *           default: all
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Search results retrieved successfully
+ */
+router.get('/search', isValidation(searchUsersSchema), controller.searchUsers);
+
+// Settings
 /**
  * @swagger
  * /api/user/settings/language:
  *   put:
- *     tags:
- *       - User Settings
- *     summary: تحديث تفضيلات اللغة
- *     description: تحديث لغة التطبيق المفضلة للمستخدم
+ *     tags: [User]
+ *     summary: Update language preference
+ *     description: Update user's language preference
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -448,54 +510,24 @@ router.get('/discover-artists', controller.discoverArtists);
  *               language:
  *                 type: string
  *                 enum: [ar, en]
- *                 description: رمز اللغة المطلوبة
+ *                 description: Language code
  *     responses:
  *       200:
- *         description: تم تحديث اللغة بنجاح
+ *         description: Language preference updated successfully
  *       400:
- *         description: اللغة غير مدعومة
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.put('/settings/language', isAuthenticated, controller.updateLanguagePreference);
-
-/**
- * @swagger
- * /api/user/settings/language/firebase:
- *   put:
- *     tags:
- *       - User Settings
- *     summary: تحديث تفضيلات اللغة (Firebase)
- *     description: تحديث لغة التطبيق المفضلة للمستخدم مع مصادقة Firebase
- *     security:
- *       - FirebaseAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - language
- *             properties:
- *               language:
- *                 type: string
- *                 enum: [ar, en]
- *                 description: رمز اللغة المطلوبة
- *     responses:
- *       200:
- *         description: تم تحديث اللغة بنجاح
- *       400:
- *         description: اللغة غير مدعومة
- */
-router.put('/settings/language/firebase', verifyFirebaseToken, controller.updateLanguagePreference);
+router.put('/settings/language', isAuthenticated, isValidation(languagePreferenceSchema), controller.updateLanguagePreference);
 
 /**
  * @swagger
  * /api/user/settings/notifications:
  *   put:
- *     tags:
- *       - User Settings
- *     summary: تحديث إعدادات الإشعارات
- *     description: تحديث تفضيلات الإشعارات للمستخدم
+ *     tags: [User]
+ *     summary: Update notification settings
+ *     description: Update user's notification preferences
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -505,31 +537,29 @@ router.put('/settings/language/firebase', verifyFirebaseToken, controller.update
  *           schema:
  *             type: object
  *             properties:
- *               enablePush:
+ *               emailNotifications:
  *                 type: boolean
- *                 description: تفعيل الإشعارات المباشرة
- *               enableEmail:
+ *               pushNotifications:
  *                 type: boolean
- *                 description: تفعيل إشعارات البريد الإلكتروني
- *               muteChat:
+ *               marketingEmails:
  *                 type: boolean
- *                 description: كتم إشعارات المحادثات
  *     responses:
  *       200:
- *         description: تم تحديث إعدادات الإشعارات بنجاح
+ *         description: Notification settings updated successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.put('/settings/notifications', isAuthenticated, controller.updateNotificationSettings);
+router.put('/settings/notifications', isAuthenticated, isValidation(notificationSettingsSchema), controller.updateNotificationSettings);
 
 /**
  * @swagger
- * /api/user/settings/notifications/firebase:
+ * /api/user/settings/privacy:
  *   put:
- *     tags:
- *       - User Settings
- *     summary: تحديث إعدادات الإشعارات (Firebase)
- *     description: تحديث تفضيلات الإشعارات للمستخدم مع مصادقة Firebase
+ *     tags: [User]
+ *     summary: Update privacy settings
+ *     description: Update user's privacy settings
  *     security:
- *       - FirebaseAuth: []
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -537,108 +567,67 @@ router.put('/settings/notifications', isAuthenticated, controller.updateNotifica
  *           schema:
  *             type: object
  *             properties:
- *               enablePush:
+ *               profileVisibility:
+ *                 type: string
+ *                 enum: [public, private]
+ *               showEmail:
  *                 type: boolean
- *                 description: تفعيل الإشعارات المباشرة
- *               enableEmail:
+ *               showPhone:
  *                 type: boolean
- *                 description: تفعيل إشعارات البريد الإلكتروني
- *               muteChat:
- *                 type: boolean
- *                 description: كتم إشعارات المحادثات
  *     responses:
  *       200:
- *         description: تم تحديث إعدادات الإشعارات بنجاح
+ *         description: Privacy settings updated successfully
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.put(
-  '/settings/notifications/firebase',
-  verifyFirebaseToken,
-  controller.updateNotificationSettings
-);
+router.put('/settings/privacy', isAuthenticated, isValidation(privacySettingsSchema), controller.updatePrivacySettings);
 
+// Account Management
 /**
  * @swagger
  * /api/user/delete-account:
  *   delete:
- *     tags:
- *       - User
- *     summary: حذف الحساب
- *     description: حذف حساب المستخدم بشكل نهائي
+ *     tags: [User]
+ *     summary: Delete user account
+ *     description: Permanently delete user account
  *     security:
  *       - BearerAuth: []
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - password
+ *               - confirmDeletion
  *             properties:
  *               password:
  *                 type: string
- *                 description: كلمة المرور للتأكيد
+ *                 format: password
+ *               confirmDeletion:
+ *                 type: string
+ *                 enum: [DELETE]
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for deletion
  *     responses:
  *       200:
- *         description: تم حذف الحساب بنجاح
+ *         description: Account deleted successfully
  *       400:
- *         description: كلمة المرور غير صحيحة
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.delete('/delete-account', isAuthenticated, controller.deleteAccount);
+router.delete('/delete-account', isAuthenticated, isValidation(deleteAccountSchema), controller.deleteAccount);
 
 /**
  * @swagger
- * /api/user/delete-account/firebase:
- *   delete:
- *     tags:
- *       - User
- *     summary: حذف الحساب (Firebase)
- *     description: حذف حساب المستخدم بشكل نهائي مع مصادقة Firebase
- *     security:
- *       - FirebaseAuth: []
- *     responses:
- *       200:
- *         description: تم حذف الحساب بنجاح
- */
-router.delete('/delete-account/firebase', verifyFirebaseToken, controller.deleteAccount);
-
-/**
- * @swagger
- * /api/user/logout-all:
+ * /api/user/reactivate-account:
  *   post:
- *     tags:
- *       - User
- *     summary: تسجيل الخروج من جميع الأجهزة
- *     description: إبطال جميع جلسات المستخدم وتسجيل الخروج من جميع الأجهزة
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: تم تسجيل الخروج بنجاح
- */
-router.post('/logout-all', isAuthenticated, controller.logoutAllDevices);
-
-/**
- * @swagger
- * /api/user/deactivate:
- *   post:
- *     tags:
- *       - User
- *     summary: تعطيل الحساب
- *     description: تعطيل حساب المستخدم مؤقتاً
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: تم تعطيل الحساب بنجاح
- */
-router.post('/deactivate', isAuthenticated, controller.deactivateAccount);
-
-/**
- * @swagger
- * /api/user/reactivate:
- *   post:
- *     tags:
- *       - User
- *     summary: إعادة تنشيط الحساب
- *     description: إعادة تنشيط حساب المستخدم المعطل
+ *     tags: [User]
+ *     summary: Reactivate deactivated account
+ *     description: Reactivate a previously deactivated account
  *     requestBody:
  *       required: true
  *       content:
@@ -654,67 +643,15 @@ router.post('/deactivate', isAuthenticated, controller.deactivateAccount);
  *                 format: email
  *               password:
  *                 type: string
+ *                 format: password
  *     responses:
  *       200:
- *         description: تم إعادة تنشيط الحساب بنجاح
- *       404:
- *         description: البريد الإلكتروني غير مسجل
- */
-router.post('/reactivate', controller.reactivateAccount);
-
-/**
- * @swagger
- * /api/user/preferences/language:
- *   patch:
- *     tags:
- *       - Users
- *       - Settings
- *     summary: تحديث اللغة المفضلة
- *     description: تحديث إعداد اللغة المفضلة للمستخدم
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/LanguagePreference'
- *           examples:
- *             Arabic:
- *               value:
- *                 language: 'ar'
- *             English:
- *               value:
- *                 language: 'en'
- *     responses:
- *       200:
- *         description: تم تحديث اللغة المفضلة بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: تم تحديث اللغة المفضلة بنجاح
- *                 data:
- *                   type: object
- *                   properties:
- *                     preferredLanguage:
- *                       type: string
- *                       example: ar
+ *         description: Account reactivated successfully
  *       400:
- *         description: بيانات غير صالحة
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
+ *         $ref: '#/components/responses/BadRequestError'
+ *       404:
+ *         description: Account not found or not deactivated
  */
-router.patch('/preferences/language', isAuthenticated, controller.updateLanguagePreference);
+router.post('/reactivate-account', isValidation(reactivateAccountSchema), controller.reactivateAccount);
 
 export default router;

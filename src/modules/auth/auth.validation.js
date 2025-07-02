@@ -1,37 +1,10 @@
-import joi from 'joi';
+import Joi from 'joi';
 
 /**
- * Default validation error messages in Arabic
- */
-const defaultMessages = {
-  'string.base': '{#label} يجب أن يكون نصًا.',
-  'string.empty': '{#label} مطلوب ولا يمكن أن يكون فارغًا.',
-  'string.min': '{#label} يجب أن يكون على الأقل {#limit} أحرف.',
-  'string.max': '{#label} يجب ألا يزيد عن {#limit} أحرف.',
-  'string.pattern.base': '{#label} يحتوي على تنسيق غير صالح.',
-  'any.required': '{#label} مطلوب.',
-  'any.only': '{#label} يجب أن يكون من القيم المسموح بها.',
-  'string.email': 'البريد الإلكتروني غير صالح، يرجى إدخال بريد إلكتروني صحيح.'
-};
-
-/**
- * Password pattern: At least 8 characters, one uppercase, one number or special character
- */
-const passwordPattern = /^(?=.*[A-Z])(?=.*\d|.*[!@#$%^&*(),.?":{}|<>])(?=.{8,}).*$/;
-const passwordMessage = 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل، حرف كبير، ورقم أو رمز خاص.';
-
-/**
- * Verification code pattern: 4 digits
- */
-const codePattern = /^\d{4}$/;
-const codeMessage = '{#label} يجب أن يتكون من 4 أرقام.';
-
-/**
- * Registration validation schema
  * @swagger
  * components:
  *   schemas:
- *     RegisterValidation:
+ *     RegisterRequest:
  *       type: object
  *       required:
  *         - email
@@ -42,53 +15,32 @@ const codeMessage = '{#label} يجب أن يتكون من 4 أرقام.';
  *         email:
  *           type: string
  *           format: email
+ *           description: البريد الإلكتروني للمستخدم
+ *           example: "user@example.com"
  *         password:
  *           type: string
  *           format: password
+ *           minLength: 8
+ *           description: كلمة المرور (8 أحرف على الأقل، تحتوي على حرف كبير ورقم أو رمز خاص)
+ *           example: "Password123!"
  *         confirmPassword:
  *           type: string
  *           format: password
+ *           description: تأكيد كلمة المرور
+ *           example: "Password123!"
  *         displayName:
  *           type: string
+ *           minLength: 2
+ *           maxLength: 50
+ *           description: اسم المستخدم للعرض
+ *           example: "أحمد محمد"
  *         phoneNumber:
  *           type: string
- *         job:
- *           type: string
- */
-export const registerSchema = joi
-  .object({
-    email: joi.string().email().required().label('البريد الإلكتروني'),
-    password: joi
-      .string()
-      .pattern(passwordPattern)
-      .required()
-      .label('كلمة المرور')
-      .messages({
-        ...defaultMessages,
-        'string.pattern.base': passwordMessage
-      }),
-    confirmPassword: joi
-      .string()
-      .valid(joi.ref('password'))
-      .required()
-      .label('تأكيد كلمة المرور')
-      .messages({
-        ...defaultMessages,
-        'any.only': 'تأكيد كلمة المرور يجب أن يطابق كلمة المرور.'
-      }),
-    displayName: joi.string().required().label('الاسم').messages(defaultMessages),
-    phoneNumber: joi.string().optional().label('رقم الهاتف').messages(defaultMessages),
-    job: joi.string().optional().label('الوظيفة').messages(defaultMessages)
-  })
-  .messages(defaultMessages)
-  .required();
-
-/**
- * Login validation schema
- * @swagger
- * components:
- *   schemas:
- *     LoginValidation:
+ *           pattern: '^\+[1-9]\d{1,14}$'
+ *           description: رقم الهاتف (اختياري)
+ *           example: "+966512345678"
+ *     
+ *     LoginRequest:
  *       type: object
  *       required:
  *         - email
@@ -97,200 +49,149 @@ export const registerSchema = joi
  *         email:
  *           type: string
  *           format: email
+ *           description: البريد الإلكتروني
+ *           example: "user@example.com"
  *         password:
  *           type: string
  *           format: password
+ *           description: كلمة المرور
+ *           example: "Password123!"
  */
-export const loginSchema = joi
-  .object({
-    email: joi.string().email().required().label('البريد الإلكتروني').messages(defaultMessages),
-    password: joi.string().required().label('كلمة المرور').messages(defaultMessages)
-  })
-  .required();
 
-/**
- * Forget password validation schema
- * @swagger
- * components:
- *   schemas:
- *     ForgetPasswordValidation:
- *       type: object
- *       required:
- *         - email
- *       properties:
- *         email:
- *           type: string
- *           format: email
- */
-export const forgetCode = joi
-  .object({
-    email: joi.string().email().required().label('البريد الإلكتروني').messages(defaultMessages)
-  })
-  .required();
+// Password validation pattern
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d|.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/;
 
-/**
- * Reset password validation schema
- * @swagger
- * components:
- *   schemas:
- *     ResetPasswordValidation:
- *       type: object
- *       required:
- *         - password
- *         - confirmPassword
- *       properties:
- *         password:
- *           type: string
- *           format: password
- *         confirmPassword:
- *           type: string
- *           format: password
- */
-export const resetPassword = joi
-  .object({
-    password: joi
-      .string()
-      .pattern(passwordPattern)
+// Common validation schemas
+const emailSchema = Joi.string()
+  .email({ tlds: { allow: false } })
+  .required()
+  .messages({
+    'string.email': 'يرجى إدخال بريد إلكتروني صحيح',
+    'any.required': 'البريد الإلكتروني مطلوب'
+  });
+
+const passwordSchema = Joi.string()
+  .min(8)
+  .pattern(passwordPattern)
+  .required()
+  .messages({
+    'string.min': 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+    'string.pattern.base': 'كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم أو رمز خاص',
+    'any.required': 'كلمة المرور مطلوبة'
+  });
+
+const displayNameSchema = Joi.string()
+  .min(2)
+  .max(50)
+  .trim()
+  .required()
+  .messages({
+    'string.min': 'الاسم يجب أن يكون حرفين على الأقل',
+    'string.max': 'الاسم يجب أن يكون أقل من 50 حرف',
+    'any.required': 'الاسم مطلوب'
+  });
+
+// Registration validation
+export const registerSchema = {
+  body: Joi.object({
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: Joi.string()
+      .valid(Joi.ref('password'))
       .required()
-      .label('كلمة المرور الجديدة')
       .messages({
-        ...defaultMessages,
-        'string.pattern.base': passwordMessage
+        'any.only': 'تأكيد كلمة المرور غير مطابق',
+        'any.required': 'تأكيد كلمة المرور مطلوب'
       }),
-    confirmPassword: joi
-      .string()
-      .valid(joi.ref('password'))
-      .required()
-      .label('تأكيد كلمة المرور')
+    displayName: displayNameSchema,
+    phoneNumber: Joi.string()
+      .pattern(/^\+[1-9]\d{1,14}$/)
+      .optional()
       .messages({
-        ...defaultMessages,
-        'any.only': 'تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.'
+        'string.pattern.base': 'رقم الهاتف غير صحيح، يجب أن يبدأ بـ + ورمز الدولة'
       })
   })
-  .required();
+};
 
-/**
- * Verification code validation schema
- * @swagger
- * components:
- *   schemas:
- *     VerificationCodeValidation:
- *       type: object
- *       required:
- *         - verificationCode
- *       properties:
- *         verificationCode:
- *           type: string
- *           pattern: ^\d{4}$
- */
-export const verify = joi
-  .object({
-    verificationCode: joi
-      .string()
-      .pattern(codePattern)
+// Login validation
+export const loginSchema = {
+  body: Joi.object({
+    email: emailSchema,
+    password: Joi.string()
       .required()
-      .label('رمز التحقق')
       .messages({
-        ...defaultMessages,
-        'string.pattern.base': codeMessage
+        'any.required': 'كلمة المرور مطلوبة'
       })
   })
-  .required();
+};
 
-/**
- * Forget code verification validation schema
- * @swagger
- * components:
- *   schemas:
- *     VerifyForgetCodeValidation:
- *       type: object
- *       required:
- *         - email
- *         - forgetCode
- *       properties:
- *         email:
- *           type: string
- *           format: email
- *         forgetCode:
- *           type: string
- *           pattern: ^\d{4}$
- */
-export const verifyForgetCode = joi
-  .object({
-    email: joi.string().email().required().label('البريد الإلكتروني').messages(defaultMessages),
-    forgetCode: joi
-      .string()
-      .pattern(codePattern)
+// Forget password validation
+export const forgetPasswordSchema = {
+  body: Joi.object({
+    email: emailSchema
+  })
+};
+
+// Verify forget code validation
+export const verifyForgetCodeSchema = {
+  body: Joi.object({
+    email: emailSchema,
+    forgetCode: Joi.string()
+      .pattern(/^\d{4}$/)
       .required()
-      .label('رمز التحقق')
       .messages({
-        ...defaultMessages,
-        'string.pattern.base': codeMessage
+        'string.pattern.base': 'رمز التحقق يجب أن يكون 4 أرقام',
+        'any.required': 'رمز التحقق مطلوب'
       })
   })
-  .required();
+};
 
-/**
- * Reset password by code validation schema
- * @swagger
- * components:
- *   schemas:
- *     ResetPasswordByCodeValidation:
- *       type: object
- *       required:
- *         - email
- *         - password
- *         - confirmPassword
- *       properties:
- *         email:
- *           type: string
- *           format: email
- *         password:
- *           type: string
- *           format: password
- *         confirmPassword:
- *           type: string
- *           format: password
- */
-export const resetPasswordByCode = joi
-  .object({
-    email: joi.string().email().required().label('البريد الإلكتروني').messages(defaultMessages),
-    password: joi
-      .string()
-      .pattern(passwordPattern)
+// Reset password validation
+export const resetPasswordSchema = {
+  body: Joi.object({
+    email: emailSchema,
+    password: passwordSchema,
+    confirmPassword: Joi.string()
+      .valid(Joi.ref('password'))
       .required()
-      .label('كلمة المرور الجديدة')
       .messages({
-        ...defaultMessages,
-        'string.pattern.base': passwordMessage
-      }),
-    confirmPassword: joi
-      .string()
-      .valid(joi.ref('password'))
-      .required()
-      .label('تأكيد كلمة المرور')
-      .messages({
-        ...defaultMessages,
-        'any.only': 'تأكيد كلمة المرور يجب أن يطابق كلمة المرور الجديدة.'
+        'any.only': 'تأكيد كلمة المرور غير مطابق',
+        'any.required': 'تأكيد كلمة المرور مطلوب'
       })
   })
-  .required();
+};
 
-/**
- * FCM token validation schema
- * @swagger
- * components:
- *   schemas:
- *     FCMTokenValidation:
- *       type: object
- *       required:
- *         - fcmToken
- *       properties:
- *         fcmToken:
- *           type: string
- */
-export const fcmTokenSchema = joi
-  .object({
-    fcmToken: joi.string().required().label('رمز الإشعارات').messages(defaultMessages)
+// FCM token validation
+export const fcmTokenSchema = {
+  body: Joi.object({
+    fcmToken: Joi.string()
+      .required()
+      .messages({
+        'any.required': 'رمز الإشعارات مطلوب',
+        'string.empty': 'رمز الإشعارات لا يمكن أن يكون فارغ'
+      })
   })
-  .required();
+};
+
+// Refresh token validation
+export const refreshTokenSchema = {
+  body: Joi.object({
+    refreshToken: Joi.string()
+      .required()
+      .messages({
+        'any.required': 'رمز التحديث مطلوب',
+        'string.empty': 'رمز التحديث لا يمكن أن يكون فارغ'
+      })
+  })
+};
+
+// Export all schemas for easy access
+export default {
+  registerSchema,
+  loginSchema,
+  forgetPasswordSchema,
+  verifyForgetCodeSchema,
+  resetPasswordSchema,
+  fcmTokenSchema,
+  refreshTokenSchema
+};

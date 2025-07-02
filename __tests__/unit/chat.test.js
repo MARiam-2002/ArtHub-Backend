@@ -1,302 +1,561 @@
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
+import mongoose from 'mongoose';
+import chatModel from '../../DB/models/chat.model.js';
+import messageModel from '../../DB/models/message.model.js';
+import userModel from '../../DB/models/user.model.js';
 
-// Create mock socket functions instead of importing
-const socketServiceMock = {
-  sendToChat: jest.fn(),
-  sendToUser: jest.fn()
-};
+// Mock Socket.io
+jest.mock('../../src/utils/socketService.js', () => ({
+  emitToUser: jest.fn(),
+  emitToRoom: jest.fn(),
+  joinRoom: jest.fn(),
+  leaveRoom: jest.fn()
+}));
 
-// Create mock functions for the controller functions we're testing
-const createChat = async (req, res, next) => {
-  try {
-    const { userId: otherUserId } = req.body;
-    const userId = req.user._id;
+// Mock push notifications
+jest.mock('../../src/utils/pushNotifications.js', () => ({
+  sendPushNotification: jest.fn().mockResolvedValue(true)
+}));
 
-    // Mock user validation
-    if (otherUserId === 'nonexistent_user') {
-      return res.fail(null, 'المستخدم غير موجود', 404);
-    }
+describe('Chat Controller', () => {
+  let req, res, next;
+  let testUser1, testUser2, testChat, testMessage;
 
-    // Mock existing chat check
-    if (otherUserId === 'existing_chat_user') {
-      return res.success(
-        {
-          _id: 'existing_chat_123',
-          otherUser: {
-            _id: otherUserId,
-            displayName: 'Existing Chat User',
-            profileImage: 'profile.jpg'
-          }
-        },
-        'المحادثة موجودة بالفعل'
-      );
-    }
+  beforeAll(async () => {
+    // Connect to test database
+    await mongoose.connect(process.env.MONGODB_TEST_URI || 'mongodb://localhost:27017/arthub_test');
+  });
 
-    // Mock chat creation
-    const chatId = 'new_chat_123';
+  afterAll(async () => {
+    await mongoose.connection.close();
+  });
 
-    return res.success(
-      {
-        _id: chatId,
-        otherUser: {
-          _id: otherUserId,
-          displayName: 'Test User',
-          profileImage: 'profile.jpg'
-        }
-      },
-      'تم إنشاء المحادثة بنجاح'
-    );
-  } catch (error) {
-    next(error);
-  }
-};
+  beforeEach(async () => {
+    // Clean up database
+    await chatModel.deleteMany({});
+    await messageModel.deleteMany({});
+    await userModel.deleteMany({});
 
-const sendMessage = async (req, res, next) => {
-  try {
-    const { chatId } = req.params;
-    const { content } = req.body;
-    const userId = req.user._id;
-
-    // Mock chat validation
-    if (chatId === 'nonexistent_chat') {
-      return res.status(404).json({
-        success: false,
-        message: 'المحادثة غير موجودة',
-        error: 'Chat not found'
-      });
-    }
-
-    // Mock message creation
-    const messageId = 'message_123';
-    const receiverId = 'receiver_123';
-
-    // Use our mock socket service
-    socketServiceMock.sendToChat(chatId, 'new_message', {
-      content,
-      isFromMe: false,
-      chatId
+    // Create test users
+    testUser1 = await userModel.create({
+      displayName: 'Test User 1',
+      email: 'user1@test.com',
+      password: 'password123',
+      isEmailVerified: true
     });
 
-    socketServiceMock.sendToUser(receiverId, 'update_chat_list', { chatId });
-
-    // Return success response
-    return res.status(201).json({
-      success: true,
-      message: 'تم إرسال الرسالة بنجاح',
-      data: {
-        _id: messageId,
-        content: content,
-        isFromMe: true,
-        sender: {
-          _id: userId,
-          displayName: 'Test Sender',
-          profileImage: 'sender-profile.jpg'
-        },
-        isRead: false,
-        createdAt: new Date()
-      }
+    testUser2 = await userModel.create({
+      displayName: 'Test User 2',
+      email: 'user2@test.com',
+      password: 'password123',
+      isEmailVerified: true
     });
-  } catch (error) {
-    next(error);
-  }
-};
 
-const getUserChats = async (req, res, next) => {
-  try {
-    const userId = req.user._id;
+    // Create test chat
+    testChat = await chatModel.create({
+      participants: [testUser1._id, testUser2._id]
+    });
 
-    // Mock chats data
-    const chats = [
-      {
-        _id: 'chat_123',
-        otherUser: {
-          _id: 'user_456',
-          displayName: 'User One',
-          profileImage: 'profile1.jpg'
-        },
-        lastMessage: {
-          content: 'Hello there!',
-          isFromMe: false,
-          createdAt: new Date()
-        },
-        unreadCount: 2,
-        updatedAt: new Date()
-      },
-      {
-        _id: 'chat_456',
-        otherUser: {
-          _id: 'user_789',
-          displayName: 'User Two',
-          profileImage: 'profile2.jpg'
-        },
-        lastMessage: {
-          content: 'How are you?',
-          isFromMe: true,
-          createdAt: new Date()
-        },
-        unreadCount: 0,
-        updatedAt: new Date()
-      }
-    ];
+    // Create test message
+    testMessage = await messageModel.create({
+      chat: testChat._id,
+      sender: testUser1._id,
+      content: 'Test message',
+      messageType: 'text'
+    });
 
-    return res.success(chats, 'تم جلب المحادثات بنجاح');
-  } catch (error) {
-    next(error);
-  }
-};
-
-describe('Chat Controller - Unit Tests', () => {
-  let req;
-  let res;
-  let next;
-
-  beforeEach(() => {
+    // Mock request, response, and next
     req = {
-      user: {
-        _id: 'user_123'
-      },
-      body: {},
-      params: {}
+      user: { _id: testUser1._id },
+      params: {},
+      query: {},
+      body: {}
     };
 
     res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
       success: jest.fn(),
-      fail: jest.fn()
+      error: jest.fn(),
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn()
     };
 
     next = jest.fn();
+  });
 
-    // Reset all mocks
+  afterEach(async () => {
     jest.clearAllMocks();
-  });
-
-  describe('createChat', () => {
-    it('should create a new chat successfully', async () => {
-      // Set request body
-      req.body = {
-        userId: 'other_user_123'
-      };
-
-      // Call the function
-      await createChat(req, res, next);
-
-      // Assertions
-      expect(res.success).toHaveBeenCalledWith(
-        expect.objectContaining({
-          _id: expect.any(String),
-          otherUser: expect.objectContaining({
-            _id: 'other_user_123'
-          })
-        }),
-        'تم إنشاء المحادثة بنجاح'
-      );
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should return existing chat if already exists', async () => {
-      // Set request body for existing chat
-      req.body = {
-        userId: 'existing_chat_user'
-      };
-
-      // Call the function
-      await createChat(req, res, next);
-
-      // Assertions
-      expect(res.success).toHaveBeenCalledWith(
-        expect.objectContaining({
-          _id: 'existing_chat_123',
-          otherUser: expect.objectContaining({
-            _id: 'existing_chat_user'
-          })
-        }),
-        'المحادثة موجودة بالفعل'
-      );
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should return 404 if other user not found', async () => {
-      // Set request body with non-existent user
-      req.body = {
-        userId: 'nonexistent_user'
-      };
-
-      // Call the function
-      await createChat(req, res, next);
-
-      // Assertions
-      expect(res.fail).toHaveBeenCalledWith(null, 'المستخدم غير موجود', 404);
-      expect(next).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('sendMessage', () => {
-    it('should send a message successfully', async () => {
-      // Set request params and body
-      req.params = { chatId: 'chat_123' };
-      req.body = { content: 'Hello, how are you?' };
-
-      // Call the function
-      await sendMessage(req, res, next);
-
-      // Assertions
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: 'تم إرسال الرسالة بنجاح',
-          data: expect.objectContaining({
-            content: 'Hello, how are you?',
-            isFromMe: true
-          })
-        })
-      );
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should return 404 if chat not found', async () => {
-      // Set request params for non-existent chat
-      req.params = { chatId: 'nonexistent_chat' };
-      req.body = { content: 'Hello, how are you?' };
-
-      // Call the function
-      await sendMessage(req, res, next);
-
-      // Assertions
-      expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: 'المحادثة غير موجودة'
-        })
-      );
-      expect(next).not.toHaveBeenCalled();
-    });
   });
 
   describe('getUserChats', () => {
     it('should get user chats successfully', async () => {
-      // Call the function
+      const { getUserChats } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.query = { page: 1, limit: 20 };
+
       await getUserChats(req, res, next);
 
-      // Assertions
       expect(res.success).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            _id: expect.any(String),
-            otherUser: expect.objectContaining({
-              _id: expect.any(String),
-              displayName: expect.any(String)
-            }),
-            lastMessage: expect.any(Object),
-            unreadCount: expect.any(Number)
-          })
-        ]),
+        expect.objectContaining({
+          chats: expect.any(Array),
+          pagination: expect.any(Object)
+        }),
         'تم جلب المحادثات بنجاح'
       );
-      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('should handle pagination correctly', async () => {
+      const { getUserChats } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.query = { page: 2, limit: 10 };
+
+      await getUserChats(req, res, next);
+
+      expect(res.success).toHaveBeenCalled();
+    });
+
+    it('should filter chats by search query', async () => {
+      const { getUserChats } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.query = { search: 'Test User' };
+
+      await getUserChats(req, res, next);
+
+      expect(res.success).toHaveBeenCalled();
+    });
+  });
+
+  describe('createChat', () => {
+    it('should create a new chat successfully', async () => {
+      const { createChat } = await import('../../src/modules/chat/chat.controller.js');
+      
+      // Create a third user to chat with
+      const testUser3 = await userModel.create({
+        displayName: 'Test User 3',
+        email: 'user3@test.com',
+        password: 'password123',
+        isEmailVerified: true
+      });
+
+      req.body = { participantId: testUser3._id.toString() };
+
+      await createChat(req, res, next);
+
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _id: expect.any(Object),
+          participants: expect.any(Array)
+        }),
+        'تم إنشاء المحادثة بنجاح'
+      );
+    });
+
+    it('should return existing chat if already exists', async () => {
+      const { createChat } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.body = { participantId: testUser2._id.toString() };
+
+      await createChat(req, res, next);
+
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _id: testChat._id
+        }),
+        'المحادثة موجودة بالفعل'
+      );
+    });
+
+    it('should handle invalid participant ID', async () => {
+      const { createChat } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.body = { participantId: new mongoose.Types.ObjectId().toString() };
+
+      await createChat(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 404,
+          message: 'المستخدم غير موجود'
+        })
+      );
+    });
+
+    it('should prevent creating chat with self', async () => {
+      const { createChat } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.body = { participantId: testUser1._id.toString() };
+
+      await createChat(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'لا يمكن إنشاء محادثة مع نفسك'
+        })
+      );
+    });
+  });
+
+  describe('getMessages', () => {
+    it('should get chat messages successfully', async () => {
+      const { getMessages } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: testChat._id.toString() };
+      req.query = { page: 1, limit: 50 };
+
+      await getMessages(req, res, next);
+
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messages: expect.any(Array),
+          pagination: expect.any(Object)
+        }),
+        'تم جلب الرسائل بنجاح'
+      );
+    });
+
+    it('should handle non-participant access', async () => {
+      const { getMessages } = await import('../../src/modules/chat/chat.controller.js');
+      
+      // Create another user who is not a participant
+      const testUser3 = await userModel.create({
+        displayName: 'Test User 3',
+        email: 'user3@test.com',
+        password: 'password123',
+        isEmailVerified: true
+      });
+
+      req.user = { _id: testUser3._id };
+      req.params = { chatId: testChat._id.toString() };
+
+      await getMessages(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'ليس لديك صلاحية للوصول لهذه المحادثة'
+        })
+      );
+    });
+
+    it('should handle invalid chat ID', async () => {
+      const { getMessages } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: new mongoose.Types.ObjectId().toString() };
+
+      await getMessages(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 404,
+          message: 'المحادثة غير موجودة'
+        })
+      );
+    });
+
+    it('should filter messages by date range', async () => {
+      const { getMessages } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: testChat._id.toString() };
+      req.query = { 
+        before: new Date().toISOString(),
+        after: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      };
+
+      await getMessages(req, res, next);
+
+      expect(res.success).toHaveBeenCalled();
+    });
+  });
+
+  describe('sendMessage', () => {
+    it('should send message successfully', async () => {
+      const { sendMessage } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: testChat._id.toString() };
+      req.body = { 
+        content: 'New test message',
+        messageType: 'text'
+      };
+
+      await sendMessage(req, res, next);
+
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _id: expect.any(Object),
+          content: 'New test message',
+          sender: testUser1._id
+        }),
+        'تم إرسال الرسالة بنجاح'
+      );
+    });
+
+    it('should handle non-participant sending message', async () => {
+      const { sendMessage } = await import('../../src/modules/chat/chat.controller.js');
+      
+      // Create another user who is not a participant
+      const testUser3 = await userModel.create({
+        displayName: 'Test User 3',
+        email: 'user3@test.com',
+        password: 'password123',
+        isEmailVerified: true
+      });
+
+      req.user = { _id: testUser3._id };
+      req.params = { chatId: testChat._id.toString() };
+      req.body = { content: 'Unauthorized message' };
+
+      await sendMessage(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'ليس لديك صلاحية للإرسال في هذه المحادثة'
+        })
+      );
+    });
+
+    it('should handle empty message content', async () => {
+      const { sendMessage } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: testChat._id.toString() };
+      req.body = { content: '' };
+
+      await sendMessage(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400
+        })
+      );
+    });
+
+    it('should update chat lastMessage', async () => {
+      const { sendMessage } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: testChat._id.toString() };
+      req.body = { content: 'Latest message' };
+
+      await sendMessage(req, res, next);
+
+      const updatedChat = await chatModel.findById(testChat._id).populate('lastMessage');
+      expect(updatedChat.lastMessage.content).toBe('Latest message');
+    });
+  });
+
+  describe('markAsRead', () => {
+    it('should mark messages as read successfully', async () => {
+      const { markAsRead } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: testChat._id.toString() };
+
+      await markAsRead(req, res, next);
+
+      expect(res.success).toHaveBeenCalledWith(
+        null,
+        'تم تحديث حالة القراءة بنجاح'
+      );
+    });
+
+    it('should handle non-participant marking as read', async () => {
+      const { markAsRead } = await import('../../src/modules/chat/chat.controller.js');
+      
+      // Create another user who is not a participant
+      const testUser3 = await userModel.create({
+        displayName: 'Test User 3',
+        email: 'user3@test.com',
+        password: 'password123',
+        isEmailVerified: true
+      });
+
+      req.user = { _id: testUser3._id };
+      req.params = { chatId: testChat._id.toString() };
+
+      await markAsRead(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'ليس لديك صلاحية للوصول لهذه المحادثة'
+        })
+      );
+    });
+  });
+
+  describe('deleteChat', () => {
+    it('should delete chat successfully', async () => {
+      const { deleteChat } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: testChat._id.toString() };
+
+      await deleteChat(req, res, next);
+
+      expect(res.success).toHaveBeenCalledWith(
+        null,
+        'تم حذف المحادثة بنجاح'
+      );
+
+      const deletedChat = await chatModel.findById(testChat._id);
+      expect(deletedChat).toBeNull();
+    });
+
+    it('should handle non-participant deleting chat', async () => {
+      const { deleteChat } = await import('../../src/modules/chat/chat.controller.js');
+      
+      // Create another user who is not a participant
+      const testUser3 = await userModel.create({
+        displayName: 'Test User 3',
+        email: 'user3@test.com',
+        password: 'password123',
+        isEmailVerified: true
+      });
+
+      req.user = { _id: testUser3._id };
+      req.params = { chatId: testChat._id.toString() };
+
+      await deleteChat(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          message: 'ليس لديك صلاحية لحذف هذه المحادثة'
+        })
+      );
+    });
+  });
+
+  describe('getSocketToken', () => {
+    it('should generate socket token successfully', async () => {
+      const { getSocketToken } = await import('../../src/modules/chat/chat.controller.js');
+      
+      await getSocketToken(req, res, next);
+
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          token: expect.any(String),
+          userId: testUser1._id.toString(),
+          expiresAt: expect.any(Date)
+        }),
+        'تم إنشاء رمز الاتصال بنجاح'
+      );
+    });
+
+    it('should generate unique tokens for each request', async () => {
+      const { getSocketToken } = await import('../../src/modules/chat/chat.controller.js');
+      
+      await getSocketToken(req, res, next);
+      const firstCall = res.success.mock.calls[0][0];
+
+      res.success.mockClear();
+      
+      await getSocketToken(req, res, next);
+      const secondCall = res.success.mock.calls[0][0];
+
+      expect(firstCall.token).not.toBe(secondCall.token);
+    });
+  });
+
+  describe('Validation Tests', () => {
+    it('should validate chat creation data', async () => {
+      const { createChatSchema } = await import('../../src/modules/chat/chat.validation.js');
+      
+      const validData = { participantId: testUser2._id.toString() };
+      const { error } = createChatSchema.body.validate(validData);
+      
+      expect(error).toBeUndefined();
+    });
+
+    it('should reject invalid participant ID format', async () => {
+      const { createChatSchema } = await import('../../src/modules/chat/chat.validation.js');
+      
+      const invalidData = { participantId: 'invalid-id' };
+      const { error } = createChatSchema.body.validate(invalidData);
+      
+      expect(error).toBeDefined();
+      expect(error.details[0].message).toContain('معرف المستخدم غير صحيح');
+    });
+
+    it('should validate message sending data', async () => {
+      const { sendMessageSchema } = await import('../../src/modules/chat/chat.validation.js');
+      
+      const validData = { 
+        content: 'Valid message content',
+        messageType: 'text'
+      };
+      const { error } = sendMessageSchema.body.validate(validData);
+      
+      expect(error).toBeUndefined();
+    });
+
+    it('should reject empty message content', async () => {
+      const { sendMessageSchema } = await import('../../src/modules/chat/chat.validation.js');
+      
+      const invalidData = { content: '' };
+      const { error } = sendMessageSchema.body.validate(invalidData);
+      
+      expect(error).toBeDefined();
+      expect(error.details[0].message).toContain('الرسالة لا يمكن أن تكون فارغة');
+    });
+
+    it('should reject message content exceeding limit', async () => {
+      const { sendMessageSchema } = await import('../../src/modules/chat/chat.validation.js');
+      
+      const invalidData = { content: 'a'.repeat(1001) };
+      const { error } = sendMessageSchema.body.validate(invalidData);
+      
+      expect(error).toBeDefined();
+      expect(error.details[0].message).toContain('1000 حرف على الأكثر');
+    });
+
+    it('should validate chat ID parameter', async () => {
+      const { chatIdParamSchema } = await import('../../src/modules/chat/chat.validation.js');
+      
+      const validData = { chatId: testChat._id.toString() };
+      const { error } = chatIdParamSchema.params.validate(validData);
+      
+      expect(error).toBeUndefined();
+    });
+
+    it('should reject invalid chat ID format', async () => {
+      const { chatIdParamSchema } = await import('../../src/modules/chat/chat.validation.js');
+      
+      const invalidData = { chatId: 'invalid-chat-id' };
+      const { error } = chatIdParamSchema.params.validate(invalidData);
+      
+      expect(error).toBeDefined();
+      expect(error.details[0].message).toContain('معرف المحادثة غير صحيح');
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle database connection errors', async () => {
+      const { getUserChats } = await import('../../src/modules/chat/chat.controller.js');
+      
+      // Mock database error
+      jest.spyOn(chatModel, 'find').mockImplementationOnce(() => {
+        throw new Error('Database connection error');
+      });
+
+      await getUserChats(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Database connection error')
+        })
+      );
+    });
+
+    it('should handle invalid ObjectId format', async () => {
+      const { getMessages } = await import('../../src/modules/chat/chat.controller.js');
+      
+      req.params = { chatId: 'invalid-object-id' };
+
+      await getMessages(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400
+        })
+      );
     });
   });
 });

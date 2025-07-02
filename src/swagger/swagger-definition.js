@@ -466,9 +466,152 @@ export const swaggerDefinition = {
             type: 'string',
             format: 'binary'
           },
-          job: {
+          phoneNumber: {
             type: 'string',
-            example: 'فنان'
+            example: '+966512345678'
+          }
+        }
+      },
+      ForgetPasswordRequest: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'user@example.com'
+          }
+        }
+      },
+      VerificationCodeRequest: {
+        type: 'object',
+        required: ['email', 'forgetCode'],
+        properties: {
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'user@example.com'
+          },
+          forgetCode: {
+            type: 'string',
+            pattern: '^\\d{4}$',
+            example: '1234'
+          }
+        }
+      },
+      ResetPasswordRequest: {
+        type: 'object',
+        required: ['email', 'password', 'confirmPassword'],
+        properties: {
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'user@example.com'
+          },
+          password: {
+            type: 'string',
+            format: 'password',
+            example: 'NewPassword123!'
+          },
+          confirmPassword: {
+            type: 'string',
+            format: 'password',
+            example: 'NewPassword123!'
+          }
+        }
+      },
+      FCMTokenRequest: {
+        type: 'object',
+        required: ['fcmToken'],
+        properties: {
+          fcmToken: {
+            type: 'string',
+            example: 'fMEGG8-TQVSEJHBFrk-BZ3:APA91bHZKmJLnmRJHBFrk...'
+          }
+        }
+      },
+      AuthSuccessResponse: {
+        type: 'object',
+        properties: {
+          success: {
+            type: 'boolean',
+            example: true
+          },
+          message: {
+            type: 'string',
+            example: 'تم تسجيل الدخول بنجاح'
+          },
+          data: {
+            type: 'object',
+            properties: {
+              _id: {
+                type: 'string',
+                example: '60d0fe4f5311236168a109ca'
+              },
+              displayName: {
+                type: 'string',
+                example: 'أحمد محمد'
+              },
+              email: {
+                type: 'string',
+                format: 'email',
+                example: 'user@example.com'
+              },
+              role: {
+                type: 'string',
+                enum: ['user', 'artist'],
+                example: 'user'
+              },
+              profileImage: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    format: 'uri',
+                    example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg'
+                  }
+                }
+              },
+              token: {
+                type: 'string',
+                example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+              }
+            }
+          }
+        }
+      },
+      TokenModel: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109cb'
+          },
+          user: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          token: {
+            type: 'string',
+            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+          },
+          userAgent: {
+            type: 'string',
+            example: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)'
+          },
+          isValid: {
+            type: 'boolean',
+            example: true
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-06-15T10:30:45.123Z'
           }
         }
       },
@@ -678,6 +821,734 @@ export const swaggerDefinition = {
                 }
               }
             }
+          }
+        }
+      },
+      RefreshTokenRequest: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: {
+            type: 'string',
+            description: 'Refresh token received during login',
+            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+          }
+        }
+      },
+      RefreshTokenResponse: {
+        type: 'object',
+        properties: {
+          success: {
+            type: 'boolean',
+            example: true
+          },
+          message: {
+            type: 'string',
+            example: 'تم تحديث رمز الوصول بنجاح'
+          },
+          data: {
+            type: 'object',
+            properties: {
+              token: {
+                type: 'string',
+                example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+              }
+            }
+          }
+        }
+      },
+      // User Management Schemas
+      UpdateProfileRequest: {
+        type: 'object',
+        properties: {
+          displayName: {
+            type: 'string',
+            example: 'أحمد محمد الفنان'
+          },
+          bio: {
+            type: 'string',
+            example: 'فنان تشكيلي متخصص في الرسم الزيتي'
+          },
+          job: {
+            type: 'string',
+            example: 'فنان تشكيلي'
+          },
+          location: {
+            type: 'string',
+            example: 'الرياض، السعودية'
+          },
+          website: {
+            type: 'string',
+            format: 'uri',
+            example: 'https://artist-portfolio.com'
+          },
+          socialMedia: {
+            type: 'object',
+            properties: {
+              instagram: {
+                type: 'string',
+                example: '@artist_instagram'
+              },
+              twitter: {
+                type: 'string',
+                example: '@artist_twitter'
+              },
+              facebook: {
+                type: 'string',
+                example: 'artist.facebook'
+              }
+            }
+          },
+          profileImage: {
+            type: 'string',
+            format: 'binary'
+          }
+        }
+      },
+      ChangePasswordRequest: {
+        type: 'object',
+        required: ['currentPassword', 'newPassword', 'confirmPassword'],
+        properties: {
+          currentPassword: {
+            type: 'string',
+            format: 'password',
+            example: 'CurrentPassword123!'
+          },
+          newPassword: {
+            type: 'string',
+            format: 'password',
+            example: 'NewPassword123!'
+          },
+          confirmPassword: {
+            type: 'string',
+            format: 'password',
+            example: 'NewPassword123!'
+          }
+        }
+      },
+      WishlistItem: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          artwork: {
+            $ref: '#/components/schemas/ArtworkResponse'
+          },
+          addedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          }
+        }
+      },
+      // Category Schemas
+      Category: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          name: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحات زيتية'
+              },
+              en: {
+                type: 'string',
+                example: 'Oil Paintings'
+              }
+            }
+          },
+          description: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحات مرسومة بالألوان الزيتية'
+              },
+              en: {
+                type: 'string',
+                example: 'Paintings created with oil colors'
+              }
+            }
+          },
+          image: {
+            type: 'object',
+            properties: {
+              url: {
+                type: 'string',
+                format: 'uri',
+                example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/category.jpg'
+              },
+              publicId: {
+                type: 'string',
+                example: 'category_123456'
+              }
+            }
+          },
+          artworkCount: {
+            type: 'integer',
+            example: 25
+          },
+          isActive: {
+            type: 'boolean',
+            example: true
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          }
+        }
+      },
+      CreateCategoryRequest: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: {
+            type: 'object',
+            required: ['ar', 'en'],
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحات زيتية'
+              },
+              en: {
+                type: 'string',
+                example: 'Oil Paintings'
+              }
+            }
+          },
+          description: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحات مرسومة بالألوان الزيتية'
+              },
+              en: {
+                type: 'string',
+                example: 'Paintings created with oil colors'
+              }
+            }
+          },
+          image: {
+            type: 'string',
+            format: 'binary'
+          }
+        }
+      },
+      UpdateCategoryRequest: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحات زيتية محدثة'
+              },
+              en: {
+                type: 'string',
+                example: 'Updated Oil Paintings'
+              }
+            }
+          },
+          description: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحات مرسومة بالألوان الزيتية المحدثة'
+              },
+              en: {
+                type: 'string',
+                example: 'Updated paintings created with oil colors'
+              }
+            }
+          },
+          image: {
+            type: 'string',
+            format: 'binary'
+          },
+          isActive: {
+            type: 'boolean',
+            example: true
+          }
+        }
+      },
+      // Artwork Schemas
+      ArtworkResponse: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          title: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحة فنية جميلة'
+              },
+              en: {
+                type: 'string',
+                example: 'Beautiful Artwork'
+              }
+            }
+          },
+          description: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'وصف اللوحة الفنية'
+              },
+              en: {
+                type: 'string',
+                example: 'Artwork description'
+              }
+            }
+          },
+          artist: {
+            $ref: '#/components/schemas/UserResponse'
+          },
+          category: {
+            $ref: '#/components/schemas/Category'
+          },
+          images: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                url: {
+                  type: 'string',
+                  format: 'uri',
+                  example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/artwork.jpg'
+                },
+                publicId: {
+                  type: 'string',
+                  example: 'artwork_123456'
+                },
+                optimizedUrl: {
+                  type: 'string',
+                  format: 'uri',
+                  example: 'https://res.cloudinary.com/demo/image/upload/q_auto,f_auto/v1612345678/artwork.jpg'
+                }
+              }
+            }
+          },
+          price: {
+            type: 'number',
+            example: 500.00
+          },
+          currency: {
+            type: 'string',
+            enum: ['SAR', 'USD', 'EUR'],
+            example: 'SAR'
+          },
+          dimensions: {
+            type: 'object',
+            properties: {
+              width: {
+                type: 'number',
+                example: 50
+              },
+              height: {
+                type: 'number',
+                example: 70
+              },
+              unit: {
+                type: 'string',
+                enum: ['cm', 'inch', 'm'],
+                example: 'cm'
+              }
+            }
+          },
+          tags: {
+            type: 'array',
+            items: {
+              type: 'string'
+            },
+            example: ['فن', 'لوحة', 'زيتي']
+          },
+          isAvailable: {
+            type: 'boolean',
+            example: true
+          },
+          viewCount: {
+            type: 'integer',
+            example: 150
+          },
+          likeCount: {
+            type: 'integer',
+            example: 25
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          }
+        }
+      },
+      CreateArtworkRequest: {
+        type: 'object',
+        required: ['title', 'description', 'category', 'images'],
+        properties: {
+          title: {
+            type: 'object',
+            required: ['ar'],
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لوحة فنية جميلة'
+              },
+              en: {
+                type: 'string',
+                example: 'Beautiful Artwork'
+              }
+            }
+          },
+          description: {
+            type: 'object',
+            required: ['ar'],
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'وصف اللوحة الفنية'
+              },
+              en: {
+                type: 'string',
+                example: 'Artwork description'
+              }
+            }
+          },
+          category: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          images: {
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'binary'
+            },
+            minItems: 1,
+            maxItems: 10
+          },
+          price: {
+            type: 'number',
+            minimum: 0,
+            example: 500.00
+          },
+          currency: {
+            type: 'string',
+            enum: ['SAR', 'USD', 'EUR'],
+            default: 'SAR',
+            example: 'SAR'
+          },
+          dimensions: {
+            type: 'object',
+            properties: {
+              width: {
+                type: 'number',
+                minimum: 0,
+                example: 50
+              },
+              height: {
+                type: 'number',
+                minimum: 0,
+                example: 70
+              },
+              unit: {
+                type: 'string',
+                enum: ['cm', 'inch', 'm'],
+                default: 'cm',
+                example: 'cm'
+              }
+            }
+          },
+          tags: {
+            type: 'array',
+            items: {
+              type: 'string'
+            },
+            maxItems: 10,
+            example: ['فن', 'لوحة', 'زيتي']
+          }
+        }
+      },
+      // Chat Schemas
+      ChatResponse: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          participants: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/UserResponse'
+            }
+          },
+          lastMessage: {
+            type: 'object',
+            properties: {
+              content: {
+                type: 'string',
+                example: 'مرحبا، كيف حالك؟'
+              },
+              sender: {
+                type: 'string',
+                example: '60d0fe4f5311236168a109ca'
+              },
+              timestamp: {
+                type: 'string',
+                format: 'date-time',
+                example: '2023-05-15T10:30:45.123Z'
+              },
+              isRead: {
+                type: 'boolean',
+                example: false
+              }
+            }
+          },
+          unreadCount: {
+            type: 'integer',
+            example: 3
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          }
+        }
+      },
+      MessageResponse: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          chat: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109cb'
+          },
+          sender: {
+            $ref: '#/components/schemas/UserResponse'
+          },
+          content: {
+            type: 'string',
+            example: 'مرحبا، كيف حالك؟'
+          },
+          messageType: {
+            type: 'string',
+            enum: ['text', 'image', 'file'],
+            example: 'text'
+          },
+          attachments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                url: {
+                  type: 'string',
+                  format: 'uri',
+                  example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/message.jpg'
+                },
+                type: {
+                  type: 'string',
+                  enum: ['image', 'file'],
+                  example: 'image'
+                },
+                filename: {
+                  type: 'string',
+                  example: 'image.jpg'
+                }
+              }
+            }
+          },
+          isRead: {
+            type: 'boolean',
+            example: false
+          },
+          readBy: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                user: {
+                  type: 'string',
+                  example: '60d0fe4f5311236168a109ca'
+                },
+                readAt: {
+                  type: 'string',
+                  format: 'date-time',
+                  example: '2023-05-15T10:30:45.123Z'
+                }
+              }
+            }
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          }
+        }
+      },
+      SendMessageRequest: {
+        type: 'object',
+        required: ['content'],
+        properties: {
+          content: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 1000,
+            example: 'مرحبا، كيف حالك؟'
+          },
+          messageType: {
+            type: 'string',
+            enum: ['text', 'image', 'file'],
+            default: 'text',
+            example: 'text'
+          },
+          attachments: {
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'binary'
+            },
+            maxItems: 5
+          }
+        }
+      },
+      // Notification Schemas
+      NotificationResponse: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          recipient: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109cb'
+          },
+          title: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لديك رسالة جديدة'
+              },
+              en: {
+                type: 'string',
+                example: 'You have a new message'
+              }
+            }
+          },
+          message: {
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'أرسل لك محمد رسالة جديدة'
+              },
+              en: {
+                type: 'string',
+                example: 'Mohammed sent you a new message'
+              }
+            }
+          },
+          type: {
+            type: 'string',
+            enum: ['message', 'artwork', 'follow', 'review', 'transaction', 'special_request'],
+            example: 'message'
+          },
+          isRead: {
+            type: 'boolean',
+            example: false
+          },
+          data: {
+            type: 'object',
+            properties: {
+              screen: {
+                type: 'string',
+                example: 'ChatScreen'
+              },
+              id: {
+                type: 'string',
+                example: '60d0fe4f5311236168a109ca'
+              }
+            }
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            example: '2023-05-15T10:30:45.123Z'
+          }
+        }
+      },
+      // Pagination Schema
+      PaginationResponse: {
+        type: 'object',
+        properties: {
+          currentPage: {
+            type: 'integer',
+            example: 1
+          },
+          totalPages: {
+            type: 'integer',
+            example: 5
+          },
+          totalItems: {
+            type: 'integer',
+            example: 100
+          },
+          itemsPerPage: {
+            type: 'integer',
+            example: 20
+          },
+          hasNextPage: {
+            type: 'boolean',
+            example: true
+          },
+          hasPrevPage: {
+            type: 'boolean',
+            example: false
+          },
+          nextPage: {
+            type: 'integer',
+            nullable: true,
+            example: 2
+          },
+          prevPage: {
+            type: 'integer',
+            nullable: true,
+            example: null
           }
         }
       }

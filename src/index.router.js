@@ -14,6 +14,8 @@ import termsRouter from './modules/global/terms.router.js';
 import specialRequestRouter from './modules/specialRequest/specialRequest.router.js';
 import reportRouter from './modules/report/report.router.js';
 import transactionRouter from './modules/transaction/transaction.router.js';
+import categoryRouter from './modules/category/category.router.js';
+import userRouter from './modules/user/user.router.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
@@ -97,6 +99,8 @@ export const bootstrap = (app, express) => {
   app.use('/api/reviews', reviewRouter);
   app.use('/api/follow', followRouter);
   app.use('/api/notifications', notificationRouter);
+  app.use('/api/categories', categoryRouter);
+  app.use('/api/user', userRouter);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

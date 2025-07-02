@@ -1,171 +1,228 @@
-# توثيق ربط الشاشات بواجهات API
+# Screen to API Endpoint Mapping
 
-هذا المستند يوفر ربطاً بين شاشات التطبيق المختلفة وواجهات برمجة التطبيقات (API) التي تستخدمها كل شاشة. يمكن استخدامه كمرجع سريع لمطوري الواجهة الأمامية.
+This document maps Flutter app screens to the corresponding API endpoints. Use this as a reference when implementing screens in your Flutter application.
 
-## 🔒 شاشات المصادقة
+## Authentication Screens
 
-### شاشة تسجيل الدخول
+### Login Screen
+- **POST** `/api/auth/login`
+  - Email/password login
+- **POST** `/api/auth/firebase`
+  - Firebase authentication (Google, Facebook, etc.)
+- **POST** `/api/auth/refresh-token`
+  - Refresh access token
 
-![تسجيل الدخول](../src/public/screens/login.png)
+### Registration Screen
+- **POST** `/api/auth/register`
+  - Create new user account
 
-| الإجراء                      | واجهة API                   | طريقة HTTP | الوصف                                                |
-| ---------------------------- | --------------------------- | ---------- | ---------------------------------------------------- |
-| تسجيل الدخول                 | `/api/auth/login`           | POST       | تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور |
-| تسجيل الدخول عبر فيسبوك      | `/api/auth/social-login`    | POST       | تسجيل الدخول باستخدام حساب فيسبوك                    |
-| تسجيل الدخول عبر جوجل        | `/api/auth/social-login`    | POST       | تسجيل الدخول باستخدام حساب جوجل                      |
-| تسجيل الدخول باستخدام البصمة | `/api/auth/login-biometric` | POST       | تسجيل الدخول باستخدام البصمة                         |
+### Password Reset Screens
+- **POST** `/api/auth/forget-password`
+  - Request password reset code
+- **POST** `/api/auth/verify-code`
+  - Verify password reset code
+- **POST** `/api/auth/reset-password`
+  - Set new password
 
-### شاشة إنشاء حساب
+## Profile Screens
 
-![إنشاء حساب](../src/public/screens/register.png)
+### Artist Profile Screen
+- **GET** `/api/user/:id`
+  - Get user profile data
+- **GET** `/api/artworks?artist=:id`
+  - Get artist's artwork
+- **POST** `/api/follow/:id`
+  - Follow artist
+- **DELETE** `/api/follow/:id`
+  - Unfollow artist
+- **POST** `/api/chat/create`
+  - Start chat with artist
+- **POST** `/api/special-requests`
+  - Create special artwork request
 
-| الإجراء                          | واجهة API               | طريقة HTTP | الوصف                                           |
-| -------------------------------- | ----------------------- | ---------- | ----------------------------------------------- |
-| إنشاء حساب جديد                  | `/api/auth/register`    | POST       | إنشاء حساب جديد بالبريد الإلكتروني وكلمة المرور |
-| التحقق من توفر البريد الإلكتروني | `/api/auth/check-email` | POST       | التحقق من توفر البريد الإلكتروني قبل التسجيل    |
+### Edit Profile Screen
+- **PUT** `/api/user`
+  - Update user profile
+- **PUT** `/api/user/profile-image`
+  - Update profile image
+- **PUT** `/api/user/cover-images`
+  - Update cover images
 
-### شاشة نسيت كلمة المرور
+### Settings Screen
+- **PUT** `/api/user/settings`
+  - Update user settings
+- **PUT** `/api/user/notification-settings`
+  - Update notification preferences
+- **POST** `/api/auth/logout`
+  - Logout from current device
+- **POST** `/api/auth/logout-all`
+  - Logout from all devices
 
-![نسيت كلمة المرور](../src/public/screens/forgot-password.png)
+## Home Screen
 
-| الإجراء                     | واجهة API                   | طريقة HTTP | الوصف                                                    |
-| --------------------------- | --------------------------- | ---------- | -------------------------------------------------------- |
-| طلب إعادة تعيين كلمة المرور | `/api/auth/forgot-password` | POST       | إرسال رابط إعادة تعيين كلمة المرور إلى البريد الإلكتروني |
+### Feed
+- **GET** `/api/home/feed`
+  - Get personalized feed
+- **GET** `/api/home/featured`
+  - Get featured artworks
+- **GET** `/api/home/top-artists`
+  - Get top artists
+- **GET** `/api/home/categories`
+  - Get artwork categories
 
-### شاشة كود التحقق
+### Search
+- **GET** `/api/artworks/search?q=:query`
+  - Search artworks
+- **GET** `/api/user/search?q=:query`
+  - Search artists/users
 
-![كود التحقق](../src/public/screens/verification-code.png)
+## Artwork Screens
 
-| الإجراء           | واجهة API               | طريقة HTTP | الوصف                                              |
-| ----------------- | ----------------------- | ---------- | -------------------------------------------------- |
-| التحقق من الرمز   | `/api/auth/verify-code` | POST       | التحقق من رمز التأكيد المرسل عبر البريد الإلكتروني |
-| إعادة إرسال الرمز | `/api/auth/resend-code` | POST       | إعادة إرسال رمز التأكيد                            |
+### Artwork Details Screen
+- **GET** `/api/artworks/:id`
+  - Get artwork details
+- **POST** `/api/artworks/:id/like`
+  - Like artwork
+- **POST** `/api/artworks/:id/save`
+  - Save artwork to favorites
+- **GET** `/api/reviews?artwork=:id`
+  - Get artwork reviews
+- **POST** `/api/reviews`
+  - Add review for artwork
+- **POST** `/api/transactions/purchase`
+  - Purchase artwork
 
-### شاشة كلمة مرور جديدة
+### Upload Artwork Screen
+- **POST** `/api/artworks`
+  - Create new artwork
+- **POST** `/api/image/upload`
+  - Upload artwork images
+- **GET** `/api/categories`
+  - Get categories for artwork
 
-![كلمة مرور جديدة](../src/public/screens/new-password.png)
+### Edit Artwork Screen
+- **PUT** `/api/artworks/:id`
+  - Update artwork details
+- **DELETE** `/api/artworks/:id`
+  - Delete artwork
 
-| الإجراء               | واجهة API                  | طريقة HTTP | الوصف                                     |
-| --------------------- | -------------------------- | ---------- | ----------------------------------------- |
-| تعيين كلمة مرور جديدة | `/api/auth/reset-password` | POST       | تعيين كلمة مرور جديدة بعد التحقق من الرمز |
+## Chat Screens
 
-## 🏠 الشاشة الرئيسية
+### Chat List Screen
+- **GET** `/api/chat`
+  - Get all user chats
+- **GET** `/api/chat/unread-count`
+  - Get unread message count
 
-![الشاشة الرئيسية](../src/public/screens/home.png)
+### Chat Detail Screen
+- **GET** `/api/chat/:id/messages`
+  - Get chat messages
+- **POST** `/api/chat/:id/messages`
+  - Send new message
+- **PUT** `/api/chat/:id/read`
+  - Mark messages as read
+- **POST** `/api/chat/:id/image`
+  - Send image in chat
 
-| الإجراء             | واجهة API                | طريقة HTTP | الوصف                                               |
-| ------------------- | ------------------------ | ---------- | --------------------------------------------------- |
-| جلب الأعمال المميزة | `/api/home/featured`     | GET        | جلب الأعمال الفنية المميزة للعرض في الصفحة الرئيسية |
-| جلب أفضل الفنانين   | `/api/home/top-artists`  | GET        | جلب قائمة بأفضل الفنانين                            |
-| جلب الأعمال الجديدة | `/api/home/new-artworks` | GET        | جلب آخر الأعمال الفنية المضافة                      |
-| جلب الفئات          | `/api/categories`        | GET        | جلب قائمة بفئات الأعمال الفنية                      |
-| البحث               | `/api/search`            | GET        | البحث عن فنانين أو أعمال فنية                       |
+## Special Request Screens
 
-## 👤 الملف الشخصي للفنان
+### Create Request Screen
+- **POST** `/api/special-requests`
+  - Create new special request
+- **POST** `/api/image/upload`
+  - Upload reference images
 
-![ملف الفنان](../src/public/screens/artist-profile.png)
+### My Requests Screen
+- **GET** `/api/special-requests?user=:id`
+  - Get user's special requests
+- **GET** `/api/special-requests/:id`
+  - Get request details
+- **PUT** `/api/special-requests/:id/cancel`
+  - Cancel request
 
-| الإجراء            | واجهة API                    | طريقة HTTP | الوصف                        |
-| ------------------ | ---------------------------- | ---------- | ---------------------------- |
-| جلب معلومات الفنان | `/api/user/{userId}`         | GET        | جلب تفاصيل ملف الفنان الشخصي |
-| جلب أعمال الفنان   | `/api/artwork/user/{userId}` | GET        | جلب الأعمال الفنية للفنان    |
-| متابعة الفنان      | `/api/follow/follow`         | POST       | متابعة فنان                  |
-| إلغاء متابعة       | `/api/follow/unfollow`       | POST       | إلغاء متابعة فنان            |
-| بدء محادثة         | `/api/chat/create`           | POST       | بدء محادثة مع الفنان         |
-| تقييم الفنان       | `/api/review/user/{userId}`  | POST       | إضافة تقييم جديد للفنان      |
+### Artist Request Screen
+- **GET** `/api/special-requests?artist=:id`
+  - Get requests for artist
+- **PUT** `/api/special-requests/:id/accept`
+  - Accept special request
+- **PUT** `/api/special-requests/:id/reject`
+  - Reject special request
+- **PUT** `/api/special-requests/:id/complete`
+  - Mark request as completed
 
-## 🖼️ تفاصيل العمل الفني
+## Transaction Screens
 
-![تفاصيل العمل](../src/public/screens/artwork-details.png)
+### Purchase Screen
+- **POST** `/api/transactions/purchase`
+  - Purchase artwork
+- **GET** `/api/transactions/:id`
+  - Get transaction details
 
-| الإجراء          | واجهة API                           | طريقة HTTP | الوصف                    |
-| ---------------- | ----------------------------------- | ---------- | ------------------------ |
-| جلب تفاصيل العمل | `/api/artwork/{artworkId}`          | GET        | جلب تفاصيل عمل فني محدد  |
-| إضافة للمفضلة    | `/api/artwork/{artworkId}/favorite` | POST       | إضافة عمل فني للمفضلة    |
-| إزالة من المفضلة | `/api/artwork/{artworkId}/favorite` | DELETE     | إزالة عمل فني من المفضلة |
-| طلب شراء         | `/api/transaction/initiate`         | POST       | بدء عملية شراء عمل فني   |
+### Order History Screen
+- **GET** `/api/transactions?user=:id`
+  - Get user's purchase history
+- **GET** `/api/transactions?artist=:id`
+  - Get artist's sales history
 
-## 💬 المحادثات
+### Transaction Detail Screen
+- **GET** `/api/transactions/:id`
+  - Get transaction details
+- **PUT** `/api/transactions/:id/cancel`
+  - Cancel transaction (if allowed)
 
-![قائمة المحادثات](../src/public/screens/chats.png)
+## Notification Screens
 
-| الإجراء       | واجهة API   | طريقة HTTP | الوصف                        |
-| ------------- | ----------- | ---------- | ---------------------------- |
-| جلب المحادثات | `/api/chat` | GET        | جلب قائمة المحادثات للمستخدم |
+### Notifications List Screen
+- **GET** `/api/notifications`
+  - Get user notifications
+- **PUT** `/api/notifications/:id/read`
+  - Mark notification as read
+- **PUT** `/api/notifications/read-all`
+  - Mark all notifications as read
 
-![المحادثة](../src/public/screens/chat-detail.png)
+## Favorites/Saved Items Screen
 
-| الإجراء         | واجهة API                     | طريقة HTTP | الوصف                       |
-| --------------- | ----------------------------- | ---------- | --------------------------- |
-| جلب الرسائل     | `/api/chat/{chatId}/messages` | GET        | جلب رسائل محادثة محددة      |
-| إرسال رسالة     | `/api/chat/{chatId}/messages` | POST       | إرسال رسالة جديدة           |
-| وضع علامة مقروء | `/api/chat/{chatId}/read`     | POST       | وضع علامة مقروء على الرسائل |
+### Favorites Screen
+- **GET** `/api/user/favorites`
+  - Get user's saved artworks
+- **DELETE** `/api/user/favorites/:id`
+  - Remove artwork from favorites
 
-## 🔔 الإشعارات
+## Terms and Conditions Screen
+- **GET** `/api/terms`
+  - Get terms and conditions
 
-![الإشعارات](../src/public/screens/notifications.png)
+## Report Screen
+- **POST** `/api/reports`
+  - Submit report for user, artwork, etc.
 
-| الإجراء         | واجهة API                             | طريقة HTTP | الوصف                              |
-| --------------- | ------------------------------------- | ---------- | ---------------------------------- |
-| جلب الإشعارات   | `/api/notifications`                  | GET        | جلب قائمة الإشعارات للمستخدم       |
-| وضع علامة مقروء | `/api/notifications/read-all`         | PATCH      | وضع علامة مقروء على جميع الإشعارات |
-| حذف إشعار       | `/api/notifications/{notificationId}` | DELETE     | حذف إشعار محدد                     |
+## App Configuration
+- **GET** `/api/app/config`
+  - Get app configuration
+- **POST** `/api/auth/fcm-token`
+  - Register device for push notifications
 
-## ❤️ المفضلة
+## Error Handling
 
-![المفضلة](../src/public/screens/favorites.png)
+All API endpoints follow a consistent error response format:
 
-| الإجراء          | واجهة API                           | طريقة HTTP | الوصف                               |
-| ---------------- | ----------------------------------- | ---------- | ----------------------------------- |
-| جلب المفضلة      | `/api/user/favorites`               | GET        | جلب الأعمال الفنية المفضلة للمستخدم |
-| إزالة من المفضلة | `/api/artwork/{artworkId}/favorite` | DELETE     | إزالة عمل فني من المفضلة            |
+```json
+{
+  "success": false,
+  "status": 400,
+  "message": "حدث خطأ",
+  "error": "تفاصيل الخطأ",
+  "errorCode": "ERROR_CODE",
+  "timestamp": "2023-05-15T10:30:45.123Z",
+  "requestId": "abc123def456"
+}
+```
 
-## 📋 الطلبات الخاصة
-
-![إنشاء طلب خاص](../src/public/screens/special-request.png)
-
-| الإجراء       | واجهة API                     | طريقة HTTP | الوصف              |
-| ------------- | ----------------------------- | ---------- | ------------------ |
-| إنشاء طلب خاص | `/api/special-request/create` | POST       | إنشاء طلب خاص جديد |
-
-![قائمة الطلبات](../src/public/screens/requests-list.png)
-
-| الإجراء     | واجهة API                          | طريقة HTTP | الوصف                             |
-| ----------- | ---------------------------------- | ---------- | --------------------------------- |
-| جلب الطلبات | `/api/special-request/my-requests` | GET        | جلب قائمة الطلبات الخاصة للمستخدم |
-
-![تفاصيل الطلب](../src/public/screens/request-detail.png)
-
-| الإجراء          | واجهة API                                 | طريقة HTTP | الوصف                   |
-| ---------------- | ----------------------------------------- | ---------- | ----------------------- |
-| جلب تفاصيل الطلب | `/api/special-request/{requestId}`        | GET        | جلب تفاصيل طلب خاص محدد |
-| إلغاء الطلب      | `/api/special-request/{requestId}/cancel` | PATCH      | إلغاء طلب خاص           |
-
-## ⚙️ الإعدادات
-
-![الإعدادات](../src/public/screens/settings.png)
-
-| الإجراء                 | واجهة API                          | طريقة HTTP | الوصف                            |
-| ----------------------- | ---------------------------------- | ---------- | -------------------------------- |
-| تحديث اللغة             | `/api/user/settings/language`      | PATCH      | تحديث لغة التطبيق المفضلة        |
-| تحديث إعدادات الإشعارات | `/api/user/settings/notifications` | PATCH      | تحديث إعدادات الإشعارات          |
-| حذف الحساب              | `/api/user/delete-account`         | DELETE     | حذف حساب المستخدم نهائياً        |
-| تسجيل الخروج            | `/api/auth/logout`                 | POST       | تسجيل الخروج وإبطال الرمز المميز |
-
-## 🖌️ رفع عمل فني جديد
-
-![رفع عمل فني](../src/public/screens/upload-artwork.png)
-
-| الإجراء     | واجهة API             | طريقة HTTP | الوصف                                       |
-| ----------- | --------------------- | ---------- | ------------------------------------------- |
-| رفع صورة    | `/api/image/upload`   | POST       | رفع صورة جديدة                              |
-| نشر عمل فني | `/api/artwork/create` | POST       | إنشاء عمل فني جديد باستخدام الصورة المرفوعة |
-
-## 🔍 البحث
-
-| الإجراء             | واجهة API                           | طريقة HTTP | الوصف                             |
-| ------------------- | ----------------------------------- | ---------- | --------------------------------- |
-| البحث العام         | `/api/search`                       | GET        | البحث في الأعمال الفنية والفنانين |
-| البحث حسب الفئة     | `/api/search?category={categoryId}` | GET        | البحث في فئة محددة                |
-| البحث عن فنانين     | `/api/search?type=artist`           | GET        | البحث عن فنانين فقط               |
-| البحث عن أعمال فنية | `/api/search?type=artwork`          | GET        | البحث عن أعمال فنية فقط           |
+Common error codes:
+- `UNAUTHORIZED` - User not authenticated
+- `FORBIDDEN` - User doesn't have permission
+- `NOT_FOUND` - Resource not found
+- `VALIDATION_ERROR` - Invalid input data
+- `SERVER_ERROR` - Internal server error
+- `NETWORK_ERROR` - Network connectivity issues
+- `DUPLICATE_ENTITY` - Resource already exists

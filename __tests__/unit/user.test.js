@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import * as userController from '../../src/modules/user/user.controller.js';
 
 // Mock dependencies before imports
 jest.mock('mongoose');
@@ -136,198 +137,812 @@ const getUserStats = async (req, res, next) => {
   }
 };
 
-describe('User Controller - Unit Tests', () => {
+describe('User Controller Tests', () => {
   let req;
   let res;
-  let next;
 
   beforeEach(() => {
     req = {
       user: {
-        _id: 'user_123'
+        _id: 'user123',
+        email: 'test@example.com',
+        displayName: 'Test User'
       },
       body: {},
-      params: {}
+      params: {},
+      query: {}
     };
 
     res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
       success: jest.fn(),
-      fail: jest.fn()
+      fail: jest.fn(),
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn()
     };
-
-    next = jest.fn();
 
     // Reset all mocks
     jest.clearAllMocks();
   });
 
-  describe('getUserProfile', () => {
-    it('should get user profile successfully', async () => {
-      // Call the function
-      await getUserProfile(req, res, next);
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
 
-      // Assertions
-      expect(res.success).toHaveBeenCalledWith(
-        expect.objectContaining({
-          _id: 'user_123',
-          displayName: 'Test User',
-          email: 'test@example.com'
-        }),
-        'تم جلب بيانات المستخدم بنجاح'
-      );
-      expect(next).not.toHaveBeenCalled();
+  describe('toggleWishlist', () => {
+    it('should add artwork to wishlist successfully', async () => {
+      // Setup
+      const artworkId = 'artwork123';
+      req.body = { artworkId };
+
+      const mockArtwork = {
+        _id: artworkId,
+        title: 'Test Artwork'
+      };
+
+      const mockUser = {
+        _id: 'user123',
+        wishlist: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userController.artworkModel.findById.mockResolvedValue(mockArtwork);
+      userController.userModel.findById.mockResolvedValue(mockUser);
+
+      // Execute
+      await userController.toggleWishlist(req, res);
+
+      // Assert
+      expect(userController.artworkModel.findById).toHaveBeenCalledWith(artworkId);
+      expect(userController.userModel.findById).toHaveBeenCalledWith('user123');
+      expect(mockUser.wishlist).toContain(artworkId);
+      expect(mockUser.save).toHaveBeenCalled();
+      expect(res.success).toHaveBeenCalledWith({
+        success: true,
+        action: 'added',
+        wishlistCount: 1,
+        artworkTitle: 'Test Artwork'
+      }, 'تم إضافة العمل إلى المفضلة');
+    });
+
+    it('should remove artwork from wishlist successfully', async () => {
+      // Setup
+      const artworkId = 'artwork123';
+      req.body = { artworkId };
+
+      const mockArtwork = {
+        _id: artworkId,
+        title: 'Test Artwork'
+      };
+
+      const mockUser = {
+        _id: 'user123',
+        wishlist: [artworkId],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userController.artworkModel.findById.mockResolvedValue(mockArtwork);
+      userController.userModel.findById.mockResolvedValue(mockUser);
+
+      // Execute
+      await userController.toggleWishlist(req, res);
+
+      // Assert
+      expect(mockUser.wishlist).not.toContain(artworkId);
+      expect(res.success).toHaveBeenCalledWith({
+        success: true,
+        action: 'removed',
+        wishlistCount: 0,
+        artworkTitle: 'Test Artwork'
+      }, 'تم إزالة العمل من المفضلة');
+    });
+
+    it('should return error if artwork not found', async () => {
+      // Setup
+      req.body = { artworkId: 'nonexistent' };
+      userController.artworkModel.findById.mockResolvedValue(null);
+
+      // Execute
+      await userController.toggleWishlist(req, res);
+
+      // Assert
+      expect(res.fail).toHaveBeenCalledWith(null, 'العمل الفني غير موجود', 404);
+    });
+
+    it('should return error if user not found', async () => {
+      // Setup
+      req.body = { artworkId: 'artwork123' };
+      userController.artworkModel.findById.mockResolvedValue({ _id: 'artwork123' });
+      userController.userModel.findById.mockResolvedValue(null);
+
+      // Execute
+      await userController.toggleWishlist(req, res);
+
+      // Assert
+      expect(res.fail).toHaveBeenCalledWith(null, 'المستخدم غير موجود', 404);
+    });
+
+    it('should handle database errors', async () => {
+      // Setup
+      req.body = { artworkId: 'artwork123' };
+      const error = new Error('Database error');
+      userController.artworkModel.findById.mockRejectedValue(error);
+
+      // Execute
+      await userController.toggleWishlist(req, res);
+
+      // Assert
+      expect(userController.errorHandler).toHaveBeenCalledWith(res, error, 'حدث خطأ أثناء تحديث المفضلة');
     });
   });
 
-  describe('updateUserProfile', () => {
-    it('should update user profile successfully', async () => {
-      // Set request body
-      req.body = {
-        displayName: 'Updated Name',
-        bio: 'Updated bio information'
+  describe('getWishlist', () => {
+    it('should return user wishlist successfully', async () => {
+      // Setup
+      const mockUser = {
+        _id: 'user123',
+        wishlist: [
+          { _id: 'artwork1', title: 'Artwork 1' },
+          { _id: 'artwork2', title: 'Artwork 2' }
+        ]
       };
 
-      // Call the function
-      await updateUserProfile(req, res, next);
+      userController.userModel.findById.mockReturnValue({
+        populate: jest.fn().mockResolvedValue(mockUser)
+      });
 
-      // Assertions
-      expect(res.success).toHaveBeenCalledWith(
-        expect.objectContaining({
-          displayName: 'Updated Name',
-          bio: 'Updated bio information'
-        }),
-        'تم تحديث الملف الشخصي بنجاح'
-      );
-      expect(next).not.toHaveBeenCalled();
+      // Execute
+      await userController.getWishlist(req, res);
+
+      // Assert
+      expect(userController.userModel.findById).toHaveBeenCalledWith('user123');
+      expect(res.success).toHaveBeenCalledWith(mockUser.wishlist, 'تم جلب قائمة المفضلة بنجاح');
+    });
+
+    it('should return error if user not found', async () => {
+      // Setup
+      userController.userModel.findById.mockReturnValue({
+        populate: jest.fn().mockResolvedValue(null)
+      });
+
+      // Execute
+      await userController.getWishlist(req, res);
+
+      // Assert
+      expect(res.fail).toHaveBeenCalledWith(null, 'المستخدم غير موجود', 404);
     });
   });
 
   describe('updateProfile', () => {
     it('should update user profile successfully', async () => {
-      // Set request body
-      req.body = {
+      // Setup
+      const updateData = {
         displayName: 'Updated Name',
-        job: 'Updated Job',
-        profileImage: 'new-profile.jpg'
+        job: 'Designer',
+        bio: 'Updated bio'
+      };
+      req.body = updateData;
+
+      const mockUpdatedUser = {
+        _id: 'user123',
+        displayName: 'Updated Name',
+        job: 'Designer',
+        bio: 'Updated bio'
       };
 
-      // Call the function
-      await updateProfile(req, res, next);
+      userController.userModel.findByIdAndUpdate.mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUpdatedUser)
+      });
 
-      // Assertions
-      expect(res.success).toHaveBeenCalledWith(
-        {
-          _id: 'user_123',
-          displayName: 'Updated Name',
-          job: 'Updated Job',
-          profileImage: 'new-profile.jpg',
-          coverImages: ['original-cover.jpg'],
-          email: 'user@example.com'
-        },
-        'تم تحديث الملف الشخصي بنجاح'
+      // Execute
+      await userController.updateProfile(req, res);
+
+      // Assert
+      expect(userController.userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        'user123',
+        updateData,
+        { new: true }
       );
-      expect(next).not.toHaveBeenCalled();
+      expect(res.success).toHaveBeenCalledWith({
+        success: true,
+        message: 'تم تحديث الملف الشخصي بنجاح',
+        data: mockUpdatedUser
+      });
     });
 
-    it('should return 404 if user not found', async () => {
-      // Set invalid user ID
-      req.user._id = 'invalid_user_id';
-      req.body = { displayName: 'Updated Name' };
+    it('should return error if user not found', async () => {
+      // Setup
+      req.body = { displayName: 'New Name' };
+      userController.userModel.findByIdAndUpdate.mockReturnValue({
+        select: jest.fn().mockResolvedValue(null)
+      });
 
-      // Call the function
-      await updateProfile(req, res, next);
+      // Execute
+      await userController.updateProfile(req, res);
 
-      // Assertions
+      // Assert
       expect(res.fail).toHaveBeenCalledWith(null, 'المستخدم غير موجود', 404);
-      expect(next).not.toHaveBeenCalled();
     });
   });
 
   describe('changePassword', () => {
-    it('should change password successfully with correct old password', async () => {
-      // Set request body
+    it('should change password successfully', async () => {
+      // Setup
       req.body = {
-        oldPassword: 'correct_password',
-        newPassword: 'new_password'
+        oldPassword: 'oldpass123',
+        newPassword: 'newpass123'
       };
 
-      // Call the function
-      await changePassword(req, res, next);
+      const mockUser = {
+        _id: 'user123',
+        password: 'hashedOldPassword',
+        save: jest.fn().mockResolvedValue(true)
+      };
 
-      // Assertions
+      userController.userModel.findById.mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUser)
+      });
+      userController.bcryptjs.compare.mockResolvedValue(true);
+      userController.bcryptjs.hash.mockResolvedValue('hashedNewPassword');
+
+      // Execute
+      await userController.changePassword(req, res);
+
+      // Assert
+      expect(userController.bcryptjs.compare).toHaveBeenCalledWith('oldpass123', 'hashedOldPassword');
+      expect(userController.bcryptjs.hash).toHaveBeenCalledWith('newpass123', 8);
+      expect(mockUser.save).toHaveBeenCalled();
       expect(res.success).toHaveBeenCalledWith(null, 'تم تغيير كلمة المرور بنجاح');
-      expect(next).not.toHaveBeenCalled();
     });
 
-    it('should return 400 if old password is incorrect', async () => {
-      // Set request body with incorrect password
+    it('should return error if old password is incorrect', async () => {
+      // Setup
       req.body = {
-        oldPassword: 'wrong_password',
-        newPassword: 'new_password'
+        oldPassword: 'wrongpass',
+        newPassword: 'newpass123'
       };
 
-      // Call the function
-      await changePassword(req, res, next);
+      const mockUser = {
+        password: 'hashedOldPassword'
+      };
 
-      // Assertions
+      userController.userModel.findById.mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUser)
+      });
+      userController.bcryptjs.compare.mockResolvedValue(false);
+
+      // Execute
+      await userController.changePassword(req, res);
+
+      // Assert
       expect(res.fail).toHaveBeenCalledWith(null, 'كلمة المرور القديمة غير صحيحة', 400);
-      expect(next).not.toHaveBeenCalled();
     });
 
-    it('should return 400 if passwords are not provided', async () => {
-      // Set empty request body
+    it('should return error if passwords not provided', async () => {
+      // Setup
       req.body = {};
 
-      // Call the function
-      await changePassword(req, res, next);
+      // Execute
+      await userController.changePassword(req, res);
 
-      // Assertions
+      // Assert
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: expect.stringContaining('كلمة المرور')
-        })
-      );
-      expect(next).not.toHaveBeenCalled();
-    });
-
-    it('should return 404 if user not found', async () => {
-      // Set invalid user ID
-      req.user._id = 'invalid_user_id';
-      req.body = {
-        oldPassword: 'correct_password',
-        newPassword: 'new_password'
-      };
-
-      // Call the function
-      await changePassword(req, res, next);
-
-      // Assertions
-      expect(res.fail).toHaveBeenCalledWith(null, 'المستخدم غير موجود', 404);
-      expect(next).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'يجب توفير كلمة المرور القديمة والجديدة'
+      });
     });
   });
 
-  describe('getUserStats', () => {
-    it('should return user statistics successfully', async () => {
-      // Call the function
-      await getUserStats(req, res, next);
+  describe('searchUsers', () => {
+    it('should search users successfully', async () => {
+      // Setup
+      req.query = {
+        query: 'artist',
+        role: 'artist',
+        page: 1,
+        limit: 10
+      };
 
-      // Assertions
+      const mockUsers = [
+        {
+          _id: 'user1',
+          displayName: 'Artist 1',
+          role: 'artist'
+        },
+        {
+          _id: 'user2',
+          displayName: 'Artist 2',
+          role: 'artist'
+        }
+      ];
+
+      userController.userModel.find.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUsers)
+      });
+
+      userController.userModel.countDocuments.mockResolvedValue(2);
+      userController.followModel.countDocuments.mockResolvedValue(5);
+      userController.artworkModel.countDocuments.mockResolvedValue(3);
+
+      // Execute
+      await userController.searchUsers(req, res);
+
+      // Assert
+      expect(userController.userModel.find).toHaveBeenCalled();
       expect(res.success).toHaveBeenCalledWith(
         expect.objectContaining({
-          artworksCount: expect.any(Number),
-          imagesCount: expect.any(Number),
-          wishlistCount: expect.any(Number),
-          followingCount: expect.any(Number),
-          followersCount: expect.any(Number)
+          users: expect.any(Array),
+          pagination: expect.objectContaining({
+            currentPage: 1,
+            totalCount: 2
+          })
         }),
-        expect.any(String)
+        'تم البحث عن المستخدمين بنجاح'
       );
-      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('should handle search with no results', async () => {
+      // Setup
+      req.query = { query: 'nonexistent' };
+
+      userController.userModel.find.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([])
+      });
+
+      userController.userModel.countDocuments.mockResolvedValue(0);
+
+      // Execute
+      await userController.searchUsers(req, res);
+
+      // Assert
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          users: [],
+          pagination: expect.objectContaining({
+            totalCount: 0
+          })
+        }),
+        'تم البحث عن المستخدمين بنجاح'
+      );
+    });
+  });
+
+  describe('getMyProfile', () => {
+    it('should return complete user profile with stats', async () => {
+      // Setup
+      const mockUser = {
+        _id: 'user123',
+        displayName: 'Test User',
+        email: 'test@example.com'
+      };
+
+      userController.userModel.findById.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUser)
+      });
+
+      // Mock all the Promise.all calls
+      userController.followModel.countDocuments.mockResolvedValueOnce(10); // followers
+      userController.followModel.countDocuments.mockResolvedValueOnce(5);  // following
+      userController.artworkModel.countDocuments.mockResolvedValue(8);
+      userController.imageModel.countDocuments.mockResolvedValue(15);
+      userController.userModel.findById.mockResolvedValueOnce({ wishlist: ['1', '2', '3'] });
+      userController.transactionModel.countDocuments.mockResolvedValue(2);
+      userController.reviewModel.countDocuments.mockResolvedValue(4);
+      userController.reviewModel.aggregate.mockResolvedValue([{ avgRating: 4.5 }]);
+
+      // Execute
+      await userController.getMyProfile(req, res);
+
+      // Assert
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user: mockUser,
+          stats: expect.objectContaining({
+            followersCount: 10,
+            followingCount: 5,
+            artworksCount: 8,
+            imagesCount: 15,
+            wishlistCount: 3,
+            salesCount: 2,
+            reviewsCount: 4,
+            avgRating: 4.5
+          })
+        }),
+        'تم جلب الملف الشخصي بنجاح'
+      );
+    });
+
+    it('should return error if user not found', async () => {
+      // Setup
+      userController.userModel.findById.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(null)
+      });
+
+      // Execute
+      await userController.getMyProfile(req, res);
+
+      // Assert
+      expect(res.fail).toHaveBeenCalledWith(null, 'المستخدم غير موجود', 404);
+    });
+  });
+
+  describe('updatePrivacySettings', () => {
+    it('should update privacy settings successfully', async () => {
+      // Setup
+      req.body = {
+        profileVisibility: 'private',
+        showEmail: false,
+        allowMessages: 'followers'
+      };
+
+      const mockUser = {
+        privacySettings: {
+          profileVisibility: 'private',
+          showEmail: false,
+          allowMessages: 'followers'
+        }
+      };
+
+      userController.userModel.findByIdAndUpdate.mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUser)
+      });
+
+      // Execute
+      await userController.updatePrivacySettings(req, res);
+
+      // Assert
+      expect(userController.userModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        'user123',
+        {
+          $set: {
+            'privacySettings.profileVisibility': 'private',
+            'privacySettings.showEmail': false,
+            'privacySettings.allowMessages': 'followers'
+          }
+        },
+        { new: true }
+      );
+      expect(res.success).toHaveBeenCalledWith(
+        { privacySettings: mockUser.privacySettings },
+        'تم تحديث إعدادات الخصوصية بنجاح'
+      );
+    });
+
+    it('should return error if user not found', async () => {
+      // Setup
+      req.body = { profileVisibility: 'private' };
+      userController.userModel.findByIdAndUpdate.mockReturnValue({
+        select: jest.fn().mockResolvedValue(null)
+      });
+
+      // Execute
+      await userController.updatePrivacySettings(req, res);
+
+      // Assert
+      expect(res.fail).toHaveBeenCalledWith(null, 'المستخدم غير موجود', 404);
+    });
+  });
+
+  describe('getDetailedStats', () => {
+    it('should return detailed statistics successfully', async () => {
+      // Setup
+      req.query = { period: 'month' };
+
+      // Mock all the Promise.all calls for basic stats
+      userController.artworkModel.countDocuments.mockResolvedValue(10);
+      userController.imageModel.countDocuments.mockResolvedValue(25);
+      userController.followModel.countDocuments.mockResolvedValueOnce(15); // followers
+      userController.followModel.countDocuments.mockResolvedValueOnce(8);  // following
+      userController.transactionModel.countDocuments.mockResolvedValue(5);
+      userController.transactionModel.aggregate.mockResolvedValueOnce([{ total: 1500 }]); // earnings
+      userController.artworkModel.aggregate.mockResolvedValueOnce([{ total: 2000 }]); // views
+
+      // Mock category stats
+      userController.artworkModel.aggregate.mockResolvedValueOnce([
+        { _id: 'Painting', count: 6 },
+        { _id: 'Digital Art', count: 4 }
+      ]);
+
+      // Mock monthly stats
+      userController.artworkModel.aggregate.mockResolvedValueOnce([
+        { _id: 1, artworks: 3, views: 500 },
+        { _id: 2, artworks: 4, views: 700 }
+      ]);
+
+      // Execute
+      await userController.getDetailedStats(req, res);
+
+      // Assert
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          overview: expect.objectContaining({
+            totalArtworks: 10,
+            totalImages: 25,
+            totalFollowers: 15,
+            totalFollowing: 8,
+            totalSales: 5,
+            totalEarnings: 1500,
+            totalViews: 2000
+          }),
+          categoryStats: expect.any(Array),
+          monthlyStats: expect.any(Array),
+          period: 'month'
+        }),
+        'تم جلب الإحصائيات التفصيلية بنجاح'
+      );
+    });
+
+    it('should handle period "all" correctly', async () => {
+      // Setup
+      req.query = { period: 'all' };
+
+      // Mock basic responses
+      userController.artworkModel.countDocuments.mockResolvedValue(0);
+      userController.imageModel.countDocuments.mockResolvedValue(0);
+      userController.followModel.countDocuments.mockResolvedValue(0);
+      userController.transactionModel.countDocuments.mockResolvedValue(0);
+      userController.transactionModel.aggregate.mockResolvedValue([]);
+      userController.artworkModel.aggregate.mockResolvedValue([]);
+
+      // Execute
+      await userController.getDetailedStats(req, res);
+
+      // Assert
+      expect(userController.artworkModel.countDocuments).toHaveBeenCalledWith(
+        expect.objectContaining({ artist: 'user123' })
+      );
+    });
+  });
+
+  describe('getArtistProfile', () => {
+    it('should return artist profile successfully', async () => {
+      // Setup
+      req.params = { artistId: 'artist123' };
+
+      const mockArtist = {
+        _id: 'artist123',
+        displayName: 'Test Artist',
+        email: 'artist@example.com',
+        role: 'artist'
+      };
+
+      const mockArtworks = [
+        { _id: 'artwork1', title: 'Art 1' },
+        { _id: 'artwork2', title: 'Art 2' }
+      ];
+
+      userController.userModel.findOne.mockResolvedValue(mockArtist);
+      userController.followModel.countDocuments.mockResolvedValueOnce(20); // followers
+      userController.followModel.findOne.mockResolvedValue(null); // not following
+      userController.reviewModel.aggregate.mockResolvedValue([{ avgRating: 4.2, ratingsCount: 8 }]);
+      userController.artworkModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue(mockArtworks)
+      });
+      userController.transactionModel.countDocuments.mockResolvedValue(3);
+
+      // Execute
+      await userController.getArtistProfile(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: 'تم جلب بيانات الفنان بنجاح',
+          data: expect.objectContaining({
+            artist: expect.objectContaining({
+              _id: 'artist123',
+              displayName: 'Test Artist'
+            }),
+            stats: expect.objectContaining({
+              followersCount: 20,
+              salesCount: 3
+            }),
+            isFollowing: false,
+            artworks: mockArtworks
+          })
+        })
+      );
+    });
+
+    it('should return 404 if artist not found', async () => {
+      // Setup
+      req.params = { artistId: 'nonexistent' };
+      userController.userModel.findOne.mockResolvedValue(null);
+
+      // Execute
+      await userController.getArtistProfile(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'الفنان غير موجود'
+      });
+    });
+  });
+
+  describe('discoverArtists', () => {
+    it('should discover artists with default sorting', async () => {
+      // Setup
+      req.query = { page: 1, limit: 10, sort: 'newest' };
+
+      const mockArtists = [
+        {
+          _id: 'artist1',
+          displayName: 'Artist 1',
+          role: 'artist'
+        }
+      ];
+
+      userController.userModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        select: jest.fn().mockResolvedValue(mockArtists)
+      });
+
+      userController.userModel.countDocuments.mockResolvedValue(1);
+      userController.followModel.countDocuments.mockResolvedValue(5);
+
+      // Execute
+      await userController.discoverArtists(req, res);
+
+      // Assert
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          artists: expect.any(Array),
+          pagination: expect.any(Object)
+        }),
+        'تم جلب الفنانين بنجاح'
+      );
+    });
+
+    it('should handle popular sorting with followers aggregation', async () => {
+      // Setup
+      req.query = { sort: 'popular', page: 1, limit: 10 };
+
+      const mockFollowersAgg = [
+        { _id: 'artist1', followersCount: 10 }
+      ];
+
+      const mockArtists = [
+        {
+          _id: 'artist1',
+          displayName: 'Popular Artist',
+          role: 'artist'
+        }
+      ];
+
+      userController.followModel.aggregate.mockResolvedValue(mockFollowersAgg);
+      userController.userModel.find.mockResolvedValue(mockArtists);
+      userController.userModel.countDocuments.mockResolvedValue(1);
+
+      // Execute
+      await userController.discoverArtists(req, res);
+
+      // Assert
+      expect(userController.followModel.aggregate).toHaveBeenCalled();
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          artists: expect.any(Array)
+        }),
+        'تم جلب الفنانين بنجاح'
+      );
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle async errors in toggleWishlist', async () => {
+      // Setup
+      req.body = { artworkId: 'artwork123' };
+      const error = new Error('Async error');
+      userController.artworkModel.findById.mockRejectedValue(error);
+
+      // Execute
+      await userController.toggleWishlist(req, res);
+
+      // Assert
+      expect(userController.errorHandler).toHaveBeenCalledWith(res, error, 'حدث خطأ أثناء تحديث المفضلة');
+    });
+
+    it('should handle async errors in searchUsers', async () => {
+      // Setup
+      req.query = { query: 'test' };
+      const error = new Error('Search error');
+      userController.userModel.find.mockImplementation(() => {
+        throw error;
+      });
+
+      // Execute
+      await userController.searchUsers(req, res);
+
+      // Assert
+      expect(userController.errorHandler).toHaveBeenCalledWith(res, error, 'حدث خطأ أثناء البحث عن المستخدمين');
+    });
+
+    it('should handle async errors in getMyProfile', async () => {
+      // Setup
+      const error = new Error('Profile error');
+      userController.userModel.findById.mockImplementation(() => {
+        throw error;
+      });
+
+      // Execute
+      await userController.getMyProfile(req, res);
+
+      // Assert
+      expect(userController.errorHandler).toHaveBeenCalledWith(res, error, 'حدث خطأ أثناء جلب الملف الشخصي');
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle empty wishlist in toggleWishlist', async () => {
+      // Setup
+      req.body = { artworkId: 'artwork123' };
+      const mockArtwork = { _id: 'artwork123', title: 'Test Art' };
+      const mockUser = {
+        _id: 'user123',
+        wishlist: [],
+        save: jest.fn().mockResolvedValue(true)
+      };
+
+      userController.artworkModel.findById.mockResolvedValue(mockArtwork);
+      userController.userModel.findById.mockResolvedValue(mockUser);
+
+      // Execute
+      await userController.toggleWishlist(req, res);
+
+      // Assert
+      expect(mockUser.wishlist).toHaveLength(1);
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'added' }),
+        'تم إضافة العمل إلى المفضلة'
+      );
+    });
+
+    it('should handle user with no stats in getMyProfile', async () => {
+      // Setup
+      const mockUser = { _id: 'user123', displayName: 'Test' };
+      
+      userController.userModel.findById.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUser)
+      });
+
+      // Mock all counts as 0
+      userController.followModel.countDocuments.mockResolvedValue(0);
+      userController.artworkModel.countDocuments.mockResolvedValue(0);
+      userController.imageModel.countDocuments.mockResolvedValue(0);
+      userController.userModel.findById.mockResolvedValueOnce({ wishlist: [] });
+      userController.transactionModel.countDocuments.mockResolvedValue(0);
+      userController.reviewModel.countDocuments.mockResolvedValue(0);
+      userController.reviewModel.aggregate.mockResolvedValue([]);
+
+      // Execute
+      await userController.getMyProfile(req, res);
+
+      // Assert
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stats: expect.objectContaining({
+            followersCount: 0,
+            avgRating: 0
+          })
+        }),
+        'تم جلب الملف الشخصي بنجاح'
+      );
     });
   });
 });

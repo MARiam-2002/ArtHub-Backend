@@ -1,94 +1,179 @@
-import mongoose, { Schema, Types, model } from 'mongoose';
+import mongoose from 'mongoose';
 
 /**
+ * Token Schema
+ * Handles both access and refresh tokens with proper indexing and expiration
+ * 
  * @swagger
  * components:
  *   schemas:
- *     Token:
+ *     TokenModel:
  *       type: object
- *       required:
- *         - token
- *         - user
  *       properties:
  *         _id:
  *           type: string
- *           description: Auto-generated MongoDB ID
- *         token:
- *           type: string
- *           description: JWT token string
+ *           example: "60d0fe4f5311236168a109cb"
  *         user:
  *           type: string
- *           description: Reference to the user ID
+ *           example: "60d0fe4f5311236168a109ca"
+ *         token:
+ *           type: string
+ *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *         refreshToken:
+ *           type: string
+ *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *         userAgent:
+ *           type: string
+ *           example: "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)"
  *         isValid:
  *           type: boolean
- *           description: Whether the token is still valid
- *           default: true
- *         agent:
- *           type: string
- *           description: User agent string from the device that created the token
- *         expiredAt:
- *           type: string
- *           format: date-time
- *           description: Timestamp when the token expires
+ *           example: true
  *         createdAt:
  *           type: string
  *           format: date-time
- *           description: Timestamp when the token was created
- *         updatedAt:
+ *           example: "2023-05-15T10:30:45.123Z"
+ *         expiresAt:
  *           type: string
  *           format: date-time
- *           description: Timestamp when the token was last updated
+ *           example: "2023-06-15T10:30:45.123Z"
  */
-const tokenSchema = new Schema(
+const tokenSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
+    },
     token: {
       type: String,
       required: true,
       index: true
     },
-    user: {
-      type: Types.ObjectId,
-      ref: 'User',
-      required: true,
+    refreshToken: {
+      type: String,
+      required: false,
       index: true
+    },
+    userAgent: {
+      type: String,
+      required: false
     },
     isValid: {
       type: Boolean,
-      default: true
+      default: true,
+      index: true
     },
-    agent: String,
-    expiredAt: {
+    expiresAt: {
       type: Date,
-      default: function() {
-        // Default expiration is 30 days from creation
-        const now = new Date();
-        return new Date(now.setDate(now.getDate() + 30));
-      }
+      required: true,
+      index: true
     }
   },
-  { timestamps: true }
+  {
+    timestamps: true
+  }
 );
 
-// Add index for faster token lookup and expiration checks
-tokenSchema.index({ token: 1, isValid: 1 });
-tokenSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
+// Create TTL index to automatically remove expired tokens
+tokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-// Static method to find a valid token
-tokenSchema.statics.findValidToken = async function(tokenString) {
+/**
+ * Static method to find a valid token by its value
+ * @param {string} token - Token to find
+ * @returns {Promise<Object|null>} - Token document or null if not found
+ */
+tokenSchema.statics.findValidToken = async function (token) {
   return this.findOne({
-    token: tokenString,
+    token,
     isValid: true,
-    expiredAt: { $gt: new Date() }
+    expiresAt: { $gt: new Date() }
   });
 };
 
-// Static method to invalidate all tokens for a user
-tokenSchema.statics.invalidateAllUserTokens = async function(userId) {
-  return this.updateMany(
-    { user: userId, isValid: true },
-    { isValid: false }
+/**
+ * Static method to find a valid refresh token by its value
+ * @param {string} refreshToken - Refresh token to find
+ * @returns {Promise<Object|null>} - Token document or null if not found
+ */
+tokenSchema.statics.findValidRefreshToken = async function (refreshToken) {
+  return this.findOne({
+    refreshToken,
+    isValid: true,
+    expiresAt: { $gt: new Date() }
+  });
+};
+
+/**
+ * Static method to invalidate a token
+ * @param {string} token - Token to invalidate
+ * @returns {Promise<Object|null>} - Updated token document or null if not found
+ */
+tokenSchema.statics.invalidateToken = async function (token) {
+  return this.findOneAndUpdate(
+    { token },
+    { isValid: false },
+    { new: true }
   );
 };
 
-const tokenModel = mongoose.models.Token || model('Token', tokenSchema);
+/**
+ * Static method to invalidate all tokens for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} - Result of update operation
+ */
+tokenSchema.statics.invalidateAllUserTokens = async function (userId) {
+  const result = await this.updateMany(
+    { user: userId, isValid: true },
+    { isValid: false }
+  );
+  return { invalidatedCount: result.modifiedCount };
+};
+
+/**
+ * Static method to create a token pair (access token + refresh token)
+ * @param {string} userId - User ID
+ * @param {string} accessToken - Access token
+ * @param {string} refreshToken - Refresh token
+ * @param {string} userAgent - User agent string
+ * @returns {Promise<Object>} - Created token document
+ */
+tokenSchema.statics.createTokenPair = async function (userId, accessToken, refreshToken, userAgent) {
+  // Calculate expiration dates
+  const accessTokenExpiry = new Date();
+  accessTokenExpiry.setHours(accessTokenExpiry.getHours() + 2); // 2 hours for access token
+  
+  const refreshTokenExpiry = new Date();
+  refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 30); // 30 days for refresh token
+  
+  return this.create({
+    user: userId,
+    token: accessToken,
+    refreshToken,
+    userAgent: userAgent || 'unknown',
+    isValid: true,
+    expiresAt: refreshTokenExpiry // Use refresh token expiry as the document expiry
+  });
+};
+
+/**
+ * Static method to refresh an access token
+ * @param {string} refreshToken - Refresh token
+ * @param {string} newAccessToken - New access token
+ * @returns {Promise<Object|null>} - Updated token document or null if not found
+ */
+tokenSchema.statics.refreshAccessToken = async function (refreshToken, newAccessToken) {
+  // Calculate new access token expiration date
+  const accessTokenExpiry = new Date();
+  accessTokenExpiry.setHours(accessTokenExpiry.getHours() + 2); // 2 hours
+  
+  return this.findOneAndUpdate(
+    { refreshToken, isValid: true, expiresAt: { $gt: new Date() } },
+    { token: newAccessToken },
+    { new: true }
+  );
+};
+
+const tokenModel = mongoose.model('Token', tokenSchema);
+
 export default tokenModel;

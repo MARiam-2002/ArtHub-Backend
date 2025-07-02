@@ -2,20 +2,88 @@ import { Router } from 'express';
 import { fileUpload, filterObject } from '../../utils/multer.js';
 import * as imageController from './controller/image.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
-import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import { createImageSchema, updateImageSchema } from './image.validation.js';
+import {
+  uploadImageSchema,
+  updateImageSchema,
+  imageIdParamSchema,
+  getImagesQuerySchema,
+  searchImagesQuerySchema
+} from './image.validation.js';
 
 const router = Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Image:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           description: معرف الصورة
+ *         title:
+ *           type: string
+ *           description: عنوان الصورة
+ *         description:
+ *           type: string
+ *           description: وصف الصورة
+ *         url:
+ *           type: string
+ *           description: رابط الصورة
+ *         publicId:
+ *           type: string
+ *           description: معرف الصورة في Cloudinary
+ *         user:
+ *           $ref: '#/components/schemas/User'
+ *         category:
+ *           $ref: '#/components/schemas/Category'
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: وسوم الصورة
+ *         size:
+ *           type: number
+ *           description: حجم الصورة بالبايت
+ *         format:
+ *           type: string
+ *           description: تنسيق الصورة
+ *         width:
+ *           type: number
+ *           description: عرض الصورة
+ *         height:
+ *           type: number
+ *           description: ارتفاع الصورة
+ *         views:
+ *           type: number
+ *           description: عدد المشاهدات
+ *         downloads:
+ *           type: number
+ *           description: عدد التحميلات
+ *         isPrivate:
+ *           type: boolean
+ *           description: هل الصورة خاصة
+ *         allowDownload:
+ *           type: boolean
+ *           description: السماح بالتحميل
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ */
+
+// Image Upload
+/**
+ * @swagger
  * /api/image/upload:
  *   post:
- *     tags:
- *       - Images
- *     summary: رفع صورة أو أكثر
- *     description: رفع صورة واحدة أو أكثر مع بيانات وصفية وخيارات للعلامة المائية
+ *     tags: [Images]
+ *     summary: Upload image
+ *     description: Upload a single image with optional metadata
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -24,287 +92,320 @@ const router = Router();
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - image
  *             properties:
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *                 description: الصور المراد رفعها (الحد الأقصى 10)
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file to upload
  *               title:
  *                 type: string
- *                 description: عنوان الصورة (اختياري)
+ *                 minLength: 3
+ *                 maxLength: 100
+ *                 description: Image title
+ *                 example: "Beautiful Artwork"
  *               description:
  *                 type: string
- *                 description: وصف الصورة (اختياري)
+ *                 maxLength: 500
+ *                 description: Image description
+ *                 example: "Abstract painting with vibrant colors"
  *               tags:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: وسوم الصورة (اختياري)
+ *                 maxItems: 10
+ *                 description: Image tags
+ *                 example: ["art", "abstract", "colors"]
  *               category:
  *                 type: string
- *                 description: فئة الصورة (اختياري)
- *               applyWatermark:
+ *                 pattern: '^[0-9a-fA-F]{24}$'
+ *                 description: Category ID
+ *               isPrivate:
  *                 type: boolean
- *                 description: تطبيق علامة مائية على الصورة (اختياري)
+ *                 default: false
+ *                 description: Make image private
+ *               allowDownload:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Allow image download
  *     responses:
  *       201:
- *         description: تم رفع الصور بنجاح
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم رفع الصورة بنجاح"
+ *                 data:
+ *                   $ref: '#/components/schemas/Image'
  *       400:
- *         description: لم يتم توفير أي صور أو خطأ في البيانات
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
- *         description: غير مصرح به
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.post(
   '/upload',
   isAuthenticated,
-  fileUpload(filterObject.image).array('images', 10),
-  isValidation(createImageSchema),
-  imageController.uploadImages
+  fileUpload(filterObject.image).single('image'),
+  isValidation(uploadImageSchema),
+  imageController.uploadImage
 );
 
+// Get Images
 /**
  * @swagger
- * /api/image/upload/firebase:
- *   post:
- *     tags:
- *       - Images
- *     summary: رفع صورة أو أكثر باستخدام مصادقة Firebase
- *     description: رفع صورة واحدة أو أكثر مع بيانات وصفية وخيارات للعلامة المائية باستخدام مصادقة Firebase
+ * /api/image:
+ *   get:
+ *     tags: [Images]
+ *     summary: Get all images
+ *     description: Get a paginated list of images with optional filtering
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Items per page
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Filter by category ID
+ *       - in: query
+ *         name: user
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Filter by user ID
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *         description: Search in title and description
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, views, downloads, title]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *     responses:
+ *       200:
+ *         description: Images retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     images:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Image'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationMeta'
+ */
+router.get('/', isValidation(getImagesQuerySchema), imageController.getAllImages);
+
+// Search Images
+/**
+ * @swagger
+ * /api/image/search:
+ *   get:
+ *     tags: [Images]
+ *     summary: Search images
+ *     description: Search for images by title, description, or tags
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *         description: Search query
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Filter by category
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Search results retrieved successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ */
+router.get('/search', isValidation(searchImagesQuerySchema), imageController.searchImages);
+
+// Get Image by ID
+/**
+ * @swagger
+ * /api/image/{imageId}:
+ *   get:
+ *     tags: [Images]
+ *     summary: Get image by ID
+ *     description: Get detailed information about a specific image
+ *     parameters:
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Image ID
+ *     responses:
+ *       200:
+ *         description: Image details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Image'
+ *       404:
+ *         description: Image not found
+ */
+router.get('/:imageId', isValidation(imageIdParamSchema), imageController.getImageById);
+
+// Update Image
+/**
+ * @swagger
+ * /api/image/{imageId}:
+ *   put:
+ *     tags: [Images]
+ *     summary: Update image
+ *     description: Update image metadata (owner only)
  *     security:
- *       - FirebaseAuth: []
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
  *             type: object
  *             properties:
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *                 description: الصور المراد رفعها (الحد الأقصى 10)
  *               title:
  *                 type: string
- *                 description: عنوان الصورة (اختياري)
+ *                 minLength: 3
+ *                 maxLength: 100
  *               description:
  *                 type: string
- *                 description: وصف الصورة (اختياري)
+ *                 maxLength: 500
  *               tags:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: وسوم الصورة (اختياري)
- *               category:
- *                 type: string
- *                 description: فئة الصورة (اختياري)
- *               applyWatermark:
+ *                 maxItems: 10
+ *               isPrivate:
  *                 type: boolean
- *                 description: تطبيق علامة مائية على الصورة (اختياري)
- *     responses:
- *       201:
- *         description: تم رفع الصور بنجاح
- *       400:
- *         description: لم يتم توفير أي صور أو خطأ في البيانات
- *       401:
- *         description: غير مصرح به
- */
-router.post(
-  '/upload/firebase',
-  verifyFirebaseToken,
-  fileUpload(filterObject.image).array('images', 10),
-  isValidation(createImageSchema),
-  imageController.uploadImages
-);
-
-/**
- * @swagger
- * /api/image/upload/album:
- *   post:
- *     tags:
- *       - Images
- *     summary: رفع ألبوم صور
- *     description: رفع مجموعة صور كألبوم
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *                 description: الصور المراد رفعها للألبوم (الحد الأقصى 30)
- *               albumTitle:
- *                 type: string
- *                 description: عنوان الألبوم
- *               applyWatermark:
+ *               allowDownload:
  *                 type: boolean
- *                 description: تطبيق علامة مائية على جميع الصور (اختياري)
- *     responses:
- *       201:
- *         description: تم رفع الألبوم بنجاح
- *       400:
- *         description: لم يتم توفير أي صور أو خطأ في البيانات
- *       401:
- *         description: غير مصرح به
- */
-router.post(
-  '/upload/album',
-  isAuthenticated,
-  fileUpload(filterObject.image).array('images', 30),
-  imageController.uploadMultipleImages
-);
-
-/**
- * @swagger
- * /api/image/upload/album/firebase:
- *   post:
- *     tags:
- *       - Images
- *     summary: رفع ألبوم صور باستخدام مصادقة Firebase
- *     description: رفع مجموعة صور كألبوم باستخدام مصادقة Firebase
- *     security:
- *       - FirebaseAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               images:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *                 description: الصور المراد رفعها للألبوم (الحد الأقصى 30)
- *               albumTitle:
- *                 type: string
- *                 description: عنوان الألبوم
- *               applyWatermark:
- *                 type: boolean
- *                 description: تطبيق علامة مائية على جميع الصور (اختياري)
- *     responses:
- *       201:
- *         description: تم رفع الألبوم بنجاح
- *       400:
- *         description: لم يتم توفير أي صور أو خطأ في البيانات
- *       401:
- *         description: غير مصرح به
- */
-router.post(
-  '/upload/album/firebase',
-  verifyFirebaseToken,
-  fileUpload(filterObject.image).array('images', 30),
-  imageController.uploadMultipleImages
-);
-
-/**
- * @swagger
- * /api/image/albums:
- *   get:
- *     tags:
- *       - Images
- *     summary: الحصول على ألبومات المستخدم
- *     description: استرجاع جميع ألبومات الصور الخاصة بالمستخدم المصادق
- *     security:
- *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: تم جلب الألبومات بنجاح
+ *         description: Image updated successfully
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
- *         description: غير مصرح به
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: Only image owner can update
+ *       404:
+ *         description: Image not found
  */
-router.get('/albums', isAuthenticated, imageController.getUserAlbums);
+router.put('/:imageId', isAuthenticated, isValidation(imageIdParamSchema), isValidation(updateImageSchema), imageController.updateImage);
 
+// Delete Image
 /**
  * @swagger
- * /api/image/albums/firebase:
- *   get:
- *     tags:
- *       - Images
- *     summary: الحصول على ألبومات المستخدم باستخدام مصادقة Firebase
- *     description: استرجاع جميع ألبومات الصور الخاصة بالمستخدم المصادق باستخدام Firebase
- *     security:
- *       - FirebaseAuth: []
- *     responses:
- *       200:
- *         description: تم جلب الألبومات بنجاح
- *       401:
- *         description: غير مصرح به
- */
-router.get('/albums/firebase', verifyFirebaseToken, imageController.getUserAlbums);
-
-/**
- * @swagger
- * /api/image/albums/{albumName}:
- *   get:
- *     tags:
- *       - Images
- *     summary: الحصول على صور ألبوم محدد
- *     description: استرجاع جميع الصور في ألبوم محدد للمستخدم المصادق
+ * /api/image/{imageId}:
+ *   delete:
+ *     tags: [Images]
+ *     summary: Delete image
+ *     description: Delete an image (owner only)
  *     security:
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: albumName
+ *         name: imageId
  *         required: true
  *         schema:
  *           type: string
- *         description: اسم الألبوم
+ *           pattern: '^[0-9a-fA-F]{24}$'
  *     responses:
  *       200:
- *         description: تم جلب صور الألبوم بنجاح
+ *         description: Image deleted successfully
  *       401:
- *         description: غير مصرح به
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: Only image owner can delete
  *       404:
- *         description: الألبوم غير موجود
+ *         description: Image not found
  */
-router.get('/albums/:albumName', isAuthenticated, imageController.getAlbumImages);
+router.delete('/:imageId', isAuthenticated, isValidation(imageIdParamSchema), imageController.deleteImage);
 
-/**
- * @swagger
- * /api/image/albums/{albumName}/firebase:
- *   get:
- *     tags:
- *       - Images
- *     summary: الحصول على صور ألبوم محدد باستخدام مصادقة Firebase
- *     description: استرجاع جميع الصور في ألبوم محدد للمستخدم المصادق باستخدام Firebase
- *     security:
- *       - FirebaseAuth: []
- *     parameters:
- *       - in: path
- *         name: albumName
- *         required: true
- *         schema:
- *           type: string
- *         description: اسم الألبوم
- *     responses:
- *       200:
- *         description: تم جلب صور الألبوم بنجاح
- *       401:
- *         description: غير مصرح به
- *       404:
- *         description: الألبوم غير موجود
- */
-router.get('/albums/:albumName/firebase', verifyFirebaseToken, imageController.getAlbumImages);
-
+// My Images
 /**
  * @swagger
  * /api/image/my-images:
  *   get:
- *     tags:
- *       - Image
- *     summary: Get user images
+ *     tags: [Images]
+ *     summary: Get my images
  *     description: Get all images uploaded by the authenticated user
  *     security:
  *       - BearerAuth: []
@@ -313,337 +414,64 @@ router.get('/albums/:albumName/firebase', verifyFirebaseToken, imageController.g
  *         name: page
  *         schema:
  *           type: integer
+ *           minimum: 1
  *           default: 1
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 20
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
  *       - in: query
- *         name: category
+ *         name: isPrivate
  *         schema:
- *           type: string
+ *           type: boolean
+ *         description: Filter by privacy status
  *     responses:
  *       200:
- *         description: Images retrieved successfully
- */
-router.get('/my-images', isAuthenticated, imageController.getUserImages);
-
-/**
- * @swagger
- * /api/image/my-images/firebase:
- *   get:
- *     tags:
- *       - Image
- *     summary: Get user images with Firebase auth
- *     description: Get all images uploaded by the user authenticated with Firebase
- *     security:
- *       - FirebaseAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Images retrieved successfully
- */
-router.get('/my-images/firebase', verifyFirebaseToken, imageController.getUserImages);
-
-/**
- * @swagger
- * /api/image/{imageId}:
- *   get:
- *     tags:
- *       - Image
- *     summary: Get image details
- *     description: Get details of a specific image
- *     parameters:
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Image retrieved successfully
- *       404:
- *         description: Image not found
- */
-router.get('/:imageId', imageController.getImageById);
-
-/**
- * @swagger
- * /api/image/{imageId}:
- *   patch:
- *     tags:
- *       - Image
- *     summary: Update image metadata
- *     description: Update metadata of a specific image
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *               category:
- *                 type: string
- *     responses:
- *       200:
- *         description: Image updated successfully
- *       404:
- *         description: Image not found
- */
-router.patch(
-  '/:imageId',
-  isAuthenticated,
-  isValidation(updateImageSchema),
-  imageController.updateImageMetadata
-);
-
-/**
- * @swagger
- * /api/image/{imageId}/firebase:
- *   patch:
- *     tags:
- *       - Image
- *     summary: Update image metadata with Firebase auth
- *     description: Update metadata of a specific image using Firebase authentication
- *     security:
- *       - FirebaseAuth: []
- *     parameters:
- *       - in: path
- *         name: imageId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *               category:
- *                 type: string
- *     responses:
- *       200:
- *         description: Image updated successfully
- *       404:
- *         description: Image not found
- */
-router.patch(
-  '/:imageId/firebase',
-  verifyFirebaseToken,
-  isValidation(updateImageSchema),
-  imageController.updateImageMetadata
-);
-
-/**
- * @swagger
- * /api/image/{publicId}:
- *   delete:
- *     tags:
- *       - Image
- *     summary: Delete image
- *     description: Delete a specific image
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: publicId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Image deleted successfully
- *       404:
- *         description: Image not found
- */
-router.delete('/:publicId', isAuthenticated, imageController.deleteImage);
-
-/**
- * @swagger
- * /api/image/{publicId}/firebase:
- *   delete:
- *     tags:
- *       - Image
- *     summary: Delete image with Firebase auth
- *     description: Delete a specific image using Firebase authentication
- *     security:
- *       - FirebaseAuth: []
- *     parameters:
- *       - in: path
- *         name: publicId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Image deleted successfully
- *       404:
- *         description: Image not found
- */
-router.delete('/:publicId/firebase', verifyFirebaseToken, imageController.deleteImage);
-
-/**
- * @swagger
- * /api/image/categories/popular:
- *   get:
- *     tags:
- *       - Image
- *       - Categories
- *     summary: Get popular image categories
- *     description: Get a list of popular image categories with counts
- *     responses:
- *       200:
- *         description: Categories retrieved successfully
- */
-router.get('/categories/popular', imageController.getImageCategories);
-
-/**
- * @swagger
- * /api/image/optimize/{imageId}:
- *   post:
- *     tags:
- *       - Images
- *     summary: تحسين صورة موجودة
- *     description: تحسين صورة موجودة في النظام وإنشاء إصدارات محسنة مختلفة الأحجام
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - name: imageId
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: معرف الصورة المراد تحسينها
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               optimizationLevel:
- *                 type: string
- *                 enum: [low, medium, high]
- *                 default: medium
- *                 description: مستوى تحسين الصورة
- *     responses:
- *       200:
- *         description: تم تحسين الصورة بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *             example:
- *               {
- *                 "success": true,
- *                 "message": "تم تحسين الصورة بنجاح",
- *                 "data": {
- *                   "optimizedUrl": "https://res.cloudinary.com/demo/image/upload/q_auto,f_auto/v1612345678/artwork.jpg",
- *                   "variants": {
- *                     "thumbnail": "https://res.cloudinary.com/demo/image/upload/c_thumb,w_200,h_200/v1612345678/artwork.jpg",
- *                     "small": "https://res.cloudinary.com/demo/image/upload/c_scale,w_400/v1612345678/artwork.jpg",
- *                     "medium": "https://res.cloudinary.com/demo/image/upload/c_scale,w_800/v1612345678/artwork.jpg"
- *                   }
- *                 }
- *               }
- *       400:
- *         description: بيانات غير صالحة
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       404:
- *         description: الصورة غير موجودة
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.post('/optimize/:imageId', isAuthenticated, imageController.optimizeImage);
-
-/**
- * @swagger
- * /api/image/optimize-all:
- *   post:
- *     tags:
- *       - Images
- *     summary: تحسين جميع صور المستخدم
- *     description: تحسين جميع صور المستخدم الحالي وإنشاء إصدارات محسنة مختلفة الأحجام
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               optimizationLevel:
- *                 type: string
- *                 enum: [low, medium, high]
- *                 default: medium
- *                 description: مستوى تحسين الصور
- *     responses:
- *       200:
- *         description: تم بدء عملية التحسين بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
- *             example:
- *               {
- *                 "success": true,
- *                 "message": "تم بدء عملية تحسين الصور",
- *                 "data": {
- *                   "totalImages": 10,
- *                   "jobId": "job-123456"
- *                 }
- *               }
+ *         description: User images retrieved successfully
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/optimize-all', isAuthenticated, imageController.optimizeAllUserImages);
+router.get('/my-images', isAuthenticated, imageController.getMyImages);
+
+// Download Image
+/**
+ * @swagger
+ * /api/image/{imageId}/download:
+ *   get:
+ *     tags: [Images]
+ *     summary: Download image
+ *     description: Download an image file (if allowed)
+ *     parameters:
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Image ID
+ *       - in: query
+ *         name: quality
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high, original]
+ *           default: original
+ *         description: Download quality
+ *     responses:
+ *       200:
+ *         description: Image file
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Download not allowed
+ *       404:
+ *         description: Image not found
+ */
+router.get('/:imageId/download', isValidation(imageIdParamSchema), imageController.downloadImage);
 
 export default router;

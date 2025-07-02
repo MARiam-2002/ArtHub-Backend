@@ -5,43 +5,53 @@ import jwt from 'jsonwebtoken';
 import tokenModel from '../../DB/models/token.model.js';
 
 /**
- * Generate JWT token for authenticated users
+ * Generate JWT tokens for authenticated users
  * @param {Object} user - User object
- * @returns {string} - JWT token
+ * @returns {Object} - Object containing access token and refresh token
  */
-const generateToken = user => {
-  return jwt.sign(
+const generateTokens = user => {
+  // Generate access token
+  const accessToken = jwt.sign(
     {
       id: user._id,
       email: user.email,
       role: user.role
     },
     process.env.TOKEN_KEY,
+    { expiresIn: '2h' }
+  );
+  
+  // Generate refresh token
+  const refreshToken = jwt.sign(
+    {
+      id: user._id,
+      tokenType: 'refresh'
+    },
+    process.env.REFRESH_TOKEN_KEY || process.env.TOKEN_KEY,
     { expiresIn: '30d' }
   );
+
+  return { accessToken, refreshToken };
 };
 
 /**
- * Save token to database
- * @param {string} token - JWT token
+ * Save token pair to database
  * @param {string} userId - User ID
+ * @param {string} accessToken - Access token
+ * @param {string} refreshToken - Refresh token
  * @param {string} userAgent - User agent string
  * @returns {Promise<Object>} - Saved token object
  */
-const saveToken = async (token, userId, userAgent) => {
+const saveTokenPair = async (userId, accessToken, refreshToken, userAgent) => {
   try {
-    // Delete any existing tokens for this user first
-    await tokenModel.findOneAndDelete({ user: userId });
-
-    // Create new token
-    return await tokenModel.create({
-      token,
-      user: userId,
-      agent: userAgent || 'unknown'
-    });
+    return await tokenModel.createTokenPair(
+      userId, 
+      accessToken, 
+      refreshToken, 
+      userAgent
+    );
   } catch (error) {
-    console.warn('Failed to save token:', error);
-    // Return null but don't fail the operation
+    console.warn('Failed to save token pair:', error);
     return null;
   }
 };
@@ -49,6 +59,15 @@ const saveToken = async (token, userId, userAgent) => {
 /**
  * Middleware to verify Firebase ID token and attach user to request
  * Works with both web and mobile Firebase Authentication
+ * 
+ * @swagger
+ * components:
+ *   securitySchemes:
+ *     firebaseAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *       description: Firebase ID token obtained from Firebase Authentication
  */
 export const verifyFirebaseToken = asyncHandler(async (req, res, next) => {
   try {
@@ -60,7 +79,13 @@ export const verifyFirebaseToken = asyncHandler(async (req, res, next) => {
     }
 
     // Verify the token with Firebase Admin
-    const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(firebaseToken);
+    } catch (error) {
+      console.error('Firebase token verification error:', error);
+      return next(new Error('رمز المصادقة غير صالح', { cause: 401 }));
+    }
 
     if (!decodedToken) {
       return next(new Error('رمز المصادقة غير صالح', { cause: 401 }));
@@ -73,7 +98,8 @@ export const verifyFirebaseToken = asyncHandler(async (req, res, next) => {
       name: decodedToken.name || decodedToken.email?.split('@')[0] || 'مستخدم جديد',
       picture: decodedToken.picture || '',
       emailVerified: decodedToken.email_verified || false,
-      phoneNumber: decodedToken.phone_number || null
+      phoneNumber: decodedToken.phone_number || null,
+      provider: decodedToken.firebase?.sign_in_provider?.split('.')[0] || 'firebase'
     };
 
     // Find or create user based on Firebase UID
@@ -85,10 +111,12 @@ export const verifyFirebaseToken = asyncHandler(async (req, res, next) => {
       
       // If found by email, update the Firebase UID
       if (user) {
-        await userModel.updateOne(
-          { _id: user._id },
-          { firebaseUid: userInfo.uid, isVerified: userInfo.emailVerified }
-        );
+        user.firebaseUid = userInfo.uid;
+        user.isVerified = userInfo.emailVerified;
+        if (!user.profileImage?.url && userInfo.picture) {
+          user.profileImage = { url: userInfo.picture };
+        }
+        await user.save();
       }
     }
 
@@ -102,7 +130,8 @@ export const verifyFirebaseToken = asyncHandler(async (req, res, next) => {
         profileImage: userInfo.picture ? { url: userInfo.picture } : undefined,
         phoneNumber: userInfo.phoneNumber,
         isVerified: userInfo.emailVerified,
-        role: 'user'
+        role: 'user',
+        socialProvider: userInfo.provider
       });
     }
 
@@ -198,14 +227,20 @@ export const firebaseToJWT = asyncHandler(async (req, res, next) => {
       return next(new Error('المستخدم غير موجود', { cause: 404 }));
     }
 
-    // Generate JWT token
-    const token = generateToken(user);
+    // Check if user is active
+    if (!user.isActive || user.isDeleted) {
+      return next(new Error('تم تعطيل هذا الحساب', { cause: 403 }));
+    }
 
-    // Save token to database
-    await saveToken(token, user._id, req.headers['user-agent']);
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
 
-    // Add token to user object
-    req.user.token = token;
+    // Save token pair to database
+    await saveTokenPair(user._id, accessToken, refreshToken, req.headers['user-agent']);
+
+    // Add tokens to user object
+    req.user.accessToken = accessToken;
+    req.user.refreshToken = refreshToken;
 
     next();
   } catch (error) {

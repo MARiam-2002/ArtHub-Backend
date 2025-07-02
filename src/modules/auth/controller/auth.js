@@ -33,110 +33,95 @@ const ensureConnection = async next => {
 };
 
 /**
- * Helper function to generate JWT token
+ * Helper function to generate JWT tokens
  * @param {Object} user - User object
- * @returns {string} - JWT token
+ * @returns {Object} - Access and refresh tokens
  */
-const generateToken = user =>
-  jwt.sign(
+const generateTokens = (user) => {
+  const accessToken = jwt.sign(
     {
       id: user._id,
       email: user.email,
       role: user.role
     },
     process.env.TOKEN_KEY,
+    { expiresIn: '2h' }
+  );
+  
+  const refreshToken = jwt.sign(
+    {
+      id: user._id,
+      tokenType: 'refresh'
+    },
+    process.env.REFRESH_TOKEN_KEY || process.env.TOKEN_KEY,
     { expiresIn: '30d' }
   );
 
-/**
- * Helper function to save token in database
- * @param {string} token - JWT token
- * @param {string} userId - User ID
- * @param {string} userAgent - User agent string
- * @returns {Promise<Object>} - Saved token object
- */
-const saveToken = async (token, userId, userAgent) => {
-  try {
-    // Delete any existing tokens for this user first
-    await tokenModel.findOneAndDelete({ user: userId });
-
-    // Create new token
-    return await tokenModel.create({
-      token,
-      user: userId,
-      agent: userAgent || 'unknown'
-    });
-  } catch (error) {
-    console.warn('Failed to save token:', error);
-    // Return null but don't fail the operation
-    return null;
-  }
+  return { accessToken, refreshToken };
 };
 
 /**
- * Register a new user
+ * Helper function to create user response
+ * @param {Object} user - User object
+ * @param {string} accessToken - Access token
+ * @param {string} refreshToken - Refresh token
+ * @returns {Object} - User response data
+ */
+const createUserResponse = (user, accessToken, refreshToken) => ({
+  _id: user._id,
+  displayName: user.displayName,
+  email: user.email,
+  role: user.role,
+  profileImage: user.profileImage,
+  accessToken,
+  refreshToken
+});
+
+/**
+ * Register new user
  * @route POST /api/auth/register
  */
 export const register = asyncHandler(async (req, res, next) => {
-  try {
-    // Ensure database connection first
-    if (!(await ensureConnection(next))) {
-      return; // Connection failed, error already sent
-    }
+  const { email, password, confirmPassword, displayName } = req.body;
 
-    // Extract data from request body
-    const { displayName, email, password, phoneNumber } = req.body;
-
-    // Check if user already exists
-    try {
-      const existingUser = await userModel.findOne({ email });
-
-      if (existingUser) {
-        return next(new Error('البريد الإلكتروني مسجل بالفعل', { cause: 409 }));
-      }
-    } catch (findError) {
-      console.error('User lookup error:', findError);
-      return handleDatabaseError(findError, next);
-    }
-
-    // Hash password
-    const hashedPassword = await bcryptjs.hash(password, parseInt(process.env.SALT_ROUND || 10));
-
-    // Create new user
-    let newUser;
-    try {
-      newUser = await userModel.create({
-        displayName,
-        email,
-        password: hashedPassword,
-        phoneNumber,
-        role: 'user'
-      });
-    } catch (createError) {
-      console.error('User creation error:', createError);
-      return handleDatabaseError(createError, next);
-    }
-
-    // Generate token
-    const token = generateToken(newUser);
-
-    // Return success response
-    return res.status(201).json({
-      success: true,
-      message: 'تم إنشاء الحساب بنجاح',
-      data: {
-        _id: newUser._id,
-        displayName: newUser.displayName,
-        email: newUser.email,
-        phoneNumber: newUser.phoneNumber,
-        role: newUser.role,
-        token
-      }
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    return handleDatabaseError(error, next);
+  // Check if email already exists
+  const existingUser = await userModel.findOne({ email });
+  if (existingUser) {
+    return next(new Error('البريد الإلكتروني مستخدم بالفعل', { cause: 409 }));
   }
+
+  // Check password confirmation
+  if (password !== confirmPassword) {
+    return next(new Error('كلمة المرور وتأكيدها غير متطابقين', { cause: 400 }));
+  }
+
+  // Hash password
+  const hashedPassword = await bcryptjs.hash(password, parseInt(process.env.SALT_ROUNDS) || 10);
+
+  // Create user
+  const user = await userModel.create({
+    email,
+    password: hashedPassword,
+    displayName
+  });
+
+  // Generate tokens
+  const { accessToken, refreshToken } = generateTokens(user);
+
+  // Save token pair to database
+  await tokenModel.createTokenPair(
+    user._id, 
+    accessToken, 
+    refreshToken, 
+    req.headers['user-agent']
+  );
+
+  // Return success response
+  return res.status(201).json({
+    success: true,
+    message: 'تم إنشاء الحساب بنجاح',
+    data: createUserResponse(user, accessToken, refreshToken)
+  });
 });
 
 /**
@@ -144,57 +129,43 @@ export const register = asyncHandler(async (req, res, next) => {
  * @route POST /api/auth/login
  */
 export const login = asyncHandler(async (req, res, next) => {
-  try {
-    // Ensure database connection first
-    if (!(await ensureConnection(next))) {
-      return; // Connection failed, error already sent
-    }
+  const { email, password } = req.body;
+  const invalidMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
 
-    const { email, password } = req.body;
-    const invalidMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
-
-    // Find user
-    let user;
-    try {
-      user = await userModel.findOne({ email }).select('+password');
-
-      if (!user) {
-        return next(new Error(invalidMessage, { cause: 400 }));
-      }
-    } catch (findError) {
-      console.error('User lookup error:', findError);
-      return handleDatabaseError(findError, next);
-    }
-
-    // Verify password
-    const isPasswordValid = await bcryptjs.compare(password, user.password);
-    if (!isPasswordValid) {
-      return next(new Error(invalidMessage, { cause: 400 }));
-    }
-
-    // Generate token
-    const token = generateToken(user);
-
-    // Save token to database
-    await saveToken(token, user._id, req.headers['user-agent']);
-
-    // Return success response
-    return res.status(200).json({
-      success: true,
-      message: 'تم تسجيل الدخول بنجاح.',
-      data: {
-        _id: user._id,
-        displayName: user.displayName,
-        email: user.email,
-        role: user.role,
-        job: user.job,
-        token
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    return handleDatabaseError(error, next);
+  // Find user
+  const user = await userModel.findOne({ email }).select('+password');
+  if (!user) {
+    return next(new Error(invalidMessage, { cause: 400 }));
   }
+
+  // Check if user is active
+  if (!user.isActive) {
+    return next(new Error('تم تعليق الحساب، يرجى التواصل مع الدعم الفني', { cause: 401 }));
+  }
+
+  // Verify password
+  const isPasswordValid = await bcryptjs.compare(password, user.password);
+  if (!isPasswordValid) {
+    return next(new Error(invalidMessage, { cause: 400 }));
+  }
+
+  // Generate tokens
+  const { accessToken, refreshToken } = generateTokens(user);
+
+  // Save token pair to database
+  await tokenModel.createTokenPair(
+    user._id, 
+    accessToken, 
+    refreshToken, 
+    req.headers['user-agent']
+  );
+
+  // Return success response
+  return res.status(200).json({
+    success: true,
+    message: 'تم تسجيل الدخول بنجاح',
+    data: createUserResponse(user, accessToken, refreshToken)
+  });
 });
 
 /**
@@ -228,23 +199,22 @@ export const fingerprint = asyncHandler(async (req, res, next) => {
       return next(new Error('بيانات البصمة غير صحيحة', { cause: 401 }));
     }
 
-    // Generate token
-    const token = generateToken(user);
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
 
-    // Save token to database
-    await saveToken(token, user._id, req.headers['user-agent']);
+    // Save token pair to database
+    await tokenModel.createTokenPair(
+      user._id, 
+      accessToken, 
+      refreshToken, 
+      req.headers['user-agent']
+    );
 
     // Return success response
     return res.status(200).json({
       success: true,
       message: 'تم تسجيل الدخول بنجاح باستخدام البصمة',
-      data: {
-        _id: user._id,
-        displayName: user.displayName,
-        email: user.email,
-        role: user.role,
-        token
-      }
+      data: createUserResponse(user, accessToken, refreshToken)
     });
   } catch (error) {
     console.error('Fingerprint login error:', error);
@@ -351,190 +321,131 @@ export const removeDeviceFingerprint = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Send password reset code
- * @route POST /api/auth/forgot-password
+ * Send forget password code
+ * @route POST /api/auth/forget-password
  */
 export const sendForgetCode = asyncHandler(async (req, res, next) => {
-  // Ensure database connection first
-  if (!(await ensureConnection(next))) {
-    return; // Connection failed, error already sent
-  }
-
   const { email } = req.body;
 
-  // Find user by email
+  // Find user
   const user = await userModel.findOne({ email });
-
-  // For security reasons, don't reveal if user exists or not
   if (!user) {
+    // Don't reveal if email exists for security
     return res.status(200).json({
       success: true,
-      message: 'إذا كان البريد الإلكتروني صحيحًا، سيتم إرسال رمز إعادة تعيين كلمة المرور.'
+      message: 'إذا كان البريد الإلكتروني مسجلاً، سيتم إرسال رمز إعادة التعيين'
     });
   }
 
-  // Generate random 4-digit code
-  const code = crypto.randomInt(1000, 9999).toString();
+  // Generate 4-digit code
+  const forgetCode = Math.floor(1000 + Math.random() * 9000).toString();
 
-  // Save code to user
-  user.forgetCode = code;
-  await user.save();
+  // Update user with forget code
+  await userModel.findByIdAndUpdate(user._id, {
+    forgetCode,
+    forgetCodeExpires: Date.now() + 10 * 60 * 1000 // 10 minutes
+  });
 
+  // Send email
   try {
-    // Send email with reset code
-    const emailSent = await sendEmail({
+    await sendEmail({
       to: email,
-      subject: 'إعادة تعيين كلمة المرور',
-      html: resetPassword(code)
-    });
-
-    if (!emailSent) {
-      return next(new Error('حدث خطأ أثناء إرسال البريد الإلكتروني.', { cause: 500 }));
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.'
+      subject: 'رمز إعادة تعيين كلمة المرور - ArtHub',
+      html: resetPassword(forgetCode)
     });
   } catch (error) {
-    console.error('Email sending error:', error);
-    return next(new Error('فشل في إرسال البريد الإلكتروني، حاول مرة أخرى.', { cause: 500 }));
+    console.error('Email sending failed:', error);
+    // Still return success to not reveal email existence
   }
-});
-
-/**
- * Verify email verification code
- * @route PATCH /api/auth/VerifyCode
- */
-export const VerifyCode = asyncHandler(async (req, res, next) => {
-  const { email, verificationCode } = req.body;
-
-  // Find user by email
-  const user = await userModel.findOne({ email });
-
-  if (!user || !user.verificationCode) {
-    return res.status(400).json({
-      success: false,
-      message: 'يرجى طلب كود تحقق جديد أولاً.'
-    });
-  }
-
-  // Verify code
-  if (user.verificationCode !== verificationCode) {
-    return res.status(400).json({
-      success: false,
-      message: 'رمز التحقق غير صحيح!'
-    });
-  }
-
-  // Mark email as verified
-  user.isEmailVerified = true;
-  user.verificationCode = null;
-  await user.save();
 
   return res.status(200).json({
     success: true,
-    message: 'تم التحقق من البريد الإلكتروني بنجاح.'
+    message: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'
   });
 });
 
 /**
- * Verify password reset code
- * @route POST /api/auth/verify-code
+ * Verify forget password code
+ * @route POST /api/auth/verify-forget-code
  */
 export const verifyForgetCode = asyncHandler(async (req, res, next) => {
   const { email, forgetCode } = req.body;
 
-  // Find user by email
-  const user = await userModel.findOne({ email });
+  // Find user with valid forget code
+  const user = await userModel.findOne({
+    email,
+    forgetCode,
+    forgetCodeExpires: { $gt: Date.now() }
+  });
 
-  if (!user || !user.forgetCode) {
-    return res.status(400).json({
-      success: false,
-      message: 'يرجى طلب كود جديد أولاً.'
-    });
-  }
-
-  // Verify code
-  if (user.forgetCode !== forgetCode) {
-    return res.status(400).json({
-      success: false,
-      message: 'رمز التحقق غير صحيح!'
-    });
+  if (!user) {
+    return next(new Error('رمز التحقق غير صحيح أو منتهي الصلاحية', { cause: 400 }));
   }
 
   // Mark code as verified
-  user.forgetCode = null;
-  user.isForgetCodeVerified = true;
-  await user.save();
+  await userModel.findByIdAndUpdate(user._id, {
+    forgetCodeVerified: true
+  });
 
   return res.status(200).json({
     success: true,
-    message: 'تم التحقق من الرمز بنجاح. يمكنك الآن إعادة تعيين كلمة المرور.'
+    message: 'تم التحقق من الرمز بنجاح'
   });
 });
 
 /**
- * Reset password using verified code
+ * Reset password by code
  * @route POST /api/auth/reset-password
  */
 export const resetPasswordByCode = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
+  const { email, password, confirmPassword } = req.body;
 
-  // Find user by email
-  const user = await userModel.findOne({ email });
+  // Check password confirmation
+  if (password !== confirmPassword) {
+    return next(new Error('كلمة المرور وتأكيدها غير متطابقين', { cause: 400 }));
+  }
 
-  if (!user || !user.isForgetCodeVerified) {
-    return res.status(400).json({
-      success: false,
-      message: 'يرجى التحقق من الكود أولاً.'
-    });
+  // Find user with verified forget code
+  const user = await userModel.findOne({
+    email,
+    forgetCodeVerified: true,
+    forgetCodeExpires: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    return next(new Error('يرجى التحقق من الكود أولاً', { cause: 400 }));
   }
 
   // Hash new password
-  const hashedPassword = await bcryptjs.hash(password, parseInt(process.env.SALT_ROUND || 10));
+  const hashedPassword = await bcryptjs.hash(password, parseInt(process.env.SALT_ROUNDS) || 10);
 
-  // Update password and reset verification flag
-  user.password = hashedPassword;
-  user.isForgetCodeVerified = false;
-  await user.save();
+  // Update password and clear forget code data
+  await userModel.findByIdAndUpdate(user._id, {
+    password: hashedPassword,
+    forgetCode: undefined,
+    forgetCodeExpires: undefined,
+    forgetCodeVerified: undefined
+  });
 
-  // Invalidate all tokens for this user
-  await tokenModel.updateMany({ user: user._id }, { isValid: false });
+  // Invalidate all existing tokens
+  await tokenModel.invalidateAllUserTokens(user._id);
 
   return res.status(200).json({
     success: true,
-    message: 'تم تحديث كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.'
+    message: 'تم تحديث كلمة المرور بنجاح'
   });
 });
 
 /**
- * Update FCM token for push notifications
+ * Update FCM token
  * @route POST /api/auth/fcm-token
  */
 export const updateFCMToken = asyncHandler(async (req, res, next) => {
   const { fcmToken } = req.body;
+  const userId = req.user._id;
 
-  if (!fcmToken) {
-    return next(new Error('رمز الإشعارات مطلوب', { cause: 400 }));
-  }
-
-  const user = await userModel.findById(req.user._id);
-
-  if (!user) {
-    return next(new Error('المستخدم غير موجود', { cause: 404 }));
-  }
-
-  // Update the FCM token
-  user.fcmToken = fcmToken;
-  await user.save();
-
-  // Update token in notification system
-  const updated = await updateUserFCMToken(user._id, fcmToken);
-
-  if (!updated) {
-    console.warn(`Warning: Failed to update FCM token for user ${user._id} in notification system`);
-  }
+  // Update user's FCM token
+  await updateUserFCMToken(userId, fcmToken);
 
   return res.status(200).json({
     success: true,
@@ -575,24 +486,42 @@ export const socialLogin = asyncHandler(async (req, res, next) => {
     await user.save();
   }
 
-  // Generate JWT token
-  const token = generateToken(user);
+  // Generate tokens
+  const { accessToken, refreshToken } = generateTokens(user);
 
-  // Save token to database
-  await saveToken(token, user._id, req.headers['user-agent']);
+  // Save token pair to database
+  await tokenModel.createTokenPair(
+    user._id, 
+    accessToken, 
+    refreshToken, 
+    req.headers['user-agent']
+  );
 
   return res.status(200).json({
     success: true,
     message: `تم تسجيل الدخول بنجاح بواسطة ${provider || 'حساب خارجي'}`,
-    data: {
-      _id: user._id,
-      displayName: user.displayName,
-      email: user.email,
-      profileImage: user.profileImage,
-      role: user.role,
-      job: user.job,
-      token
-    }
+    data: createUserResponse(user, accessToken, refreshToken)
+  });
+});
+
+/**
+ * Login with Firebase token
+ * @route POST /api/auth/firebase
+ */
+export const firebaseLogin = asyncHandler(async (req, res, next) => {
+  // User and tokens are already attached by middleware
+  if (!req.user || !req.user.accessToken || !req.user.refreshToken) {
+    return next(new Error('فشل في مصادقة المستخدم', { cause: 401 }));
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: 'تم تسجيل الدخول بنجاح',
+    data: createUserResponse(
+      req.user,
+      req.user.accessToken,
+      req.user.refreshToken
+    )
   });
 });
 

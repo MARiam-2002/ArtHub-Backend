@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { sendChatMessageNotification } from '../../utils/pushNotifications.js';
 import { sendNotification } from '../notification/notification.controller.js';
 import { sendToChat, sendToUser } from '../../utils/socketService.js';
+import jwt from 'jsonwebtoken';
 
 /**
  * جلب قائمة المحادثات للمستخدم الحالي
@@ -336,3 +337,53 @@ export const markAsRead = asyncHandler(async (req, res, shouldRespond = true) =>
  * واجهة بديلة للتوافق - الحصول على محادثات المستخدم
  */
 export const getChats = asyncHandler(async (req, res) => getUserChats(req, res));
+
+/**
+ * Delete a chat
+ */
+export const deleteChat = asyncHandler(async (req, res) => {
+  const { chatId } = req.params;
+  const userId = req.user._id;
+
+  // Find the chat
+  const chat = await chatModel.findById(chatId);
+  if (!chat) {
+    return res.fail(null, 'المحادثة غير موجودة', 404);
+  }
+
+  // Check if user is a participant
+  const isParticipant = chat.participants.some(p => p.toString() === userId.toString());
+  if (!isParticipant) {
+    return res.fail(null, 'غير مصرح لك بحذف هذه المحادثة', 403);
+  }
+
+  // Delete the chat and all its messages
+  await Promise.all([
+    chatModel.findByIdAndDelete(chatId),
+    messageModel.deleteMany({ chat: chatId })
+  ]);
+
+  res.success(null, 'تم حذف المحادثة بنجاح');
+});
+
+/**
+ * Get socket token for real-time messaging
+ */
+export const getSocketToken = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  // Generate a temporary token for socket connection
+  const token = jwt.sign(
+    { userId, type: 'socket' },
+    process.env.TOKEN_KEY,
+    { expiresIn: '1h' }
+  );
+  
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+  
+  res.success({
+    token,
+    userId,
+    expiresAt
+  }, 'تم إنشاء رمز الاتصال بنجاح');
+});

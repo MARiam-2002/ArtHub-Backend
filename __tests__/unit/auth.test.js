@@ -1,195 +1,73 @@
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
+import mongoose from 'mongoose';
+import bcryptjs from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import userModel from '../../DB/models/user.model.js';
+import tokenModel from '../../DB/models/token.model.js';
 
-// Create mock functions for the controller functions we're testing
-const register = async (req, res, next) => {
-  try {
-    const { email, password, displayName, phoneNumber } = req.body;
+// Mock Firebase Admin SDK
+jest.mock('../../src/utils/firebaseAdmin.js', () => ({
+  auth: jest.fn().mockReturnValue({
+    verifyIdToken: jest.fn()
+  })
+}));
 
-    // Check if email exists
-    if (email === 'existing@example.com') {
-      return next(new Error('البريد الإلكتروني مسجل بالفعل'));
-    }
+// Mock email sending
+jest.mock('../../src/utils/sendEmails.js', () => ({
+  sendEmail: jest.fn().mockResolvedValue(true)
+}));
 
-    // Create user
-    const userId = '60d0fe4f5311236168a109ca';
-    const token = 'generated_token';
+// Mock push notifications
+jest.mock('../../src/utils/pushNotifications.js', () => ({
+  updateUserFCMToken: jest.fn().mockResolvedValue(true)
+}));
 
-    return res.status(201).json({
-      success: true,
-      message: 'تم إنشاء الحساب بنجاح',
-      data: {
-        _id: userId,
-        displayName,
-        email,
-        phoneNumber,
-        role: 'user',
-        token
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+describe('Auth Controller', () => {
+  let req, res, next;
+  let testUser, testToken;
+  
+  // Import auth controller functions
+  let authController;
 
-const login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-
-    // Check if user exists
-    if (email !== 'test@example.com') {
-      return next(new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.'));
-    }
-
-    // Check password
-    if (password !== 'Password123!') {
-      return next(new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة.'));
-    }
-
-    // Generate token
-    const token = 'generated_token';
-
-    return res.status(200).json({
-      success: true,
-      message: 'تم تسجيل الدخول بنجاح',
-      data: {
-        _id: '60d0fe4f5311236168a109ca',
-        displayName: 'Test User',
-        email,
-        role: 'user',
-        token
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const logout = async (req, res, next) => {
-  try {
-    const token = req.headers['authorization']?.split(' ')[1] || req.headers['token'];
+  beforeAll(async () => {
+    // Connect to test database
+    const mongoUri = process.env.TEST_DB_URI || 'mongodb://localhost:27017/arthub-test';
+    await mongoose.connect(mongoUri);
     
-    if (!token) {
-      return next(new Error('لم يتم توفير رمز المصادقة', { cause: 400 }));
-    }
-    
-    // Simulate token invalidation
-    if (token !== 'valid_token') {
-      return next(new Error('رمز المصادقة غير موجود', { cause: 404 }));
-    }
-    
-    return res.status(200).json({
-      success: true,
-      message: 'تم تسجيل الخروج بنجاح'
+    // Import controller after mocks are set up
+    authController = await import('../../src/modules/auth/controller/auth.js');
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.close();
+  });
+
+  beforeEach(async () => {
+    // Clear collections
+    await userModel.deleteMany({});
+    await tokenModel.deleteMany({});
+
+    // Create test user
+    const hashedPassword = await bcryptjs.hash('Password123!', 10);
+    testUser = await userModel.create({
+      email: 'test@example.com',
+      password: hashedPassword,
+      displayName: 'Test User',
+      isActive: true
     });
-  } catch (error) {
-    next(error);
-  }
-};
 
-const sendForgetCode = async (req, res, next) => {
-  try {
-    const { email } = req.body;
-
-    // For security, always return success even if email doesn't exist
-    if (email === 'nonexistent@example.com') {
-      return res.status(200).json({
-        success: true,
-        message: 'إذا كان البريد الإلكتروني صحيحًا، سيتم إرسال رمز إعادة تعيين كلمة المرور.'
-      });
-    }
-
-    // Generate code for existing user
-    const code = '1234'; // Simulated random code
-
-    return res.status(200).json({
-      success: true,
-      message: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني.'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const verifyForgetCode = async (req, res, next) => {
-  try {
-    const { email, forgetCode } = req.body;
-
-    // Check if code is valid
-    if (forgetCode !== '1234') {
-      return res.status(400).json({
-        success: false,
-        message: 'رمز التحقق غير صحيح!'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'تم التحقق من الرمز بنجاح. يمكنك الآن إعادة تعيين كلمة المرور.'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const resetPasswordByCode = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-
-    // Check if user is verified
-    if (email === 'notverified@example.com') {
-      return res.status(400).json({
-        success: false,
-        message: 'يرجى التحقق من الكود أولاً.'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'تم تحديث كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const updateFCMToken = async (req, res, next) => {
-  try {
-    const { fcmToken } = req.body;
-
-    if (!fcmToken) {
-      return next(new Error('رمز الإشعارات مطلوب', { cause: 400 }));
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'تم تحديث رمز الإشعارات بنجاح'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-describe('Auth Controller - Unit Tests', () => {
-  let req;
-  let res;
-  let next;
-
-  beforeEach(() => {
+    // Setup request, response, and next mocks
     req = {
-      body: {
-        email: 'test@example.com',
-        password: 'Password123!',
-        displayName: 'Test User',
-        phoneNumber: '+9665xxxxxxxx'
-      },
+      body: {},
       headers: {
-        'user-agent': 'test-agent',
-        'authorization': 'Bearer valid_token'
+        'authorization': 'Bearer valid_token',
+        'user-agent': 'test-agent'
       },
       user: {
-        _id: '60d0fe4f5311236168a109ca',
-        email: 'test@example.com',
-        role: 'user'
+        _id: testUser._id,
+        email: testUser.email,
+        displayName: testUser.displayName,
+        role: testUser.role
       }
     };
 
@@ -199,11 +77,29 @@ describe('Auth Controller - Unit Tests', () => {
     };
 
     next = jest.fn();
+
+    // Reset all mocks
+    jest.clearAllMocks();
   });
 
-  describe('Register', () => {
+  afterEach(async () => {
+    // Clean up after each test
+    await userModel.deleteMany({});
+    await tokenModel.deleteMany({});
+  });
+
+  describe('User Registration', () => {
+    beforeEach(() => {
+      req.body = {
+        email: 'newuser@example.com',
+        password: 'Password123!',
+        confirmPassword: 'Password123!',
+        displayName: 'New User'
+      };
+    });
+
     it('should register a new user successfully', async () => {
-      await register(req, res, next);
+      await authController.register(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
@@ -211,30 +107,52 @@ describe('Auth Controller - Unit Tests', () => {
           success: true,
           message: 'تم إنشاء الحساب بنجاح',
           data: expect.objectContaining({
-            _id: expect.any(String),
-            displayName: 'Test User',
-            email: 'test@example.com',
-            token: expect.any(String)
+            email: 'newuser@example.com',
+            displayName: 'New User',
+            accessToken: expect.any(String),
+            refreshToken: expect.any(String)
           })
         })
       );
     });
 
     it('should reject registration with existing email', async () => {
-      req.body.email = 'existing@example.com';
-      await register(req, res, next);
+      req.body.email = testUser.email;
+      
+      await authController.register(req, res, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'البريد الإلكتروني مسجل بالفعل'
+          message: 'البريد الإلكتروني مستخدم بالفعل',
+          cause: 409
+        })
+      );
+    });
+
+    it('should reject registration with mismatched passwords', async () => {
+      req.body.confirmPassword = 'DifferentPassword123!';
+      
+      await authController.register(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'كلمة المرور وتأكيدها غير متطابقين',
+          cause: 400
         })
       );
     });
   });
 
-  describe('Login', () => {
-    it('should login user with correct credentials', async () => {
-      await login(req, res, next);
+  describe('User Login', () => {
+    beforeEach(() => {
+      req.body = {
+        email: testUser.email,
+        password: 'Password123!'
+      };
+    });
+
+    it('should login user successfully', async () => {
+      await authController.login(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -242,276 +160,287 @@ describe('Auth Controller - Unit Tests', () => {
           success: true,
           message: 'تم تسجيل الدخول بنجاح',
           data: expect.objectContaining({
-            _id: expect.any(String),
-            displayName: 'Test User',
-            email: 'test@example.com',
-            token: expect.any(String)
+            email: testUser.email,
+            displayName: testUser.displayName,
+            accessToken: expect.any(String),
+            refreshToken: expect.any(String)
           })
         })
       );
     });
 
-    it('should reject login with incorrect email', async () => {
-      req.body.email = 'wrong@example.com';
-      await login(req, res, next);
+    it('should reject login with invalid email', async () => {
+      req.body.email = 'nonexistent@example.com';
+      
+      await authController.login(req, res, next);
 
       expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
-        })
-      );
-    });
-
-    it('should reject login with incorrect password', async () => {
-      req.body.password = 'WrongPassword123!';
-      await login(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
-        })
-      );
-    });
-  });
-
-  describe('Logout', () => {
-    it('should logout user successfully', async () => {
-      await logout(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        message: 'تم تسجيل الخروج بنجاح'
-      });
-    });
-
-    it('should reject logout with invalid token', async () => {
-      req.headers.authorization = 'Bearer invalid_token';
-      await logout(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'رمز المصادقة غير موجود',
-          cause: 404
-        })
-      );
-    });
-
-    it('should reject logout with missing token', async () => {
-      req.headers.authorization = undefined;
-      await logout(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'لم يتم توفير رمز المصادقة',
+          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
           cause: 400
         })
       );
     });
+
+    it('should reject login with invalid password', async () => {
+      req.body.password = 'WrongPassword123!';
+      
+      await authController.login(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+          cause: 400
+        })
+      );
+    });
+
+    it('should reject login for inactive user', async () => {
+      await userModel.findByIdAndUpdate(testUser._id, { isActive: false });
+      
+      await authController.login(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'تم تعليق الحساب، يرجى التواصل مع الدعم الفني',
+          cause: 401
+        })
+      );
+    });
   });
 
-  describe('Forget Password', () => {
-    it('should send forget code successfully', async () => {
-      await sendForgetCode(req, res, next);
+  describe('Password Reset Flow', () => {
+    describe('Send Forget Code', () => {
+      beforeEach(() => {
+        req.body = { email: testUser.email };
+      });
+
+      it('should send forget code successfully', async () => {
+        await authController.sendForgetCode(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'
+          })
+        );
+
+        // Check that forget code was saved
+        const updatedUser = await userModel.findById(testUser._id);
+        expect(updatedUser.forgetCode).toBeDefined();
+        expect(updatedUser.forgetCodeExpires).toBeDefined();
+      });
+
+      it('should not reveal non-existent email', async () => {
+        req.body.email = 'nonexistent@example.com';
+        
+        await authController.sendForgetCode(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: expect.stringContaining('إذا كان البريد الإلكتروني')
+          })
+        );
+      });
+    });
+
+    describe('Verify Forget Code', () => {
+      let forgetCode;
+
+      beforeEach(async () => {
+        forgetCode = '1234';
+        await userModel.findByIdAndUpdate(testUser._id, {
+          forgetCode,
+          forgetCodeExpires: Date.now() + 10 * 60 * 1000 // 10 minutes
+        });
+
+        req.body = {
+          email: testUser.email,
+          forgetCode
+        };
+      });
+
+      it('should verify forget code successfully', async () => {
+        await authController.verifyForgetCode(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: 'تم التحقق من الرمز بنجاح'
+          })
+        );
+
+        // Check that code was marked as verified
+        const updatedUser = await userModel.findById(testUser._id);
+        expect(updatedUser.forgetCodeVerified).toBe(true);
+      });
+
+      it('should reject invalid forget code', async () => {
+        req.body.forgetCode = '9999';
+        
+        await authController.verifyForgetCode(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
+            cause: 400
+          })
+        );
+      });
+
+      it('should reject expired forget code', async () => {
+        await userModel.findByIdAndUpdate(testUser._id, {
+          forgetCodeExpires: Date.now() - 1000 // Expired
+        });
+        
+        await authController.verifyForgetCode(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
+            cause: 400
+          })
+        );
+      });
+    });
+
+    describe('Reset Password', () => {
+      beforeEach(async () => {
+        await userModel.findByIdAndUpdate(testUser._id, {
+          forgetCode: '1234',
+          forgetCodeExpires: Date.now() + 10 * 60 * 1000,
+          forgetCodeVerified: true
+        });
+
+        req.body = {
+          email: testUser.email,
+          password: 'NewPassword123!',
+          confirmPassword: 'NewPassword123!'
+        };
+      });
+
+      it('should reset password successfully', async () => {
+        await authController.resetPasswordByCode(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: 'تم تحديث كلمة المرور بنجاح'
+          })
+        );
+
+        // Verify password was updated
+        const updatedUser = await userModel.findById(testUser._id).select('+password');
+        const isNewPasswordValid = await bcryptjs.compare('NewPassword123!', updatedUser.password);
+        expect(isNewPasswordValid).toBe(true);
+      });
+
+      it('should reject reset without code verification', async () => {
+        await userModel.findByIdAndUpdate(testUser._id, {
+          forgetCodeVerified: false
+        });
+        
+        await authController.resetPasswordByCode(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'يرجى التحقق من الكود أولاً',
+            cause: 400
+          })
+        );
+      });
+
+      it('should reject mismatched passwords', async () => {
+        req.body.confirmPassword = 'DifferentPassword123!';
+        
+        await authController.resetPasswordByCode(req, res, next);
+
+        expect(next).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'كلمة المرور وتأكيدها غير متطابقين',
+            cause: 400
+          })
+        );
+      });
+    });
+  });
+
+  describe('Firebase Authentication', () => {
+    beforeEach(() => {
+      req.user = {
+        _id: 'firebase_user_id',
+        email: 'firebase@example.com',
+        displayName: 'Firebase User',
+        role: 'user',
+        accessToken: 'mock_access_token',
+        refreshToken: 'mock_refresh_token'
+      };
+    });
+
+    it('should handle Firebase login successfully', async () => {
+      await authController.firebaseLogin(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          message: expect.stringContaining('تم إرسال رمز')
+          message: 'تم تسجيل الدخول بنجاح',
+          data: expect.objectContaining({
+            _id: 'firebase_user_id',
+            email: 'firebase@example.com',
+            displayName: 'Firebase User',
+            accessToken: 'mock_access_token',
+            refreshToken: 'mock_refresh_token'
+          })
         })
       );
     });
 
-    it('should handle non-existent email securely', async () => {
-      req.body.email = 'nonexistent@example.com';
-      await sendForgetCode(req, res, next);
+    it('should handle missing user data', async () => {
+      req.user = undefined;
+      
+      await authController.firebaseLogin(req, res, next);
 
-      // Should still return success for security reasons
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
+      expect(next).toHaveBeenCalledWith(
         expect.objectContaining({
-          success: true
+          message: 'فشل في مصادقة المستخدم',
+          cause: 401
+        })
+      );
+    });
+
+    it('should handle missing tokens', async () => {
+      delete req.user.accessToken;
+      
+      await authController.firebaseLogin(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'فشل في مصادقة المستخدم',
+          cause: 401
         })
       );
     });
   });
 
-  describe('Verify Forget Code', () => {
+  describe('FCM Token Update', () => {
     beforeEach(() => {
-      req.body.forgetCode = '1234';
-    });
-
-    it('should verify correct code successfully', async () => {
-      await verifyForgetCode(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: 'تم التحقق من الرمز بنجاح. يمكنك الآن إعادة تعيين كلمة المرور.'
-        })
-      );
-    });
-
-    it('should reject incorrect verification code', async () => {
-      req.body.forgetCode = '5678';
-      await verifyForgetCode(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: 'رمز التحقق غير صحيح!'
-        })
-      );
-    });
-  });
-
-  describe('Reset Password', () => {
-    beforeEach(() => {
-      req.body.confirmPassword = req.body.password;
-    });
-
-    it('should reset password successfully for verified user', async () => {
-      await resetPasswordByCode(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: 'تم تحديث كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.'
-        })
-      );
-    });
-
-    it('should reject password reset for unverified code', async () => {
-      req.body.email = 'notverified@example.com';
-      await resetPasswordByCode(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: 'يرجى التحقق من الكود أولاً.'
-        })
-      );
-    });
-  });
-
-  describe('Update FCM Token', () => {
-    beforeEach(() => {
-      req.body.fcmToken = 'valid-fcm-token';
+      req.body = { fcmToken: 'test_fcm_token' };
     });
 
     it('should update FCM token successfully', async () => {
-      await updateFCMToken(req, res, next);
+      await authController.updateFCMToken(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
           message: 'تم تحديث رمز الإشعارات بنجاح'
-        })
-      );
-    });
-
-    it('should reject missing FCM token', async () => {
-      req.body.fcmToken = undefined;
-      await updateFCMToken(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'رمز الإشعارات مطلوب',
-          cause: 400
-        })
-      );
-    });
-  });
-
-  describe('Validation', () => {
-    const validateRegister = (req, res, next) => {
-      const { email, password, confirmPassword, displayName } = req.body;
-      const errors = [];
-
-      if (!email || !email.match(/^\S+@\S+\.\S+$/)) {
-        errors.push({ field: 'email', message: 'البريد الإلكتروني غير صالح' });
-      }
-
-      if (!password || password.length < 8) {
-        errors.push({ field: 'password', message: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' });
-      }
-
-      if (password !== confirmPassword) {
-        errors.push({
-          field: 'confirmPassword',
-          message: 'تأكيد كلمة المرور يجب أن يطابق كلمة المرور'
-        });
-      }
-
-      if (!displayName) {
-        errors.push({ field: 'displayName', message: 'الاسم مطلوب' });
-      }
-
-      if (errors.length > 0) {
-        return next(new Error('بيانات غير صالحة', { cause: 400, validationErrors: errors }));
-      }
-
-      next();
-    };
-
-    it('should validate registration data correctly', () => {
-      validateRegister(req, res, next);
-      expect(next).toHaveBeenCalledWith();
-    });
-
-    it('should reject invalid email', () => {
-      req.body.email = 'invalid-email';
-      validateRegister(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'بيانات غير صالحة',
-          cause: 400,
-          validationErrors: expect.arrayContaining([
-            expect.objectContaining({
-              field: 'email'
-            })
-          ])
-        })
-      );
-    });
-
-    it('should reject short password', () => {
-      req.body.password = 'short';
-      validateRegister(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'بيانات غير صالحة',
-          cause: 400,
-          validationErrors: expect.arrayContaining([
-            expect.objectContaining({
-              field: 'password'
-            })
-          ])
-        })
-      );
-    });
-
-    it('should reject mismatched passwords', () => {
-      req.body.confirmPassword = 'different-password';
-      validateRegister(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'بيانات غير صالحة',
-          cause: 400,
-          validationErrors: expect.arrayContaining([
-            expect.objectContaining({
-              field: 'confirmPassword'
-            })
-          ])
         })
       );
     });

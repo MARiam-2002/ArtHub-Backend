@@ -6,6 +6,7 @@ import cloudinary, {
   getOptimizationSettings
 } from '../../../utils/cloudinary.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
+import { createErrorResponse } from '../../../utils/errorHandler.js';
 import {
   sendPushNotificationToUser,
   createMultilingualNotification
@@ -13,6 +14,10 @@ import {
 import fs from 'fs';
 import imageModel from '../../../../DB/models/image.model.js';
 import mongoose from 'mongoose';
+import { processAndUploadImage, isSafeImage } from '../../../utils/imageProcessing.js';
+import { nanoid } from 'nanoid';
+import categoryModel from '../../../../DB/models/category.model.js';
+import userModel from '../../../../DB/models/user.model.js';
 
 /**
  * @swagger
@@ -84,126 +89,99 @@ import mongoose from 'mongoose';
  *       500:
  *         description: خطأ في الخادم
  */
-export const uploadImage = asyncHandler(async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const {
-      title,
-      description,
-      tags,
-      category,
-      applyWatermark,
-      optimizationLevel = 'medium'
-    } = req.body;
+export const uploadImage = asyncHandler(async (req, res, next) => {
+  const { title, description, tags = [], category, applyWatermark = false, optimizationLevel = 'medium', isPrivate = false } = req.body;
+  
+  if (!req.file) {
+    return next(new Error('يرجى تحميل صورة', { cause: 400 }));
+  }
 
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'لم يتم توفير أي صور للرفع',
-        error: 'No images provided'
-      });
+  try {
+    // التحقق من وجود الفئة إذا تم تحديدها
+    if (category) {
+      const categoryExists = await categoryModel.findById(category);
+      if (!categoryExists) {
+        return next(new Error('الفئة المحددة غير موجودة', { cause: 400 }));
+      }
     }
 
-    const uploadedImages = [];
-
-    // تحديد إعدادات التحسين بناء على المستوى المطلوب
-    const getOptimizationSettings = level => {
-      switch (level) {
-        case 'low':
-          return { quality: 80, fetch_format: 'auto' };
-        case 'high':
-          return {
-            quality: 'auto:best',
-            fetch_format: 'auto',
-            flags: 'progressive',
-            eager_async: true
-          };
-        case 'medium':
-        default:
-          return { quality: 'auto:good', fetch_format: 'auto', flags: 'progressive' };
-      }
+    // معالجة ورفع الصورة
+    const uploadOptions = {
+      folder: `arthub/images/${req.user._id}`,
+      public_id: `${nanoid()}_${Date.now()}`,
+      quality: optimizationLevel === 'high' ? 'auto:best' : optimizationLevel === 'low' ? 80 : 'auto:good',
+      fetch_format: 'auto'
     };
 
-    const optimizationSettings = getOptimizationSettings(optimizationLevel);
+    // تطبيق العلامة المائية إذا طُلب
+    if (applyWatermark) {
+      uploadOptions.transformation = [{
+        overlay: {
+          font_family: 'Arial',
+          font_size: 20,
+          text: `ArtHub © ${new Date().getFullYear()}`
+        },
+        color: '#FFFFFF',
+        opacity: 60,
+        gravity: 'south_east',
+        x: 15,
+        y: 15
+      }];
+    }
 
-    // معالجة كل صورة
-    for (const file of req.files) {
-      const uploadOptions = {
-        folder: 'arthub/images',
-        ...optimizationSettings
-      };
+    const result = await processAndUploadImage(req.file.path, uploadOptions);
 
-      // تطبيق العلامة المائية إذا طلب المستخدم ذلك
-      if (applyWatermark === 'true' || applyWatermark === true) {
-        uploadOptions.transformation = [
-          ...(uploadOptions.transformation || []),
-          {
-            overlay: {
-              font_family: 'Arial',
-              font_size: 20,
-              text: `ArtHub - ${new Date().toISOString().split('T')[0]}`
-            },
-            color: '#FFFFFF',
-            opacity: 50,
-            gravity: 'south_east',
-            x: 10,
-            y: 10
-          }
-        ];
-      }
+    // فحص أمان الصورة
+    const isSafe = await isSafeImage(result.public_id);
+    if (!isSafe) {
+      await cloudinary.uploader.destroy(result.public_id);
+      return next(new Error('الصورة غير مناسبة، يرجى تحميل صورة أخرى', { cause: 400 }));
+    }
 
-      // استخدام وظيفة الرفع المحسنة
-      const uploadResult = await uploadOptimizedImage(file.path, uploadOptions);
+    // إنشاء سجل الصورة في قاعدة البيانات
+    const imageData = {
+      user: req.user._id,
+      title: title || 'صورة بدون عنوان',
+      description: description || '',
+      tags: Array.isArray(tags) ? tags : [tags].filter(Boolean),
+      category: category || null,
+      url: result.secure_url,
+      publicId: result.public_id,
+      size: result.bytes,
+      format: result.format,
+      width: result.width,
+      height: result.height,
+      hasWatermark: applyWatermark,
+      optimizationLevel,
+      isPrivate,
+      views: 0,
+      downloads: 0
+    };
 
-      // حفظ بيانات الصورة في قاعدة البيانات
-      const imageData = {
-        user: userId,
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
-        title: title || 'صورة بدون عنوان',
-        description: description || '',
-        tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
-        category: category || null,
-        size: uploadResult.bytes,
-        format: uploadResult.format,
-        width: uploadResult.width,
-        height: uploadResult.height,
-        hasWatermark: applyWatermark === 'true' || applyWatermark === true,
-        // إضافة معلومات إضافية عن تحسين الصورة
-        optimizationLevel,
-        optimizedUrl: getOptimizedImageUrl(uploadResult.public_id, {
-          width: 800, // عرض افتراضي للعرض المحسن
-          ...optimizationSettings
-        })
-      };
+    const image = await imageModel.create(imageData);
+    
+    // تحديث إحصائيات المستخدم
+    await userModel.findByIdAndUpdate(req.user._id, {
+      $inc: { imagesCount: 1 }
+    });
 
-      const image = await imageModel.create(imageData);
-      uploadedImages.push(image);
-
-      // حذف الملف المؤقت
-      fs.unlinkSync(file.path);
+    // حذف الملف المؤقت
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
     }
 
     res.status(201).json({
       success: true,
-      message: 'تم رفع الصور بنجاح',
-      data: uploadedImages
+      message: 'تم رفع الصورة بنجاح',
+      data: image
     });
+
   } catch (error) {
-    console.error('Error uploading images:', error);
-    // حذف الملفات المؤقتة في حالة حدوث خطأ
-    if (req.files) {
-      req.files.forEach(file => {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
-      });
+    // حذف الملف المؤقت في حالة الخطأ
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
     }
-    res.status(500).json({
-      success: false,
-      message: 'فشل في رفع الصور',
-      error: error.message
-    });
+    next(new Error('فشل في رفع الصورة', { cause: 500 }));
   }
 });
 
@@ -360,100 +338,89 @@ export const uploadImages = asyncHandler(async (req, res) => {
  *       500:
  *         description: خطأ في الخادم
  */
-export const uploadMultipleImages = asyncHandler(async (req, res) => {
+export const uploadMultipleImages = asyncHandler(async (req, res, next) => {
+  const { albumTitle, applyWatermark = false, optimizationLevel = 'medium', isPrivate = false } = req.body;
+  
+  if (!req.files || req.files.length === 0) {
+          return next(new Error('يرجى تحميل صورة واحدة على الأقل', { cause: 400 }));
+  }
+
+  if (req.files.length > 10) {
+          return next(new Error('لا يمكن رفع أكثر من 10 صور في المرة الواحدة', { cause: 400 }));
+  }
+
   try {
-    const userId = req.user._id;
-    const { applyWatermark, albumTitle, optimizationLevel = 'medium' } = req.body;
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'لم يتم توفير أي صور للرفع',
-        error: 'No images provided'
-      });
-    }
-
-    // تحديد إعدادات التحسين بناء على المستوى المطلوب
-    const getOptimizationSettings = level => {
-      switch (level) {
-        case 'low':
-          return { quality: 80, fetch_format: 'auto' };
-        case 'high':
-          return {
-            quality: 'auto:best',
-            fetch_format: 'auto',
-            flags: 'progressive',
-            eager_async: true
-          };
-        case 'medium':
-        default:
-          return { quality: 'auto:good', fetch_format: 'auto', flags: 'progressive' };
-      }
-    };
-
-    const optimizationSettings = getOptimizationSettings(optimizationLevel);
-
     const uploadPromises = req.files.map(async (file, index) => {
       const uploadOptions = {
-        folder: 'arthub/images',
-        ...optimizationSettings
+        folder: `arthub/albums/${req.user._id}`,
+        public_id: `${nanoid()}_${Date.now()}_${index}`,
+        quality: optimizationLevel === 'high' ? 'auto:best' : optimizationLevel === 'low' ? 80 : 'auto:good',
+        fetch_format: 'auto'
       };
 
-      // تطبيق العلامة المائية إذا طلب المستخدم ذلك
-      if (applyWatermark === 'true' || applyWatermark === true) {
-        uploadOptions.transformation = [
-          ...(uploadOptions.transformation || []),
-          {
-            overlay: {
-              font_family: 'Arial',
-              font_size: 20,
-              text: `ArtHub - ${new Date().toISOString().split('T')[0]}`
-            },
-            color: '#FFFFFF',
-            opacity: 50,
-            gravity: 'south_east',
-            x: 10,
-            y: 10
-          }
-        ];
+      if (applyWatermark) {
+        uploadOptions.transformation = [{
+          overlay: {
+            font_family: 'Arial',
+            font_size: 20,
+            text: `ArtHub © ${new Date().getFullYear()}`
+          },
+          color: '#FFFFFF',
+          opacity: 60,
+          gravity: 'south_east',
+          x: 15,
+          y: 15
+        }];
       }
 
-      // استخدام وظيفة الرفع المحسنة
-      const uploadResult = await uploadOptimizedImage(file.path, uploadOptions);
+      const result = await processAndUploadImage(file.path, uploadOptions);
+      
+      // فحص أمان الصورة
+      const isSafe = await isSafeImage(result.public_id);
+      if (!isSafe) {
+        await cloudinary.uploader.destroy(result.public_id);
+        throw new Error(`الصورة ${index + 1} غير مناسبة`);
+      }
 
-      // حذف الملف المؤقت بعد الرفع
-      fs.unlinkSync(file.path);
+      // حذف الملف المؤقت
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
 
       return {
-        user: userId,
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
+        user: req.user._id,
         title: `${albumTitle || 'ألبوم'} - صورة ${index + 1}`,
-        size: uploadResult.bytes,
-        format: uploadResult.format,
-        width: uploadResult.width,
-        height: uploadResult.height,
-        hasWatermark: applyWatermark === 'true' || applyWatermark === true,
-        album: albumTitle,
+        url: result.secure_url,
+        publicId: result.public_id,
+        size: result.bytes,
+        format: result.format,
+        width: result.width,
+        height: result.height,
+        hasWatermark: applyWatermark,
         optimizationLevel,
-        optimizedUrl: getOptimizedImageUrl(uploadResult.public_id, {
-          width: 800, // عرض افتراضي للعرض المحسن
-          ...optimizationSettings
-        })
+        isPrivate,
+        album: albumTitle,
+        views: 0,
+        downloads: 0
       };
     });
 
     const uploadResults = await Promise.all(uploadPromises);
     const savedImages = await imageModel.insertMany(uploadResults);
 
+    // تحديث إحصائيات المستخدم
+    await userModel.findByIdAndUpdate(req.user._id, {
+      $inc: { imagesCount: savedImages.length }
+    });
+
     res.status(201).json({
       success: true,
       message: `تم رفع ${savedImages.length} صور بنجاح`,
       data: savedImages
     });
+
   } catch (error) {
-    console.error('Error uploading multiple images:', error);
-    // حذف الملفات المؤقتة في حالة حدوث خطأ
+    // حذف الملفات المؤقتة في حالة الخطأ
     if (req.files) {
       req.files.forEach(file => {
         if (fs.existsSync(file.path)) {
@@ -461,11 +428,7 @@ export const uploadMultipleImages = asyncHandler(async (req, res) => {
         }
       });
     }
-    res.status(500).json({
-      success: false,
-      message: 'فشل في رفع الصور المتعددة',
-      error: error.message
-    });
+    next(new Error(error.message || 'فشل في رفع الصور', { cause: 500 }));
   }
 });
 
@@ -508,18 +471,60 @@ export const getUserImages = asyncHandler(async (req, res) => {
 });
 
 // Get image by ID
-export const getImageById = asyncHandler(async (req, res) => {
+export const getImageById = asyncHandler(async (req, res, next) => {
   const { imageId } = req.params;
 
-  const image = await imageModel.findById(imageId);
-  if (!image) {
-    return res.fail(null, 'الصورة غير موجودة', 404);
+  try {
+    const image = await imageModel
+      .findById(imageId)
+      .populate('user', 'name avatar bio')
+      .populate('category', 'name description')
+      .lean();
+
+    if (!image) {
+      return next(new Error('الصورة غير موجودة', { cause: 404 }));
+    }
+
+    // التحقق من الخصوصية
+    if (image.isPrivate && (!req.user || image.user._id.toString() !== req.user._id.toString())) {
+      return next(new Error('غير مصرح لك بعرض هذه الصورة', { cause: 403 }));
+    }
+
+    // زيادة عدد المشاهدات (إذا لم يكن المالك)
+    if (!req.user || image.user._id.toString() !== req.user._id.toString()) {
+      await imageModel.findByIdAndUpdate(imageId, { $inc: { views: 1 } });
+      image.views += 1;
+    }
+
+    // الحصول على صور مشابهة
+    const similarImages = await imageModel
+      .find({
+        _id: { $ne: imageId },
+        $or: [
+          { category: image.category?._id },
+          { tags: { $in: image.tags } },
+          { user: image.user._id }
+        ],
+        isPrivate: false
+      })
+      .select('title url user category')
+      .populate('user', 'name')
+      .populate('category', 'name')
+      .limit(6)
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      message: 'تم جلب الصورة بنجاح',
+      data: {
+        ...image,
+        similarImages
+      }
+    });
+
+  } catch (error) {
+    next(new Error('فشل في جلب الصورة', { cause: 500 }));
   }
-
-  // Increment view count
-  await image.incrementViewCount();
-
-  res.success(image, 'تم استرجاع بيانات الصورة بنجاح');
 });
 
 // Update image metadata
@@ -881,4 +886,274 @@ export const optimizeAllUserImages = asyncHandler(async (req, res) => {
       jobId
     }
   });
+});
+
+/**
+ * Get all images with pagination and filtering
+ */
+export const getAllImages = asyncHandler(async (req, res, next) => {
+  try {
+    const { page = 1, limit = 10, category, user, search, sortBy = 'createdAt', order = 'desc' } = req.query;
+    
+    // Build query
+    let query = { isPrivate: false }; // Only show public images
+    
+    if (category) {
+      query.category = category;
+    }
+    
+    if (user) {
+      query.user = user;
+    }
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search, 'i')] } }
+      ];
+    }
+    
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = order === 'desc' ? -1 : 1;
+    
+    // Execute query
+    const [images, totalCount] = await Promise.all([
+      imageModel.find(query)
+        .populate('user', 'displayName profileImage')
+        .populate('category', 'name')
+        .sort(sort)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      imageModel.countDocuments(query)
+    ]);
+    
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+    
+    res.success({
+      images,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: totalCount,
+        itemsPerPage: parseInt(limit),
+        hasNextPage: parseInt(page) < totalPages,
+        hasPrevPage: parseInt(page) > 1
+      }
+    }, 'تم جلب الصور بنجاح');
+    
+  } catch (error) {
+    next(new Error('فشل في جلب الصور', { cause: 500 }));
+  }
+});
+
+/**
+ * Search images
+ */
+export const searchImages = asyncHandler(async (req, res, next) => {
+  try {
+    const { q, category, page = 1, limit = 10 } = req.query;
+    
+    if (!q || q.trim().length < 2) {
+      return next(new Error('يجب أن يكون النص المراد البحث عنه أطول من حرفين', { cause: 400 }));
+    }
+    
+    // Build search query
+    let query = {
+      isPrivate: false,
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { tags: { $in: [new RegExp(q, 'i')] } }
+      ]
+    };
+    
+    if (category) {
+      query.category = category;
+    }
+    
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Execute search
+    const [images, totalCount] = await Promise.all([
+      imageModel.find(query)
+        .populate('user', 'displayName profileImage')
+        .populate('category', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      imageModel.countDocuments(query)
+    ]);
+    
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+    
+    res.success({
+      images,
+      searchQuery: q,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: totalCount,
+        itemsPerPage: parseInt(limit),
+        hasNextPage: parseInt(page) < totalPages,
+        hasPrevPage: parseInt(page) > 1
+      }
+    }, `تم العثور على ${totalCount} نتيجة للبحث`);
+    
+  } catch (error) {
+    next(new Error('فشل في البحث عن الصور', { cause: 500 }));
+  }
+});
+
+/**
+ * Update image metadata
+ */
+export const updateImage = asyncHandler(async (req, res, next) => {
+  try {
+    const { imageId } = req.params;
+    const { title, description, tags, isPrivate, allowDownload } = req.body;
+    const userId = req.user._id;
+    
+    // Find the image
+    const image = await imageModel.findById(imageId);
+    
+    if (!image) {
+      return next(new Error('الصورة غير موجودة', { cause: 404 }));
+    }
+    
+    // Check ownership
+    if (image.user.toString() !== userId.toString()) {
+      return next(new Error('غير مصرح لك بتعديل هذه الصورة', { cause: 403 }));
+    }
+    
+    // Build update object
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (tags !== undefined) updateData.tags = tags;
+    if (isPrivate !== undefined) updateData.isPrivate = isPrivate;
+    if (allowDownload !== undefined) updateData.allowDownload = allowDownload;
+    
+    // Update the image
+    const updatedImage = await imageModel.findByIdAndUpdate(
+      imageId,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('user', 'displayName profileImage').populate('category', 'name');
+    
+    res.success(updatedImage, 'تم تحديث الصورة بنجاح');
+    
+  } catch (error) {
+    next(new Error('فشل في تحديث الصورة', { cause: 500 }));
+  }
+});
+
+/**
+ * Get user's own images
+ */
+export const getMyImages = asyncHandler(async (req, res, next) => {
+  try {
+    const { page = 1, limit = 10, isPrivate } = req.query;
+    const userId = req.user._id;
+    
+    // Build query
+    let query = { user: userId };
+    
+    if (isPrivate !== undefined) {
+      query.isPrivate = isPrivate === 'true';
+    }
+    
+    // Calculate pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Execute query
+    const [images, totalCount] = await Promise.all([
+      imageModel.find(query)
+        .populate('category', 'name')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      imageModel.countDocuments(query)
+    ]);
+    
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+    
+    res.success({
+      images,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems: totalCount,
+        itemsPerPage: parseInt(limit),
+        hasNextPage: parseInt(page) < totalPages,
+        hasPrevPage: parseInt(page) > 1
+      }
+    }, 'تم جلب صورك بنجاح');
+    
+  } catch (error) {
+    next(new Error('فشل في جلب صورك', { cause: 500 }));
+  }
+});
+
+/**
+ * Download image
+ */
+export const downloadImage = asyncHandler(async (req, res, next) => {
+  try {
+    const { imageId } = req.params;
+    const { quality = 'original' } = req.query;
+    
+    // Find the image
+    const image = await imageModel.findById(imageId);
+    
+    if (!image) {
+      return next(new Error('الصورة غير موجودة', { cause: 404 }));
+    }
+    
+    // Check if download is allowed
+    if (!image.allowDownload) {
+      return next(new Error('تحميل هذه الصورة غير مسموح', { cause: 403 }));
+    }
+    
+    // Check privacy
+    if (image.isPrivate && (!req.user || image.user.toString() !== req.user._id.toString())) {
+      return next(new Error('غير مصرح لك بتحميل هذه الصورة', { cause: 403 }));
+    }
+    
+    // Increment download count
+    await imageModel.findByIdAndUpdate(imageId, { $inc: { downloads: 1 } });
+    
+    // Get the appropriate URL based on quality
+    let downloadUrl = image.url;
+    
+    if (quality !== 'original' && image.variants) {
+      switch (quality) {
+        case 'low':
+          downloadUrl = image.variants.small || image.url;
+          break;
+        case 'medium':
+          downloadUrl = image.variants.medium || image.url;
+          break;
+        case 'high':
+          downloadUrl = image.variants.large || image.url;
+          break;
+        default:
+          downloadUrl = image.url;
+      }
+    }
+    
+    // Redirect to the image URL for download
+    res.redirect(downloadUrl);
+    
+  } catch (error) {
+    next(new Error('فشل في تحميل الصورة', { cause: 500 }));
+  }
 });

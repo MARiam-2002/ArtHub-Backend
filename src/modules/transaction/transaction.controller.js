@@ -2,8 +2,10 @@ import transactionModel from '../../../DB/models/transaction.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import specialRequestModel from '../../../DB/models/specialRequest.model.js';
+import notificationModel from '../../../DB/models/notification.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { getPaginationParams } from '../../utils/pagination.js';
+import { createNotificationHelper } from '../notification/notification.controller.js';
 import mongoose from 'mongoose';
 
 /**
@@ -23,714 +25,1019 @@ function calculateCommission(amount) {
 }
 
 /**
- * إنشاء معاملة جديدة لشراء عمل فني
+ * إنشاء معاملة جديدة (موحدة للأعمال الفنية والطلبات الخاصة)
  */
-export const createArtworkTransaction = asyncHandler(async (req, res) => {
-  const { artworkId, paymentMethod, paymentId, shippingAddress } = req.body;
+export const createTransaction = asyncHandler(async (req, res) => {
+  const { items, payment, shipping, installments, discountCode, notes, metadata } = req.body;
   const buyer = req.user._id;
 
-  // التحقق من وجود العمل الفني وأنه متاح للبيع
-  const artwork = await artworkModel.findById(artworkId);
-  if (!artwork) {
-    return res.fail(null, 'العمل الفني غير موجود', 404);
+  // التحقق من صحة العناصر وحساب الأسعار
+  const processedItems = [];
+  let subtotal = 0;
+  let seller = null;
+
+  for (const item of items) {
+    let itemData = null;
+    let itemPrice = 0;
+    let itemSeller = null;
+
+    if (item.artworkId) {
+      // التحقق من العمل الفني
+      const artwork = await artworkModel.findById(item.artworkId).populate('artist');
+      if (!artwork) {
+        return res.fail(null, `العمل الفني غير موجود: ${item.artworkId}`, 404);
+      }
+      if (!artwork.isAvailable) {
+        return res.fail(null, `العمل الفني غير متاح للشراء: ${artwork.title}`, 400);
+      }
+
+      itemData = artwork;
+      itemPrice = artwork.price;
+      itemSeller = artwork.artist._id;
+    } else if (item.specialRequestId) {
+      // التحقق من الطلب الخاص
+      const specialRequest = await specialRequestModel.findById(item.specialRequestId).populate('artist');
+      if (!specialRequest) {
+        return res.fail(null, `الطلب الخاص غير موجود: ${item.specialRequestId}`, 404);
+      }
+      if (specialRequest.status !== 'accepted') {
+        return res.fail(null, 'الطلب الخاص غير مقبول للدفع', 400);
+      }
+      if (specialRequest.sender.toString() !== buyer.toString()) {
+        return res.fail(null, 'غير مصرح لك بالدفع لهذا الطلب', 403);
+      }
+
+      itemData = specialRequest;
+      itemPrice = specialRequest.budget;
+      itemSeller = specialRequest.artist._id;
+    }
+
+    // التحقق من أن جميع العناصر من نفس البائع
+    if (seller && seller.toString() !== itemSeller.toString()) {
+      return res.fail(null, 'جميع العناصر يجب أن تكون من نفس البائع', 400);
+    }
+    seller = itemSeller;
+
+    // التحقق من أن المشتري ليس البائع
+    if (buyer.toString() === seller.toString()) {
+      return res.fail(null, 'لا يمكنك شراء العناصر الخاصة بك', 400);
+    }
+
+    // حساب أسعار العنصر
+    const quantity = item.quantity || 1;
+    const unitPrice = itemPrice;
+    const totalPrice = unitPrice * quantity;
+    const discountAmount = 0; // يمكن إضافة منطق الخصم هنا
+    const finalPrice = totalPrice - discountAmount;
+
+    processedItems.push({
+      artwork: item.artworkId || undefined,
+      specialRequest: item.specialRequestId || undefined,
+      quantity,
+      unitPrice,
+      totalPrice,
+      discountAmount,
+      finalPrice
+    });
+
+    subtotal += finalPrice;
   }
 
-  if (!artwork.isAvailable) {
-    return res.fail(null, 'العمل الفني غير متاح للشراء', 400);
+  // التحقق من وجود البائع
+  const sellerUser = await userModel.findById(seller);
+  if (!sellerUser) {
+    return res.fail(null, 'بيانات البائع غير موجودة', 404);
   }
 
-  // التحقق من وجود الفنان
-  const seller = artwork.artist;
-  const artist = await userModel.findById(seller);
-  if (!artist) {
-    return res.fail(null, 'بيانات الفنان غير موجودة', 404);
-  }
+  // حساب الرسوم والضرائب
+  const itemType = processedItems[0].artwork ? 'artwork' : 'specialRequest';
+  const commissionAmount = calculateCommission(subtotal);
+  const taxAmount = transactionModel.calculateTax(subtotal, shipping.address.country);
+  const shippingCost = shipping.cost || 0;
+  const totalAmount = subtotal + taxAmount + shippingCost;
+  const netAmount = subtotal - commissionAmount;
 
-  // Verify buyer is not the seller
-  if (buyer.toString() === seller.toString()) {
-    return res.fail(null, 'لا يمكنك شراء العمل الفني الخاص بك', 400);
-  }
+  // إعداد بيانات التقسيط إذا كان مفعلاً
+  let installmentData = null;
+  if (installments?.enabled) {
+    const installmentAmount = totalAmount / installments.totalInstallments;
+    const schedule = [];
+    
+    for (let i = 1; i <= installments.totalInstallments; i++) {
+      const dueDate = new Date();
+      dueDate.setMonth(dueDate.getMonth() + i);
+      
+      schedule.push({
+        installmentNumber: i,
+        amount: installmentAmount,
+        dueDate,
+        status: i === 1 ? 'paid' : 'pending' // القسط الأول مدفوع مقدماً
+      });
+    }
 
-  // حساب العمولة (15٪ من سعر العمل الفني)
-  const amount = artwork.price;
-  const commissionAmount = calculateCommission(amount);
-  const netAmount = amount - commissionAmount;
+    installmentData = {
+      enabled: true,
+      totalInstallments: installments.totalInstallments,
+      paidInstallments: 1,
+      installmentAmount,
+      nextDueDate: schedule[1]?.dueDate,
+      schedule
+    };
+  }
 
   // إنشاء المعاملة
   const transaction = await transactionModel.create({
     buyer,
     seller,
-    artwork: artworkId,
-    amount,
-    commissionAmount,
-    netAmount,
-    currency: 'SAR', // Default currency
-    paymentMethod,
-    paymentId,
-    shippingAddress,
-    status: 'pending' // Initial status
+    items: processedItems,
+    pricing: {
+      subtotal,
+      discountAmount: 0, // يمكن إضافة منطق الخصم
+      taxAmount,
+      shippingCost,
+      commissionAmount,
+      totalAmount,
+      netAmount
+    },
+    currency: 'SAR',
+    payment: {
+      ...payment,
+      fees: payment.fees || 0
+    },
+    shipping,
+    installments: installmentData,
+    metadata: {
+      ...metadata,
+      userAgent: req.get('User-Agent'),
+      ipAddress: req.ip,
+      deviceType: req.get('User-Agent')?.includes('Mobile') ? 'mobile' : 'desktop'
+    },
+    notes,
+    status: installments?.enabled ? 'processing' : 'pending'
   });
 
-  // تحديث حالة العمل الفني (في التطبيق الحقيقي، يتم هذا بعد اكتمال الدفع)
+  // تحديث حالة العناصر (في بيئة التطوير فقط)
   if (process.env.NODE_ENV !== 'production') {
-    // هذا للاختبار فقط، في الإنتاج سيتم التحديث عبر webhook من بوابة الدفع
-    artwork.isAvailable = false;
-    await artwork.save();
+    for (const item of processedItems) {
+      if (item.artwork) {
+        await artworkModel.findByIdAndUpdate(item.artwork, { isAvailable: false });
+      } else if (item.specialRequest) {
+        await specialRequestModel.findByIdAndUpdate(item.specialRequest, { 
+          status: 'completed',
+          completedAt: new Date()
+        });
+      }
+    }
+    
+    // تحديث حالة المعاملة للاختبار
     transaction.status = 'completed';
     transaction.completedAt = new Date();
     await transaction.save();
   }
 
-  res.success(transaction, 'تم إنشاء عملية الشراء بنجاح، في انتظار تأكيد الدفع', 201);
-});
-
-/**
- * إنشاء معاملة جديدة لطلب خاص
- */
-export const createSpecialRequestTransaction = asyncHandler(async (req, res) => {
-  const { specialRequestId, paymentMethod, paymentId, shippingAddress } = req.body;
-  const buyer = req.user._id;
-
-  // التحقق من وجود الطلب الخاص
-  const specialRequest = await specialRequestModel.findById(specialRequestId);
-  if (!specialRequest) {
-    return res.fail(null, 'الطلب الخاص غير موجود', 404);
-  }
-
-  if (specialRequest.status !== 'accepted') {
-    return res.fail(null, 'الطلب الخاص غير مقبول بعد للدفع', 400);
-  }
-
-  // Verify buyer is the requester
-  if (buyer.toString() !== specialRequest.sender.toString()) {
-    return res.fail(null, 'غير مصرح لك بالدفع لهذا الطلب', 403);
-  }
-
-  // التحقق من وجود الفنان
-  const seller = specialRequest.artist;
-  const artist = await userModel.findById(seller);
-  if (!artist) {
-    return res.fail(null, 'بيانات الفنان غير موجودة', 404);
-  }
-
-  // حساب العمولة (10٪ من سعر الطلب الخاص)
-  const amount = specialRequest.budget;
-  const commissionAmount = calculateCommission(amount);
-  const netAmount = amount - commissionAmount;
-
-  // إنشاء المعاملة
-  const transaction = await transactionModel.create({
-    buyer,
-    seller,
-    specialRequest: specialRequestId,
-    amount,
-    commissionAmount,
-    netAmount,
-    currency: 'SAR', // Default currency
-    paymentMethod,
-    paymentId,
-    shippingAddress,
-    status: 'pending' // Initial status
+  // إرسال إشعار للبائع
+  await createNotificationHelper({
+    recipient: seller,
+    type: 'transaction_created',
+    title: 'طلب شراء جديد',
+    message: `تم إنشاء طلب شراء جديد بقيمة ${totalAmount} ريال`,
+    data: { transactionId: transaction._id }
   });
 
-  // تحديث حالة الطلب الخاص (في التطبيق الحقيقي، يتم هذا بعد اكتمال الدفع)
-  if (process.env.NODE_ENV !== 'production') {
-    // هذا للاختبار فقط، في الإنتاج سيتم التحديث عبر webhook من بوابة الدفع
-    specialRequest.status = 'completed';
-    specialRequest.completedAt = new Date();
-    await specialRequest.save();
-    transaction.status = 'completed';
-    transaction.completedAt = new Date();
-    await transaction.save();
-  }
+  // إرسال إشعار للمشتري
+  await createNotificationHelper({
+    recipient: buyer,
+    type: 'transaction_created',
+    title: 'تم إنشاء الطلب',
+    message: `تم إنشاء طلب الشراء بنجاح، رقم المعاملة: ${transaction.transactionNumber}`,
+    data: { transactionId: transaction._id }
+  });
 
-  res.success(transaction, 'تم إنشاء عملية الدفع للطلب الخاص بنجاح', 201);
+  res.success(transaction, 'تم إنشاء المعاملة بنجاح', 201);
 });
 
 /**
- * الحصول على قائمة معاملات المستخدم
+ * الحصول على قائمة معاملات المستخدم مع فلترة وبحث متقدم
  */
 export const getUserTransactions = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPaginationParams(req.query);
   const userId = req.user._id;
+  const { 
+    status, 
+    type, 
+    startDate, 
+    endDate, 
+    minAmount, 
+    maxAmount, 
+    search,
+    sortBy,
+    sortOrder 
+  } = req.query;
 
-  // المستخدم يمكنه رؤية المعاملات التي هو طرف فيها (كمشتري أو بائع)
-  const query = {
-    $or: [{ buyer: userId }, { seller: userId }]
-  };
+  // بناء الاستعلام
+  let query = {};
 
-  // فلترة حسب النوع إذا تم تحديده
-  if (req.query.type === 'buying') {
+  // فلترة حسب نوع المعاملة
+  if (type === 'buying') {
     query.buyer = userId;
-    delete query.$or;
-  } else if (req.query.type === 'selling') {
+  } else if (type === 'selling') {
     query.seller = userId;
-    delete query.$or;
+  } else {
+    query.$or = [{ buyer: userId }, { seller: userId }];
   }
 
   // فلترة حسب الحالة
-  if (
-    req.query.status &&
-    ['pending', 'completed', 'failed', 'refunded'].includes(req.query.status)
-  ) {
-    query.status = req.query.status;
+  if (status) {
+    query.status = status;
   }
+
+  // فلترة حسب التاريخ
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) query.createdAt.$gte = new Date(startDate);
+    if (endDate) query.createdAt.$lte = new Date(endDate);
+  }
+
+  // فلترة حسب المبلغ
+  if (minAmount || maxAmount) {
+    query['pricing.totalAmount'] = {};
+    if (minAmount) query['pricing.totalAmount'].$gte = parseFloat(minAmount);
+    if (maxAmount) query['pricing.totalAmount'].$lte = parseFloat(maxAmount);
+  }
+
+  // البحث النصي
+  if (search) {
+    query.$or = [
+      { transactionNumber: { $regex: search, $options: 'i' } },
+      { notes: { $regex: search, $options: 'i' } }
+    ];
+  }
+
+  // إعداد الترتيب
+  const sortOptions = {};
+  sortOptions[sortBy || 'createdAt'] = sortOrder === 'asc' ? 1 : -1;
 
   const [transactions, totalCount] = await Promise.all([
     transactionModel
       .find(query)
       .populate('buyer', 'displayName email profileImage')
       .populate('seller', 'displayName email profileImage')
-      .populate('artwork', 'title image price')
-      .populate('specialRequest', 'requestType description budget')
-      .sort({ createdAt: -1 })
+      .populate('items.artwork', 'title image price category')
+      .populate('items.specialRequest', 'requestType description budget')
+      .sort(sortOptions)
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     transactionModel.countDocuments(query)
   ]);
 
+  // إضافة معلومات إضافية لكل معاملة
+  const enrichedTransactions = transactions.map(transaction => ({
+    ...transaction,
+    userRole: transaction.buyer._id.toString() === userId.toString() ? 'buyer' : 'seller',
+    itemsCount: transaction.items.length,
+    ageInDays: Math.floor((Date.now() - transaction.createdAt) / (1000 * 60 * 60 * 24))
+  }));
+
   const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(totalCount);
 
-  res.success({ transactions, pagination: paginationMeta }, 'تم جلب المعاملات بنجاح');
+  res.success({ 
+    transactions: enrichedTransactions, 
+    pagination: paginationMeta,
+    summary: {
+      totalTransactions: totalCount,
+      totalAmount: transactions.reduce((sum, t) => sum + t.pricing.totalAmount, 0),
+      averageAmount: totalCount > 0 ? transactions.reduce((sum, t) => sum + t.pricing.totalAmount, 0) / totalCount : 0
+    }
+  }, 'تم جلب المعاملات بنجاح');
 });
 
 /**
- * الحصول على تفاصيل معاملة
+ * الحصول على تفاصيل معاملة محددة
  */
 export const getTransactionById = asyncHandler(async (req, res) => {
   const { transactionId } = req.params;
+  const userId = req.user._id;
 
   const transaction = await transactionModel
     .findById(transactionId)
-    .populate('buyer', 'displayName email profileImage')
-    .populate('seller', 'displayName email profileImage')
-    .populate('artwork')
-    .populate('specialRequest');
+    .populate('buyer', 'displayName email profileImage phoneNumber')
+    .populate('seller', 'displayName email profileImage phoneNumber')
+    .populate('items.artwork', 'title description image price category artist')
+    .populate('items.specialRequest', 'requestType description budget requirements artist')
+    .populate('statusHistory.updatedBy', 'displayName email');
 
   if (!transaction) {
     return res.fail(null, 'المعاملة غير موجودة', 404);
   }
 
-  // Check permissions: must be admin, buyer or seller
-  if (
-    req.user.role !== 'admin' &&
-    transaction.buyer._id.toString() !== req.user._id.toString() &&
-    transaction.seller._id.toString() !== req.user._id.toString()
-  ) {
+  // التحقق من الصلاحية
+  const isOwner = transaction.buyer._id.toString() === userId.toString() || 
+                  transaction.seller._id.toString() === userId.toString();
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isOwner && !isAdmin) {
     return res.fail(null, 'غير مصرح لك بعرض هذه المعاملة', 403);
   }
 
-  res.success(transaction, 'تم جلب تفاصيل المعاملة بنجاح');
+  // إضافة معلومات إضافية
+  const transactionData = transaction.toObject({ virtuals: true });
+  transactionData.userRole = transaction.buyer._id.toString() === userId.toString() ? 'buyer' : 'seller';
+  transactionData.canCancel = transaction.status === 'pending' && 
+                              transaction.buyer._id.toString() === userId.toString();
+  transactionData.canRefund = ['completed', 'delivered'].includes(transaction.status) &&
+                              transaction.buyer._id.toString() === userId.toString();
+  transactionData.canDispute = ['completed', 'delivered'].includes(transaction.status) &&
+                               !transaction.dispute?.active;
+
+  res.success(transactionData, 'تم جلب تفاصيل المعاملة بنجاح');
 });
 
 /**
- * تحديث معلومات الشحن والتتبع (للبائع/الفنان فقط)
- */
-export const updateShippingInfo = asyncHandler(async (req, res) => {
-  const { transactionId } = req.params;
-  const { provider, trackingNumber, trackingUrl, estimatedDelivery } = req.body;
-  const sellerId = req.user._id;
-
-  const transaction = await transactionModel.findOne({
-    _id: transactionId,
-    seller: sellerId,
-    status: 'completed' // يمكن تحديث معلومات الشحن فقط للمعاملات المكتملة
-  });
-
-  if (!transaction) {
-    return res.fail(null, 'المعاملة غير موجودة أو لا يمكن تحديثها', 404);
-  }
-
-  // تحديث معلومات الشحن
-  transaction.trackingInfo = {
-    provider,
-    trackingNumber,
-    trackingUrl,
-    estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
-    shippedAt: new Date()
-  };
-
-  await transaction.save();
-
-  res.success(transaction, 'تم تحديث معلومات الشحن بنجاح');
-});
-
-/**
- * الحصول على إحصائيات المعاملات للمدير
- */
-export const getTransactionStats = asyncHandler(async (req, res) => {
-  // التحقق من أن المستخدم هو مدير
-  if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بعرض إحصائيات المعاملات', 403);
-  }
-
-  // إحصائيات عامة
-  const [totalStats, monthlyStats] = await Promise.all([
-    transactionModel.aggregate([
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          totalAmount: { $sum: '$amount' },
-          totalCommission: { $sum: '$commissionAmount' }
-        }
-      }
-    ]),
-
-    // إحصائيات شهرية (آخر 6 أشهر)
-    transactionModel.aggregate([
-      {
-        $match: {
-          createdAt: {
-            $gte: new Date(new Date().setMonth(new Date().getMonth() - 6))
-          }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            month: { $month: '$createdAt' },
-            year: { $year: '$createdAt' }
-          },
-          count: { $sum: 1 },
-          totalAmount: { $sum: '$amount' },
-          totalCommission: { $sum: '$commissionAmount' }
-        }
-      },
-      { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ])
-  ]);
-
-  // تنسيق الإحصائيات
-  const stats = {
-    overall: {
-      total: 0,
-      totalAmount: 0,
-      totalCommission: 0,
-      byStatus: {}
-    },
-    monthly: []
-  };
-
-  // معالجة الإحصائيات العامة
-  totalStats.forEach(item => {
-    stats.overall.total += item.count;
-    stats.overall.totalAmount += item.totalAmount;
-    stats.overall.totalCommission += item.totalCommission;
-    stats.overall.byStatus[item._id] = {
-      count: item.count,
-      amount: item.totalAmount,
-      commission: item.totalCommission
-    };
-  });
-
-  // معالجة الإحصائيات الشهرية
-  const monthNames = [
-    'يناير',
-    'فبراير',
-    'مارس',
-    'إبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر'
-  ];
-
-  monthlyStats.forEach(item => {
-    stats.monthly.push({
-      month: item._id.month,
-      year: item._id.year,
-      label: `${monthNames[item._id.month - 1]} ${item._id.year}`,
-      count: item.count,
-      totalAmount: item.totalAmount,
-      totalCommission: item.totalCommission
-    });
-  });
-
-  res.success(stats, 'تم جلب إحصائيات المعاملات بنجاح');
-});
-
-/**
- * Update transaction status
- * This would be called from payment webhooks or admin
+ * تحديث حالة المعاملة
  */
 export const updateTransactionStatus = asyncHandler(async (req, res) => {
   const { transactionId } = req.params;
-  const { status, trackingInfo, notes } = req.body;
+  const { status, reason, notes, trackingInfo } = req.body;
+  const userId = req.user._id;
 
-  // Only admin or seller can update transaction status
-  const transaction = await transactionModel
-    .findById(transactionId)
-    .populate('seller', '_id')
-    .populate('buyer', '_id');
-
+  const transaction = await transactionModel.findById(transactionId);
   if (!transaction) {
     return res.fail(null, 'المعاملة غير موجودة', 404);
   }
 
-  // Check permissions: must be admin or the seller
-  if (req.user.role !== 'admin' && transaction.seller._id.toString() !== req.user._id.toString()) {
-    return res.fail(null, 'غير مصرح لك بتحديث حالة هذه المعاملة', 403);
+  // التحقق من الصلاحية
+  const isSeller = transaction.seller.toString() === userId.toString();
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isSeller && !isAdmin) {
+    return res.fail(null, 'غير مصرح لك بتعديل هذه المعاملة', 403);
   }
 
-  // Update transaction
-  transaction.status = status;
+  // التحقق من صحة التحديث
+  const validTransitions = {
+    'pending': ['processing', 'confirmed', 'cancelled'],
+    'processing': ['confirmed', 'cancelled'],
+    'confirmed': ['shipped', 'cancelled'],
+    'shipped': ['delivered', 'returned'],
+    'delivered': ['completed'],
+    'completed': ['refunded'],
+    'cancelled': [],
+    'refunded': [],
+    'disputed': ['resolved']
+  };
 
-  if (status === 'completed') {
-    transaction.completedAt = new Date();
+  if (!validTransitions[transaction.status]?.includes(status)) {
+    return res.fail(null, `لا يمكن تغيير حالة المعاملة من ${transaction.status} إلى ${status}`, 400);
   }
 
-  if (trackingInfo) {
-    transaction.trackingInfo = {
-      ...transaction.trackingInfo,
-      ...trackingInfo
+  // تحديث معلومات التتبع إذا كانت متوفرة
+  if (trackingInfo && status === 'shipped') {
+    transaction.shipping.tracking = {
+      ...transaction.shipping.tracking,
+      ...trackingInfo,
+      status: 'shipped',
+      shippedAt: new Date()
     };
-
-    // Set shipping date if not already set
-    if (trackingInfo.trackingNumber && !transaction.trackingInfo.shippedAt) {
-      transaction.trackingInfo.shippedAt = new Date();
-    }
   }
 
-  if (notes) {
-    transaction.notes = notes;
+  // تحديث الحالة
+  await transaction.updateStatus(status, userId, reason, notes);
+
+  // إرسال إشعارات
+  const notificationData = {
+    transactionId: transaction._id,
+    transactionNumber: transaction.transactionNumber,
+    status
+  };
+
+  // إشعار للمشتري
+  await createNotificationHelper({
+    recipient: transaction.buyer,
+    type: 'transaction_status_updated',
+    title: 'تحديث حالة الطلب',
+    message: `تم تحديث حالة طلبك رقم ${transaction.transactionNumber} إلى: ${status}`,
+    data: notificationData
+  });
+
+  // إشعار للبائع (إذا لم يكن هو المحدث)
+  if (transaction.seller.toString() !== userId.toString()) {
+    await createNotificationHelper({
+      recipient: transaction.seller,
+      type: 'transaction_status_updated',
+      title: 'تحديث حالة الطلب',
+      message: `تم تحديث حالة الطلب رقم ${transaction.transactionNumber} إلى: ${status}`,
+      data: notificationData
+    });
   }
-
-  await transaction.save();
-
-  // Send notification to buyer about status update (can be implemented later)
 
   res.success(transaction, 'تم تحديث حالة المعاملة بنجاح');
 });
 
 /**
- * Get buyer transactions (purchases)
- */
-export const getBuyerTransactions = asyncHandler(async (req, res) => {
-  const { page, limit, skip } = getPaginationParams(req.query);
-  const { status } = req.query;
-
-  // Build query
-  const query = { buyer: req.user._id };
-  if (status && ['pending', 'completed', 'failed', 'refunded'].includes(status)) {
-    query.status = status;
-  }
-
-  const [transactions, totalCount] = await Promise.all([
-    transactionModel
-      .find(query)
-      .populate('seller', 'displayName email profileImage')
-      .populate('artwork', 'title image price')
-      .populate('specialRequest', 'requestType description budget')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-    transactionModel.countDocuments(query)
-  ]);
-
-  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(totalCount);
-
-  res.success({ transactions, pagination: paginationMeta }, 'تم جلب قائمة المشتريات بنجاح');
-});
-
-/**
- * Get seller transactions (sales)
- */
-export const getSellerTransactions = asyncHandler(async (req, res) => {
-  const { page, limit, skip } = getPaginationParams(req.query);
-  const { status } = req.query;
-
-  // Build query
-  const query = { seller: req.user._id };
-  if (status && ['pending', 'completed', 'failed', 'refunded'].includes(status)) {
-    query.status = status;
-  }
-
-  const [transactions, totalCount] = await Promise.all([
-    transactionModel
-      .find(query)
-      .populate('buyer', 'displayName email profileImage')
-      .populate('artwork', 'title image price')
-      .populate('specialRequest', 'requestType description budget')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-    transactionModel.countDocuments(query)
-  ]);
-
-  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(totalCount);
-
-  res.success({ transactions, pagination: paginationMeta }, 'تم جلب قائمة المبيعات بنجاح');
-});
-
-/**
- * Update shipping/tracking information
+ * تحديث معلومات التتبع
  */
 export const updateTrackingInfo = asyncHandler(async (req, res) => {
   const { transactionId } = req.params;
-  const { trackingNumber, provider, trackingUrl, estimatedDelivery } = req.body;
+  const { provider, trackingNumber, trackingUrl, estimatedDelivery, status } = req.body;
+  const userId = req.user._id;
 
   const transaction = await transactionModel.findById(transactionId);
-
   if (!transaction) {
     return res.fail(null, 'المعاملة غير موجودة', 404);
   }
 
-  // Check permissions: must be admin or the seller
-  if (req.user.role !== 'admin' && transaction.seller.toString() !== req.user._id.toString()) {
-    return res.fail(null, 'غير مصرح لك بتحديث معلومات الشحن', 403);
+  // التحقق من الصلاحية
+  const isSeller = transaction.seller.toString() === userId.toString();
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isSeller && !isAdmin) {
+    return res.fail(null, 'غير مصرح لك بتعديل معلومات التتبع', 403);
   }
 
-  // Update tracking info
-  transaction.trackingInfo = {
-    ...transaction.trackingInfo,
-    trackingNumber,
+  // تحديث معلومات التتبع
+  transaction.shipping.tracking = {
+    ...transaction.shipping.tracking,
     provider,
+    trackingNumber,
     trackingUrl,
-    estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
-    shippedAt: new Date()
+    estimatedDelivery,
+    status: status || 'shipped',
+    shippedAt: transaction.shipping.tracking.shippedAt || new Date()
   };
 
   await transaction.save();
 
-  // Send notification to buyer about shipment (can be implemented later)
+  // إرسال إشعار للمشتري
+  await createNotificationHelper({
+    recipient: transaction.buyer,
+    type: 'tracking_updated',
+    title: 'تحديث معلومات الشحن',
+    message: `تم تحديث معلومات شحن طلبك رقم ${transaction.transactionNumber}`,
+    data: {
+      transactionId: transaction._id,
+      trackingNumber,
+      trackingUrl
+    }
+  });
 
-  res.success(transaction, 'تم تحديث معلومات الشحن بنجاح');
+  res.success(transaction.shipping.tracking, 'تم تحديث معلومات التتبع بنجاح');
 });
 
 /**
- * Get sales statistics for seller
+ * طلب استرداد
  */
-export const getSellerStats = asyncHandler(async (req, res) => {
-  // Check if user is an artist/seller
-  const user = await userModel.findById(req.user._id);
-  if (user.role !== 'artist') {
-    return res.fail(null, 'هذه الاحصائيات متاحة فقط للفنانين', 403);
+export const requestRefund = asyncHandler(async (req, res) => {
+  const { transactionId } = req.params;
+  const { amount, reason, type } = req.body;
+  const userId = req.user._id;
+
+  const transaction = await transactionModel.findById(transactionId);
+  if (!transaction) {
+    return res.fail(null, 'المعاملة غير موجودة', 404);
   }
 
-  // Get current date and calculate date ranges
-  const now = new Date();
-  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const thisYear = new Date(now.getFullYear(), 0, 1);
+  // التحقق من الصلاحية
+  if (transaction.buyer.toString() !== userId.toString()) {
+    return res.fail(null, 'غير مصرح لك بطلب استرداد لهذه المعاملة', 403);
+  }
 
-  // Aggregate sales data
-  const salesStats = await transactionModel.aggregate([
-    { $match: { seller: req.user._id, status: 'completed' } },
-    {
-      $group: {
-        _id: null,
-        totalSales: { $sum: 1 },
-        totalRevenue: { $sum: '$netAmount' },
-        totalCommission: { $sum: '$commissionAmount' },
-        avgOrderValue: { $avg: '$amount' }
-      }
+  // التحقق من إمكانية الاسترداد
+  if (!['completed', 'delivered'].includes(transaction.status)) {
+    return res.fail(null, 'لا يمكن طلب الاسترداد لهذه المعاملة في حالتها الحالية', 400);
+  }
+
+  if (transaction.refund.requested) {
+    return res.fail(null, 'تم طلب الاسترداد مسبقاً لهذه المعاملة', 400);
+  }
+
+  // تحديد مبلغ الاسترداد
+  const refundAmount = type === 'partial' && amount ? 
+    Math.min(amount, transaction.pricing.totalAmount) : 
+    transaction.pricing.totalAmount;
+
+  // معالجة طلب الاسترداد
+  await transaction.processRefund(refundAmount, reason, userId);
+
+  // إرسال إشعار للبائع
+  await createNotificationHelper({
+    recipient: transaction.seller,
+    type: 'refund_requested',
+    title: 'طلب استرداد',
+    message: `تم طلب استرداد للطلب رقم ${transaction.transactionNumber}`,
+    data: {
+      transactionId: transaction._id,
+      refundAmount,
+      reason
     }
-  ]);
+  });
 
-  // Monthly sales
-  const monthlySales = await transactionModel.aggregate([
-    {
-      $match: {
-        seller: req.user._id,
-        status: 'completed',
-        createdAt: { $gte: thisYear }
-      }
-    },
-    {
-      $group: {
-        _id: { $month: '$createdAt' },
-        count: { $sum: 1 },
-        revenue: { $sum: '$netAmount' }
-      }
-    },
-    { $sort: { _id: 1 } }
-  ]);
+  res.success(transaction.refund, 'تم تقديم طلب الاسترداد بنجاح');
+});
 
-  // Current month sales
-  const currentMonthSales = await transactionModel.aggregate([
-    {
-      $match: {
-        seller: req.user._id,
-        status: 'completed',
-        createdAt: { $gte: thisMonth }
-      }
-    },
-    {
-      $group: {
-        _id: null,
-        count: { $sum: 1 },
-        revenue: { $sum: '$netAmount' }
-      }
+/**
+ * فتح نزاع
+ */
+export const openDispute = asyncHandler(async (req, res) => {
+  const { transactionId } = req.params;
+  const { reason, description, evidence } = req.body;
+  const userId = req.user._id;
+
+  const transaction = await transactionModel.findById(transactionId);
+  if (!transaction) {
+    return res.fail(null, 'المعاملة غير موجودة', 404);
+  }
+
+  // التحقق من الصلاحية
+  const isParty = transaction.buyer.toString() === userId.toString() || 
+                  transaction.seller.toString() === userId.toString();
+
+  if (!isParty) {
+    return res.fail(null, 'غير مصرح لك بفتح نزاع لهذه المعاملة', 403);
+  }
+
+  // التحقق من إمكانية فتح النزاع
+  if (transaction.dispute.active) {
+    return res.fail(null, 'يوجد نزاع مفتوح بالفعل لهذه المعاملة', 400);
+  }
+
+  if (!['completed', 'delivered', 'shipped'].includes(transaction.status)) {
+    return res.fail(null, 'لا يمكن فتح نزاع لهذه المعاملة في حالتها الحالية', 400);
+  }
+
+  // فتح النزاع
+  await transaction.openDispute(reason, description, userId);
+
+  // تحديث حالة المعاملة
+  transaction.status = 'disputed';
+  await transaction.save();
+
+  // إرسال إشعار للطرف الآخر
+  const otherParty = transaction.buyer.toString() === userId.toString() ? 
+    transaction.seller : transaction.buyer;
+
+  await createNotificationHelper({
+    recipient: otherParty,
+    type: 'dispute_opened',
+    title: 'نزاع جديد',
+    message: `تم فتح نزاع للطلب رقم ${transaction.transactionNumber}`,
+    data: {
+      transactionId: transaction._id,
+      reason,
+      description
     }
-  ]);
+  });
 
-  // Last month sales for comparison
-  const lastMonthSales = await transactionModel.aggregate([
-    {
-      $match: {
-        seller: req.user._id,
-        status: 'completed',
-        createdAt: { $gte: lastMonth, $lt: thisMonth }
-      }
-    },
-    {
-      $group: {
-        _id: null,
-        count: { $sum: 1 },
-        revenue: { $sum: '$netAmount' }
-      }
+  res.success(transaction.dispute, 'تم فتح النزاع بنجاح');
+});
+
+/**
+ * الحصول على إحصائيات المعاملات
+ */
+export const getTransactionStats = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { period, startDate, endDate, groupBy, includeRefunds, includeDisputes } = req.query;
+
+  // بناء فلتر التاريخ
+  let dateFilter = {};
+  if (period && period !== 'all') {
+    const now = new Date();
+    const periodMap = {
+      'day': () => new Date(now.setHours(0, 0, 0, 0)),
+      'week': () => new Date(now.setDate(now.getDate() - 7)),
+      'month': () => new Date(now.setMonth(now.getMonth() - 1)),
+      'quarter': () => new Date(now.setMonth(now.getMonth() - 3)),
+      'year': () => new Date(now.setFullYear(now.getFullYear() - 1))
+    };
+    
+    if (periodMap[period]) {
+      dateFilter.createdAt = { $gte: periodMap[period]() };
     }
-  ]);
+  } else if (startDate || endDate) {
+    dateFilter.createdAt = {};
+    if (startDate) dateFilter.createdAt.$gte = new Date(startDate);
+    if (endDate) dateFilter.createdAt.$lte = new Date(endDate);
+  }
 
-  // Format stats
-  const stats = {
-    overall: {
-      totalSales: salesStats[0]?.totalSales || 0,
-      totalRevenue: salesStats[0]?.totalRevenue || 0,
-      totalCommission: salesStats[0]?.totalCommission || 0,
-      avgOrderValue: salesStats[0]?.avgOrderValue || 0
-    },
-    currentMonth: {
-      sales: currentMonthSales[0]?.count || 0,
-      revenue: currentMonthSales[0]?.revenue || 0
-    },
-    lastMonth: {
-      sales: lastMonthSales[0]?.count || 0,
-      revenue: lastMonthSales[0]?.revenue || 0
-    },
-    monthlySales: monthlySales.map(month => ({
-      month: month._id,
-      sales: month.count,
-      revenue: month.revenue
-    }))
+  // إحصائيات كمشتري
+  const buyerStats = await transactionModel.getTransactionStats(userId, 'buyer');
+  
+  // إحصائيات كبائع
+  const sellerStats = await transactionModel.getTransactionStats(userId, 'seller');
+
+  // إحصائيات مفصلة بناءً على التجميع
+  let detailedStats = [];
+  const baseQuery = {
+    $or: [{ buyer: userId }, { seller: userId }],
+    ...dateFilter
   };
 
-  // Calculate growth percentages
-  if (stats.lastMonth.sales > 0) {
-    stats.growth = {
-      sales: ((stats.currentMonth.sales - stats.lastMonth.sales) / stats.lastMonth.sales) * 100,
-      revenue:
-        ((stats.currentMonth.revenue - stats.lastMonth.revenue) / stats.lastMonth.revenue) * 100
-    };
-  } else {
-    stats.growth = {
-      sales: stats.currentMonth.sales > 0 ? 100 : 0,
-      revenue: stats.currentMonth.revenue > 0 ? 100 : 0
-    };
+  if (!includeRefunds) {
+    baseQuery.status = { $ne: 'refunded' };
+  }
+  if (!includeDisputes) {
+    baseQuery['dispute.active'] = { $ne: true };
   }
 
-  res.success(stats, 'تم جلب إحصائيات المبيعات بنجاح');
+  switch (groupBy) {
+    case 'status':
+      detailedStats = await transactionModel.aggregate([
+        { $match: baseQuery },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 },
+            totalAmount: { $sum: '$pricing.totalAmount' },
+            avgAmount: { $avg: '$pricing.totalAmount' }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      break;
+
+    case 'method':
+      detailedStats = await transactionModel.aggregate([
+        { $match: baseQuery },
+        {
+          $group: {
+            _id: '$payment.method',
+            count: { $sum: 1 },
+            totalAmount: { $sum: '$pricing.totalAmount' },
+            avgAmount: { $avg: '$pricing.totalAmount' }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      break;
+
+    case 'currency':
+      detailedStats = await transactionModel.aggregate([
+        { $match: baseQuery },
+        {
+          $group: {
+            _id: '$currency',
+            count: { $sum: 1 },
+            totalAmount: { $sum: '$pricing.totalAmount' },
+            avgAmount: { $avg: '$pricing.totalAmount' }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      break;
+
+    case 'date':
+      detailedStats = await transactionModel.aggregate([
+        { $match: baseQuery },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$createdAt' },
+              month: { $month: '$createdAt' },
+              day: { $dayOfMonth: '$createdAt' }
+            },
+            count: { $sum: 1 },
+            totalAmount: { $sum: '$pricing.totalAmount' },
+            avgAmount: { $avg: '$pricing.totalAmount' }
+          }
+        },
+        { $sort: { '_id.year': -1, '_id.month': -1, '_id.day': -1 } }
+      ]);
+      break;
+  }
+
+  // إحصائيات إضافية
+  const additionalStats = await transactionModel.aggregate([
+    { $match: baseQuery },
+    {
+      $group: {
+        _id: null,
+        totalCommission: { $sum: '$pricing.commissionAmount' },
+        totalTax: { $sum: '$pricing.taxAmount' },
+        totalShipping: { $sum: '$pricing.shippingCost' },
+        avgProcessingTime: {
+          $avg: {
+            $subtract: [
+              { $ifNull: ['$completedAt', new Date()] },
+              '$createdAt'
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  res.success({
+    summary: {
+      buyer: buyerStats,
+      seller: sellerStats,
+      combined: {
+        totalTransactions: buyerStats.totalTransactions + sellerStats.totalTransactions,
+        totalAmount: buyerStats.totalAmount + sellerStats.totalAmount,
+        avgAmount: (buyerStats.avgAmount + sellerStats.avgAmount) / 2
+      }
+    },
+    detailed: detailedStats,
+    additional: additionalStats[0] || {},
+    period: period || 'custom',
+    groupBy: groupBy || 'status'
+  }, 'تم جلب الإحصائيات بنجاح');
 });
 
 /**
- * Get admin transaction statistics
+ * العمليات المجمعة على المعاملات
  */
-export const getAdminStats = asyncHandler(async (req, res) => {
-  // Check if user is admin
+export const bulkUpdateTransactions = asyncHandler(async (req, res) => {
+  const { transactionIds, action, reason, notes } = req.body;
+  const userId = req.user._id;
+
+  // التحقق من الصلاحية (المدير فقط)
   if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بعرض إحصائيات المعاملات', 403);
+    return res.fail(null, 'غير مصرح لك بتنفيذ العمليات المجمعة', 403);
   }
 
-  // Get current date and calculate date ranges
-  const now = new Date();
-  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const thisYear = new Date(now.getFullYear(), 0, 1);
+  // التحقق من وجود المعاملات
+  const transactions = await transactionModel.find({
+    _id: { $in: transactionIds }
+  });
 
-  // Aggregate all sales data
-  const overallStats = await transactionModel.aggregate([
-    { $match: { status: 'completed' } },
-    {
-      $group: {
-        _id: null,
-        totalSales: { $sum: 1 },
-        totalRevenue: { $sum: '$amount' },
-        totalCommission: { $sum: '$commissionAmount' },
-        avgOrderValue: { $avg: '$amount' }
-      }
-    }
-  ]);
+  if (transactions.length !== transactionIds.length) {
+    return res.fail(null, 'بعض المعاملات غير موجودة', 404);
+  }
 
-  // Monthly commission revenue
-  const monthlyCommission = await transactionModel.aggregate([
-    {
-      $match: {
-        status: 'completed',
-        createdAt: { $gte: thisYear }
-      }
-    },
-    {
-      $group: {
-        _id: { $month: '$createdAt' },
-        count: { $sum: 1 },
-        commission: { $sum: '$commissionAmount' },
-        revenue: { $sum: '$amount' }
-      }
-    },
-    { $sort: { _id: 1 } }
-  ]);
-
-  // Top selling artists
-  const topArtists = await transactionModel.aggregate([
-    { $match: { status: 'completed' } },
-    {
-      $group: {
-        _id: '$seller',
-        salesCount: { $sum: 1 },
-        totalRevenue: { $sum: '$amount' }
-      }
-    },
-    { $sort: { salesCount: -1 } },
-    { $limit: 5 },
-    {
-      $lookup: {
-        from: 'users',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'sellerInfo'
-      }
-    },
-    { $unwind: '$sellerInfo' },
-    {
-      $project: {
-        _id: 1,
-        salesCount: 1,
-        totalRevenue: 1,
-        'sellerInfo.displayName': 1,
-        'sellerInfo.email': 1,
-        'sellerInfo.profileImage': 1
-      }
-    }
-  ]);
-
-  // Format admin stats
-  const stats = {
-    overall: {
-      totalSales: overallStats[0]?.totalSales || 0,
-      totalRevenue: overallStats[0]?.totalRevenue || 0,
-      totalCommission: overallStats[0]?.totalCommission || 0,
-      avgOrderValue: overallStats[0]?.avgOrderValue || 0
-    },
-    monthlyStats: monthlyCommission.map(month => ({
-      month: month._id,
-      sales: month.count,
-      commission: month.commission,
-      revenue: month.revenue
-    })),
-    topArtists: topArtists.map(artist => ({
-      id: artist._id,
-      displayName: artist.sellerInfo.displayName,
-      email: artist.sellerInfo.email,
-      profileImage: artist.sellerInfo.profileImage,
-      salesCount: artist.salesCount,
-      totalRevenue: artist.totalRevenue
-    }))
+  // تنفيذ العملية المطلوبة
+  const results = [];
+  const statusMap = {
+    'cancel': 'cancelled',
+    'confirm': 'confirmed',
+    'ship': 'shipped',
+    'complete': 'completed'
   };
 
-  res.success(stats, 'تم جلب إحصائيات المعاملات بنجاح');
+  const newStatus = statusMap[action];
+  if (!newStatus) {
+    return res.fail(null, 'العملية غير صالحة', 400);
+  }
+
+  for (const transaction of transactions) {
+    try {
+      await transaction.updateStatus(newStatus, userId, reason, notes);
+      results.push({
+        transactionId: transaction._id,
+        transactionNumber: transaction.transactionNumber,
+        success: true,
+        newStatus
+      });
+
+      // إرسال إشعارات
+      await createNotificationHelper({
+        recipient: transaction.buyer,
+        type: 'transaction_bulk_updated',
+        title: 'تحديث جماعي للطلبات',
+        message: `تم تحديث حالة طلبك رقم ${transaction.transactionNumber}`,
+        data: { transactionId: transaction._id, newStatus }
+      });
+
+    } catch (error) {
+      results.push({
+        transactionId: transaction._id,
+        transactionNumber: transaction.transactionNumber,
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  const successCount = results.filter(r => r.success).length;
+  const failureCount = results.filter(r => !r.success).length;
+
+  res.success({
+    results,
+    summary: {
+      total: transactionIds.length,
+      successful: successCount,
+      failed: failureCount
+    }
+  }, `تم تحديث ${successCount} معاملة من أصل ${transactionIds.length}`);
+});
+
+/**
+ * تصدير بيانات المعاملات
+ */
+export const exportTransactions = asyncHandler(async (req, res) => {
+  const { format, startDate, endDate, status, includeItems, includeShipping, includePayment } = req.query;
+  const userId = req.user._id;
+
+  // بناء الاستعلام
+  let query = {
+    $or: [{ buyer: userId }, { seller: userId }]
+  };
+
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) query.createdAt.$gte = new Date(startDate);
+    if (endDate) query.createdAt.$lte = new Date(endDate);
+  }
+
+  if (status && Array.isArray(status)) {
+    query.status = { $in: status };
+  }
+
+  // جلب البيانات
+  const transactions = await transactionModel
+    .find(query)
+    .populate('buyer', 'displayName email')
+    .populate('seller', 'displayName email')
+    .populate('items.artwork', 'title price')
+    .populate('items.specialRequest', 'requestType budget')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // تحضير البيانات للتصدير
+  const exportData = transactions.map(transaction => {
+    const baseData = {
+      transactionNumber: transaction.transactionNumber,
+      status: transaction.status,
+      totalAmount: transaction.pricing.totalAmount,
+      currency: transaction.currency,
+      createdAt: transaction.createdAt,
+      completedAt: transaction.completedAt,
+      buyerName: transaction.buyer.displayName,
+      sellerName: transaction.seller.displayName
+    };
+
+    if (includeItems === 'true') {
+      baseData.itemsCount = transaction.items.length;
+      baseData.items = transaction.items.map(item => ({
+        type: item.artwork ? 'artwork' : 'specialRequest',
+        title: item.artwork?.title || item.specialRequest?.requestType,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice
+      }));
+    }
+
+    if (includeShipping === 'true') {
+      baseData.shippingMethod = transaction.shipping.method;
+      baseData.shippingCost = transaction.shipping.cost;
+      baseData.shippingAddress = transaction.shipping.address;
+    }
+
+    if (includePayment === 'true') {
+      baseData.paymentMethod = transaction.payment.method;
+      baseData.paymentProvider = transaction.payment.provider;
+    }
+
+    return baseData;
+  });
+
+  // تحديد نوع المحتوى بناءً على التنسيق
+  const contentTypes = {
+    'csv': 'text/csv',
+    'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'pdf': 'application/pdf'
+  };
+
+  res.setHeader('Content-Type', contentTypes[format] || 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="transactions.${format}"`);
+
+  // في التطبيق الحقيقي، ستحتاج إلى مكتبات لتحويل البيانات للتنسيقات المختلفة
+  if (format === 'csv') {
+    // تحويل إلى CSV (مبسط)
+    const csvHeaders = Object.keys(exportData[0] || {}).join(',');
+    const csvRows = exportData.map(row => Object.values(row).join(','));
+    const csvContent = [csvHeaders, ...csvRows].join('\n');
+    res.send(csvContent);
+  } else {
+    // إرجاع JSON كافتراضي
+    res.success(exportData, `تم تصدير ${exportData.length} معاملة بنجاح`);
+  }
+});
+
+/**
+ * دفع قسط
+ */
+export const payInstallment = asyncHandler(async (req, res) => {
+  const { transactionId } = req.params;
+  const { installmentNumber, amount, paymentMethod, paymentId } = req.body;
+  const userId = req.user._id;
+
+  const transaction = await transactionModel.findById(transactionId);
+  if (!transaction) {
+    return res.fail(null, 'المعاملة غير موجودة', 404);
+  }
+
+  // التحقق من الصلاحية
+  if (transaction.buyer.toString() !== userId.toString()) {
+    return res.fail(null, 'غير مصرح لك بدفع أقساط هذه المعاملة', 403);
+  }
+
+  // التحقق من وجود نظام التقسيط
+  if (!transaction.installments.enabled) {
+    return res.fail(null, 'هذه المعاملة لا تستخدم نظام التقسيط', 400);
+  }
+
+  // العثور على القسط
+  const installment = transaction.installments.schedule.find(
+    inst => inst.installmentNumber === installmentNumber
+  );
+
+  if (!installment) {
+    return res.fail(null, 'القسط المحدد غير موجود', 404);
+  }
+
+  if (installment.status === 'paid') {
+    return res.fail(null, 'تم دفع هذا القسط مسبقاً', 400);
+  }
+
+  // تحديث حالة القسط
+  installment.status = 'paid';
+  installment.paidAt = new Date();
+
+  // تحديث معلومات التقسيط العامة
+  transaction.installments.paidInstallments += 1;
+  
+  // تحديد القسط التالي
+  const nextInstallment = transaction.installments.schedule.find(
+    inst => inst.status === 'pending'
+  );
+  transaction.installments.nextDueDate = nextInstallment?.dueDate || null;
+
+  // التحقق من اكتمال جميع الأقساط
+  if (transaction.installments.paidInstallments === transaction.installments.totalInstallments) {
+    transaction.status = 'completed';
+    transaction.completedAt = new Date();
+  }
+
+  await transaction.save();
+
+  // إرسال إشعار
+  await createNotificationHelper({
+    recipient: transaction.seller,
+    type: 'installment_paid',
+    title: 'تم دفع قسط',
+    message: `تم دفع القسط رقم ${installmentNumber} للطلب ${transaction.transactionNumber}`,
+    data: {
+      transactionId: transaction._id,
+      installmentNumber,
+      amount: installment.amount
+    }
+  });
+
+  res.success({
+    installment,
+    installmentProgress: transaction.installmentProgress,
+    transactionStatus: transaction.status
+  }, 'تم دفع القسط بنجاح');
+});
+
+/**
+ * إلغاء معاملة
+ */
+export const cancelTransaction = asyncHandler(async (req, res) => {
+  const { transactionId } = req.params;
+  const { reason } = req.body;
+  const userId = req.user._id;
+
+  const transaction = await transactionModel.findById(transactionId);
+  if (!transaction) {
+    return res.fail(null, 'المعاملة غير موجودة', 404);
+  }
+
+  // التحقق من الصلاحية
+  const canCancel = transaction.buyer.toString() === userId.toString() || 
+                    req.user.role === 'admin';
+
+  if (!canCancel) {
+    return res.fail(null, 'غير مصرح لك بإلغاء هذه المعاملة', 403);
+  }
+
+  // التحقق من إمكانية الإلغاء
+  if (!['pending', 'processing'].includes(transaction.status)) {
+    return res.fail(null, 'لا يمكن إلغاء المعاملة في حالتها الحالية', 400);
+  }
+
+  // إلغاء المعاملة
+  await transaction.updateStatus('cancelled', userId, reason, 'تم إلغاء المعاملة بواسطة المستخدم');
+
+  // إعادة توفر العناصر
+  for (const item of transaction.items) {
+    if (item.artwork) {
+      await artworkModel.findByIdAndUpdate(item.artwork, { isAvailable: true });
+    } else if (item.specialRequest) {
+      await specialRequestModel.findByIdAndUpdate(item.specialRequest, { 
+        status: 'accepted' // إعادة للحالة المقبولة
+      });
+    }
+  }
+
+  // إرسال إشعارات
+  await createNotificationHelper({
+    recipient: transaction.seller,
+    type: 'transaction_cancelled',
+    title: 'تم إلغاء طلب',
+    message: `تم إلغاء الطلب رقم ${transaction.transactionNumber}`,
+    data: { transactionId: transaction._id, reason }
+  });
+
+  res.success(transaction, 'تم إلغاء المعاملة بنجاح');
 });

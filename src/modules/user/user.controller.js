@@ -10,25 +10,57 @@ import transactionModel from '../../../DB/models/transaction.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import chatModel from '../../../DB/models/chat.model.js';
+import categoryModel from '../../../DB/models/category.model.js';
+// Removed errorHandler import - using direct error handling instead
 
-export const toggleWishlist = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-  const { artworkId } = req.body;
-  const user = await userModel.findById(userId);
-  if (!user) {
-    return res.fail(null, 'المستخدم غير موجود', 404);
+/**
+ * تبديل العمل الفني في قائمة المفضلة
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ */
+export const toggleWishlist = asyncHandler(async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { artworkId } = req.body;
+
+    // التحقق من وجود العمل الفني
+    const artwork = await artworkModel.findById(artworkId).lean();
+    if (!artwork) {
+      return res.fail(null, 'العمل الفني غير موجود', 404);
+    }
+
+    // التحقق من وجود المستخدم
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
+    }
+
+    const index = user.wishlist.findIndex(id => id.toString() === artworkId);
+    let action, message;
+
+    if (index > -1) {
+      // إزالة من المفضلة
+      user.wishlist.splice(index, 1);
+      action = 'removed';
+      message = 'تم إزالة العمل من المفضلة';
+    } else {
+      // إضافة إلى المفضلة
+      user.wishlist.push(artworkId);
+      action = 'added';
+      message = 'تم إضافة العمل إلى المفضلة';
+    }
+
+    await user.save();
+
+    res.success({
+      success: true,
+      action,
+      wishlistCount: user.wishlist.length,
+      artworkTitle: artwork.title
+    }, message);
+  } catch (error) {
+    return next(new Error('حدث خطأ أثناء تحديث المفضلة', { cause: 500 }));
   }
-  const index = user.wishlist.findIndex(id => id.toString() === artworkId);
-  let action;
-  if (index > -1) {
-    user.wishlist.splice(index, 1);
-    action = 'removed';
-  } else {
-    user.wishlist.push(artworkId);
-    action = 'added';
-  }
-  await user.save();
-  res.success({ success: true, action });
 });
 
 export const getWishlist = asyncHandler(async (req, res) => {
@@ -722,4 +754,301 @@ export const reactivateAccount = asyncHandler(async (req, res) => {
     success: true,
     message: 'تم إعادة تنشيط الحساب بنجاح'
   });
+});
+
+/**
+ * البحث المتقدم عن المستخدمين
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ */
+export const searchUsers = asyncHandler(async (req, res, next) => {
+  try {
+    const { query, role, location, verified, page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // بناء استعلام البحث
+    const searchQuery = {};
+
+    // البحث النصي
+    if (query) {
+      searchQuery.$or = [
+        { displayName: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+        { job: { $regex: query, $options: 'i' } },
+        { bio: { $regex: query, $options: 'i' } }
+      ];
+    }
+
+    // فلترة حسب الدور
+    if (role) {
+      searchQuery.role = role;
+    }
+
+    // فلترة حسب الموقع
+    if (location) {
+      searchQuery.location = { $regex: location, $options: 'i' };
+    }
+
+    // فلترة حسب التحقق
+    if (verified !== undefined) {
+      searchQuery.isVerified = verified === 'true';
+    }
+
+    // استبعاد المستخدمين المحذوفين وغير النشطين
+    searchQuery.isDeleted = { $ne: true };
+    searchQuery.isActive = true;
+
+    // تنفيذ البحث مع الإحصائيات
+    const [users, totalCount] = await Promise.all([
+      userModel
+        .find(searchQuery)
+        .select('displayName email profileImage job location bio role isVerified createdAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      userModel.countDocuments(searchQuery)
+    ]);
+
+    // إضافة إحصائيات لكل مستخدم
+    const usersWithStats = await Promise.all(
+      users.map(async user => {
+        const stats = await Promise.all([
+          followModel.countDocuments({ following: user._id }),
+          followModel.countDocuments({ follower: user._id }),
+          artworkModel.countDocuments({ artist: user._id, isAvailable: true })
+        ]);
+
+        return {
+          ...user,
+          stats: {
+            followersCount: stats[0],
+            followingCount: stats[1],
+            artworksCount: stats[2]
+          }
+        };
+      })
+    );
+
+    const totalPages = Math.ceil(totalCount / parseInt(limit));
+
+    res.success({
+      users: usersWithStats,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalCount,
+        hasNextPage: parseInt(page) < totalPages,
+        hasPrevPage: parseInt(page) > 1,
+        limit: parseInt(limit)
+      }
+    }, 'تم البحث عن المستخدمين بنجاح');
+  } catch (error) {
+    return next(new Error('حدث خطأ أثناء البحث عن المستخدمين', { cause: 500 }));
+  }
+});
+
+/**
+ * الحصول على الملف الشخصي الكامل للمستخدم الحالي
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ */
+export const getMyProfile = asyncHandler(async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    // جلب بيانات المستخدم
+    const user = await userModel
+      .findById(userId)
+      .select('-password')
+      .lean();
+
+    if (!user) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
+    }
+
+    // جلب الإحصائيات
+    const [
+      followersCount,
+      followingCount,
+      artworksCount,
+      imagesCount,
+      wishlistCount,
+      salesCount,
+      reviewsCount
+    ] = await Promise.all([
+      followModel.countDocuments({ following: userId }),
+      followModel.countDocuments({ follower: userId }),
+      artworkModel.countDocuments({ artist: userId, isAvailable: true }),
+      imageModel.countDocuments({ user: userId }),
+      userModel.findById(userId).then(u => u?.wishlist?.length || 0),
+      transactionModel.countDocuments({ seller: userId, status: 'completed' }),
+      reviewModel.countDocuments({ artist: userId })
+    ]);
+
+    // حساب متوسط التقييم
+    const avgRating = await reviewModel.aggregate([
+      { $match: { artist: new mongoose.Types.ObjectId(userId) } },
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]);
+
+    res.success({
+      user,
+      stats: {
+        followersCount,
+        followingCount,
+        artworksCount,
+        imagesCount,
+        wishlistCount,
+        salesCount,
+        reviewsCount,
+        avgRating: avgRating[0]?.avgRating || 0
+      }
+    }, 'تم جلب الملف الشخصي بنجاح');
+  } catch (error) {
+    return next(new Error('حدث خطأ أثناء جلب الملف الشخصي', { cause: 500 }));
+  }
+});
+
+/**
+ * تحديث إعدادات الخصوصية
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ */
+export const updatePrivacySettings = asyncHandler(async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { profileVisibility, showEmail, showPhone, allowMessages, showActivity } = req.body;
+
+    // بناء كائن التحديث
+    const updateData = {};
+    if (profileVisibility !== undefined) {
+      updateData['privacySettings.profileVisibility'] = profileVisibility;
+    }
+    if (showEmail !== undefined) {
+      updateData['privacySettings.showEmail'] = showEmail;
+    }
+    if (showPhone !== undefined) {
+      updateData['privacySettings.showPhone'] = showPhone;
+    }
+    if (allowMessages !== undefined) {
+      updateData['privacySettings.allowMessages'] = allowMessages;
+    }
+    if (showActivity !== undefined) {
+      updateData['privacySettings.showActivity'] = showActivity;
+    }
+
+    // تحديث إعدادات الخصوصية
+    const user = await userModel
+      .findByIdAndUpdate(userId, { $set: updateData }, { new: true })
+      .select('privacySettings');
+
+    if (!user) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
+    }
+
+    res.success({
+      privacySettings: user.privacySettings
+    }, 'تم تحديث إعدادات الخصوصية بنجاح');
+  } catch (error) {
+    return next(new Error('حدث خطأ أثناء تحديث إعدادات الخصوصية', { cause: 500 }));
+  }
+});
+
+/**
+ * الحصول على إحصائيات شاملة للمستخدم
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ */
+export const getDetailedStats = asyncHandler(async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { period = 'all' } = req.query; // all, month, week, year
+
+    // تحديد فترة الإحصائيات
+    let dateFilter = {};
+    if (period !== 'all') {
+      const now = new Date();
+      switch (period) {
+        case 'week':
+          dateFilter = { createdAt: { $gte: new Date(now.setDate(now.getDate() - 7)) } };
+          break;
+        case 'month':
+          dateFilter = { createdAt: { $gte: new Date(now.setMonth(now.getMonth() - 1)) } };
+          break;
+        case 'year':
+          dateFilter = { createdAt: { $gte: new Date(now.setFullYear(now.getFullYear() - 1)) } };
+          break;
+      }
+    }
+
+    // الإحصائيات الأساسية
+    const [
+      totalArtworks,
+      totalImages,
+      totalFollowers,
+      totalFollowing,
+      totalSales,
+      totalEarnings,
+      totalViews
+    ] = await Promise.all([
+      artworkModel.countDocuments({ artist: userId, ...dateFilter }),
+      imageModel.countDocuments({ user: userId, ...dateFilter }),
+      followModel.countDocuments({ following: userId, ...dateFilter }),
+      followModel.countDocuments({ follower: userId, ...dateFilter }),
+      transactionModel.countDocuments({ seller: userId, status: 'completed', ...dateFilter }),
+      transactionModel.aggregate([
+        { $match: { seller: new mongoose.Types.ObjectId(userId), status: 'completed', ...dateFilter } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      artworkModel.aggregate([
+        { $match: { artist: new mongoose.Types.ObjectId(userId), ...dateFilter } },
+        { $group: { _id: null, total: { $sum: '$views' } } }
+      ])
+    ]);
+
+    // إحصائيات الفئات
+    const categoryStats = await artworkModel.aggregate([
+      { $match: { artist: new mongoose.Types.ObjectId(userId), ...dateFilter } },
+      { $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'categoryInfo' } },
+      { $unwind: '$categoryInfo' },
+      { $group: { _id: '$categoryInfo.name', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    // إحصائيات شهرية للعام الحالي
+    const monthlyStats = await artworkModel.aggregate([
+      {
+        $match: {
+          artist: new mongoose.Types.ObjectId(userId),
+          createdAt: { $gte: new Date(new Date().getFullYear(), 0, 1) }
+        }
+      },
+      {
+        $group: {
+          _id: { $month: '$createdAt' },
+          artworks: { $sum: 1 },
+          views: { $sum: '$views' }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    res.success({
+      overview: {
+        totalArtworks,
+        totalImages,
+        totalFollowers,
+        totalFollowing,
+        totalSales,
+        totalEarnings: totalEarnings[0]?.total || 0,
+        totalViews: totalViews[0]?.total || 0
+      },
+      categoryStats,
+      monthlyStats,
+      period
+    }, 'تم جلب الإحصائيات التفصيلية بنجاح');
+  } catch (error) {
+    return next(new Error('حدث خطأ أثناء جلب الإحصائيات', { cause: 500 }));
+  }
 });
