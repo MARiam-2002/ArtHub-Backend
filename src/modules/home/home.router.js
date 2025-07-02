@@ -1,18 +1,30 @@
 import { Router } from 'express';
-import { getHomeData, search } from './home.controller.js';
+import * as homeController from './home.controller.js';
+import { optionalAuth } from '../../middleware/authentication.middleware.js';
+import { isValidation } from '../../middleware/validation.middleware.js';
+import * as Validators from './home.validation.js';
+
 const router = Router();
+
+/**
+ * @swagger
+ * tags:
+ *   name: Home
+ *   description: Home screen endpoints for mobile app
+ */
 
 /**
  * @swagger
  * /api/home:
  *   get:
- *     tags:
- *       - Home
- *     summary: Get home page data
- *     description: Retrieve data for the home page including featured artworks, artists, and categories
+ *     summary: Get home screen data
+ *     tags: [Home]
+ *     description: Get all data needed for the home screen including categories, featured artists, and artworks
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Home page data retrieved successfully
+ *         description: Home data retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -21,79 +33,133 @@ const router = Router();
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب بيانات الصفحة الرئيسية بنجاح"
  *                 data:
  *                   type: object
  *                   properties:
- *                     featuredArtworks:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Artwork'
- *                     featuredArtists:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/User'
  *                     categories:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/Category'
- *                     banners:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           image:
+ *                             type: string
+ *                           artworksCount:
+ *                             type: number
+ *                     featuredArtists:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/Banner'
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           displayName:
+ *                             type: string
+ *                           profileImage:
+ *                             type: string
+ *                           followersCount:
+ *                             type: number
+ *                           artworksCount:
+ *                             type: number
+ *                     featuredArtworks:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           images:
+ *                             type: array
+ *                           price:
+ *                             type: number
+ *                           artist:
+ *                             type: object
+ *                     latestArtworks:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       500:
+ *         description: Server error
  */
-router.get('/', getHomeData);
+router.get('/', optionalAuth, homeController.getHomeData);
 
 /**
  * @swagger
  * /api/home/search:
  *   get:
- *     tags:
- *       - Home
- *     summary: Search artworks, artists and images
- *     description: Search for artworks, artists and images by query term with filters
+ *     summary: Search artworks and artists
+ *     tags: [Home]
+ *     description: Search for artworks and artists
  *     parameters:
- *       - name: q
- *         in: query
+ *       - in: query
+ *         name: q
  *         schema:
  *           type: string
  *         description: Search query
- *       - name: type
- *         in: query
+ *         required: true
+ *       - in: query
+ *         name: type
  *         schema:
  *           type: string
- *           enum: [all, artworks, artists, images]
+ *           enum: [all, artworks, artists]
  *           default: all
- *         description: Type of results to return
- *       - name: category
- *         in: query
- *         schema:
- *           type: string
- *         description: Filter by category
- *       - name: price_min
- *         in: query
- *         schema:
- *           type: number
- *         description: Minimum price (for artworks)
- *       - name: price_max
- *         in: query
- *         schema:
- *           type: number
- *         description: Maximum price (for artworks)
- *       - name: page
- *         in: query
+ *         description: Search type
+ *       - in: query
+ *         name: page
  *         schema:
  *           type: integer
  *           default: 1
  *         description: Page number
- *       - name: limit
- *         in: query
+ *       - in: query
+ *         name: limit
  *         schema:
  *           type: integer
- *           default: 10
+ *           default: 20
  *         description: Items per page
  *     responses:
  *       200:
  *         description: Search results retrieved successfully
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.get('/search', homeController.search);
+
+/**
+ * @swagger
+ * /api/home/trending:
+ *   get:
+ *     summary: Get trending artworks
+ *     tags: [Home]
+ *     description: Get trending artworks based on views and likes
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Trending artworks retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -102,51 +168,22 @@ router.get('/', getHomeData);
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب الأعمال الرائجة بنجاح"
  *                 data:
  *                   type: object
  *                   properties:
  *                     artworks:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/Artwork'
- *                     artists:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/User'
- *                     images:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Image'
+ *                         $ref: '#/components/schemas/ArtworkSummary'
  *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.get('/search', search);
-
-/**
- * @swagger
- * /api/home/trending:
- *   get:
- *     tags:
- *       - Home
- *     summary: Get trending content
- *     description: Retrieve trending artworks, artists, and images
- *     parameters:
- *       - name: type
- *         in: query
- *         schema:
- *           type: string
- *           enum: [all, artworks, artists, images]
- *           default: all
- *       - name: limit
- *         in: query
- *         schema:
- *           type: integer
- *           default: 10
- *     responses:
- *       200:
- *         description: Trending content retrieved successfully
- */
-router.get('/trending', getTrendingContent);
+router.get('/trending', isValidation(Validators.paginationSchema), homeController.getTrendingArtworks);
 
 /**
  * @swagger

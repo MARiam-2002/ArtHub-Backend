@@ -10,7 +10,12 @@ const defaultMessages = {
   'string.max': '{#label} يجب ألا يزيد عن {#limit} أحرف.',
   'string.pattern.base': '{#label} يحتوي على تنسيق غير صالح.',
   'any.required': '{#label} مطلوب.',
-  'string.uri': '{#label} يجب أن يكون رابطًا صالحًا.'
+  'string.uri': '{#label} يجب أن يكون رابطًا صالحًا.',
+  'number.base': '{#label} يجب أن يكون رقمًا.',
+  'number.integer': '{#label} يجب أن يكون رقمًا صحيحًا.',
+  'number.min': '{#label} يجب أن يكون على الأقل {#limit}.',
+  'number.max': '{#label} يجب ألا يزيد عن {#limit}.',
+  'any.only': '{#label} يجب أن يكون إحدى القيم التالية: {#valids}.'
 };
 
 /**
@@ -33,10 +38,12 @@ const objectIdPattern = /^[0-9a-fA-F]{24}$/;
  *           minLength: 2
  *           maxLength: 50
  *           example: "لوحات زيتية"
+ *           description: "اسم التصنيف يجب أن يكون فريدًا"
  *         description:
  *           type: string
  *           maxLength: 200
  *           example: "لوحات مرسومة بالألوان الزيتية"
+ *           description: "وصف اختياري للتصنيف"
  *         image:
  *           type: object
  *           properties:
@@ -44,9 +51,12 @@ const objectIdPattern = /^[0-9a-fA-F]{24}$/;
  *               type: string
  *               format: uri
  *               example: "https://res.cloudinary.com/demo/image/upload/v1612345678/category.jpg"
+ *               description: "رابط صورة التصنيف"
  *             id:
  *               type: string
  *               example: "demo/category_id"
+ *               description: "معرف الصورة في Cloudinary"
+ *           description: "صورة اختيارية للتصنيف"
  */
 export const createCategorySchema = joi
   .object({
@@ -54,13 +64,16 @@ export const createCategorySchema = joi
       .string()
       .min(2)
       .max(50)
+      .trim()
       .required()
       .label('اسم التصنيف')
       .messages(defaultMessages),
     description: joi
       .string()
       .max(200)
+      .trim()
       .optional()
+      .allow('')
       .label('وصف التصنيف')
       .messages(defaultMessages),
     image: joi
@@ -95,10 +108,12 @@ export const createCategorySchema = joi
  *           minLength: 2
  *           maxLength: 50
  *           example: "لوحات زيتية محدثة"
+ *           description: "اسم التصنيف الجديد (يجب أن يكون فريدًا)"
  *         description:
  *           type: string
  *           maxLength: 200
  *           example: "وصف محدث للتصنيف"
+ *           description: "وصف التصنيف الجديد"
  *         image:
  *           type: object
  *           properties:
@@ -106,9 +121,13 @@ export const createCategorySchema = joi
  *               type: string
  *               format: uri
  *               example: "https://res.cloudinary.com/demo/image/upload/v1612345678/updated.jpg"
+ *               description: "رابط الصورة الجديدة"
  *             id:
  *               type: string
  *               example: "demo/updated_id"
+ *               description: "معرف الصورة الجديدة في Cloudinary"
+ *           description: "صورة التصنيف الجديدة"
+ *       description: "يجب توفير حقل واحد على الأقل للتحديث"
  */
 export const updateCategorySchema = joi
   .object({
@@ -116,13 +135,16 @@ export const updateCategorySchema = joi
       .string()
       .min(2)
       .max(50)
+      .trim()
       .optional()
       .label('اسم التصنيف')
       .messages(defaultMessages),
     description: joi
       .string()
       .max(200)
+      .trim()
       .optional()
+      .allow('')
       .label('وصف التصنيف')
       .messages(defaultMessages),
     image: joi
@@ -143,7 +165,10 @@ export const updateCategorySchema = joi
       .label('صورة التصنيف')
   })
   .min(1) // At least one field must be provided
-  .required();
+  .required()
+  .messages({
+    'object.min': 'يجب توفير حقل واحد على الأقل للتحديث'
+  });
 
 /**
  * Category ID parameter validation schema
@@ -159,6 +184,7 @@ export const updateCategorySchema = joi
  *           type: string
  *           pattern: ^[0-9a-fA-F]{24}$
  *           example: "60d0fe4f5311236168a109ca"
+ *           description: "معرف التصنيف في قاعدة البيانات"
  */
 export const categoryIdSchema = joi
   .object({
@@ -187,17 +213,26 @@ export const categoryIdSchema = joi
  *           minimum: 1
  *           default: 1
  *           example: 1
+ *           description: "رقم الصفحة المطلوبة"
  *         limit:
  *           type: integer
  *           minimum: 1
  *           maximum: 100
  *           default: 10
  *           example: 10
+ *           description: "عدد التصنيفات في الصفحة الواحدة"
  *         search:
  *           type: string
  *           minLength: 1
  *           maxLength: 50
  *           example: "لوحات"
+ *           description: "نص البحث في اسم أو وصف التصنيف"
+ *         includeStats:
+ *           type: string
+ *           enum: ['true', 'false']
+ *           default: 'false'
+ *           example: "true"
+ *           description: "تضمين عدد الأعمال الفنية لكل تصنيف"
  */
 export const getCategoriesQuerySchema = joi
   .object({
@@ -205,8 +240,8 @@ export const getCategoriesQuerySchema = joi
       .number()
       .integer()
       .min(1)
-      .default(1)
       .optional()
+      .default(1)
       .label('رقم الصفحة')
       .messages(defaultMessages),
     limit: joi
@@ -214,24 +249,93 @@ export const getCategoriesQuerySchema = joi
       .integer()
       .min(1)
       .max(100)
-      .default(10)
       .optional()
-      .label('عدد العناصر في الصفحة')
+      .default(10)
+      .label('عدد العناصر')
       .messages(defaultMessages),
     search: joi
       .string()
       .min(1)
       .max(50)
+      .trim()
       .optional()
-      .label('البحث')
+      .label('نص البحث')
+      .messages(defaultMessages),
+    includeStats: joi
+      .string()
+      .valid('true', 'false')
+      .optional()
+      .default('false')
+      .label('تضمين الإحصائيات')
       .messages(defaultMessages)
   })
   .optional();
 
-// Export all schemas for easy access
+/**
+ * Get single category query validation schema
+ * @swagger
+ * components:
+ *   schemas:
+ *     GetCategoryQuery:
+ *       type: object
+ *       properties:
+ *         includeStats:
+ *           type: string
+ *           enum: ['true', 'false']
+ *           default: 'false'
+ *           example: "true"
+ *           description: "تضمين إحصائيات وأعمال فنية حديثة"
+ */
+export const getCategoryQuerySchema = joi
+  .object({
+    includeStats: joi
+      .string()
+      .valid('true', 'false')
+      .optional()
+      .default('false')
+      .label('تضمين الإحصائيات')
+      .messages(defaultMessages)
+  })
+  .optional();
+
+/**
+ * Popular categories query validation schema
+ * @swagger
+ * components:
+ *   schemas:
+ *     PopularCategoriesQuery:
+ *       type: object
+ *       properties:
+ *         limit:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 20
+ *           default: 8
+ *           example: 8
+ *           description: "عدد التصنيفات الشائعة المطلوب جلبها"
+ */
+export const popularCategoriesQuerySchema = joi
+  .object({
+    limit: joi
+      .number()
+      .integer()
+      .min(1)
+      .max(20)
+      .optional()
+      .default(8)
+      .label('عدد التصنيفات')
+      .messages(defaultMessages)
+  })
+  .optional();
+
+/**
+ * Validators object for easy import
+ */
 export const Validators = {
   createCategorySchema,
   updateCategorySchema,
   categoryIdSchema,
-  getCategoriesQuerySchema
+  getCategoriesQuerySchema,
+  getCategoryQuerySchema,
+  popularCategoriesQuerySchema
 }; 

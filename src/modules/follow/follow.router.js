@@ -1,13 +1,9 @@
 import { Router } from 'express';
-import * as controller from './follow.controller.js';
+import * as followController from './follow.controller.js';
+import { requireAuth } from '../../middleware/authentication.middleware.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import {
-  followUserSchema,
-  userIdParamSchema,
-  getFollowersQuerySchema,
-  getFollowingQuerySchema
-} from './follow.validation.js';
+import { Validators } from './follow.validation.js';
 
 const router = Router();
 
@@ -15,55 +11,302 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
- *     Follow:
+ *     FollowUser:
  *       type: object
  *       properties:
  *         _id:
  *           type: string
- *           description: معرف المتابعة
- *         follower:
- *           $ref: '#/components/schemas/User'
- *         following:
- *           $ref: '#/components/schemas/User'
- *         createdAt:
+ *           example: "60d0fe4f5311236168a109ca"
+ *         displayName:
+ *           type: string
+ *           example: "أحمد محمد"
+ *         profileImage:
+ *           type: object
+ *           properties:
+ *             url:
+ *               type: string
+ *               format: uri
+ *             id:
+ *               type: string
+ *         job:
+ *           type: string
+ *           example: "فنان تشكيلي"
+ *         bio:
+ *           type: string
+ *           example: "رسام محترف متخصص في اللوحات الزيتية"
+ *         followedAt:
  *           type: string
  *           format: date-time
- *           description: تاريخ المتابعة
+ *           example: "2023-05-15T10:30:45.123Z"
+ *
  *     FollowStats:
  *       type: object
  *       properties:
+ *         artistId:
+ *           type: string
+ *           example: "60d0fe4f5311236168a109ca"
+ *         artistName:
+ *           type: string
+ *           example: "أحمد محمد"
  *         followersCount:
  *           type: integer
- *           description: عدد المتابعين
+ *           example: 150
  *         followingCount:
  *           type: integer
- *           description: عدد المتابعين
- *         isFollowing:
+ *           example: 75
+ *         recentFollowersCount:
+ *           type: integer
+ *           example: 12
+ *         recentFollowers:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               _id:
+ *                 type: string
+ *               displayName:
+ *                 type: string
+ *               profileImage:
+ *                 type: object
+ *               followedAt:
+ *                 type: string
+ *                 format: date-time
+ *         memberSince:
+ *           type: string
+ *           format: date-time
+ *           example: "2023-01-15T10:30:45.123Z"
+ *
+ *     FollowResponse:
+ *       type: object
+ *       properties:
+ *         success:
  *           type: boolean
- *           description: هل يتابع المستخدم الحالي هذا المستخدم
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "تمت المتابعة بنجاح"
+ *         data:
+ *           oneOf:
+ *             - type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                 artistId:
+ *                   type: string
+ *                 artistName:
+ *                   type: string
+ *                 followedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 isFollowing:
+ *                   type: boolean
+ *             - type: object
+ *               properties:
+ *                 action:
+ *                   type: string
+ *                   enum: ['followed', 'unfollowed']
+ *                 artistId:
+ *                   type: string
+ *                 artistName:
+ *                   type: string
+ *                 isFollowing:
+ *                   type: boolean
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *             - type: object
+ *               properties:
+ *                 followers:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/FollowUser'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/PaginationResponse'
+ *             - $ref: '#/components/schemas/FollowStats'
  */
 
-// Toggle Follow
 /**
  * @swagger
- * /api/follow/{userId}:
+ * tags:
+ *   name: Follow
+ *   description: Follow/unfollow functionality
+ */
+
+/**
+ * @swagger
+ * /api/follow/toggle:
  *   post:
+ *     summary: Toggle follow/unfollow artist
  *     tags: [Follow]
- *     summary: Toggle follow user
- *     description: Follow or unfollow a user
+ *     description: Follow or unfollow an artist (toggle action)
  *     security:
  *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - artistId
+ *             properties:
+ *               artistId:
+ *                 type: string
+ *                 description: Artist ID to follow/unfollow
+ *     responses:
+ *       200:
+ *         description: Follow status toggled successfully
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Artist not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/toggle', requireAuth, followController.toggleFollow);
+
+/**
+ * @swagger
+ * /api/follow/followers/{userId}:
+ *   get:
+ *     summary: Get user followers
+ *     tags: [Follow]
+ *     description: Get paginated list of user followers
  *     parameters:
  *       - in: path
  *         name: userId
  *         required: true
  *         schema:
  *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: User ID to follow/unfollow
+ *         description: User ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
  *     responses:
  *       200:
- *         description: Follow status toggled successfully
+ *         description: Followers retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/followers/:userId', followController.getFollowers);
+
+/**
+ * @swagger
+ * /api/follow/following/{userId}:
+ *   get:
+ *     summary: Get user following
+ *     tags: [Follow]
+ *     description: Get paginated list of users that the user is following
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Following list retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/following/:userId', followController.getFollowing);
+
+/**
+ * @swagger
+ * /api/follow/status/{artistId}:
+ *   get:
+ *     summary: Check follow status
+ *     tags: [Follow]
+ *     description: Check if current user is following an artist
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Artist ID
+ *     responses:
+ *       200:
+ *         description: Follow status retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/status/:artistId', requireAuth, followController.checkFollowStatus);
+
+/**
+ * @swagger
+ * /api/follow/stats/{userId}:
+ *   get:
+ *     summary: Get follow statistics
+ *     tags: [Follow]
+ *     description: Get follow statistics for a user (followers and following count)
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: Follow statistics retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/stats/:userId', followController.getFollowStats);
+
+/**
+ * @swagger
+ * /api/follow/follow:
+ *   post:
+ *     summary: متابعة فنان
+ *     tags: [Follow]
+ *     description: |
+ *       إنشاء علاقة متابعة بين المستخدم والفنان.
+ *       لا يمكن للمستخدم متابعة نفسه.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - artistId
+ *             properties:
+ *               artistId:
+ *                 type: string
+ *                 pattern: ^[0-9a-fA-F]{24}$
+ *                 example: "60d0fe4f5311236168a109ca"
+ *                 description: "معرف الفنان المراد متابعته"
+ *     responses:
+ *       201:
+ *         description: تمت المتابعة بنجاح
  *         content:
  *           application/json:
  *             schema:
@@ -78,65 +321,101 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     action:
+ *                     _id:
  *                       type: string
- *                       enum: [followed, unfollowed]
- *                       example: "followed"
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     artistId:
+ *                       type: string
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     artistName:
+ *                       type: string
+ *                       example: "أحمد محمد"
+ *                     followedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-05-15T10:30:45.123Z"
  *                     isFollowing:
  *                       type: boolean
  *                       example: true
- *                     user:
- *                       $ref: '#/components/schemas/User'
  *       400:
- *         description: Cannot follow yourself
+ *         description: خطأ في البيانات أو لا يمكن متابعة نفسك
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "لا يمكنك متابعة نفسك"
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
- *         description: User not found
+ *         description: الفنان غير موجود
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "الفنان غير موجود"
+ *       409:
+ *         description: أنت تتابع هذا الفنان بالفعل
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "أنت تتابع هذا الفنان بالفعل"
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: ArtistProfileScreen
  */
-router.post('/:userId', isAuthenticated, isValidation(userIdParamSchema), controller.toggleFollow);
+router.post(
+  '/follow',
+  isAuthenticated,
+  isValidation(Validators.followUserSchema),
+  followController.followArtist
+);
 
-// Get User Followers
 /**
  * @swagger
- * /api/follow/{userId}/followers:
- *   get:
+ * /api/follow/unfollow:
+ *   post:
+ *     summary: إلغاء متابعة فنان
  *     tags: [Follow]
- *     summary: Get user followers
- *     description: Get a list of users who follow the specified user
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: User ID
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 20
- *         description: Items per page
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *           minLength: 2
- *           maxLength: 100
- *         description: Search in follower names
+ *     description: |
+ *       إزالة علاقة المتابعة بين المستخدم والفنان.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - artistId
+ *             properties:
+ *               artistId:
+ *                 type: string
+ *                 pattern: ^[0-9a-fA-F]{24}$
+ *                 example: "60d0fe4f5311236168a109ca"
+ *                 description: "معرف الفنان المراد إلغاء متابعته"
  *     responses:
  *       200:
- *         description: Followers retrieved successfully
+ *         description: تم إلغاء المتابعة بنجاح
  *         content:
  *           application/json:
  *             schema:
@@ -145,43 +424,141 @@ router.post('/:userId', isAuthenticated, isValidation(userIdParamSchema), contro
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إلغاء المتابعة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artistId:
+ *                       type: string
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     isFollowing:
+ *                       type: boolean
+ *                       example: false
+ *                     unfollowedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-05-15T10:30:45.123Z"
+ *       400:
+ *         description: أنت لا تتابع هذا الفنان
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "أنت لا تتابع هذا الفنان"
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: ArtistProfileScreen
+ */
+router.post(
+  '/unfollow',
+  isAuthenticated,
+  isValidation(Validators.followUserSchema),
+  followController.unfollowArtist
+);
+
+/**
+ * @swagger
+ * /api/follow/my-followers:
+ *   get:
+ *     summary: جلب متابعيّ
+ *     tags: [Follow]
+ *     description: |
+ *       جلب قائمة مقسمة من متابعي المستخدم الحالي مع إمكانية البحث.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد المتابعين في الصفحة
+ *         example: 20
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *         description: البحث في أسماء المتابعين
+ *         example: "أحمد"
+ *     responses:
+ *       200:
+ *         description: تم جلب متابعيك بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب متابعيك بنجاح"
  *                 data:
  *                   type: object
  *                   properties:
  *                     followers:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/User'
+ *                         $ref: '#/components/schemas/FollowUser'
  *                     pagination:
- *                       $ref: '#/components/schemas/PaginationMeta'
- *       404:
- *         description: User not found
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: MyFollowersScreen
  */
-router.get('/:userId/followers', isValidation(userIdParamSchema), isValidation(getFollowersQuerySchema), controller.getFollowers);
+router.get(
+  '/my-followers',
+  isAuthenticated,
+  isValidation(Validators.getFollowersQuerySchema, 'query'),
+  followController.getMyFollowers
+);
 
-// Get User Following
 /**
  * @swagger
- * /api/follow/{userId}/following:
+ * /api/follow/my-following:
  *   get:
+ *     summary: جلب متابعاتي
  *     tags: [Follow]
- *     summary: Get user following
- *     description: Get a list of users that the specified user follows
+ *     description: |
+ *       جلب قائمة مقسمة من الفنانين الذين يتابعهم المستخدم الحالي.
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: User ID
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           minimum: 1
  *           default: 1
- *         description: Page number
+ *         description: رقم الصفحة
+ *         example: 1
  *       - in: query
  *         name: limit
  *         schema:
@@ -189,17 +566,19 @@ router.get('/:userId/followers', isValidation(userIdParamSchema), isValidation(g
  *           minimum: 1
  *           maximum: 50
  *           default: 20
- *         description: Items per page
+ *         description: عدد المتابعات في الصفحة
+ *         example: 20
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
  *           minLength: 2
  *           maxLength: 100
- *         description: Search in following names
+ *         description: البحث في أسماء الفنانين
+ *         example: "فاطمة"
  *     responses:
  *       200:
- *         description: Following list retrieved successfully
+ *         description: تم جلب قائمة متابعاتك بنجاح
  *         content:
  *           application/json:
  *             schema:
@@ -208,62 +587,41 @@ router.get('/:userId/followers', isValidation(userIdParamSchema), isValidation(g
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب قائمة متابعاتك بنجاح"
  *                 data:
  *                   type: object
  *                   properties:
  *                     following:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/User'
+ *                         $ref: '#/components/schemas/FollowUser'
  *                     pagination:
- *                       $ref: '#/components/schemas/PaginationMeta'
- *       404:
- *         description: User not found
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: MyFollowingScreen
  */
-router.get('/:userId/following', isValidation(userIdParamSchema), isValidation(getFollowingQuerySchema), controller.getFollowing);
+router.get(
+  '/my-following',
+  isAuthenticated,
+  isValidation(Validators.getFollowingQuerySchema, 'query'),
+  followController.getMyFollowing
+);
 
-// Get Follow Stats
 /**
  * @swagger
- * /api/follow/{userId}/stats:
+ * /api/follow/mutual/{userId}:
  *   get:
+ *     summary: جلب المتابعات المشتركة
  *     tags: [Follow]
- *     summary: Get follow statistics
- *     description: Get follower and following counts for a user
- *     parameters:
- *       - in: path
- *         name: userId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: User ID
- *     responses:
- *       200:
- *         description: Follow stats retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/FollowStats'
- *       404:
- *         description: User not found
- */
-router.get('/:userId/stats', isValidation(userIdParamSchema), controller.getFollowStats);
-
-// Check Follow Status
-/**
- * @swagger
- * /api/follow/{userId}/status:
- *   get:
- *     tags: [Follow]
- *     summary: Check follow status
- *     description: Check if the authenticated user follows the specified user
+ *     description: |
+ *       جلب قائمة المستخدمين الذين يتابعهم كل من المستخدم الحالي والمستخدم المحدد.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -272,11 +630,29 @@ router.get('/:userId/stats', isValidation(userIdParamSchema), controller.getFoll
  *         required: true
  *         schema:
  *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: User ID to check
+ *           pattern: ^[0-9a-fA-F]{24}$
+ *         description: معرف المستخدم المراد مقارنة المتابعات معه
+ *         example: "60d0fe4f5311236168a109ca"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد المتابعات المشتركة في الصفحة
+ *         example: 20
  *     responses:
  *       200:
- *         description: Follow status retrieved successfully
+ *         description: تم جلب المتابعات المشتركة بنجاح
  *         content:
  *           application/json:
  *             schema:
@@ -285,103 +661,63 @@ router.get('/:userId/stats', isValidation(userIdParamSchema), controller.getFoll
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب المتابعات المشتركة بنجاح"
  *                 data:
  *                   type: object
  *                   properties:
- *                     isFollowing:
- *                       type: boolean
- *                       example: true
- *                     followedAt:
- *                       type: string
- *                       format: date-time
- *                       description: Date when follow relationship was created (if following)
+ *                     mutualFollows:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           displayName:
+ *                             type: string
+ *                           userName:
+ *                             type: string
+ *                           profileImage:
+ *                             type: object
+ *                           job:
+ *                             type: string
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *                     targetUser:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
- *         description: User not found
+ *         description: المستخدم غير موجود
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "المستخدم غير موجود"
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: MutualFollowsScreen
  */
-router.get('/:userId/status', isAuthenticated, isValidation(userIdParamSchema), controller.getFollowStatus);
-
-// Get My Followers
-/**
- * @swagger
- * /api/follow/my-followers:
- *   get:
- *     tags: [Follow]
- *     summary: Get my followers
- *     description: Get a list of users who follow the authenticated user
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 20
- *         description: Items per page
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *           minLength: 2
- *           maxLength: 100
- *         description: Search in follower names
- *     responses:
- *       200:
- *         description: My followers retrieved successfully
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.get('/my-followers', isAuthenticated, isValidation(getFollowersQuerySchema), controller.getMyFollowers);
-
-// Get My Following
-/**
- * @swagger
- * /api/follow/my-following:
- *   get:
- *     tags: [Follow]
- *     summary: Get my following
- *     description: Get a list of users that the authenticated user follows
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 20
- *         description: Items per page
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *           minLength: 2
- *           maxLength: 100
- *         description: Search in following names
- *     responses:
- *       200:
- *         description: My following list retrieved successfully
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.get('/my-following', isAuthenticated, isValidation(getFollowingQuerySchema), controller.getMyFollowing);
+router.get(
+  '/mutual/:userId',
+  isAuthenticated,
+  isValidation(Validators.userIdParamSchema, 'params'),
+  isValidation(Validators.paginationQuerySchema, 'query'),
+  followController.getMutualFollows
+);
 
 export default router;

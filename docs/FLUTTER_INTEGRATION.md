@@ -1,3 +1,381 @@
+# دليل ربط Flutter مع AtrtHub Backend
+
+## نظرة عامة
+تم تحسين جميع APIs لتكون بسيطة وسهلة الربط مع Flutter. هذا الدليل يوضح كيفية استخدام الـ APIs المحسنة.
+
+## إعداد Dio Client
+
+```dart
+import 'package:dio/dio.dart';
+
+class ApiClient {
+  static final Dio _dio = Dio();
+  static const String baseUrl = 'https://your-backend-url.com/api';
+  
+  static void initialize() {
+    _dio.options = BaseOptions(
+      baseUrl: baseUrl,
+      connectTimeout: Duration(seconds: 30),
+      receiveTimeout: Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
+    
+    // Add auth interceptor
+    _dio.interceptors.add(AuthInterceptor());
+  }
+  
+  static Dio get dio => _dio;
+}
+
+class AuthInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final token = AuthService.getToken();
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+    handler.next(options);
+  }
+}
+```
+
+## 1. الصفحة الرئيسية (Home)
+
+### جلب بيانات الصفحة الرئيسية
+```dart
+class HomeService {
+  static Future<HomeData> getHomeData() async {
+    try {
+      final response = await ApiClient.dio.get('/home');
+      return HomeData.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<SearchResults> search(String query, {
+    String type = 'all',
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await ApiClient.dio.get('/home/search', 
+        queryParameters: {
+          'q': query,
+          'type': type,
+          'page': page,
+          'limit': limit,
+        },
+      );
+      return SearchResults.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+}
+
+// Models
+class HomeData {
+  final List<Category> categories;
+  final List<Artist> featuredArtists;
+  final List<Artwork> featuredArtworks;
+  final List<Artwork> latestArtworks;
+  
+  HomeData({
+    required this.categories,
+    required this.featuredArtists,
+    required this.featuredArtworks,
+    required this.latestArtworks,
+  });
+  
+  factory HomeData.fromJson(Map<String, dynamic> json) {
+    return HomeData(
+      categories: (json['categories'] as List)
+          .map((e) => Category.fromJson(e))
+          .toList(),
+      featuredArtists: (json['featuredArtists'] as List)
+          .map((e) => Artist.fromJson(e))
+          .toList(),
+      featuredArtworks: (json['featuredArtworks'] as List)
+          .map((e) => Artwork.fromJson(e))
+          .toList(),
+      latestArtworks: (json['latestArtworks'] as List)
+          .map((e) => Artwork.fromJson(e))
+          .toList(),
+    );
+  }
+}
+```
+
+## 2. الإشعارات (Notifications)
+
+### إدارة الإشعارات
+```dart
+class NotificationService {
+  static Future<NotificationResponse> getNotifications({
+    int page = 1,
+    int limit = 20,
+    bool unreadOnly = false,
+  }) async {
+    try {
+      final response = await ApiClient.dio.get('/notifications',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          'unreadOnly': unreadOnly,
+        },
+      );
+      return NotificationResponse.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<void> markAsRead(String notificationId) async {
+    try {
+      await ApiClient.dio.patch('/notifications/$notificationId/read');
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<void> markAllAsRead() async {
+    try {
+      await ApiClient.dio.patch('/notifications/read-all');
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<NotificationSettings> getSettings() async {
+    try {
+      final response = await ApiClient.dio.get('/notifications/settings');
+      return NotificationSettings.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<void> updateSettings(NotificationSettings settings) async {
+    try {
+      await ApiClient.dio.put('/notifications/settings',
+        data: {'notificationSettings': settings.toJson()},
+      );
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+}
+
+// Models
+class NotificationItem {
+  final String id;
+  final String title;
+  final String message;
+  final String type;
+  final bool isRead;
+  final UserSummary? sender;
+  final DateTime createdAt;
+  
+  NotificationItem({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.type,
+    required this.isRead,
+    this.sender,
+    required this.createdAt,
+  });
+  
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    return NotificationItem(
+      id: json['_id'],
+      title: json['title'],
+      message: json['message'],
+      type: json['type'],
+      isRead: json['isRead'],
+      sender: json['sender'] != null 
+          ? UserSummary.fromJson(json['sender']) 
+          : null,
+      createdAt: DateTime.parse(json['createdAt']),
+    );
+  }
+}
+```
+
+## 3. المتابعة (Follow)
+
+### إدارة المتابعة
+```dart
+class FollowService {
+  static Future<FollowResult> toggleFollow(String artistId) async {
+    try {
+      final response = await ApiClient.dio.post('/follow/toggle',
+        data: {'artistId': artistId},
+      );
+      return FollowResult.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<bool> checkFollowStatus(String artistId) async {
+    try {
+      final response = await ApiClient.dio.get('/follow/status/$artistId');
+      return response.data['data']['isFollowing'];
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<FollowListResponse> getFollowers(String userId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await ApiClient.dio.get('/follow/followers/$userId',
+        queryParameters: {'page': page, 'limit': limit},
+      );
+      return FollowListResponse.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<FollowStats> getFollowStats(String userId) async {
+    try {
+      final response = await ApiClient.dio.get('/follow/stats/$userId');
+      return FollowStats.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+}
+
+// Models
+class FollowResult {
+  final String action;
+  final bool isFollowing;
+  final Artist artist;
+  
+  FollowResult({
+    required this.action,
+    required this.isFollowing,
+    required this.artist,
+  });
+  
+  factory FollowResult.fromJson(Map<String, dynamic> json) {
+    return FollowResult(
+      action: json['action'],
+      isFollowing: json['isFollowing'],
+      artist: Artist.fromJson(json['artist']),
+    );
+  }
+}
+```
+
+## 4. المحادثات (Chat)
+
+### إدارة المحادثات
+```dart
+class ChatService {
+  static Future<ChatListResponse> getChats({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await ApiClient.dio.get('/chat',
+        queryParameters: {'page': page, 'limit': limit},
+      );
+      return ChatListResponse.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<Chat> getOrCreateChat(String otherUserId) async {
+    try {
+      final response = await ApiClient.dio.post('/chat/create',
+        data: {'otherUserId': otherUserId},
+      );
+      return Chat.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<MessageListResponse> getMessages(String chatId, {
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      final response = await ApiClient.dio.get('/chat/$chatId/messages',
+        queryParameters: {'page': page, 'limit': limit},
+      );
+      return MessageListResponse.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<Message> sendMessage(String chatId, String content) async {
+    try {
+      final response = await ApiClient.dio.post('/chat/$chatId/send',
+        data: {'content': content},
+      );
+      return Message.fromJson(response.data['data']);
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+  
+  static Future<void> markAsRead(String chatId) async {
+    try {
+      await ApiClient.dio.patch('/chat/$chatId/read');
+    } catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+}
+
+// Models
+class Chat {
+  final String id;
+  final UserSummary otherUser;
+  final Message? lastMessage;
+  final int unreadCount;
+  final DateTime updatedAt;
+  
+  Chat({
+    required this.id,
+    required this.otherUser,
+    this.lastMessage,
+    required this.unreadCount,
+    required this.updatedAt,
+  });
+  
+  factory Chat.fromJson(Map<String, dynamic> json) {
+    return Chat(
+      id: json['_id'],
+      otherUser: UserSummary.fromJson(json['otherUser']),
+      lastMessage: json['lastMessage'] != null 
+          ? Message.fromJson(json['lastMessage']) 
+          : null,
+      unreadCount: json['unreadCount'],
+      updatedAt: DateTime.parse(json['updatedAt']),
+    );
+  }
+}
+
+class Message {
+  final String id;
+  final String content;
+  final bool isFromMe;
+  final UserSummary sender;
+  final bool isRead;
 # دليل تكامل Flutter مع نظام المحادثات (Socket.io)
 
 ## نظرة عامة

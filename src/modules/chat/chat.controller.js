@@ -2,6 +2,8 @@ import chatModel from '../../../DB/models/chat.model.js';
 import messageModel from '../../../DB/models/message.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
+import { ensureConnection } from '../../utils/mongodbUtils.js';
+import { createNotification } from '../notification/notification.controller.js';
 import mongoose from 'mongoose';
 import { sendChatMessageNotification } from '../../utils/pushNotifications.js';
 import { sendNotification } from '../notification/notification.controller.js';
@@ -9,361 +11,425 @@ import { sendToChat, sendToUser } from '../../utils/socketService.js';
 import jwt from 'jsonwebtoken';
 
 /**
- * جلب قائمة المحادثات للمستخدم الحالي
+ * Get user chats
  */
-export const getUserChats = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+export const getChats = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureConnection();
+    
+    const userId = req.user._id;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
 
-  // جلب جميع المحادثات مع آخر رسالة والمستخدم الآخر
-  const chats = await chatModel
-    .find({
-      members: userId
-    })
-    .populate({
-      path: 'members',
-      match: { _id: { $ne: userId } },
-      select: 'displayName profileImage'
-    })
-    .populate({
-      path: 'lastMessage',
-      populate: {
-        path: 'sender',
-        select: 'displayName profileImage'
-      }
-    })
-    .sort({ updatedAt: -1 });
-
-  // تحميل آخر رسالة لكل محادثة
-  const formattedChats = await Promise.all(
-    chats.map(async chat => {
-      // جلب آخر رسالة إذا لم تكن موجودة
-      let lastMessage = chat.lastMessage;
-      if (!lastMessage) {
-        lastMessage = await messageModel
-          .findOne({ chat: chat._id })
-          .sort({ createdAt: -1 })
-          .select('sender content createdAt');
-      }
-
-      // المستخدم الآخر في المحادثة
-      const otherUser = chat.members[0]; // هذا سيكون المستخدم الآخر لأننا استبعدنا المستخدم الحالي في الاستعلام
-
-      // عدد الرسائل غير المقروءة
-      const unreadCount = await messageModel.countDocuments({
-        chat: chat._id,
-        sender: { $ne: userId },
-        isRead: false
-      });
-
-      return {
-        _id: chat._id,
-        otherUser: {
-          _id: otherUser?._id,
-          displayName: otherUser?.displayName,
-          profileImage: otherUser?.profileImage
-        },
-        lastMessage: lastMessage
-          ? {
-              content: lastMessage.content || lastMessage.text, // دعم الاصدارات القديمة والجديدة
-              isFromMe: lastMessage.sender.toString() === userId.toString(),
-              createdAt: lastMessage.createdAt
-            }
-          : null,
-        unreadCount,
-        updatedAt: chat.updatedAt
-      };
-    })
-  );
-
-  res.success(formattedChats, 'تم جلب المحادثات بنجاح');
-});
-
-/**
- * جلب رسائل محادثة معينة
- */
-export const getMessages = asyncHandler(async (req, res) => {
-  const { chatId } = req.params;
-  const userId = req.user._id;
-
-  // التحقق من وجود المحادثة وأن المستخدم مشارك فيها
-  const chat = await chatModel
-    .findOne({
-      _id: chatId,
-      members: userId
-    })
-    .populate({
-      path: 'members',
-      match: { _id: { $ne: userId } },
-      select: 'displayName profileImage'
-    });
-
-  if (!chat) {
-    return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
-  }
-
-  // جلب الرسائل
-  const messages = await messageModel
-    .find({ chat: chatId })
-    .sort({ createdAt: 1 })
-    .populate('sender', 'displayName profileImage');
-
-  // تنسيق الرسائل
-  const formattedMessages = messages.map(msg => ({
-    _id: msg._id,
-    content: msg.content || msg.text, // دعم الاصدارات القديمة والجديدة
-    isFromMe: msg.sender._id.toString() === userId.toString(),
-    sender: {
-      _id: msg.sender._id,
-      displayName: msg.sender.displayName,
-      profileImage: msg.sender.profileImage
-    },
-    isRead: msg.isRead,
-    createdAt: msg.createdAt
-  }));
-
-  // معلومات المستخدم الآخر في المحادثة
-  const otherUser = chat.members[0]; // هذا سيكون المستخدم الآخر لأننا استبعدنا المستخدم الحالي في الاستعلام
-
-  // تحديث حالة قراءة الرسائل
-  await markAsRead(req, res, false); // تمرير false لمنع الرد المباشر
-
-  res.success(
-    {
-      chat: {
-        _id: chat._id,
-        otherUser: {
-          _id: otherUser?._id,
-          displayName: otherUser?.displayName,
-          profileImage: otherUser?.profileImage
-        }
-      },
-      messages: formattedMessages
-    },
-    'تم جلب الرسائل بنجاح'
-  );
-});
-
-/**
- * إرسال رسالة جديدة
- */
-export const sendMessage = asyncHandler(async (req, res) => {
-  const { chatId } = req.params;
-  const { content } = req.body;
-  const userId = req.user._id;
-
-  // تحقق من وجود المحادثة ومن أن المستخدم عضو فيها
-  const chat = await chatModel.findOne({
-    _id: chatId,
-    members: userId,
-    isDeleted: { $ne: true }
-  });
-
-  if (!chat) {
-    return res.status(404).json({
-      success: false,
-      message: 'المحادثة غير موجودة',
-      error: 'Chat not found'
-    });
-  }
-
-  // الحصول على معرف المستخدم الآخر
-  const receiverId = chat.members.find(member => member.toString() !== userId.toString());
-
-  // إنشاء رسالة جديدة
-  const message = await messageModel.create({
-    chat: chatId,
-    sender: userId,
-    content: content, // استخدام حقل content بدلاً من text
-    isRead: false,
-    sentAt: new Date()
-  });
-
-  // تحديث آخر رسالة في المحادثة
-  chat.lastMessage = message._id;
-  chat.updatedAt = new Date();
-  await chat.save();
-
-  // إعادة قراءة الرسالة مع معلومات المرسل
-  const populatedMessage = await messageModel
-    .findById(message._id)
-    .populate('sender', 'displayName profileImage');
-
-  // إعداد الرسالة المنسقة للرد
-  const formattedMessage = {
-    _id: populatedMessage._id,
-    content: populatedMessage.content,
-    isFromMe: true,
-    sender: {
-      _id: populatedMessage.sender._id,
-      displayName: populatedMessage.sender.displayName,
-      profileImage: populatedMessage.sender.profileImage
-    },
-    isRead: populatedMessage.isRead,
-    createdAt: populatedMessage.createdAt
-  };
-
-  // إرسال الرسالة عبر Socket.io
-  sendToChat(chatId, 'new_message', {
-    ...formattedMessage,
-    isFromMe: false, // سيتم عكسها للمستلم
-    chatId
-  });
-
-  // إرسال تحديث للمحادثات للمستلم
-  sendToUser(receiverId, 'update_chat_list', { chatId });
-
-  res.status(201).json({
-    success: true,
-    message: 'تم إرسال الرسالة بنجاح',
-    data: formattedMessage
-  });
-});
-
-/**
- * إنشاء محادثة جديدة
- */
-export const createChat = asyncHandler(async (req, res) => {
-  const { userId: otherUserId } = req.body;
-  const userId = req.user._id;
-
-  // التحقق من وجود المستخدم الآخر
-  const otherUser = await userModel.findById(otherUserId).select('displayName profileImage');
-
-  if (!otherUser) {
-    return res.fail(null, 'المستخدم غير موجود', 404);
-  }
-
-  // التحقق من عدم وجود محادثة مسبقًا
-  const existingChat = await chatModel.findOne({
-    members: {
-      $all: [mongoose.Types.ObjectId(userId), mongoose.Types.ObjectId(otherUserId)]
-    }
-  });
-
-  if (existingChat) {
-    return res.success(
+    // Get chats with other user info and last message
+    const chats = await chatModel.aggregate([
       {
-        _id: existingChat._id,
-        otherUser: {
-          _id: otherUser._id,
-          displayName: otherUser.displayName,
-          profileImage: otherUser.profileImage
+        $match: {
+          members: userId,
+          isDeleted: { $ne: true }
         }
       },
-      'المحادثة موجودة بالفعل'
-    );
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'members',
+          foreignField: '_id',
+          as: 'memberDetails'
+        }
+      },
+      {
+        $lookup: {
+          from: 'messages',
+          localField: 'lastMessage',
+          foreignField: '_id',
+          as: 'lastMessageDetails'
+        }
+      },
+      {
+        $addFields: {
+          otherUser: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: '$memberDetails',
+                  cond: { $ne: ['$$this._id', userId] }
+                }
+              },
+              0
+            ]
+          },
+          lastMessage: { $arrayElemAt: ['$lastMessageDetails', 0] }
+        }
+      },
+      {
+        $lookup: {
+          from: 'messages',
+          let: { chatId: '$_id', currentUserId: userId },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$chat', '$$chatId'] },
+                    { $ne: ['$sender', '$$currentUserId'] },
+                    { $eq: ['$isRead', false] }
+                  ]
+                }
+              }
+            },
+            { $count: 'unread' }
+          ],
+          as: 'unreadCount'
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          otherUser: {
+            _id: '$otherUser._id',
+            displayName: '$otherUser.displayName',
+            profileImage: '$otherUser.profileImage'
+          },
+          lastMessage: {
+            content: '$lastMessage.content',
+            sender: '$lastMessage.sender',
+            createdAt: '$lastMessage.createdAt'
+          },
+          unreadCount: { $ifNull: [{ $arrayElemAt: ['$unreadCount.unread', 0] }, 0] },
+          updatedAt: 1
+        }
+      },
+      { $sort: { updatedAt: -1 } },
+      { $skip: skip },
+      { $limit: Number(limit) }
+    ]);
+
+    // Format chats for mobile app
+    const formattedChats = chats.map(chat => ({
+      _id: chat._id,
+      otherUser: {
+        _id: chat.otherUser._id,
+        displayName: chat.otherUser.displayName,
+        profileImage: chat.otherUser.profileImage?.url
+      },
+      lastMessage: chat.lastMessage ? {
+        content: chat.lastMessage.content,
+        isFromMe: chat.lastMessage.sender?.toString() === userId.toString(),
+        createdAt: chat.lastMessage.createdAt
+      } : null,
+      unreadCount: chat.unreadCount,
+      updatedAt: chat.updatedAt
+    }));
+
+    const totalCount = await chatModel.countDocuments({
+      members: userId,
+      isDeleted: { $ne: true }
+    });
+
+    const response = {
+      chats: formattedChats,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalCount / limit),
+        totalItems: totalCount,
+        hasNextPage: skip + chats.length < totalCount
+      }
+    };
+
+    res.success(response, 'تم جلب المحادثات بنجاح');
+  } catch (error) {
+    console.error('Get chats error:', error);
+    next(new Error('حدث خطأ أثناء جلب المحادثات', { cause: 500 }));
   }
+});
 
-  // إنشاء محادثة جديدة
-  const chat = await chatModel.create({
-    members: [userId, otherUserId],
-    createdAt: new Date(),
-    updatedAt: new Date()
-  });
+/**
+ * Get or create chat with user
+ */
+export const getOrCreateChat = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureConnection();
+    
+    const userId = req.user._id;
+    const { otherUserId } = req.body;
 
-  // إرسال إشعار للمستخدم الآخر
-  sendToUser(otherUserId, 'new_chat', {
-    chatId: chat._id,
-    user: {
-      _id: req.user._id,
-      displayName: req.user.displayName,
-      profileImage: req.user.profileImage
+    // Check if user exists
+    const otherUser = await userModel
+      .findOne({ _id: otherUserId, isActive: true })
+      .select('displayName profileImage')
+      .lean();
+
+    if (!otherUser) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
     }
-  });
 
-  res.status(201).success(
-    {
+    // Check if chat already exists
+    let chat = await chatModel.findOne({
+      members: { $all: [userId, otherUserId] },
+      isDeleted: { $ne: true }
+    });
+
+    if (!chat) {
+      // Create new chat
+      chat = await chatModel.create({
+        members: [userId, otherUserId],
+        createdBy: userId
+      });
+    }
+
+    res.success({
       _id: chat._id,
       otherUser: {
         _id: otherUser._id,
         displayName: otherUser.displayName,
-        profileImage: otherUser.profileImage
-      }
-    },
-    'تم إنشاء المحادثة بنجاح'
-  );
+        profileImage: otherUser.profileImage?.url
+      },
+      createdAt: chat.createdAt
+    }, 'تم إنشاء المحادثة بنجاح');
+  } catch (error) {
+    console.error('Get or create chat error:', error);
+    next(new Error('حدث خطأ أثناء إنشاء المحادثة', { cause: 500 }));
+  }
 });
 
 /**
- * تحديث حالة قراءة الرسائل
+ * Get chat messages
  */
-export const markAsRead = asyncHandler(async (req, res, shouldRespond = true) => {
-  const { chatId } = req.params;
-  const userId = req.user._id;
+export const getMessages = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureConnection();
+    
+    const { chatId } = req.params;
+    const userId = req.user._id;
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (page - 1) * limit;
 
-  // التحقق من وجود المحادثة وأن المستخدم مشارك فيها
-  const chat = await chatModel.findOne({
-    _id: chatId,
-    members: userId
-  });
+    // Check if user is member of chat
+    const chat = await chatModel.findOne({
+      _id: chatId,
+      members: userId,
+      isDeleted: { $ne: true }
+    }).lean();
 
-  if (!chat) {
-    if (shouldRespond) {
+    if (!chat) {
       return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
     }
-    return;
-  }
 
-  // تحديث حالة قراءة الرسائل
-  const result = await messageModel.updateMany(
-    {
-      chat: chatId,
-      sender: { $ne: userId },
-      isRead: false
-    },
-    { isRead: true }
-  );
+    // Get messages
+    const [messages, totalCount] = await Promise.all([
+      messageModel
+        .find({ chat: chatId })
+        .populate('sender', 'displayName profileImage')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      messageModel.countDocuments({ chat: chatId })
+    ]);
 
-  // إرسال إشعار بالقراءة عبر Socket.io
-  if (result.modifiedCount > 0) {
-    sendToChat(chatId, 'messages_read', {
-      chatId,
-      readBy: userId
-    });
+    // Format messages for mobile app
+    const formattedMessages = messages.reverse().map(message => ({
+      _id: message._id,
+      content: message.content,
+      isFromMe: message.sender._id.toString() === userId.toString(),
+      sender: {
+        _id: message.sender._id,
+        displayName: message.sender.displayName,
+        profileImage: message.sender.profileImage?.url
+      },
+      isRead: message.isRead,
+      createdAt: message.createdAt
+    }));
 
-    // إعلام المستخدم الآخر أيضًا
-    const otherUserId = chat.members.find(member => member.toString() !== userId.toString());
-    if (otherUserId) {
-      sendToUser(otherUserId, 'update_chat_list', { chatId });
-    }
-  }
+    // Mark messages as read
+    await messageModel.updateMany(
+      {
+        chat: chatId,
+        sender: { $ne: userId },
+        isRead: false
+      },
+      { isRead: true, readAt: new Date() }
+    );
 
-  if (shouldRespond) {
-    res.success({ modifiedCount: result.modifiedCount }, 'تم تحديث حالة قراءة الرسائل بنجاح');
+    const response = {
+      messages: formattedMessages,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalCount / limit),
+        totalItems: totalCount,
+        hasNextPage: skip + messages.length < totalCount
+      }
+    };
+
+    res.success(response, 'تم جلب الرسائل بنجاح');
+  } catch (error) {
+    console.error('Get messages error:', error);
+    next(new Error('حدث خطأ أثناء جلب الرسائل', { cause: 500 }));
   }
 });
 
 /**
- * واجهة بديلة للتوافق - الحصول على محادثات المستخدم
+ * Send message
  */
-export const getChats = asyncHandler(async (req, res) => getUserChats(req, res));
+export const sendMessage = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureConnection();
+    
+    const { chatId } = req.params;
+    const { content } = req.body;
+    const userId = req.user._id;
+
+    if (!content?.trim()) {
+      return res.fail(null, 'محتوى الرسالة مطلوب', 400);
+    }
+
+    // Check if user is member of chat
+    const chat = await chatModel.findOne({
+      _id: chatId,
+      members: userId,
+      isDeleted: { $ne: true }
+    });
+
+    if (!chat) {
+      return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
+    }
+
+    // Get receiver ID
+    const receiverId = chat.members.find(member => member.toString() !== userId.toString());
+
+    // Create message
+    const message = await messageModel.create({
+      chat: chatId,
+      sender: userId,
+      content: content.trim(),
+      isRead: false
+    });
+
+    // Update chat last message
+    await chatModel.findByIdAndUpdate(chatId, {
+      lastMessage: message._id,
+      updatedAt: new Date()
+    });
+
+    // Populate message with sender info
+    const populatedMessage = await messageModel
+      .findById(message._id)
+      .populate('sender', 'displayName profileImage')
+      .lean();
+
+    // Format message for response
+    const formattedMessage = {
+      _id: populatedMessage._id,
+      content: populatedMessage.content,
+      isFromMe: true,
+      sender: {
+        _id: populatedMessage.sender._id,
+        displayName: populatedMessage.sender.displayName,
+        profileImage: populatedMessage.sender.profileImage?.url
+      },
+      isRead: populatedMessage.isRead,
+      createdAt: populatedMessage.createdAt
+    };
+
+    // Send notification to receiver
+    try {
+      await createNotification({
+        user: receiverId,
+        title: 'رسالة جديدة',
+        message: `${req.user.displayName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+        type: 'message',
+        sender: userId,
+        data: {
+          chatId: chatId.toString(),
+          messageId: message._id.toString()
+        }
+      });
+    } catch (notificationError) {
+      console.error('Failed to send message notification:', notificationError);
+    }
+
+    res.success(formattedMessage, 'تم إرسال الرسالة بنجاح');
+  } catch (error) {
+    console.error('Send message error:', error);
+    next(new Error('حدث خطأ أثناء إرسال الرسالة', { cause: 500 }));
+  }
+});
 
 /**
- * Delete a chat
+ * Mark messages as read
  */
-export const deleteChat = asyncHandler(async (req, res) => {
-  const { chatId } = req.params;
-  const userId = req.user._id;
+export const markAsRead = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureConnection();
+    
+    const { chatId } = req.params;
+    const userId = req.user._id;
 
-  // Find the chat
-  const chat = await chatModel.findById(chatId);
-  if (!chat) {
-    return res.fail(null, 'المحادثة غير موجودة', 404);
+    // Check if user is member of chat
+    const chat = await chatModel.findOne({
+      _id: chatId,
+      members: userId,
+      isDeleted: { $ne: true }
+    });
+
+    if (!chat) {
+      return res.fail(null, 'المحادثة غير موجودة', 404);
+    }
+
+    // Mark messages as read
+    const result = await messageModel.updateMany(
+      {
+        chat: chatId,
+        sender: { $ne: userId },
+        isRead: false
+      },
+      { 
+        isRead: true, 
+        readAt: new Date() 
+      }
+    );
+
+    res.success({
+      markedCount: result.modifiedCount
+    }, 'تم وضع علامة مقروء على الرسائل');
+  } catch (error) {
+    console.error('Mark as read error:', error);
+    next(new Error('حدث خطأ أثناء تحديث حالة الرسائل', { cause: 500 }));
   }
+});
 
-  // Check if user is a participant
-  const isParticipant = chat.participants.some(p => p.toString() === userId.toString());
-  if (!isParticipant) {
-    return res.fail(null, 'غير مصرح لك بحذف هذه المحادثة', 403);
+/**
+ * Delete chat
+ */
+export const deleteChat = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureConnection();
+    
+    const { chatId } = req.params;
+    const userId = req.user._id;
+
+    // Check if user is member of chat
+    const chat = await chatModel.findOne({
+      _id: chatId,
+      members: userId
+    });
+
+    if (!chat) {
+      return res.fail(null, 'المحادثة غير موجودة', 404);
+    }
+
+    // Soft delete chat
+    await chatModel.findByIdAndUpdate(chatId, {
+      isDeleted: true,
+      deletedAt: new Date(),
+      deletedBy: userId
+    });
+
+    res.success(null, 'تم حذف المحادثة بنجاح');
+  } catch (error) {
+    console.error('Delete chat error:', error);
+    next(new Error('حدث خطأ أثناء حذف المحادثة', { cause: 500 }));
   }
-
-  // Delete the chat and all its messages
-  await Promise.all([
-    chatModel.findByIdAndDelete(chatId),
-    messageModel.deleteMany({ chat: chatId })
-  ]);
-
-  res.success(null, 'تم حذف المحادثة بنجاح');
 });
 
 /**

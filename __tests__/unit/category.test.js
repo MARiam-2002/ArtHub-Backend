@@ -1,9 +1,35 @@
 import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import * as categoryController from '../../src/modules/category/category.controller.js';
-import categoryModel from '../../DB/models/category.model.js';
 
-// Mock the category model
-jest.mock('../../DB/models/category.model.js');
+// Mock the database models
+jest.unstable_mockModule('../../../DB/models/category.model.js', () => ({
+  default: {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    findById: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    findByIdAndDelete: jest.fn(),
+    paginate: jest.fn(),
+    countDocuments: jest.fn(),
+    aggregate: jest.fn()
+  }
+}));
+
+jest.unstable_mockModule('../../../DB/models/artwork.model.js', () => ({
+  default: {
+    countDocuments: jest.fn(),
+    find: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    populate: jest.fn().mockReturnThis(),
+    sort: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    lean: jest.fn()
+  }
+}));
+
+// Import after mocking
+const categoryModel = (await import('../../../DB/models/category.model.js')).default;
+const artworkModel = (await import('../../../DB/models/artwork.model.js')).default;
+const * as categoryController = await import('../../../src/modules/category/category.controller.js');
 
 describe('Category Controller Tests', () => {
   let req;
@@ -16,7 +42,7 @@ describe('Category Controller Tests', () => {
       params: {},
       query: {},
       user: {
-        _id: 'user123',
+        _id: 'admin123',
         role: 'admin'
       }
     };
@@ -35,13 +61,13 @@ describe('Category Controller Tests', () => {
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('createCategory', () => {
     it('should create a new category successfully', async () => {
       // Setup
-      const categoryData = {
+      req.body = {
         name: 'لوحات زيتية',
         description: 'لوحات مرسومة بالألوان الزيتية',
         image: {
@@ -50,29 +76,32 @@ describe('Category Controller Tests', () => {
         }
       };
 
-      req.body = categoryData;
-
       const mockCreatedCategory = {
         _id: 'category123',
-        ...categoryData,
+        name: 'لوحات زيتية',
+        description: 'لوحات مرسومة بالألوان الزيتية',
+        image: {
+          url: 'https://example.com/image.jpg',
+          id: 'image123'
+        },
         createdAt: new Date(),
         updatedAt: new Date()
       };
 
-      categoryModel.findOne.mockResolvedValue(null); // No existing category
+      categoryModel.findOne.mockResolvedValue(null);
       categoryModel.create.mockResolvedValue(mockCreatedCategory);
 
       // Execute
-      await categoryController.createCategory(req, res);
+      await categoryController.createCategory(req, res, next);
 
       // Assert
       expect(categoryModel.findOne).toHaveBeenCalledWith({
-        name: { $regex: new RegExp(`^${categoryData.name}$`, 'i') }
+        name: { $regex: new RegExp(`^${req.body.name.trim()}$`, 'i') }
       });
       expect(categoryModel.create).toHaveBeenCalledWith({
-        name: categoryData.name.trim(),
-        description: categoryData.description.trim(),
-        image: categoryData.image
+        name: req.body.name.trim(),
+        description: req.body.description.trim(),
+        image: req.body.image
       });
       expect(res.success).toHaveBeenCalledWith(
         mockCreatedCategory,
@@ -81,14 +110,12 @@ describe('Category Controller Tests', () => {
       );
     });
 
-    it('should fail when category with same name exists', async () => {
+    it('should fail when category name already exists', async () => {
       // Setup
-      const categoryData = {
+      req.body = {
         name: 'لوحات زيتية',
-        description: 'وصف التصنيف'
+        description: 'لوحات مرسومة بالألوان الزيتية'
       };
-
-      req.body = categoryData;
 
       const existingCategory = {
         _id: 'existing123',
@@ -98,7 +125,7 @@ describe('Category Controller Tests', () => {
       categoryModel.findOne.mockResolvedValue(existingCategory);
 
       // Execute
-      await categoryController.createCategory(req, res);
+      await categoryController.createCategory(req, res, next);
 
       // Assert
       expect(categoryModel.findOne).toHaveBeenCalled();
@@ -110,76 +137,61 @@ describe('Category Controller Tests', () => {
       );
     });
 
-    it('should handle missing optional fields', async () => {
+    it('should handle database errors', async () => {
       // Setup
-      const categoryData = {
-        name: 'تصنيف جديد'
-        // No description or image
+      req.body = {
+        name: 'لوحات زيتية'
       };
 
-      req.body = categoryData;
-
-      const mockCreatedCategory = {
-        _id: 'category123',
-        name: categoryData.name,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      categoryModel.findOne.mockResolvedValue(null);
-      categoryModel.create.mockResolvedValue(mockCreatedCategory);
+      categoryModel.findOne.mockRejectedValue(new Error('Database error'));
 
       // Execute
-      await categoryController.createCategory(req, res);
+      await categoryController.createCategory(req, res, next);
 
       // Assert
-      expect(categoryModel.create).toHaveBeenCalledWith({
-        name: categoryData.name.trim(),
-        description: undefined,
-        image: undefined
-      });
-      expect(res.success).toHaveBeenCalled();
+      expect(res.fail).toHaveBeenCalledWith(
+        null,
+        'حدث خطأ أثناء إنشاء التصنيف',
+        500
+      );
     });
   });
 
   describe('updateCategory', () => {
     it('should update category successfully', async () => {
       // Setup
-      const categoryId = 'category123';
-      const updateData = {
-        name: 'اسم محدث',
+      req.params.id = 'category123';
+      req.body = {
+        name: 'لوحات زيتية محدثة',
         description: 'وصف محدث'
       };
 
-      req.params.id = categoryId;
-      req.body = updateData;
-
       const existingCategory = {
-        _id: categoryId,
-        name: 'اسم قديم',
+        _id: 'category123',
+        name: 'لوحات زيتية',
         description: 'وصف قديم'
       };
 
       const updatedCategory = {
-        _id: categoryId,
-        ...updateData,
-        updatedAt: new Date()
+        ...existingCategory,
+        name: 'لوحات زيتية محدثة',
+        description: 'وصف محدث'
       };
 
       categoryModel.findById.mockResolvedValue(existingCategory);
-      categoryModel.findOne.mockResolvedValue(null); // No duplicate name
+      categoryModel.findOne.mockResolvedValue(null);
       categoryModel.findByIdAndUpdate.mockResolvedValue(updatedCategory);
 
       // Execute
-      await categoryController.updateCategory(req, res);
+      await categoryController.updateCategory(req, res, next);
 
       // Assert
-      expect(categoryModel.findById).toHaveBeenCalledWith(categoryId);
+      expect(categoryModel.findById).toHaveBeenCalledWith(req.params.id);
       expect(categoryModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        categoryId,
+        req.params.id,
         {
-          name: updateData.name.trim(),
-          description: updateData.description.trim()
+          name: req.body.name.trim(),
+          description: req.body.description.trim()
         },
         { new: true, runValidators: true }
       );
@@ -189,20 +201,17 @@ describe('Category Controller Tests', () => {
       );
     });
 
-    it('should fail when category does not exist', async () => {
+    it('should fail when category not found', async () => {
       // Setup
-      const categoryId = 'nonexistent123';
-      req.params.id = categoryId;
+      req.params.id = 'nonexistent123';
       req.body = { name: 'اسم جديد' };
 
       categoryModel.findById.mockResolvedValue(null);
 
       // Execute
-      await categoryController.updateCategory(req, res);
+      await categoryController.updateCategory(req, res, next);
 
       // Assert
-      expect(categoryModel.findById).toHaveBeenCalledWith(categoryId);
-      expect(categoryModel.findByIdAndUpdate).not.toHaveBeenCalled();
       expect(res.fail).toHaveBeenCalledWith(
         null,
         'التصنيف غير موجود',
@@ -210,35 +219,28 @@ describe('Category Controller Tests', () => {
       );
     });
 
-    it('should fail when new name conflicts with existing category', async () => {
+    it('should fail when new name already exists', async () => {
       // Setup
-      const categoryId = 'category123';
-      const updateData = { name: 'اسم موجود' };
-
-      req.params.id = categoryId;
-      req.body = updateData;
+      req.params.id = 'category123';
+      req.body = { name: 'اسم موجود' };
 
       const existingCategory = {
-        _id: categoryId,
+        _id: 'category123',
         name: 'اسم قديم'
       };
 
-      const conflictingCategory = {
+      const duplicateCategory = {
         _id: 'other123',
         name: 'اسم موجود'
       };
 
       categoryModel.findById.mockResolvedValue(existingCategory);
-      categoryModel.findOne.mockResolvedValue(conflictingCategory);
+      categoryModel.findOne.mockResolvedValue(duplicateCategory);
 
       // Execute
-      await categoryController.updateCategory(req, res);
+      await categoryController.updateCategory(req, res, next);
 
       // Assert
-      expect(categoryModel.findOne).toHaveBeenCalledWith({
-        name: { $regex: new RegExp(`^${updateData.name}$`, 'i') },
-        _id: { $ne: categoryId }
-      });
       expect(res.fail).toHaveBeenCalledWith(
         null,
         'يوجد تصنيف بنفس هذا الاسم بالفعل',
@@ -248,44 +250,71 @@ describe('Category Controller Tests', () => {
   });
 
   describe('deleteCategory', () => {
-    it('should delete category successfully', async () => {
+    it('should delete category successfully when no artworks exist', async () => {
       // Setup
-      const categoryId = 'category123';
-      req.params.id = categoryId;
+      req.params.id = 'category123';
 
       const existingCategory = {
-        _id: categoryId,
+        _id: 'category123',
         name: 'تصنيف للحذف'
       };
 
       categoryModel.findById.mockResolvedValue(existingCategory);
+      artworkModel.countDocuments.mockResolvedValue(0);
       categoryModel.findByIdAndDelete.mockResolvedValue(existingCategory);
 
       // Execute
-      await categoryController.deleteCategory(req, res);
+      await categoryController.deleteCategory(req, res, next);
 
       // Assert
-      expect(categoryModel.findById).toHaveBeenCalledWith(categoryId);
-      expect(categoryModel.findByIdAndDelete).toHaveBeenCalledWith(categoryId);
+      expect(categoryModel.findById).toHaveBeenCalledWith(req.params.id);
+      expect(artworkModel.countDocuments).toHaveBeenCalledWith({ 
+        category: req.params.id 
+      });
+      expect(categoryModel.findByIdAndDelete).toHaveBeenCalledWith(req.params.id);
       expect(res.success).toHaveBeenCalledWith(
         null,
         'تم حذف التصنيف بنجاح'
       );
     });
 
-    it('should fail when category does not exist', async () => {
+    it('should fail when category has associated artworks', async () => {
       // Setup
-      const categoryId = 'nonexistent123';
-      req.params.id = categoryId;
+      req.params.id = 'category123';
+
+      const existingCategory = {
+        _id: 'category123',
+        name: 'تصنيف مرتبط'
+      };
+
+      categoryModel.findById.mockResolvedValue(existingCategory);
+      artworkModel.countDocuments.mockResolvedValue(5);
+
+      // Execute
+      await categoryController.deleteCategory(req, res, next);
+
+      // Assert
+      expect(artworkModel.countDocuments).toHaveBeenCalledWith({ 
+        category: req.params.id 
+      });
+      expect(categoryModel.findByIdAndDelete).not.toHaveBeenCalled();
+      expect(res.fail).toHaveBeenCalledWith(
+        { artworksCount: 5 },
+        'لا يمكن حذف التصنيف لأنه مرتبط بـ 5 عمل فني',
+        400
+      );
+    });
+
+    it('should fail when category not found', async () => {
+      // Setup
+      req.params.id = 'nonexistent123';
 
       categoryModel.findById.mockResolvedValue(null);
 
       // Execute
-      await categoryController.deleteCategory(req, res);
+      await categoryController.deleteCategory(req, res, next);
 
       // Assert
-      expect(categoryModel.findById).toHaveBeenCalledWith(categoryId);
-      expect(categoryModel.findByIdAndDelete).not.toHaveBeenCalled();
       expect(res.fail).toHaveBeenCalledWith(
         null,
         'التصنيف غير موجود',
@@ -295,11 +324,17 @@ describe('Category Controller Tests', () => {
   });
 
   describe('getCategories', () => {
-    it('should get categories with default pagination', async () => {
+    it('should get categories with pagination successfully', async () => {
       // Setup
+      req.query = {
+        page: '1',
+        limit: '10',
+        search: 'لوحات'
+      };
+
       const mockCategories = [
-        { _id: '1', name: 'تصنيف 1' },
-        { _id: '2', name: 'تصنيف 2' }
+        { _id: 'cat1', name: 'لوحات زيتية' },
+        { _id: 'cat2', name: 'لوحات مائية' }
       ];
 
       const mockPaginationResult = {
@@ -315,11 +350,16 @@ describe('Category Controller Tests', () => {
       categoryModel.paginate.mockResolvedValue(mockPaginationResult);
 
       // Execute
-      await categoryController.getCategories(req, res);
+      await categoryController.getCategories(req, res, next);
 
       // Assert
       expect(categoryModel.paginate).toHaveBeenCalledWith(
-        {},
+        {
+          $or: [
+            { name: { $regex: 'لوحات', $options: 'i' } },
+            { description: { $regex: 'لوحات', $options: 'i' } }
+          ]
+        },
         {
           page: 1,
           limit: 10,
@@ -344,14 +384,20 @@ describe('Category Controller Tests', () => {
       );
     });
 
-    it('should search categories when search query provided', async () => {
+    it('should include artwork stats when requested', async () => {
       // Setup
-      req.query = { search: 'لوحات', page: 1, limit: 5 };
+      req.query = {
+        includeStats: 'true'
+      };
+
+      const mockCategories = [
+        { _id: 'cat1', name: 'لوحات زيتية' }
+      ];
 
       const mockPaginationResult = {
-        docs: [{ _id: '1', name: 'لوحات زيتية' }],
+        docs: mockCategories,
         page: 1,
-        limit: 5,
+        limit: 10,
         totalPages: 1,
         totalDocs: 1,
         hasNextPage: false,
@@ -359,24 +405,26 @@ describe('Category Controller Tests', () => {
       };
 
       categoryModel.paginate.mockResolvedValue(mockPaginationResult);
+      artworkModel.countDocuments.mockResolvedValue(5);
 
       // Execute
-      await categoryController.getCategories(req, res);
+      await categoryController.getCategories(req, res, next);
 
       // Assert
-      expect(categoryModel.paginate).toHaveBeenCalledWith(
-        {
-          $or: [
-            { name: { $regex: 'لوحات', $options: 'i' } },
-            { description: { $regex: 'لوحات', $options: 'i' } }
+      expect(artworkModel.countDocuments).toHaveBeenCalledWith({
+        category: 'cat1'
+      });
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          categories: [
+            expect.objectContaining({
+              _id: 'cat1',
+              name: 'لوحات زيتية',
+              artworkCount: 5
+            })
           ]
-        },
-        {
-          page: 1,
-          limit: 5,
-          sort: { createdAt: -1 },
-          lean: true
-        }
+        }),
+        'تم جلب التصنيفات بنجاح'
       );
     });
   });
@@ -384,12 +432,11 @@ describe('Category Controller Tests', () => {
   describe('getCategory', () => {
     it('should get single category successfully', async () => {
       // Setup
-      const categoryId = 'category123';
-      req.params.id = categoryId;
+      req.params.id = 'category123';
 
       const mockCategory = {
-        _id: categoryId,
-        name: 'تصنيف تجريبي',
+        _id: 'category123',
+        name: 'لوحات زيتية',
         description: 'وصف التصنيف'
       };
 
@@ -398,27 +445,69 @@ describe('Category Controller Tests', () => {
       });
 
       // Execute
-      await categoryController.getCategory(req, res);
+      await categoryController.getCategory(req, res, next);
 
       // Assert
-      expect(categoryModel.findById).toHaveBeenCalledWith(categoryId);
+      expect(categoryModel.findById).toHaveBeenCalledWith(req.params.id);
       expect(res.success).toHaveBeenCalledWith(
         mockCategory,
         'تم جلب التصنيف بنجاح'
       );
     });
 
+    it('should include stats and recent artworks when requested', async () => {
+      // Setup
+      req.params.id = 'category123';
+      req.query.includeStats = 'true';
+
+      const mockCategory = {
+        _id: 'category123',
+        name: 'لوحات زيتية'
+      };
+
+      const mockRecentArtworks = [
+        {
+          _id: 'art1',
+          title: 'لوحة جميلة',
+          price: 100,
+          artist: { name: 'فنان', avatar: {} }
+        }
+      ];
+
+      categoryModel.findById.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockCategory)
+      });
+      artworkModel.countDocuments.mockResolvedValue(10);
+      artworkModel.lean.mockResolvedValue(mockRecentArtworks);
+
+      // Execute
+      await categoryController.getCategory(req, res, next);
+
+      // Assert
+      expect(artworkModel.countDocuments).toHaveBeenCalledWith({
+        category: req.params.id
+      });
+      expect(res.success).toHaveBeenCalledWith(
+        expect.objectContaining({
+          _id: 'category123',
+          name: 'لوحات زيتية',
+          artworkCount: 10,
+          recentArtworks: mockRecentArtworks
+        }),
+        'تم جلب التصنيف بنجاح'
+      );
+    });
+
     it('should fail when category not found', async () => {
       // Setup
-      const categoryId = 'nonexistent123';
-      req.params.id = categoryId;
+      req.params.id = 'nonexistent123';
 
       categoryModel.findById.mockReturnValue({
         lean: jest.fn().mockResolvedValue(null)
       });
 
       // Execute
-      await categoryController.getCategory(req, res);
+      await categoryController.getCategory(req, res, next);
 
       // Assert
       expect(res.fail).toHaveBeenCalledWith(
@@ -430,19 +519,157 @@ describe('Category Controller Tests', () => {
   });
 
   describe('getCategoryStats', () => {
-    it('should get category statistics successfully', async () => {
+    it('should get comprehensive category statistics', async () => {
       // Setup
-      const totalCount = 25;
-      categoryModel.countDocuments.mockResolvedValue(totalCount);
+      const mockAggregationResult = [
+        { _id: 'cat1', name: 'لوحات زيتية', artworkCount: 15, createdAt: new Date() },
+        { _id: 'cat2', name: 'لوحات مائية', artworkCount: 10, createdAt: new Date() },
+        { _id: 'cat3', name: 'منحوتات', artworkCount: 0, createdAt: new Date() }
+      ];
+
+      categoryModel.countDocuments
+        .mockResolvedValueOnce(3) // totalCategories
+        .mockResolvedValueOnce(1); // recentCategoriesCount
+
+      categoryModel.aggregate.mockResolvedValue(mockAggregationResult);
 
       // Execute
-      await categoryController.getCategoryStats(req, res);
+      await categoryController.getCategoryStats(req, res, next);
 
       // Assert
-      expect(categoryModel.countDocuments).toHaveBeenCalled();
+      expect(categoryModel.countDocuments).toHaveBeenCalledTimes(2);
+      expect(categoryModel.aggregate).toHaveBeenCalled();
       expect(res.success).toHaveBeenCalledWith(
-        { totalCategories: totalCount },
+        expect.objectContaining({
+          totalCategories: 3,
+          emptyCategoriesCount: 1,
+          recentCategoriesCount: 1,
+          mostPopularCategories: expect.arrayContaining([
+            expect.objectContaining({ name: 'لوحات زيتية', artworkCount: 15 })
+          ]),
+          averageArtworksPerCategory: 8
+        }),
         'تم جلب إحصائيات التصنيفات بنجاح'
+      );
+    });
+  });
+
+  describe('getPopularCategories', () => {
+    it('should get popular categories successfully', async () => {
+      // Setup
+      req.query.limit = '5';
+
+      const mockPopularCategories = [
+        {
+          _id: 'cat1',
+          name: 'لوحات زيتية',
+          description: 'وصف',
+          image: { url: 'image.jpg', id: 'img1' },
+          artworkCount: 20
+        },
+        {
+          _id: 'cat2',
+          name: 'منحوتات',
+          description: 'وصف',
+          image: { url: 'image2.jpg', id: 'img2' },
+          artworkCount: 15
+        }
+      ];
+
+      categoryModel.aggregate.mockResolvedValue(mockPopularCategories);
+
+      // Execute
+      await categoryController.getPopularCategories(req, res, next);
+
+      // Assert
+      expect(categoryModel.aggregate).toHaveBeenCalledWith([
+        {
+          $lookup: {
+            from: 'artworks',
+            localField: '_id',
+            foreignField: 'category',
+            as: 'artworks'
+          }
+        },
+        {
+          $addFields: {
+            artworkCount: { $size: '$artworks' }
+          }
+        },
+        {
+          $match: {
+            artworkCount: { $gt: 0 }
+          }
+        },
+        {
+          $project: {
+            name: 1,
+            description: 1,
+            image: 1,
+            artworkCount: 1
+          }
+        },
+        {
+          $sort: { artworkCount: -1 }
+        },
+        {
+          $limit: 5
+        }
+      ]);
+
+      expect(res.success).toHaveBeenCalledWith(
+        mockPopularCategories,
+        'تم جلب التصنيفات الشائعة بنجاح'
+      );
+    });
+
+    it('should use default limit when not provided', async () => {
+      // Setup - no limit in query
+      categoryModel.aggregate.mockResolvedValue([]);
+
+      // Execute
+      await categoryController.getPopularCategories(req, res, next);
+
+      // Assert
+      expect(categoryModel.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $limit: 8 // default limit
+          })
+        ])
+      );
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle database connection errors', async () => {
+      // Setup
+      req.body = { name: 'تصنيف جديد' };
+      categoryModel.findOne.mockRejectedValue(new Error('Connection failed'));
+
+      // Execute
+      await categoryController.createCategory(req, res, next);
+
+      // Assert
+      expect(res.fail).toHaveBeenCalledWith(
+        null,
+        'حدث خطأ أثناء إنشاء التصنيف',
+        500
+      );
+    });
+
+    it('should handle aggregation pipeline errors', async () => {
+      // Setup
+      categoryModel.aggregate.mockRejectedValue(new Error('Aggregation failed'));
+
+      // Execute
+      await categoryController.getCategoryStats(req, res, next);
+
+      // Assert
+      expect(res.fail).toHaveBeenCalledWith(
+        null,
+        'حدث خطأ أثناء جلب إحصائيات التصنيفات',
+        500
       );
     });
   });

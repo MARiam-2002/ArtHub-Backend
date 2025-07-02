@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as notificationController from './notification.controller.js';
-import { isAuthenticated } from '../../middleware/authentication.middleware.js';
+import { requireAuth } from '../../middleware/authentication.middleware.js';
 import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import {
@@ -17,178 +17,48 @@ const router = Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Notifications
+ *   description: Notification management endpoints
+ */
+
+/**
+ * @swagger
  * /api/notifications:
  *   get:
- *     tags:
- *       - Notifications
- *     summary: الحصول على إشعارات المستخدم مع فلترة متقدمة
- *     description: |
- *       استرجاع إشعارات المستخدم مع إمكانيات فلترة وتصفح متقدمة
- *       
- *       **مميزات الـ API:**
- *       - فلترة حسب النوع والحالة والتاريخ
- *       - ترقيم الصفحات مع معلومات شاملة
- *       - دعم اللغتين العربية والإنجليزية
- *       - إحصائيات سريعة (المجموع، غير المقروء، المقروء)
- *       
- *       **Flutter Integration:**
- *       ```dart
- *       // GET /api/notifications
- *       final response = await dio.get('/api/notifications', 
- *         queryParameters: {
- *           'page': 1,
- *           'limit': 20,
- *           'unreadOnly': false,
- *           'type': 'message',
- *           'language': 'ar'
- *         }
- *       );
- *       ```
+ *     summary: Get user notifications
+ *     tags: [Notifications]
+ *     description: Get paginated list of user notifications
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - name: page
- *         in: query
+ *       - in: query
+ *         name: page
  *         schema:
  *           type: integer
- *           minimum: 1
  *           default: 1
- *         description: رقم الصفحة
- *         example: 1
- *       - name: limit
- *         in: query
+ *         description: Page number
+ *       - in: query
+ *         name: limit
  *         schema:
  *           type: integer
- *           minimum: 1
- *           maximum: 100
  *           default: 20
- *         description: عدد العناصر في الصفحة
- *         example: 20
- *       - name: unreadOnly
- *         in: query
+ *         description: Items per page
+ *       - in: query
+ *         name: unreadOnly
  *         schema:
  *           type: boolean
- *         description: عرض الإشعارات غير المقروءة فقط
- *         example: false
- *       - name: type
- *         in: query
- *         schema:
- *           type: string
- *           enum: ["request", "message", "review", "system", "other"]
- *         description: فلترة حسب نوع الإشعار
- *         example: "message"
- *       - name: language
- *         in: query
- *         schema:
- *           type: string
- *           enum: ["ar", "en"]
- *           default: "ar"
- *         description: لغة الإشعارات
- *         example: "ar"
- *       - name: dateFrom
- *         in: query
- *         schema:
- *           type: string
- *           format: date
- *         description: تاريخ البداية للفلترة
- *         example: "2024-01-01"
- *       - name: dateTo
- *         in: query
- *         schema:
- *           type: string
- *           format: date
- *         description: تاريخ النهاية للفلترة
- *         example: "2024-12-31"
+ *           default: false
+ *         description: Get only unread notifications
  *     responses:
  *       200:
- *         description: تم جلب الإشعارات بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "تم جلب الإشعارات بنجاح"
- *                 data:
- *                   type: object
- *                   properties:
- *                     notifications:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                             example: "507f1f77bcf86cd799439011"
- *                           title:
- *                             type: string
- *                             example: "رسالة جديدة"
- *                           message:
- *                             type: string
- *                             example: "لديك رسالة جديدة من أحمد"
- *                           type:
- *                             type: string
- *                             example: "message"
- *                           isRead:
- *                             type: boolean
- *                             example: false
- *                           sender:
- *                             type: object
- *                             properties:
- *                               _id:
- *                                 type: string
- *                               displayName:
- *                                 type: string
- *                               profileImage:
- *                                 type: string
- *                           data:
- *                             type: object
- *                           createdAt:
- *                             type: string
- *                             format: date-time
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         currentPage:
- *                           type: integer
- *                           example: 1
- *                         totalPages:
- *                           type: integer
- *                           example: 5
- *                         totalItems:
- *                           type: integer
- *                           example: 95
- *                         unreadCount:
- *                           type: integer
- *                           example: 12
- *                     summary:
- *                       type: object
- *                       properties:
- *                         total:
- *                           type: integer
- *                           example: 95
- *                         unread:
- *                           type: integer
- *                           example: 12
- *                         read:
- *                           type: integer
- *                           example: 83
- *       400:
- *         description: خطأ في المعاملات
+ *         description: Notifications retrieved successfully
  *       401:
- *         description: غير مصرح
- *     x-screen: "NotificationsScreen"
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
-router.get(
-  '/',
-  isAuthenticated,
-  isValidation(notificationQuerySchema, 'query'),
-  notificationController.getUserNotifications
-);
+router.get('/', requireAuth, notificationController.getNotifications);
 
 /**
  * @swagger
@@ -290,7 +160,7 @@ router.get(
  */
 router.get(
   '/stats',
-  isAuthenticated,
+  requireAuth,
   isValidation(notificationStatsQuerySchema, 'query'),
   notificationController.getNotificationStats
 );
@@ -299,49 +169,26 @@ router.get(
  * @swagger
  * /api/notifications/settings:
  *   get:
- *     tags:
- *       - Notification Settings
- *     summary: الحصول على إعدادات الإشعارات
- *     description: جلب إعدادات الإشعارات الحالية للمستخدم
+ *     summary: Get notification settings
+ *     tags: [Notifications]
+ *     description: Get user notification preferences
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - name: language
- *         in: query
- *         schema:
- *           type: string
- *           enum: ["ar", "en"]
- *           default: "ar"
- *         description: لغة الاستجابة
  *     responses:
  *       200:
- *         description: تم جلب الإعدادات بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/NotificationSettingsSchema'
- *     x-screen: "NotificationSettingsScreen"
+ *         description: Notification settings retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/settings', requireAuth, notificationController.getNotificationSettings);
+
+/**
+ * @swagger
+ * /api/notifications/settings:
  *   put:
- *     tags:
- *       - Notification Settings
- *     summary: تحديث إعدادات الإشعارات
- *     description: |
- *       تحديث تفضيلات الإشعارات للمستخدم
- *       
- *       **Flutter Integration:**
- *       ```dart
- *       final response = await dio.put('/api/notifications/settings',
- *         data: {
- *           'enablePush': true,
- *           'enableEmail': false,
- *           'categories': {
- *             'messages': true,
- *             'requests': true,
- *             'reviews': false
- *           }
- *         }
- *       );
- *       ```
+ *     summary: Update notification settings
+ *     tags: [Notifications]
+ *     description: Update user notification preferences
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -349,211 +196,101 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/NotificationSettingsSchema'
+ *             type: object
+ *             properties:
+ *               notificationSettings:
+ *                 type: object
+ *                 properties:
+ *                   pushNotifications:
+ *                     type: boolean
+ *                   emailNotifications:
+ *                     type: boolean
+ *                   messageNotifications:
+ *                     type: boolean
+ *                   followNotifications:
+ *                     type: boolean
+ *                   artworkNotifications:
+ *                     type: boolean
+ *                   marketingNotifications:
+ *                     type: boolean
  *     responses:
  *       200:
- *         description: تم تحديث الإعدادات بنجاح
+ *         description: Notification settings updated successfully
  *       400:
- *         description: خطأ في البيانات المرسلة
- *     x-screen: "NotificationSettingsScreen"
+ *         description: Bad request
+ *       500:
+ *         description: Server error
  */
-router.get('/settings', isAuthenticated, notificationController.getNotificationSettings);
-router.put(
-  '/settings',
-  isAuthenticated,
-  isValidation(notificationSettingsSchema),
-  notificationController.updateNotificationSettings
-);
+router.put('/settings', requireAuth, notificationController.updateNotificationSettings);
 
 /**
  * @swagger
  * /api/notifications/{notificationId}/read:
  *   patch:
- *     tags:
- *       - Notifications
- *     summary: وضع علامة "مقروء" على إشعار
- *     description: |
- *       تعيين إشعار معين كمقروء
- *       
- *       **Flutter Integration:**
- *       ```dart
- *       final response = await dio.patch(
- *         '/api/notifications/${notificationId}/read'
- *       );
- *       ```
+ *     summary: Mark notification as read
+ *     tags: [Notifications]
+ *     description: Mark a specific notification as read
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - name: notificationId
- *         in: path
+ *       - in: path
+ *         name: notificationId
  *         required: true
  *         schema:
  *           type: string
- *           pattern: "^[0-9a-fA-F]{24}$"
- *         description: معرف الإشعار
- *         example: "507f1f77bcf86cd799439011"
- *       - name: language
- *         in: query
- *         schema:
- *           type: string
- *           enum: ["ar", "en"]
- *           default: "ar"
- *         description: لغة الاستجابة
+ *         description: Notification ID
  *     responses:
  *       200:
- *         description: تم وضع علامة مقروء على الإشعار بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "تم وضع علامة مقروء على الإشعار بنجاح"
- *                 data:
- *                   type: object
- *                   properties:
- *                     _id:
- *                       type: string
- *                     title:
- *                       type: string
- *                     message:
- *                       type: string
- *                     isRead:
- *                       type: boolean
- *                       example: true
- *                     readAt:
- *                       type: string
- *                       format: date-time
+ *         description: Notification marked as read
  *       404:
- *         description: الإشعار غير موجود أو مقروء بالفعل
- *     x-screen: "NotificationDetailScreen"
+ *         description: Notification not found
+ *       500:
+ *         description: Server error
  */
-router.patch(
-  '/:notificationId/read',
-  isAuthenticated,
-  isValidation(notificationIdSchema, 'params'),
-  notificationController.markNotificationAsRead
-);
+router.patch('/:notificationId/read', requireAuth, notificationController.markAsRead);
 
 /**
  * @swagger
  * /api/notifications/read-all:
  *   patch:
- *     tags:
- *       - Notifications
- *     summary: وضع علامة "مقروء" على جميع الإشعارات
- *     description: |
- *       تعيين جميع إشعارات المستخدم كمقروءة
- *       
- *       **Flutter Integration:**
- *       ```dart
- *       final response = await dio.patch('/api/notifications/read-all');
- *       ```
+ *     summary: Mark all notifications as read
+ *     tags: [Notifications]
+ *     description: Mark all user notifications as read
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - name: language
- *         in: query
- *         schema:
- *           type: string
- *           enum: ["ar", "en"]
- *           default: "ar"
- *         description: لغة الاستجابة
  *     responses:
  *       200:
- *         description: تم وضع علامة مقروء على جميع الإشعارات بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "تم وضع علامة مقروء على جميع الإشعارات بنجاح"
- *                 data:
- *                   type: object
- *                   properties:
- *                     modifiedCount:
- *                       type: integer
- *                       example: 15
- *                     message:
- *                       type: string
- *                       example: "تم وضع علامة مقروء على 15 إشعار"
- *     x-screen: "NotificationsScreen"
+ *         description: All notifications marked as read
+ *       500:
+ *         description: Server error
  */
-router.patch('/read-all', isAuthenticated, notificationController.markAllNotificationsAsRead);
+router.patch('/read-all', requireAuth, notificationController.markAllAsRead);
 
 /**
  * @swagger
  * /api/notifications/{notificationId}:
  *   delete:
- *     tags:
- *       - Notifications
- *     summary: حذف إشعار
- *     description: |
- *       حذف إشعار معين
- *       
- *       **Flutter Integration:**
- *       ```dart
- *       final response = await dio.delete(
- *         '/api/notifications/${notificationId}'
- *       );
- *       ```
+ *     summary: Delete notification
+ *     tags: [Notifications]
+ *     description: Delete a specific notification
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - name: notificationId
- *         in: path
+ *       - in: path
+ *         name: notificationId
  *         required: true
  *         schema:
  *           type: string
- *           pattern: "^[0-9a-fA-F]{24}$"
- *         description: معرف الإشعار
- *         example: "507f1f77bcf86cd799439011"
- *       - name: language
- *         in: query
- *         schema:
- *           type: string
- *           enum: ["ar", "en"]
- *           default: "ar"
- *         description: لغة الاستجابة
+ *         description: Notification ID
  *     responses:
  *       200:
- *         description: تم حذف الإشعار بنجاح
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "تم حذف الإشعار بنجاح"
- *                 data:
- *                   type: object
- *                   properties:
- *                     deletedId:
- *                       type: string
- *                       example: "507f1f77bcf86cd799439011"
+ *         description: Notification deleted successfully
  *       404:
- *         description: الإشعار غير موجود
- *     x-screen: "NotificationDetailScreen"
+ *         description: Notification not found
+ *       500:
+ *         description: Server error
  */
-router.delete(
-  '/:notificationId',
-  isAuthenticated,
-  isValidation(notificationIdSchema, 'params'),
-  notificationController.deleteNotification
-);
+router.delete('/:notificationId', requireAuth, notificationController.deleteNotification);
 
 /**
  * @swagger
@@ -630,10 +367,10 @@ router.delete(
  *         description: المستخدم المتلقي غير موجود
  *     x-screen: "AdminNotificationScreen"
  */
-router.delete('/', isAuthenticated, notificationController.deleteAllNotifications);
+router.delete('/', requireAuth, notificationController.deleteAllNotifications);
 router.post(
   '/',
-  isAuthenticated,
+  requireAuth,
   isValidation(createNotificationSchema),
   notificationController.createNotification
 );
@@ -708,7 +445,7 @@ router.post(
  */
 router.post(
   '/bulk',
-  isAuthenticated,
+  requireAuth,
   isValidation(bulkNotificationSchema),
   notificationController.sendBulkNotifications
 );
@@ -806,8 +543,8 @@ router.post(
  *         description: الرمز مطلوب
  *     x-screen: "SettingsScreen"
  */
-router.post('/token', isAuthenticated, isValidation(fcmTokenSchema), notificationController.registerFCMToken);
-router.delete('/token', isAuthenticated, isValidation(fcmTokenSchema), notificationController.unregisterFCMToken);
+router.post('/token', requireAuth, isValidation(fcmTokenSchema), notificationController.registerFCMToken);
+router.delete('/token', requireAuth, isValidation(fcmTokenSchema), notificationController.unregisterFCMToken);
 
 /**
  * @swagger

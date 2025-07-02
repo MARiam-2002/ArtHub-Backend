@@ -1,7 +1,189 @@
-import Joi from 'joi';
+import joi from 'joi';
 
-// MongoDB ObjectId regex pattern for validation
-const MONGODB_OBJECTID_REGEX = /^[0-9a-fA-F]{24}$/;
+/**
+ * Default validation error messages in Arabic
+ */
+const defaultMessages = {
+  'string.base': '{#label} يجب أن يكون نصًا.',
+  'string.empty': '{#label} مطلوب ولا يمكن أن يكون فارغًا.',
+  'string.min': '{#label} يجب أن يكون على الأقل {#limit} أحرف.',
+  'string.max': '{#label} يجب ألا يزيد عن {#limit} أحرف.',
+  'string.pattern.base': '{#label} يحتوي على تنسيق غير صالح.',
+  'number.base': '{#label} يجب أن يكون رقمًا.',
+  'number.min': '{#label} يجب أن يكون على الأقل {#limit}.',
+  'number.max': '{#label} يجب ألا يزيد عن {#limit}.',
+  'any.only': '{#label} يجب أن يكون إحدى القيم المسموحة.',
+  'any.required': '{#label} مطلوب.'
+};
+
+/**
+ * MongoDB ObjectId pattern
+ */
+const objectIdPattern = /^[0-9a-fA-F]{24}$/;
+
+/**
+ * Search query validation schema
+ */
+export const searchQuerySchema = joi.object({
+  q: joi
+    .string()
+    .min(1)
+    .max(100)
+    .optional()
+    .label('نص البحث')
+    .messages(defaultMessages),
+  
+  type: joi
+    .string()
+    .valid('all', 'artworks', 'artists')
+    .default('all')
+    .optional()
+    .label('نوع البحث')
+    .messages(defaultMessages),
+  
+  category: joi
+    .string()
+    .pattern(objectIdPattern)
+    .optional()
+    .label('التصنيف')
+    .messages({
+      ...defaultMessages,
+      'string.pattern.base': 'معرف التصنيف غير صالح'
+    }),
+  
+  minPrice: joi
+    .number()
+    .min(0)
+    .optional()
+    .label('الحد الأدنى للسعر')
+    .messages(defaultMessages),
+  
+  maxPrice: joi
+    .number()
+    .min(0)
+    .optional()
+    .label('الحد الأقصى للسعر')
+    .messages(defaultMessages),
+  
+  page: joi
+    .number()
+    .integer()
+    .min(1)
+    .default(1)
+    .optional()
+    .label('رقم الصفحة')
+    .messages(defaultMessages),
+  
+  limit: joi
+    .number()
+    .integer()
+    .min(1)
+    .max(50)
+    .default(10)
+    .optional()
+    .label('عدد العناصر في الصفحة')
+    .messages(defaultMessages)
+}).custom((value, helpers) => {
+  // Validate that maxPrice is greater than minPrice if both are provided
+  if (value.minPrice && value.maxPrice && value.maxPrice <= value.minPrice) {
+    return helpers.error('custom.maxPriceGreaterThanMin');
+  }
+  return value;
+}).messages({
+  'custom.maxPriceGreaterThanMin': 'الحد الأقصى للسعر يجب أن يكون أكبر من الحد الأدنى'
+});
+
+/**
+ * Pagination validation schema
+ */
+export const paginationSchema = joi.object({
+  page: joi
+    .number()
+    .integer()
+    .min(1)
+    .default(1)
+    .optional()
+    .label('رقم الصفحة')
+    .messages(defaultMessages),
+  
+  limit: joi
+    .number()
+    .integer()
+    .min(1)
+    .max(50)
+    .default(10)
+    .optional()
+    .label('عدد العناصر في الصفحة')
+    .messages(defaultMessages)
+});
+
+/**
+ * Category filter validation schema
+ */
+export const categoryFilterSchema = joi.object({
+  category: joi
+    .string()
+    .pattern(objectIdPattern)
+    .required()
+    .label('التصنيف')
+    .messages({
+      ...defaultMessages,
+      'string.pattern.base': 'معرف التصنيف غير صالح'
+    }),
+  
+  page: joi
+    .number()
+    .integer()
+    .min(1)
+    .default(1)
+    .optional()
+    .label('رقم الصفحة')
+    .messages(defaultMessages),
+  
+  limit: joi
+    .number()
+    .integer()
+    .min(1)
+    .max(50)
+    .default(10)
+    .optional()
+    .label('عدد العناصر في الصفحة')
+    .messages(defaultMessages)
+});
+
+/**
+ * Artist filter validation schema
+ */
+export const artistFilterSchema = joi.object({
+  artist: joi
+    .string()
+    .pattern(objectIdPattern)
+    .required()
+    .label('الفنان')
+    .messages({
+      ...defaultMessages,
+      'string.pattern.base': 'معرف الفنان غير صالح'
+    }),
+  
+  page: joi
+    .number()
+    .integer()
+    .min(1)
+    .default(1)
+    .optional()
+    .label('رقم الصفحة')
+    .messages(defaultMessages),
+  
+  limit: joi
+    .number()
+    .integer()
+    .min(1)
+    .max(50)
+    .default(10)
+    .optional()
+    .label('عدد العناصر في الصفحة')
+    .messages(defaultMessages)
+});
 
 /**
  * @swagger
@@ -90,23 +272,23 @@ const MONGODB_OBJECTID_REGEX = /^[0-9a-fA-F]{24}$/;
  * Schema for getting home data
  */
 export const getHomeDataSchema = {
-  query: Joi.object({
-    includePersonalized: Joi.boolean()
+  query: joi.object({
+    includePersonalized: joi.boolean()
       .default(true)
       .messages({
         'boolean.base': 'تضمين المحتوى المخصص يجب أن يكون true أو false'
       }),
-    includeStatistics: Joi.boolean()
+    includeStatistics: joi.boolean()
       .default(false)
       .messages({
         'boolean.base': 'تضمين الإحصائيات يجب أن يكون true أو false'
       }),
-    includeTrending: Joi.boolean()
+    includeTrending: joi.boolean()
       .default(true)
       .messages({
         'boolean.base': 'تضمين المحتوى الرائج يجب أن يكون true أو false'
       }),
-    categoryLimit: Joi.number()
+    categoryLimit: joi.number()
       .integer()
       .min(1)
       .max(20)
@@ -117,7 +299,7 @@ export const getHomeDataSchema = {
         'number.min': 'حد التصنيفات يجب أن يكون 1 أو أكثر',
         'number.max': 'حد التصنيفات يجب ألا يتجاوز 20'
       }),
-    artistLimit: Joi.number()
+    artistLimit: joi.number()
       .integer()
       .min(1)
       .max(20)
@@ -128,7 +310,7 @@ export const getHomeDataSchema = {
         'number.min': 'حد الفنانين يجب أن يكون 1 أو أكثر',
         'number.max': 'حد الفنانين يجب ألا يتجاوز 20'
       }),
-    artworkLimit: Joi.number()
+    artworkLimit: joi.number()
       .integer()
       .min(1)
       .max(50)
@@ -139,13 +321,13 @@ export const getHomeDataSchema = {
         'number.min': 'حد الأعمال الفنية يجب أن يكون 1 أو أكثر',
         'number.max': 'حد الأعمال الفنية يجب ألا يتجاوز 50'
       }),
-    language: Joi.string()
+    language: joi.string()
       .valid('ar', 'en', 'fr')
       .default('ar')
       .messages({
         'any.only': 'اللغة غير مدعومة'
       }),
-    region: Joi.string()
+    region: joi.string()
       .valid('saudi', 'gulf', 'arab', 'international')
       .messages({
         'any.only': 'المنطقة غير صالحة'
@@ -157,8 +339,8 @@ export const getHomeDataSchema = {
  * Schema for search functionality
  */
 export const searchSchema = {
-  query: Joi.object({
-    q: Joi.string()
+  query: joi.object({
+    q: joi.string()
       .min(1)
       .max(100)
       .trim()
@@ -167,32 +349,32 @@ export const searchSchema = {
         'string.min': 'نص البحث يجب أن يكون حرف واحد على الأقل',
         'string.max': 'نص البحث يجب ألا يتجاوز 100 حرف'
       }),
-    type: Joi.string()
+    type: joi.string()
       .valid('all', 'artworks', 'artists', 'categories', 'users')
       .default('all')
       .messages({
         'any.only': 'نوع البحث غير صالح'
       }),
-    category: Joi.string()
-      .pattern(MONGODB_OBJECTID_REGEX)
+    category: joi.string()
+      .pattern(objectIdPattern)
       .messages({
         'string.pattern.base': 'معرف التصنيف غير صالح'
       }),
-    priceMin: Joi.number()
+    priceMin: joi.number()
       .min(0)
       .messages({
         'number.base': 'الحد الأدنى للسعر يجب أن يكون رقم',
         'number.min': 'الحد الأدنى للسعر يجب أن يكون 0 أو أكثر'
       }),
-    priceMax: Joi.number()
+    priceMax: joi.number()
       .min(0)
-      .greater(Joi.ref('priceMin'))
+      .greater(joi.ref('priceMin'))
       .messages({
         'number.base': 'الحد الأقصى للسعر يجب أن يكون رقم',
         'number.min': 'الحد الأقصى للسعر يجب أن يكون 0 أو أكثر',
         'number.greater': 'الحد الأقصى للسعر يجب أن يكون أكبر من الحد الأدنى'
       }),
-    minRating: Joi.number()
+    minRating: joi.number()
       .min(1)
       .max(5)
       .integer()
@@ -202,24 +384,24 @@ export const searchSchema = {
         'number.max': 'الحد الأدنى للتقييم يجب أن يكون بين 1 و 5',
         'number.integer': 'الحد الأدنى للتقييم يجب أن يكون رقم صحيح'
       }),
-    location: Joi.string()
+    location: joi.string()
       .max(50)
       .messages({
         'string.max': 'الموقع يجب ألا يتجاوز 50 حرف'
       }),
-    availability: Joi.string()
+    availability: joi.string()
       .valid('available', 'sold', 'commission', 'all')
       .default('available')
       .messages({
         'any.only': 'حالة التوفر غير صالحة'
       }),
-    sortBy: Joi.string()
+    sortBy: joi.string()
       .valid('newest', 'oldest', 'price_low', 'price_high', 'rating', 'popular', 'views', 'alphabetical')
       .default('newest')
       .messages({
         'any.only': 'معيار الترتيب غير صالح'
       }),
-    page: Joi.number()
+    page: joi.number()
       .integer()
       .min(1)
       .default(1)
@@ -228,7 +410,7 @@ export const searchSchema = {
         'number.integer': 'رقم الصفحة يجب أن يكون رقم صحيح',
         'number.min': 'رقم الصفحة يجب أن يكون 1 أو أكثر'
       }),
-    limit: Joi.number()
+    limit: joi.number()
       .integer()
       .min(1)
       .max(50)
@@ -239,14 +421,14 @@ export const searchSchema = {
         'number.min': 'حد النتائج يجب أن يكون 1 أو أكثر',
         'number.max': 'حد النتائج يجب ألا يتجاوز 50'
       }),
-    includeCount: Joi.boolean()
+    includeCount: joi.boolean()
       .default(true)
       .messages({
         'boolean.base': 'تضمين العدد يجب أن يكون true أو false'
       }),
-    tags: Joi.array()
+    tags: joi.array()
       .items(
-        Joi.string()
+        joi.string()
           .min(2)
           .max(30)
           .messages({
@@ -259,26 +441,26 @@ export const searchSchema = {
         'array.base': 'العلامات يجب أن تكون قائمة',
         'array.max': 'لا يمكن البحث بأكثر من 10 علامات'
       }),
-    dateRange: Joi.object({
-      startDate: Joi.date()
+    dateRange: joi.object({
+      startDate: joi.date()
         .messages({
           'date.base': 'تاريخ البداية يجب أن يكون تاريخ صالح'
         }),
-      endDate: Joi.date()
-        .min(Joi.ref('startDate'))
+      endDate: joi.date()
+        .min(joi.ref('startDate'))
         .messages({
           'date.base': 'تاريخ النهاية يجب أن يكون تاريخ صالح',
           'date.min': 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية'
         })
     }),
-    artistExperience: Joi.string()
+    artistExperience: joi.string()
       .valid('beginner', 'intermediate', 'expert', 'master')
       .messages({
         'any.only': 'مستوى خبرة الفنان غير صالح'
       }),
-    artworkStyle: Joi.array()
+    artworkStyle: joi.array()
       .items(
-        Joi.string()
+        joi.string()
           .valid('traditional', 'modern', 'abstract', 'realistic', 'digital', 'mixed_media', 'other')
           .messages({
             'any.only': 'نمط العمل الفني غير صالح'
@@ -296,11 +478,11 @@ export const searchSchema = {
  * Schema for advanced search with filters
  */
 export const advancedSearchSchema = {
-  body: Joi.object({
-    searchCriteria: Joi.object({
-      keywords: Joi.array()
+  body: joi.object({
+    searchCriteria: joi.object({
+      keywords: joi.array()
         .items(
-          Joi.string()
+          joi.string()
             .min(2)
             .max(50)
             .messages({
@@ -313,14 +495,14 @@ export const advancedSearchSchema = {
           'array.base': 'الكلمات المفتاحية يجب أن تكون قائمة',
           'array.max': 'لا يمكن البحث بأكثر من 20 كلمة مفتاحية'
         }),
-      exactPhrase: Joi.string()
+      exactPhrase: joi.string()
         .max(200)
         .messages({
           'string.max': 'العبارة الدقيقة يجب ألا تتجاوز 200 حرف'
         }),
-      excludeWords: Joi.array()
+      excludeWords: joi.array()
         .items(
-          Joi.string()
+          joi.string()
             .min(2)
             .max(50)
             .messages({
@@ -334,11 +516,11 @@ export const advancedSearchSchema = {
           'array.max': 'لا يمكن استبعاد أكثر من 10 كلمات'
         })
     }),
-    filters: Joi.object({
-      categories: Joi.array()
+    filters: joi.object({
+      categories: joi.array()
         .items(
-          Joi.string()
-            .pattern(MONGODB_OBJECTID_REGEX)
+          joi.string()
+            .pattern(objectIdPattern)
             .messages({
               'string.pattern.base': 'معرف التصنيف غير صالح'
             })
@@ -348,22 +530,22 @@ export const advancedSearchSchema = {
           'array.base': 'التصنيفات يجب أن تكون قائمة',
           'array.max': 'لا يمكن اختيار أكثر من 10 تصنيفات'
         }),
-      priceRange: Joi.object({
-        min: Joi.number()
+      priceRange: joi.object({
+        min: joi.number()
           .min(0)
           .messages({
             'number.min': 'الحد الأدنى للسعر يجب أن يكون 0 أو أكثر'
           }),
-        max: Joi.number()
+        max: joi.number()
           .min(0)
-          .greater(Joi.ref('min'))
+          .greater(joi.ref('min'))
           .messages({
             'number.min': 'الحد الأقصى للسعر يجب أن يكون 0 أو أكثر',
             'number.greater': 'الحد الأقصى للسعر يجب أن يكون أكبر من الحد الأدنى'
           })
       }),
-      ratingRange: Joi.object({
-        min: Joi.number()
+      ratingRange: joi.object({
+        min: joi.number()
           .min(1)
           .max(5)
           .integer()
@@ -372,41 +554,41 @@ export const advancedSearchSchema = {
             'number.max': 'الحد الأدنى للتقييم يجب أن يكون بين 1 و 5',
             'number.integer': 'الحد الأدنى للتقييم يجب أن يكون رقم صحيح'
           }),
-        max: Joi.number()
+        max: joi.number()
           .min(1)
           .max(5)
           .integer()
-          .min(Joi.ref('min'))
+          .min(joi.ref('min'))
           .messages({
             'number.min': 'الحد الأقصى للتقييم يجب أن يكون بين 1 و 5',
             'number.max': 'الحد الأقصى للتقييم يجب أن يكون بين 1 و 5',
             'number.integer': 'الحد الأقصى للتقييم يجب أن يكون رقم صحيح'
           })
       }),
-      dateCreated: Joi.object({
-        startDate: Joi.date()
+      dateCreated: joi.object({
+        startDate: joi.date()
           .messages({
             'date.base': 'تاريخ البداية يجب أن يكون تاريخ صالح'
           }),
-        endDate: Joi.date()
-          .min(Joi.ref('startDate'))
+        endDate: joi.date()
+          .min(joi.ref('startDate'))
           .messages({
             'date.base': 'تاريخ النهاية يجب أن يكون تاريخ صالح',
             'date.min': 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية'
           })
       }),
-      location: Joi.object({
-        country: Joi.string()
+      location: joi.object({
+        country: joi.string()
           .max(50)
           .messages({
             'string.max': 'اسم البلد يجب ألا يتجاوز 50 حرف'
           }),
-        city: Joi.string()
+        city: joi.string()
           .max(50)
           .messages({
             'string.max': 'اسم المدينة يجب ألا يتجاوز 50 حرف'
           }),
-        radius: Joi.number()
+        radius: joi.number()
           .min(1)
           .max(1000)
           .messages({
@@ -415,21 +597,21 @@ export const advancedSearchSchema = {
           })
       })
     }),
-    sorting: Joi.object({
-      primary: Joi.string()
+    sorting: joi.object({
+      primary: joi.string()
         .valid('relevance', 'newest', 'oldest', 'price_low', 'price_high', 'rating', 'popular', 'views')
         .default('relevance')
         .messages({
           'any.only': 'معيار الترتيب الأساسي غير صالح'
         }),
-      secondary: Joi.string()
+      secondary: joi.string()
         .valid('newest', 'oldest', 'price_low', 'price_high', 'rating', 'popular', 'views')
         .messages({
           'any.only': 'معيار الترتيب الثانوي غير صالح'
         })
     }),
-    pagination: Joi.object({
-      page: Joi.number()
+    pagination: joi.object({
+      page: joi.number()
         .integer()
         .min(1)
         .default(1)
@@ -438,7 +620,7 @@ export const advancedSearchSchema = {
           'number.integer': 'رقم الصفحة يجب أن يكون رقم صحيح',
           'number.min': 'رقم الصفحة يجب أن يكون 1 أو أكثر'
         }),
-      limit: Joi.number()
+      limit: joi.number()
         .integer()
         .min(1)
         .max(100)
@@ -457,20 +639,20 @@ export const advancedSearchSchema = {
  * Schema for getting trending content
  */
 export const getTrendingSchema = {
-  query: Joi.object({
-    type: Joi.string()
+  query: joi.object({
+    type: joi.string()
       .valid('artworks', 'artists', 'categories', 'all')
       .default('all')
       .messages({
         'any.only': 'نوع المحتوى الرائج غير صالح'
       }),
-    period: Joi.string()
+    period: joi.string()
       .valid('day', 'week', 'month', 'quarter', 'year')
       .default('week')
       .messages({
         'any.only': 'فترة المحتوى الرائج غير صالحة'
       }),
-    limit: Joi.number()
+    limit: joi.number()
       .integer()
       .min(1)
       .max(50)
@@ -481,7 +663,7 @@ export const getTrendingSchema = {
         'number.min': 'حد النتائج يجب أن يكون 1 أو أكثر',
         'number.max': 'حد النتائج يجب ألا يتجاوز 50'
       }),
-    includeStats: Joi.boolean()
+    includeStats: joi.boolean()
       .default(false)
       .messages({
         'boolean.base': 'تضمين الإحصائيات يجب أن يكون true أو false'
@@ -493,20 +675,20 @@ export const getTrendingSchema = {
  * Schema for getting recommendations
  */
 export const getRecommendationsSchema = {
-  query: Joi.object({
-    type: Joi.string()
+  query: joi.object({
+    type: joi.string()
       .valid('artworks', 'artists', 'categories', 'mixed')
       .default('mixed')
       .messages({
         'any.only': 'نوع التوصيات غير صالح'
       }),
-    basedOn: Joi.string()
+    basedOn: joi.string()
       .valid('viewing_history', 'purchases', 'favorites', 'ratings', 'similar_users')
       .default('viewing_history')
       .messages({
         'any.only': 'أساس التوصية غير صالح'
       }),
-    limit: Joi.number()
+    limit: joi.number()
       .integer()
       .min(1)
       .max(30)
@@ -517,12 +699,12 @@ export const getRecommendationsSchema = {
         'number.min': 'حد النتائج يجب أن يكون 1 أو أكثر',
         'number.max': 'حد النتائج يجب ألا يتجاوز 30'
       }),
-    excludeViewed: Joi.boolean()
+    excludeViewed: joi.boolean()
       .default(true)
       .messages({
         'boolean.base': 'استبعاد المشاهد يجب أن يكون true أو false'
       }),
-    diversityFactor: Joi.number()
+    diversityFactor: joi.number()
       .min(0)
       .max(1)
       .default(0.3)
@@ -538,22 +720,22 @@ export const getRecommendationsSchema = {
  * Schema for getting statistics
  */
 export const getStatisticsSchema = {
-  query: Joi.object({
-    type: Joi.string()
+  query: joi.object({
+    type: joi.string()
       .valid('overview', 'detailed', 'trends', 'comparisons')
       .default('overview')
       .messages({
         'any.only': 'نوع الإحصائيات غير صالح'
       }),
-    period: Joi.string()
+    period: joi.string()
       .valid('day', 'week', 'month', 'quarter', 'year', 'all')
       .default('month')
       .messages({
         'any.only': 'فترة الإحصائيات غير صالحة'
       }),
-    metrics: Joi.array()
+    metrics: joi.array()
       .items(
-        Joi.string()
+        joi.string()
           .valid('users', 'artworks', 'transactions', 'reviews', 'views', 'revenue', 'growth')
           .messages({
             'any.only': 'مقياس الإحصائيات غير صالح'
@@ -563,7 +745,7 @@ export const getStatisticsSchema = {
       .messages({
         'array.base': 'مقاييس الإحصائيات يجب أن تكون قائمة'
       }),
-    groupBy: Joi.string()
+    groupBy: joi.string()
       .valid('day', 'week', 'month', 'category', 'location', 'artist')
       .messages({
         'any.only': 'معيار التجميع غير صالح'
@@ -575,8 +757,8 @@ export const getStatisticsSchema = {
  * Schema for search suggestions
  */
 export const getSearchSuggestionsSchema = {
-  query: Joi.object({
-    q: Joi.string()
+  query: joi.object({
+    q: joi.string()
       .required()
       .min(1)
       .max(50)
@@ -587,13 +769,13 @@ export const getSearchSuggestionsSchema = {
         'string.min': 'نص البحث يجب أن يكون حرف واحد على الأقل',
         'string.max': 'نص البحث يجب ألا يتجاوز 50 حرف'
       }),
-    type: Joi.string()
+    type: joi.string()
       .valid('all', 'artworks', 'artists', 'categories', 'tags')
       .default('all')
       .messages({
         'any.only': 'نوع الاقتراحات غير صالح'
       }),
-    limit: Joi.number()
+    limit: joi.number()
       .integer()
       .min(1)
       .max(20)
@@ -611,16 +793,16 @@ export const getSearchSuggestionsSchema = {
  * Schema for content feed
  */
 export const getContentFeedSchema = {
-  query: Joi.object({
-    feedType: Joi.string()
+  query: joi.object({
+    feedType: joi.string()
       .valid('following', 'discover', 'trending', 'recommended', 'recent')
       .default('discover')
       .messages({
         'any.only': 'نوع الخلاصة غير صالح'
       }),
-    contentTypes: Joi.array()
+    contentTypes: joi.array()
       .items(
-        Joi.string()
+        joi.string()
           .valid('artworks', 'artist_updates', 'reviews', 'collections', 'events')
           .messages({
             'any.only': 'نوع المحتوى غير صالح'
@@ -630,7 +812,7 @@ export const getContentFeedSchema = {
       .messages({
         'array.base': 'أنواع المحتوى يجب أن تكون قائمة'
       }),
-    page: Joi.number()
+    page: joi.number()
       .integer()
       .min(1)
       .default(1)
@@ -639,7 +821,7 @@ export const getContentFeedSchema = {
         'number.integer': 'رقم الصفحة يجب أن يكون رقم صحيح',
         'number.min': 'رقم الصفحة يجب أن يكون 1 أو أكثر'
       }),
-    limit: Joi.number()
+    limit: joi.number()
       .integer()
       .min(1)
       .max(50)
@@ -650,7 +832,7 @@ export const getContentFeedSchema = {
         'number.min': 'حد النتائج يجب أن يكون 1 أو أكثر',
         'number.max': 'حد النتائج يجب ألا يتجاوز 50'
       }),
-    refreshToken: Joi.string()
+    refreshToken: joi.string()
       .messages({
         'string.base': 'رمز التحديث يجب أن يكون نص'
       })
@@ -661,8 +843,8 @@ export const getContentFeedSchema = {
  * Schema for location-based search
  */
 export const locationSearchSchema = {
-  query: Joi.object({
-    latitude: Joi.number()
+  query: joi.object({
+    latitude: joi.number()
       .required()
       .min(-90)
       .max(90)
@@ -672,7 +854,7 @@ export const locationSearchSchema = {
         'number.min': 'خط العرض يجب أن يكون بين -90 و 90',
         'number.max': 'خط العرض يجب أن يكون بين -90 و 90'
       }),
-    longitude: Joi.number()
+    longitude: joi.number()
       .required()
       .min(-180)
       .max(180)
@@ -682,7 +864,7 @@ export const locationSearchSchema = {
         'number.min': 'خط الطول يجب أن يكون بين -180 و 180',
         'number.max': 'خط الطول يجب أن يكون بين -180 و 180'
       }),
-    radius: Joi.number()
+    radius: joi.number()
       .min(1)
       .max(1000)
       .default(50)
@@ -691,19 +873,19 @@ export const locationSearchSchema = {
         'number.min': 'نطاق البحث يجب أن يكون 1 كم أو أكثر',
         'number.max': 'نطاق البحث يجب ألا يتجاوز 1000 كم'
       }),
-    unit: Joi.string()
+    unit: joi.string()
       .valid('km', 'miles')
       .default('km')
       .messages({
         'any.only': 'وحدة المسافة غير صالحة'
       }),
-    type: Joi.string()
+    type: joi.string()
       .valid('artworks', 'artists', 'galleries', 'events', 'all')
       .default('all')
       .messages({
         'any.only': 'نوع البحث الجغرافي غير صالح'
       }),
-    limit: Joi.number()
+    limit: joi.number()
       .integer()
       .min(1)
       .max(100)

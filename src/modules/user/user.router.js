@@ -1,88 +1,26 @@
 import { Router } from 'express';
-import * as controller from './user.controller.js';
+import * as userController from './user.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import {
-  toggleWishlistSchema,
-  updateProfileSchema,
-  changePasswordSchema,
-  discoverArtistsQuerySchema,
-  languagePreferenceSchema,
-  notificationSettingsSchema,
-  deleteAccountSchema,
-  reactivateAccountSchema,
-  followersQuerySchema,
-  userIdParamSchema,
-  artistIdParamSchema,
-  searchUsersSchema,
-  privacySettingsSchema
-} from './user.validation.js';
+import * as Validators from './user.validation.js';
+import { fileUpload } from '../../utils/multer.js';
 
 const router = Router();
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     UserProfile:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *           description: معرف المستخدم
- *         displayName:
- *           type: string
- *           description: اسم المستخدم للعرض
- *         email:
- *           type: string
- *           format: email
- *           description: البريد الإلكتروني
- *         role:
- *           type: string
- *           enum: [user, artist]
- *           description: دور المستخدم
- *         profileImage:
- *           type: object
- *           properties:
- *             url:
- *               type: string
- *               format: uri
- *         bio:
- *           type: string
- *           description: نبذة عن المستخدم
- *         phoneNumber:
- *           type: string
- *           description: رقم الهاتف
- *         location:
- *           type: string
- *           description: الموقع
- *         isActive:
- *           type: boolean
- *           description: حالة النشاط
- *         createdAt:
- *           type: string
- *           format: date-time
- *         stats:
- *           type: object
- *           properties:
- *             totalArtworks:
- *               type: number
- *             totalFollowers:
- *               type: number
- *             totalFollowing:
- *               type: number
- *             avgRating:
- *               type: number
+ * tags:
+ *   name: User
+ *   description: User management endpoints
  */
 
-// Profile Management
 /**
  * @swagger
  * /api/user/profile:
  *   get:
- *     tags: [User]
  *     summary: Get current user profile
- *     description: Get the authenticated user's profile information
+ *     tags: [User]
+ *     description: Get the authenticated user's profile with statistics
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -96,116 +34,36 @@ const router = Router();
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب الملف الشخصي بنجاح"
  *                 data:
  *                   $ref: '#/components/schemas/UserProfile'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.get('/profile', isAuthenticated, controller.getMyProfile);
+router.get('/profile', isAuthenticated, userController.getProfile);
 
 /**
  * @swagger
  * /api/user/profile:
  *   put:
- *     tags: [User]
  *     summary: Update user profile
- *     description: Update user profile information
+ *     tags: [User]
+ *     description: Update the authenticated user's profile information
  *     security:
  *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
- *             type: object
- *             properties:
- *               displayName:
- *                 type: string
- *                 description: اسم المستخدم للعرض
- *               bio:
- *                 type: string
- *                 description: نبذة شخصية
- *               phoneNumber:
- *                 type: string
- *                 description: رقم الهاتف
- *               location:
- *                 type: string
- *                 description: الموقع
- *               profileImage:
- *                 type: object
- *                 properties:
- *                   url:
- *                     type: string
- *                   id:
- *                     type: string
+ *             $ref: '#/components/schemas/UpdateProfileRequest'
  *     responses:
  *       200:
  *         description: Profile updated successfully
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.put('/profile', isAuthenticated, isValidation(updateProfileSchema), controller.updateProfile);
-
-/**
- * @swagger
- * /api/user/change-password:
- *   patch:
- *     tags: [User]
- *     summary: Change password
- *     description: Change user password
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - oldPassword
- *               - newPassword
- *               - confirmPassword
- *             properties:
- *               oldPassword:
- *                 type: string
- *                 format: password
- *               newPassword:
- *                 type: string
- *                 format: password
- *               confirmPassword:
- *                 type: string
- *                 format: password
- *     responses:
- *       200:
- *         description: Password changed successfully
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.patch('/change-password', isAuthenticated, isValidation(changePasswordSchema), controller.changePassword);
-
-// Artist Profiles
-/**
- * @swagger
- * /api/user/artist/{artistId}:
- *   get:
- *     tags: [User]
- *     summary: Get artist profile
- *     description: Get detailed profile information for an artist
- *     parameters:
- *       - in: path
- *         name: artistId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: معرف الفنان
- *     responses:
- *       200:
- *         description: Artist profile retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -214,21 +72,74 @@ router.patch('/change-password', isAuthenticated, isValidation(changePasswordSch
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث الملف الشخصي بنجاح"
  *                 data:
- *                   $ref: '#/components/schemas/UserProfile'
- *       404:
- *         description: Artist not found
+ *                   $ref: '#/components/schemas/UserResponse'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.get('/artist/:artistId', isValidation(artistIdParamSchema), controller.getArtistProfile);
+router.put('/profile', 
+  isAuthenticated,
+  fileUpload.single('profileImage'),
+  isValidation(Validators.updateProfileSchema),
+  userController.updateProfile
+);
 
-// Wishlist Management
+/**
+ * @swagger
+ * /api/user/change-password:
+ *   put:
+ *     summary: Change user password
+ *     tags: [User]
+ *     description: Change the authenticated user's password
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ChangePasswordRequest'
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تغيير كلمة المرور بنجاح"
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
+router.put('/change-password',
+  isAuthenticated,
+  isValidation(Validators.changePasswordSchema),
+  userController.changePassword
+);
+
 /**
  * @swagger
  * /api/user/wishlist:
  *   get:
- *     tags: [User]
  *     summary: Get user wishlist
- *     description: Get all artworks in the user's wishlist
+ *     tags: [User]
+ *     description: Get the authenticated user's wishlist with pagination
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -238,6 +149,7 @@ router.get('/artist/:artistId', isValidation(artistIdParamSchema), controller.ge
  *           type: integer
  *           minimum: 1
  *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
@@ -245,21 +157,48 @@ router.get('/artist/:artistId', isValidation(artistIdParamSchema), controller.ge
  *           minimum: 1
  *           maximum: 50
  *           default: 10
+ *         description: Items per page
  *     responses:
  *       200:
  *         description: Wishlist retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب قائمة المفضلة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     wishlist:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/WishlistItem'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.get('/wishlist', isAuthenticated, controller.getWishlist);
+router.get('/wishlist', 
+  isAuthenticated,
+  isValidation(Validators.paginationSchema),
+  userController.getWishlist
+);
 
 /**
  * @swagger
  * /api/user/wishlist/toggle:
  *   post:
- *     tags: [User]
  *     summary: Toggle artwork in wishlist
- *     description: Add or remove an artwork from user's wishlist
+ *     tags: [User]
+ *     description: Add or remove an artwork from the user's wishlist
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -274,10 +213,10 @@ router.get('/wishlist', isAuthenticated, controller.getWishlist);
  *               artworkId:
  *                 type: string
  *                 pattern: '^[0-9a-fA-F]{24}$'
- *                 description: معرف العمل الفني
+ *                 example: "60d0fe4f5311236168a109ca"
  *     responses:
  *       200:
- *         description: Artwork toggled in wishlist
+ *         description: Wishlist updated successfully
  *         content:
  *           application/json:
  *             schema:
@@ -285,28 +224,45 @@ router.get('/wishlist', isAuthenticated, controller.getWishlist);
  *               properties:
  *                 success:
  *                   type: boolean
- *                 action:
- *                   type: string
- *                   enum: [added, removed]
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "تم إضافة العمل إلى المفضلة"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: string
+ *                       enum: [added, removed]
+ *                       example: "added"
+ *                     wishlistCount:
+ *                       type: integer
+ *                       example: 5
+ *                     isInWishlist:
+ *                       type: boolean
+ *                       example: true
  *       400:
  *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: Artwork not found
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.post('/wishlist/toggle', isAuthenticated, isValidation(toggleWishlistSchema), controller.toggleWishlist);
+router.post('/wishlist/toggle',
+  isAuthenticated,
+  isValidation(Validators.toggleWishlistSchema),
+  userController.toggleWishlist
+);
 
-// Following System
 /**
  * @swagger
- * /api/user/follow/{artistId}:
- *   post:
+ * /api/user/artist/{artistId}:
+ *   get:
+ *     summary: Get artist profile
  *     tags: [User]
- *     summary: Follow artist
- *     description: Follow an artist
- *     security:
- *       - BearerAuth: []
+ *     description: Get public artist profile with statistics and recent artworks
  *     parameters:
  *       - in: path
  *         name: artistId
@@ -314,49 +270,106 @@ router.post('/wishlist/toggle', isAuthenticated, isValidation(toggleWishlistSche
  *         schema:
  *           type: string
  *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *         example: "60d0fe4f5311236168a109ca"
  *     responses:
  *       200:
- *         description: Artist followed successfully
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
+ *         description: Artist profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب بيانات الفنان بنجاح"
+ *                 data:
+ *                   $ref: '#/components/schemas/ArtistProfile'
+ *       404:
+ *         description: Artist not found
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.post('/follow/:artistId', isAuthenticated, isValidation(artistIdParamSchema), controller.followArtist);
+router.get('/artist/:artistId',
+  isValidation(Validators.artistIdSchema),
+  userController.getArtistProfile
+);
 
 /**
  * @swagger
- * /api/user/unfollow/{artistId}:
- *   post:
+ * /api/user/my-artworks:
+ *   get:
+ *     summary: Get user's own artworks
  *     tags: [User]
- *     summary: Unfollow artist
- *     description: Unfollow an artist
+ *     description: Get artworks created by the authenticated artist
  *     security:
  *       - BearerAuth: []
  *     parameters:
- *       - in: path
- *         name: artistId
- *         required: true
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Items per page
+ *       - in: query
+ *         name: status
  *         schema:
  *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
+ *           enum: [available, sold]
+ *         description: Filter by availability status
  *     responses:
  *       200:
- *         description: Artist unfollowed successfully
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
+ *         description: Artworks retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب أعمالك الفنية بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artworks:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/ArtworkSummary'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.post('/unfollow/:artistId', isAuthenticated, isValidation(artistIdParamSchema), controller.unfollowArtist);
+router.get('/my-artworks',
+  isAuthenticated,
+  isValidation(Validators.myArtworksSchema),
+  userController.getMyArtworks
+);
 
 /**
  * @swagger
  * /api/user/following:
  *   get:
+ *     summary: Get following artists
  *     tags: [User]
- *     summary: Get following list
- *     description: Get list of artists the user is following
+ *     description: Get list of artists that the user is following
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -366,6 +379,7 @@ router.post('/unfollow/:artistId', isAuthenticated, isValidation(artistIdParamSc
  *           type: integer
  *           minimum: 1
  *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
@@ -373,160 +387,82 @@ router.post('/unfollow/:artistId', isAuthenticated, isValidation(artistIdParamSc
  *           minimum: 1
  *           maximum: 50
  *           default: 10
+ *         description: Items per page
  *     responses:
  *       200:
  *         description: Following list retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب قائمة المتابعين بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     following:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/ArtistSummary'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.get('/following', isAuthenticated, controller.getFollowing);
+router.get('/following',
+  isAuthenticated,
+  isValidation(Validators.paginationSchema),
+  userController.getFollowing
+);
 
 /**
  * @swagger
- * /api/user/followers:
+ * /api/user/notification-settings:
  *   get:
+ *     summary: Get notification settings
  *     tags: [User]
- *     summary: Get followers list
- *     description: Get list of users following the current user
+ *     description: Get user's notification preferences
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 10
  *     responses:
  *       200:
- *         description: Followers list retrieved successfully
+ *         description: Notification settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب إعدادات الإشعارات بنجاح"
+ *                 data:
+ *                   $ref: '#/components/schemas/NotificationSettings'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.get('/followers', isAuthenticated, controller.getFollowers);
-
-// Discovery
-/**
- * @swagger
- * /api/user/discover/artists:
- *   get:
- *     tags: [User]
- *     summary: Discover artists
- *     description: Discover new artists based on preferences
- *     parameters:
- *       - in: query
- *         name: category
- *         schema:
- *           type: string
- *       - in: query
- *         name: location
- *         schema:
- *           type: string
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 10
- *     responses:
- *       200:
- *         description: Artists discovered successfully
- */
-router.get('/discover/artists', isValidation(discoverArtistsQuerySchema), controller.discoverArtists);
+router.get('/notification-settings',
+  isAuthenticated,
+  userController.getNotificationSettings
+);
 
 /**
  * @swagger
- * /api/user/search:
- *   get:
- *     tags: [User]
- *     summary: Search users
- *     description: Search for users by name or email
- *     parameters:
- *       - in: query
- *         name: q
- *         required: true
- *         schema:
- *           type: string
- *           minLength: 2
- *         description: Search query
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [all, artist, user]
- *           default: all
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 10
- *     responses:
- *       200:
- *         description: Search results retrieved successfully
- */
-router.get('/search', isValidation(searchUsersSchema), controller.searchUsers);
-
-// Settings
-/**
- * @swagger
- * /api/user/settings/language:
+ * /api/user/notification-settings:
  *   put:
- *     tags: [User]
- *     summary: Update language preference
- *     description: Update user's language preference
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - language
- *             properties:
- *               language:
- *                 type: string
- *                 enum: [ar, en]
- *                 description: Language code
- *     responses:
- *       200:
- *         description: Language preference updated successfully
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.put('/settings/language', isAuthenticated, isValidation(languagePreferenceSchema), controller.updateLanguagePreference);
-
-/**
- * @swagger
- * /api/user/settings/notifications:
- *   put:
- *     tags: [User]
  *     summary: Update notification settings
+ *     tags: [User]
  *     description: Update user's notification preferences
  *     security:
  *       - BearerAuth: []
@@ -535,61 +471,43 @@ router.put('/settings/language', isAuthenticated, isValidation(languagePreferenc
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               emailNotifications:
- *                 type: boolean
- *               pushNotifications:
- *                 type: boolean
- *               marketingEmails:
- *                 type: boolean
+ *             $ref: '#/components/schemas/UpdateNotificationSettings'
  *     responses:
  *       200:
  *         description: Notification settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث إعدادات الإشعارات بنجاح"
+ *                 data:
+ *                   $ref: '#/components/schemas/NotificationSettings'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.put('/settings/notifications', isAuthenticated, isValidation(notificationSettingsSchema), controller.updateNotificationSettings);
+router.put('/notification-settings',
+  isAuthenticated,
+  isValidation(Validators.notificationSettingsSchema),
+  userController.updateNotificationSettings
+);
 
-/**
- * @swagger
- * /api/user/settings/privacy:
- *   put:
- *     tags: [User]
- *     summary: Update privacy settings
- *     description: Update user's privacy settings
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               profileVisibility:
- *                 type: string
- *                 enum: [public, private]
- *               showEmail:
- *                 type: boolean
- *               showPhone:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Privacy settings updated successfully
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.put('/settings/privacy', isAuthenticated, isValidation(privacySettingsSchema), controller.updatePrivacySettings);
-
-// Account Management
 /**
  * @swagger
  * /api/user/delete-account:
  *   delete:
- *     tags: [User]
  *     summary: Delete user account
- *     description: Permanently delete user account
+ *     tags: [User]
+ *     description: Permanently delete user account (soft delete)
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -600,58 +518,36 @@ router.put('/settings/privacy', isAuthenticated, isValidation(privacySettingsSch
  *             type: object
  *             required:
  *               - password
- *               - confirmDeletion
  *             properties:
  *               password:
  *                 type: string
  *                 format: password
- *               confirmDeletion:
- *                 type: string
- *                 enum: [DELETE]
- *               reason:
- *                 type: string
- *                 description: Optional reason for deletion
+ *                 example: "userPassword123!"
  *     responses:
  *       200:
  *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم حذف الحساب بنجاح"
  *       400:
  *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
  */
-router.delete('/delete-account', isAuthenticated, isValidation(deleteAccountSchema), controller.deleteAccount);
-
-/**
- * @swagger
- * /api/user/reactivate-account:
- *   post:
- *     tags: [User]
- *     summary: Reactivate deactivated account
- *     description: Reactivate a previously deactivated account
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *               password:
- *                 type: string
- *                 format: password
- *     responses:
- *       200:
- *         description: Account reactivated successfully
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       404:
- *         description: Account not found or not deactivated
- */
-router.post('/reactivate-account', isValidation(reactivateAccountSchema), controller.reactivateAccount);
+router.delete('/delete-account',
+  isAuthenticated,
+  isValidation(Validators.deleteAccountSchema),
+  userController.deleteAccount
+);
 
 export default router;

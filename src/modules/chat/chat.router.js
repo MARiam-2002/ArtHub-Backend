@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as chatController from './chat.controller.js';
-import { isAuthenticated } from '../../middleware/authentication.middleware.js';
+import { requireAuth } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import {
   createChatSchema,
@@ -72,14 +72,20 @@ const router = Router();
  *           format: date-time
  */
 
-// Get User Chats
+/**
+ * @swagger
+ * tags:
+ *   name: Chat
+ *   description: Chat and messaging functionality
+ */
+
 /**
  * @swagger
  * /api/chat:
  *   get:
- *     tags: [Chat]
  *     summary: Get user chats
- *     description: Get all chats for the authenticated user
+ *     tags: [Chat]
+ *     description: Get paginated list of user chats
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -87,50 +93,31 @@ const router = Router();
  *         name: page
  *         schema:
  *           type: integer
- *           minimum: 1
  *           default: 1
  *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           minimum: 1
- *           maximum: 50
  *           default: 20
  *         description: Items per page
  *     responses:
  *       200:
  *         description: Chats retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     chats:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Chat'
- *                     pagination:
- *                       $ref: '#/components/schemas/PaginationMeta'
  *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
-router.get('/', isAuthenticated, isValidation(getUserChatsQuerySchema), chatController.getUserChats);
+router.get('/', requireAuth, chatController.getChats);
 
-// Create Chat
 /**
  * @swagger
- * /api/chat:
+ * /api/chat/create:
  *   post:
+ *     summary: Get or create chat with user
  *     tags: [Chat]
- *     summary: Create chat
- *     description: Create a new chat with another user
+ *     description: Get existing chat or create new chat with another user
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -140,48 +127,30 @@ router.get('/', isAuthenticated, isValidation(getUserChatsQuerySchema), chatCont
  *           schema:
  *             type: object
  *             required:
- *               - participantId
+ *               - otherUserId
  *             properties:
- *               participantId:
+ *               otherUserId:
  *                 type: string
- *                 pattern: '^[0-9a-fA-F]{24}$'
  *                 description: ID of the user to chat with
- *                 example: "507f1f77bcf86cd799439011"
  *     responses:
- *       201:
- *         description: Chat created successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "تم إنشاء المحادثة بنجاح"
- *                 data:
- *                   $ref: '#/components/schemas/Chat'
+ *       200:
+ *         description: Chat created or retrieved successfully
  *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
+ *         description: Bad request
  *       404:
  *         description: User not found
- *       409:
- *         description: Chat already exists
+ *       500:
+ *         description: Server error
  */
-router.post('/', isAuthenticated, isValidation(createChatSchema), chatController.createChat);
+router.post('/create', requireAuth, chatController.getOrCreateChat);
 
-// Get Chat Messages
 /**
  * @swagger
  * /api/chat/{chatId}/messages:
  *   get:
- *     tags: [Chat]
  *     summary: Get chat messages
- *     description: Get all messages in a specific chat
+ *     tags: [Chat]
+ *     description: Get paginated list of messages in a chat
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -190,66 +159,36 @@ router.post('/', isAuthenticated, isValidation(createChatSchema), chatController
  *         required: true
  *         schema:
  *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: Chat ID
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
- *           minimum: 1
  *           default: 1
  *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           minimum: 1
- *           maximum: 100
  *           default: 50
- *         description: Messages per page
- *       - in: query
- *         name: before
- *         schema:
- *           type: string
- *           format: date-time
- *         description: Get messages before this date
+ *         description: Items per page
  *     responses:
  *       200:
  *         description: Messages retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     messages:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/Message'
- *                     pagination:
- *                       $ref: '#/components/schemas/PaginationMeta'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       403:
- *         description: Not a participant in this chat
  *       404:
  *         description: Chat not found
+ *       500:
+ *         description: Server error
  */
-router.get('/:chatId/messages', isAuthenticated, isValidation(chatIdParamSchema), isValidation(getMessagesQuerySchema), chatController.getMessages);
+router.get('/:chatId/messages', requireAuth, chatController.getMessages);
 
-// Send Message
 /**
  * @swagger
- * /api/chat/{chatId}/messages:
+ * /api/chat/{chatId}/send:
  *   post:
- *     tags: [Chat]
  *     summary: Send message
- *     description: Send a new message in a specific chat
+ *     tags: [Chat]
+ *     description: Send a message in a chat
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -258,7 +197,6 @@ router.get('/:chatId/messages', isAuthenticated, isValidation(chatIdParamSchema)
  *         required: true
  *         schema:
  *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: Chat ID
  *     requestBody:
  *       required: true
@@ -271,50 +209,28 @@ router.get('/:chatId/messages', isAuthenticated, isValidation(chatIdParamSchema)
  *             properties:
  *               content:
  *                 type: string
+ *                 description: Message content
  *                 minLength: 1
  *                 maxLength: 1000
- *                 description: Message content
- *                 example: "Hello, how are you?"
- *               messageType:
- *                 type: string
- *                 enum: [text, image, file]
- *                 default: text
- *                 description: Type of message
  *     responses:
- *       201:
+ *       200:
  *         description: Message sent successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "تم إرسال الرسالة بنجاح"
- *                 data:
- *                   $ref: '#/components/schemas/Message'
  *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       403:
- *         description: Not a participant in this chat
+ *         description: Bad request
  *       404:
  *         description: Chat not found
+ *       500:
+ *         description: Server error
  */
-router.post('/:chatId/messages', isAuthenticated, isValidation(chatIdParamSchema), isValidation(sendMessageSchema), chatController.sendMessage);
+router.post('/:chatId/send', requireAuth, chatController.sendMessage);
 
-// Mark Messages as Read
 /**
  * @swagger
  * /api/chat/{chatId}/read:
- *   post:
- *     tags: [Chat]
+ *   patch:
  *     summary: Mark messages as read
- *     description: Mark all messages in a chat as read by the current user
+ *     tags: [Chat]
+ *     description: Mark all messages in a chat as read
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -323,39 +239,24 @@ router.post('/:chatId/messages', isAuthenticated, isValidation(chatIdParamSchema
  *         required: true
  *         schema:
  *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: Chat ID
  *     responses:
  *       200:
- *         description: Messages marked as read successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "تم تحديث حالة القراءة بنجاح"
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       403:
- *         description: Not a participant in this chat
+ *         description: Messages marked as read
  *       404:
  *         description: Chat not found
+ *       500:
+ *         description: Server error
  */
-router.post('/:chatId/read', isAuthenticated, isValidation(chatIdParamSchema), chatController.markAsRead);
+router.patch('/:chatId/read', requireAuth, chatController.markAsRead);
 
-// Delete Chat
 /**
  * @swagger
  * /api/chat/{chatId}:
  *   delete:
- *     tags: [Chat]
  *     summary: Delete chat
- *     description: Delete a chat (participant only)
+ *     tags: [Chat]
+ *     description: Delete a chat (soft delete)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -364,19 +265,16 @@ router.post('/:chatId/read', isAuthenticated, isValidation(chatIdParamSchema), c
  *         required: true
  *         schema:
  *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: Chat ID
  *     responses:
  *       200:
  *         description: Chat deleted successfully
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       403:
- *         description: Not a participant in this chat
  *       404:
  *         description: Chat not found
+ *       500:
+ *         description: Server error
  */
-router.delete('/:chatId', isAuthenticated, isValidation(chatIdParamSchema), chatController.deleteChat);
+router.delete('/:chatId', requireAuth, chatController.deleteChat);
 
 // Get Socket Token (for real-time messaging)
 /**
@@ -415,6 +313,6 @@ router.delete('/:chatId', isAuthenticated, isValidation(chatIdParamSchema), chat
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/socket-token', isAuthenticated, chatController.getSocketToken);
+router.get('/socket-token', requireAuth, chatController.getSocketToken);
 
 export default router;

@@ -620,55 +620,49 @@ export const swaggerDefinition = {
         properties: {
           _id: {
             type: 'string',
-            example: '60d21b4667d0d8992e610c85'
+            example: '60d0fe4f5311236168a109ca'
           },
           email: {
             type: 'string',
-            example: 'user@example.com'
+            format: 'email',
+            example: 'ahmed@example.com'
           },
           displayName: {
             type: 'string',
             example: 'أحمد محمد'
+          },
+          role: {
+            type: 'string',
+            enum: ['user', 'artist'],
+            example: 'artist'
           },
           profileImage: {
             type: 'object',
             properties: {
               url: {
                 type: 'string',
-                example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg'
+                format: 'uri'
+              },
+              publicId: {
+                type: 'string'
               }
             }
           },
-          role: {
+          bio: {
             type: 'string',
-            enum: ['user', 'artist', 'admin'],
-            example: 'artist'
+            example: 'فنان تشكيلي متخصص في الرسم الزيتي'
           },
           job: {
             type: 'string',
-            example: 'فنان'
+            example: 'رسام'
           },
-          isVerified: {
+          isActive: {
             type: 'boolean',
             example: true
           },
-          preferredLanguage: {
+          createdAt: {
             type: 'string',
-            enum: ['ar', 'en'],
-            example: 'ar'
-          },
-          bio: {
-            type: 'object',
-            properties: {
-              ar: {
-                type: 'string',
-                example: 'فنان تشكيلي متخصص في الرسم بالألوان المائية'
-              },
-              en: {
-                type: 'string',
-                example: 'Visual artist specializing in watercolor painting'
-              }
-            }
+            format: 'date-time'
           }
         }
       },
@@ -677,19 +671,37 @@ export const swaggerDefinition = {
         properties: {
           _id: {
             type: 'string',
-            example: '60d21b4667d0d8992e610c85'
+            example: '60d0fe4f5311236168a109ca'
           },
           title: {
-            type: 'string',
-            example: 'لديك رسالة جديدة'
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'لديك رسالة جديدة'
+              },
+              en: {
+                type: 'string',
+                example: 'You have a new message'
+              }
+            }
           },
           message: {
-            type: 'string',
-            example: 'أرسل لك محمد رسالة جديدة'
+            type: 'object',
+            properties: {
+              ar: {
+                type: 'string',
+                example: 'أرسل لك محمد رسالة جديدة'
+              },
+              en: {
+                type: 'string',
+                example: 'Mohammed sent you a new message'
+              }
+            }
           },
           type: {
             type: 'string',
-            enum: ['message', 'follow', 'artwork', 'comment', 'system'],
+            enum: ['message', 'artwork', 'follow', 'review', 'transaction', 'special_request'],
             example: 'message'
           },
           isRead: {
@@ -705,7 +717,7 @@ export const swaggerDefinition = {
               },
               id: {
                 type: 'string',
-                example: '60d21b4667d0d8992e610c85'
+                example: '60d0fe4f5311236168a109ca'
               }
             }
           },
@@ -863,45 +875,54 @@ export const swaggerDefinition = {
         properties: {
           displayName: {
             type: 'string',
-            example: 'أحمد محمد الفنان'
+            minLength: 2,
+            maxLength: 50,
+            example: 'أحمد محمد المحدث'
           },
           bio: {
             type: 'string',
-            example: 'فنان تشكيلي متخصص في الرسم الزيتي'
+            maxLength: 500,
+            example: 'فنان تشكيلي متخصص في الرسم الزيتي والألوان المائية'
           },
           job: {
             type: 'string',
-            example: 'فنان تشكيلي'
+            maxLength: 100,
+            example: 'رسام ومصمم جرافيك'
           },
           location: {
             type: 'string',
-            example: 'الرياض، السعودية'
+            maxLength: 100,
+            example: 'جدة، السعودية'
           },
           website: {
             type: 'string',
             format: 'uri',
-            example: 'https://artist-portfolio.com'
+            example: 'https://www.my-new-portfolio.com'
           },
           socialMedia: {
             type: 'object',
             properties: {
               instagram: {
                 type: 'string',
-                example: '@artist_instagram'
+                maxLength: 100,
+                example: '@my_new_instagram'
               },
               twitter: {
                 type: 'string',
-                example: '@artist_twitter'
+                maxLength: 100,
+                example: '@my_new_twitter'
               },
               facebook: {
                 type: 'string',
-                example: 'artist.facebook'
+                maxLength: 100,
+                example: 'my.new.facebook'
               }
             }
           },
           profileImage: {
             type: 'string',
-            format: 'binary'
+            format: 'binary',
+            description: 'Profile image file'
           }
         }
       },
@@ -912,17 +933,19 @@ export const swaggerDefinition = {
           currentPassword: {
             type: 'string',
             format: 'password',
-            example: 'CurrentPassword123!'
+            example: 'currentPassword123!'
           },
           newPassword: {
             type: 'string',
             format: 'password',
-            example: 'NewPassword123!'
+            minLength: 8,
+            pattern: '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{8,}$',
+            example: 'newPassword123!'
           },
           confirmPassword: {
             type: 'string',
             format: 'password',
-            example: 'NewPassword123!'
+            example: 'newPassword123!'
           }
         }
       },
@@ -933,13 +956,61 @@ export const swaggerDefinition = {
             type: 'string',
             example: '60d0fe4f5311236168a109ca'
           },
-          artwork: {
-            $ref: '#/components/schemas/ArtworkResponse'
+          title: {
+            type: 'object',
+            properties: {
+              ar: { type: 'string', example: 'لوحة جميلة' },
+              en: { type: 'string', example: 'Beautiful Painting' }
+            }
+          },
+          images: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                url: {
+                  type: 'string',
+                  format: 'uri'
+                }
+              }
+            }
+          },
+          price: {
+            type: 'number',
+            example: 500
+          },
+          currency: {
+            type: 'string',
+            example: 'SAR'
+          },
+          isAvailable: {
+            type: 'boolean',
+            example: true
+          },
+          artist: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              displayName: { type: 'string', example: 'أحمد الفنان' },
+              profileImage: {
+                type: 'object',
+                properties: {
+                  url: { type: 'string', format: 'uri' }
+                }
+              },
+              job: { type: 'string', example: 'رسام' }
+            }
+          },
+          category: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              name: { type: 'string', example: 'لوحات زيتية' }
+            }
           },
           addedAt: {
             type: 'string',
-            format: 'date-time',
-            example: '2023-05-15T10:30:45.123Z'
+            format: 'date-time'
           }
         }
       },
@@ -1445,74 +1516,461 @@ export const swaggerDefinition = {
           }
         }
       },
-      // Notification Schemas
-      NotificationResponse: {
+      // User and Profile Schemas
+      UserProfile: {
         type: 'object',
         properties: {
           _id: {
             type: 'string',
             example: '60d0fe4f5311236168a109ca'
           },
-          recipient: {
+          displayName: {
             type: 'string',
-            example: '60d0fe4f5311236168a109cb'
+            example: 'أحمد محمد'
+          },
+          email: {
+            type: 'string',
+            format: 'email',
+            example: 'ahmed@example.com'
+          },
+          role: {
+            type: 'string',
+            enum: ['user', 'artist'],
+            example: 'artist'
+          },
+          profileImage: {
+            type: 'object',
+            properties: {
+              url: {
+                type: 'string',
+                format: 'uri',
+                example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg'
+              },
+              publicId: {
+                type: 'string',
+                example: 'demo/profile_id'
+              }
+            }
+          },
+          bio: {
+            type: 'string',
+            example: 'فنان تشكيلي متخصص في الرسم الزيتي'
+          },
+          job: {
+            type: 'string',
+            example: 'رسام'
+          },
+          location: {
+            type: 'string',
+            example: 'الرياض، السعودية'
+          },
+          website: {
+            type: 'string',
+            format: 'uri',
+            example: 'https://www.artist-portfolio.com'
+          },
+          socialMedia: {
+            type: 'object',
+            properties: {
+              instagram: {
+                type: 'string',
+                example: '@artist_instagram'
+              },
+              twitter: {
+                type: 'string',
+                example: '@artist_twitter'
+              },
+              facebook: {
+                type: 'string',
+                example: 'artist.facebook'
+              }
+            }
+          },
+          isActive: {
+            type: 'boolean',
+            example: true
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time'
+          },
+          stats: {
+            type: 'object',
+            properties: {
+              artworksCount: {
+                type: 'integer',
+                example: 15
+              },
+              followersCount: {
+                type: 'integer',
+                example: 250
+              },
+              followingCount: {
+                type: 'integer',
+                example: 50
+              },
+              wishlistCount: {
+                type: 'integer',
+                example: 8
+              }
+            }
+          }
+        }
+      },
+      // Artist Profile Schemas
+      ArtistProfile: {
+        type: 'object',
+        properties: {
+          artist: {
+            type: 'object',
+            properties: {
+              _id: {
+                type: 'string',
+                example: '60d0fe4f5311236168a109ca'
+              },
+              displayName: {
+                type: 'string',
+                example: 'أحمد الفنان'
+              },
+              email: {
+                type: 'string',
+                format: 'email',
+                example: 'artist@example.com'
+              },
+              profileImage: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    format: 'uri'
+                  }
+                }
+              },
+              coverImage: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    format: 'uri'
+                  }
+                }
+              },
+              bio: {
+                type: 'string',
+                example: 'فنان تشكيلي متخصص في الرسم الزيتي'
+              },
+              job: {
+                type: 'string',
+                example: 'رسام'
+              },
+              location: {
+                type: 'string',
+                example: 'الرياض، السعودية'
+              },
+              website: {
+                type: 'string',
+                format: 'uri'
+              },
+              socialMedia: {
+                type: 'object',
+                properties: {
+                  instagram: { type: 'string' },
+                  twitter: { type: 'string' },
+                  facebook: { type: 'string' }
+                }
+              },
+              joinDate: {
+                type: 'string',
+                format: 'date-time'
+              }
+            }
+          },
+          stats: {
+            type: 'object',
+            properties: {
+              followersCount: {
+                type: 'integer',
+                example: 250
+              },
+              artworksCount: {
+                type: 'integer',
+                example: 15
+              },
+              salesCount: {
+                type: 'integer',
+                example: 8
+              },
+              rating: {
+                type: 'number',
+                format: 'float',
+                example: 4.5
+              },
+              reviewsCount: {
+                type: 'integer',
+                example: 12
+              }
+            }
+          },
+          recentArtworks: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/ArtworkSummary'
+            }
+          },
+          isFollowing: {
+            type: 'boolean',
+            example: false
+          }
+        }
+      },
+      ArtistSummary: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          displayName: {
+            type: 'string',
+            example: 'أحمد الفنان'
+          },
+          profileImage: {
+            type: 'object',
+            properties: {
+              url: {
+                type: 'string',
+                format: 'uri',
+                example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg'
+              }
+            }
+          },
+          job: {
+            type: 'string',
+            example: 'رسام'
+          },
+          bio: {
+            type: 'string',
+            example: 'فنان موهوب'
+          },
+          rating: {
+            type: 'number',
+            format: 'float',
+            example: 4.5
+          },
+          reviewsCount: {
+            type: 'integer',
+            example: 10
+          },
+          artworksCount: {
+            type: 'integer',
+            example: 15
+          }
+        }
+      },
+      // Artwork Schemas
+      ArtworkSummary: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
           },
           title: {
             type: 'object',
             properties: {
               ar: {
                 type: 'string',
-                example: 'لديك رسالة جديدة'
+                example: 'لوحة جميلة'
               },
               en: {
                 type: 'string',
-                example: 'You have a new message'
+                example: 'Beautiful Painting'
               }
             }
           },
-          message: {
+          description: {
             type: 'object',
             properties: {
               ar: {
                 type: 'string',
-                example: 'أرسل لك محمد رسالة جديدة'
+                example: 'لوحة زيتية جميلة تعبر عن الطبيعة'
               },
               en: {
                 type: 'string',
-                example: 'Mohammed sent you a new message'
+                example: 'Beautiful oil painting depicting nature'
               }
             }
           },
-          type: {
+          images: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                url: {
+                  type: 'string',
+                  format: 'uri',
+                  example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/artwork.jpg'
+                },
+                publicId: {
+                  type: 'string',
+                  example: 'demo/artwork_id'
+                }
+              }
+            }
+          },
+          price: {
+            type: 'number',
+            example: 500
+          },
+          currency: {
             type: 'string',
-            enum: ['message', 'artwork', 'follow', 'review', 'transaction', 'special_request'],
-            example: 'message'
+            example: 'SAR'
           },
-          isRead: {
-            type: 'boolean',
-            example: false
-          },
-          data: {
+          dimensions: {
             type: 'object',
             properties: {
-              screen: {
-                type: 'string',
-                example: 'ChatScreen'
+              width: {
+                type: 'number',
+                example: 100
               },
-              id: {
+              height: {
+                type: 'number',
+                example: 80
+              },
+              unit: {
+                type: 'string',
+                example: 'cm'
+              }
+            }
+          },
+          tags: {
+            type: 'array',
+            items: {
+              type: 'string'
+            },
+            example: ['فن', 'لوحة', 'زيتي']
+          },
+          viewCount: {
+            type: 'integer',
+            example: 50
+          },
+          likeCount: {
+            type: 'integer',
+            example: 25
+          },
+          isAvailable: {
+            type: 'boolean',
+            example: true
+          },
+          artist: {
+            type: 'object',
+            properties: {
+              _id: {
                 type: 'string',
                 example: '60d0fe4f5311236168a109ca'
+              },
+              displayName: {
+                type: 'string',
+                example: 'أحمد الفنان'
+              },
+              profileImage: {
+                type: 'object',
+                properties: {
+                  url: {
+                    type: 'string',
+                    format: 'uri'
+                  }
+                }
+              },
+              job: {
+                type: 'string',
+                example: 'رسام'
+              }
+            }
+          },
+          category: {
+            type: 'object',
+            properties: {
+              _id: {
+                type: 'string',
+                example: '60d0fe4f5311236168a109ca'
+              },
+              name: {
+                type: 'string',
+                example: 'لوحات زيتية'
               }
             }
           },
           createdAt: {
             type: 'string',
-            format: 'date-time',
-            example: '2023-05-15T10:30:45.123Z'
+            format: 'date-time'
           }
         }
       },
-      // Pagination Schema
+      // Category Schemas
+      CategorySummary: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          name: {
+            type: 'string',
+            example: 'لوحات زيتية'
+          },
+          image: {
+            type: 'object',
+            properties: {
+              url: {
+                type: 'string',
+                format: 'uri',
+                example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/category.jpg'
+              }
+            }
+          }
+        }
+      },
+      // Notification Settings
+      NotificationSettings: {
+        type: 'object',
+        properties: {
+          pushNotifications: {
+            type: 'boolean',
+            example: true
+          },
+          emailNotifications: {
+            type: 'boolean',
+            example: true
+          },
+          messageNotifications: {
+            type: 'boolean',
+            example: true
+          },
+          followNotifications: {
+            type: 'boolean',
+            example: true
+          },
+          artworkNotifications: {
+            type: 'boolean',
+            example: true
+          },
+          marketingNotifications: {
+            type: 'boolean',
+            example: false
+          }
+        }
+      },
+      UpdateNotificationSettings: {
+        type: 'object',
+        required: ['notificationSettings'],
+        properties: {
+          notificationSettings: {
+            $ref: '#/components/schemas/NotificationSettings'
+          }
+        }
+      },
+      // Pagination
       PaginationResponse: {
         type: 'object',
         properties: {
@@ -1526,29 +1984,11 @@ export const swaggerDefinition = {
           },
           totalItems: {
             type: 'integer',
-            example: 100
-          },
-          itemsPerPage: {
-            type: 'integer',
-            example: 20
+            example: 50
           },
           hasNextPage: {
             type: 'boolean',
             example: true
-          },
-          hasPrevPage: {
-            type: 'boolean',
-            example: false
-          },
-          nextPage: {
-            type: 'integer',
-            nullable: true,
-            example: 2
-          },
-          prevPage: {
-            type: 'integer',
-            nullable: true,
-            example: null
           }
         }
       }
