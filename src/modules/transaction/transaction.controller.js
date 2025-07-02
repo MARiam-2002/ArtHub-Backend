@@ -5,7 +5,7 @@ import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { getPaginationParams } from '../../utils/pagination.js';
-import { createNotificationHelper } from '../notification/notification.controller.js';
+import { createNotification } from '../notification/notification.controller.js';
 import mongoose from 'mongoose';
 
 /**
@@ -196,7 +196,7 @@ export const createTransaction = asyncHandler(async (req, res) => {
   }
 
   // إرسال إشعار للبائع
-  await createNotificationHelper({
+  await createNotification({
     recipient: seller,
     type: 'transaction_created',
     title: 'طلب شراء جديد',
@@ -205,7 +205,7 @@ export const createTransaction = asyncHandler(async (req, res) => {
   });
 
   // إرسال إشعار للمشتري
-  await createNotificationHelper({
+  await createNotification({
     recipient: buyer,
     type: 'transaction_created',
     title: 'تم إنشاء الطلب',
@@ -412,7 +412,7 @@ export const updateTransactionStatus = asyncHandler(async (req, res) => {
   };
 
   // إشعار للمشتري
-  await createNotificationHelper({
+  await createNotification({
     recipient: transaction.buyer,
     type: 'transaction_status_updated',
     title: 'تحديث حالة الطلب',
@@ -422,7 +422,7 @@ export const updateTransactionStatus = asyncHandler(async (req, res) => {
 
   // إشعار للبائع (إذا لم يكن هو المحدث)
   if (transaction.seller.toString() !== userId.toString()) {
-    await createNotificationHelper({
+    await createNotification({
       recipient: transaction.seller,
       type: 'transaction_status_updated',
       title: 'تحديث حالة الطلب',
@@ -469,7 +469,7 @@ export const updateTrackingInfo = asyncHandler(async (req, res) => {
   await transaction.save();
 
   // إرسال إشعار للمشتري
-  await createNotificationHelper({
+  await createNotification({
     recipient: transaction.buyer,
     type: 'tracking_updated',
     title: 'تحديث معلومات الشحن',
@@ -520,7 +520,7 @@ export const requestRefund = asyncHandler(async (req, res) => {
   await transaction.processRefund(refundAmount, reason, userId);
 
   // إرسال إشعار للبائع
-  await createNotificationHelper({
+  await createNotification({
     recipient: transaction.seller,
     type: 'refund_requested',
     title: 'طلب استرداد',
@@ -576,7 +576,7 @@ export const openDispute = asyncHandler(async (req, res) => {
   const otherParty = transaction.buyer.toString() === userId.toString() ? 
     transaction.seller : transaction.buyer;
 
-  await createNotificationHelper({
+  await createNotification({
     recipient: otherParty,
     type: 'dispute_opened',
     title: 'نزاع جديد',
@@ -789,7 +789,7 @@ export const bulkUpdateTransactions = asyncHandler(async (req, res) => {
       });
 
       // إرسال إشعارات
-      await createNotificationHelper({
+      await createNotification({
         recipient: transaction.buyer,
         type: 'transaction_bulk_updated',
         title: 'تحديث جماعي للطلبات',
@@ -971,7 +971,7 @@ export const payInstallment = asyncHandler(async (req, res) => {
   await transaction.save();
 
   // إرسال إشعار
-  await createNotificationHelper({
+  await createNotification({
     recipient: transaction.seller,
     type: 'installment_paid',
     title: 'تم دفع قسط',
@@ -1031,7 +1031,7 @@ export const cancelTransaction = asyncHandler(async (req, res) => {
   }
 
   // إرسال إشعارات
-  await createNotificationHelper({
+  await createNotification({
     recipient: transaction.seller,
     type: 'transaction_cancelled',
     title: 'تم إلغاء طلب',

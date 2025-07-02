@@ -3,7 +3,7 @@ import * as userController from './user.controller.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './user.validation.js';
-import { fileUpload } from '../../utils/multer.js';
+import { fileUpload, filterObject } from '../../utils/multer.js';
 
 const router = Router();
 
@@ -86,7 +86,7 @@ router.get('/profile', isAuthenticated, userController.getProfile);
  */
 router.put('/profile', 
   isAuthenticated,
-  fileUpload.single('profileImage'),
+  fileUpload(filterObject.image).single('profileImage'),
   isValidation(Validators.updateProfileSchema),
   userController.updateProfile
 );

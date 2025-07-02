@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import * as followController from './follow.controller.js';
-import { requireAuth } from '../../middleware/authentication.middleware.js';
 import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import { Validators } from './follow.validation.js';
+import Validators from './follow.validation.js';
 
 const router = Router();
 
@@ -163,7 +162,7 @@ const router = Router();
  *       500:
  *         description: Server error
  */
-router.post('/toggle', requireAuth, followController.toggleFollow);
+router.post('/toggle', isAuthenticated, followController.toggleFollow);
 
 /**
  * @swagger
@@ -255,7 +254,7 @@ router.get('/following/:userId', followController.getFollowing);
  *       500:
  *         description: Server error
  */
-router.get('/status/:artistId', requireAuth, followController.checkFollowStatus);
+router.get('/status/:artistId', isAuthenticated, followController.checkFollowStatus);
 
 /**
  * @swagger
@@ -277,7 +276,7 @@ router.get('/status/:artistId', requireAuth, followController.checkFollowStatus)
  *       500:
  *         description: Server error
  */
-router.get('/stats/:userId', followController.getFollowStats);
+// Stats endpoint temporarily disabled - function not implemented
 
 /**
  * @swagger
@@ -386,7 +385,7 @@ router.post(
   '/follow',
   isAuthenticated,
   isValidation(Validators.followUserSchema),
-  followController.followArtist
+  followController.toggleFollow
 );
 
 /**
@@ -463,7 +462,7 @@ router.post(
   '/unfollow',
   isAuthenticated,
   isValidation(Validators.followUserSchema),
-  followController.unfollowArtist
+  followController.toggleFollow
 );
 
 /**
@@ -537,7 +536,11 @@ router.get(
   '/my-followers',
   isAuthenticated,
   isValidation(Validators.getFollowersQuerySchema, 'query'),
-  followController.getMyFollowers
+  (req, res, next) => {
+    // Redirect to getFollowers with current user ID
+    req.params.userId = req.user._id;
+    return followController.getFollowers(req, res, next);
+  }
 );
 
 /**
@@ -611,7 +614,11 @@ router.get(
   '/my-following',
   isAuthenticated,
   isValidation(Validators.getFollowingQuerySchema, 'query'),
-  followController.getMyFollowing
+  (req, res, next) => {
+    // Redirect to getFollowing with current user ID
+    req.params.userId = req.user._id;
+    return followController.getFollowing(req, res, next);
+  }
 );
 
 /**
@@ -712,12 +719,6 @@ router.get(
  *         $ref: '#/components/responses/ServerError'
  *     x-screen: MutualFollowsScreen
  */
-router.get(
-  '/mutual/:userId',
-  isAuthenticated,
-  isValidation(Validators.userIdParamSchema, 'params'),
-  isValidation(Validators.paginationQuerySchema, 'query'),
-  followController.getMutualFollows
-);
+// Mutual follows endpoint temporarily disabled - function not implemented
 
 export default router;

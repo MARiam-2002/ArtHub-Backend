@@ -2,11 +2,10 @@ import chatModel from '../../../DB/models/chat.model.js';
 import messageModel from '../../../DB/models/message.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { ensureConnection } from '../../utils/mongodbUtils.js';
-import { createNotification } from '../notification/notification.controller.js';
+import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
 import { sendChatMessageNotification } from '../../utils/pushNotifications.js';
-import { sendNotification } from '../notification/notification.controller.js';
+import { createNotification } from '../notification/notification.controller.js';
 import { sendToChat, sendToUser } from '../../utils/socketService.js';
 import jwt from 'jsonwebtoken';
 
@@ -15,7 +14,7 @@ import jwt from 'jsonwebtoken';
  */
 export const getChats = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const userId = req.user._id;
     const { page = 1, limit = 20 } = req.query;
@@ -148,7 +147,7 @@ export const getChats = asyncHandler(async (req, res, next) => {
  */
 export const getOrCreateChat = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const userId = req.user._id;
     const { otherUserId } = req.body;
@@ -197,7 +196,7 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
  */
 export const getMessages = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { chatId } = req.params;
     const userId = req.user._id;
@@ -273,7 +272,7 @@ export const getMessages = asyncHandler(async (req, res, next) => {
  */
 export const sendMessage = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { chatId } = req.params;
     const { content } = req.body;
@@ -334,7 +333,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     // Send notification to receiver
     try {
       await createNotification({
-        user: receiverId,
+        userId: receiverId,
         title: 'رسالة جديدة',
         message: `${req.user.displayName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
         type: 'message',
@@ -360,7 +359,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
  */
 export const markAsRead = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { chatId } = req.params;
     const userId = req.user._id;
@@ -403,7 +402,7 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
  */
 export const deleteChat = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { chatId } = req.params;
     const userId = req.user._id;

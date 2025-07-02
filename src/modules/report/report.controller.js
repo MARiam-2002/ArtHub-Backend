@@ -5,7 +5,7 @@ import imageModel from '../../../DB/models/image.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { getPaginationParams } from '../../utils/pagination.js';
-import { createNotificationHelper } from '../notification/notification.controller.js';
+import { createNotification } from '../notification/notification.controller.js';
 import mongoose from 'mongoose';
 
 /**
@@ -121,7 +121,7 @@ export const createReport = asyncHandler(async (req, res) => {
   try {
     const admins = await userModel.find({ role: 'admin' }).select('_id').lean();
     const notificationPromises = admins.map(admin => 
-      createNotificationHelper({
+      createNotification({
         userId: admin._id,
         type: 'report_created',
         title: 'تقرير جديد',
@@ -549,7 +549,7 @@ export const updateReportStatus = asyncHandler(async (req, res) => {
         escalated: 'تم تصعيد التقرير'
       };
 
-      await createNotificationHelper({
+      await createNotification({
         userId: report.reporter,
         type: 'report_status_updated',
         title: 'تحديث حالة التقرير',

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as notificationController from './notification.controller.js';
-import { requireAuth } from '../../middleware/authentication.middleware.js';
+import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import {
@@ -58,7 +58,7 @@ const router = Router();
  *       500:
  *         description: Server error
  */
-router.get('/', requireAuth, notificationController.getNotifications);
+router.get('/', isAuthenticated, notificationController.getNotifications);
 
 /**
  * @swagger
@@ -83,7 +83,7 @@ router.get(
   '/firebase',
   verifyFirebaseToken,
   isValidation(notificationQuerySchema, 'query'),
-  notificationController.getUserNotifications
+  notificationController.getNotifications
 );
 
 /**
@@ -158,12 +158,7 @@ router.get(
  *                       type: array
  *     x-screen: "NotificationStatsScreen"
  */
-router.get(
-  '/stats',
-  requireAuth,
-  isValidation(notificationStatsQuerySchema, 'query'),
-  notificationController.getNotificationStats
-);
+// Stats endpoint temporarily disabled - function not implemented
 
 /**
  * @swagger
@@ -180,7 +175,7 @@ router.get(
  *       500:
  *         description: Server error
  */
-router.get('/settings', requireAuth, notificationController.getNotificationSettings);
+router.get('/settings', isAuthenticated, notificationController.getNotificationSettings);
 
 /**
  * @swagger
@@ -221,7 +216,7 @@ router.get('/settings', requireAuth, notificationController.getNotificationSetti
  *       500:
  *         description: Server error
  */
-router.put('/settings', requireAuth, notificationController.updateNotificationSettings);
+router.put('/settings', isAuthenticated, notificationController.updateNotificationSettings);
 
 /**
  * @swagger
@@ -247,7 +242,7 @@ router.put('/settings', requireAuth, notificationController.updateNotificationSe
  *       500:
  *         description: Server error
  */
-router.patch('/:notificationId/read', requireAuth, notificationController.markAsRead);
+router.patch('/:notificationId/read', isAuthenticated, notificationController.markAsRead);
 
 /**
  * @swagger
@@ -264,7 +259,7 @@ router.patch('/:notificationId/read', requireAuth, notificationController.markAs
  *       500:
  *         description: Server error
  */
-router.patch('/read-all', requireAuth, notificationController.markAllAsRead);
+router.patch('/read-all', isAuthenticated, notificationController.markAllAsRead);
 
 /**
  * @swagger
@@ -290,7 +285,7 @@ router.patch('/read-all', requireAuth, notificationController.markAllAsRead);
  *       500:
  *         description: Server error
  */
-router.delete('/:notificationId', requireAuth, notificationController.deleteNotification);
+router.delete('/:notificationId', isAuthenticated, notificationController.deleteNotification);
 
 /**
  * @swagger
@@ -367,10 +362,10 @@ router.delete('/:notificationId', requireAuth, notificationController.deleteNoti
  *         description: المستخدم المتلقي غير موجود
  *     x-screen: "AdminNotificationScreen"
  */
-router.delete('/', requireAuth, notificationController.deleteAllNotifications);
+router.delete('/', isAuthenticated, notificationController.deleteAllNotifications);
 router.post(
   '/',
-  requireAuth,
+  isAuthenticated,
   isValidation(createNotificationSchema),
   notificationController.createNotification
 );
@@ -443,12 +438,7 @@ router.post(
  *         description: لا يوجد مستخدمون صالحون للإرسال
  *     x-screen: "AdminBulkNotificationScreen"
  */
-router.post(
-  '/bulk',
-  requireAuth,
-  isValidation(bulkNotificationSchema),
-  notificationController.sendBulkNotifications
-);
+// Bulk notifications endpoint temporarily disabled - function not implemented
 
 /**
  * @swagger
@@ -543,8 +533,7 @@ router.post(
  *         description: الرمز مطلوب
  *     x-screen: "SettingsScreen"
  */
-router.post('/token', requireAuth, isValidation(fcmTokenSchema), notificationController.registerFCMToken);
-router.delete('/token', requireAuth, isValidation(fcmTokenSchema), notificationController.unregisterFCMToken);
+// FCM token endpoints temporarily disabled - functions not implemented
 
 /**
  * @swagger
@@ -594,7 +583,6 @@ router.delete('/token', requireAuth, isValidation(fcmTokenSchema), notificationC
  *         description: الرمز مطلوب
  *     x-screen: "SettingsScreen"
  */
-router.post('/token/firebase', verifyFirebaseToken, isValidation(fcmTokenSchema), notificationController.registerFCMToken);
-router.delete('/token/firebase', verifyFirebaseToken, isValidation(fcmTokenSchema), notificationController.unregisterFCMToken);
+// Firebase FCM token endpoints temporarily disabled - functions not implemented
 
 export default router;

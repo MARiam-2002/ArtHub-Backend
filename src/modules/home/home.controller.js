@@ -2,7 +2,7 @@ import artworkModel from '../../../DB/models/artwork.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { ensureConnection } from '../../utils/mongodbUtils.js';
+import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 
 /**
  * Get home screen data - optimized for mobile app
@@ -10,7 +10,7 @@ import { ensureConnection } from '../../utils/mongodbUtils.js';
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
 
     // Get all data in parallel for better performance
     const [categories, featuredArtists, featuredArtworks, latestArtworks] = await Promise.all([
@@ -120,7 +120,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
  */
 export const search = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { q, type = 'artworks', page = 1, limit = 20 } = req.query;
     
@@ -219,7 +219,7 @@ export const search = asyncHandler(async (req, res, next) => {
  */
 export const getTrendingArtworks = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;

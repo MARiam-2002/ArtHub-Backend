@@ -11,7 +11,7 @@ import notificationModel from '../../../DB/models/notification.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import chatModel from '../../../DB/models/chat.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
-import { ensureConnection } from '../../utils/mongodbUtils.js';
+import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 // Removed errorHandler import - using direct error handling instead
 
 /**
@@ -21,7 +21,7 @@ import { ensureConnection } from '../../utils/mongodbUtils.js';
  */
 export const toggleWishlist = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const userId = req.user._id;
     const { artworkId } = req.body;
@@ -69,7 +69,7 @@ export const toggleWishlist = asyncHandler(async (req, res, next) => {
 
 export const getWishlist = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
@@ -122,7 +122,7 @@ export const getWishlist = asyncHandler(async (req, res, next) => {
  */
 export const updateProfile = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const userId = req.user._id;
     const updateData = {};
@@ -165,7 +165,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
  */
 export const changePassword = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { currentPassword, newPassword } = req.body;
     const userId = req.user._id;
@@ -198,7 +198,7 @@ export const changePassword = asyncHandler(async (req, res, next) => {
  */
 export const getArtistProfile = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { artistId } = req.params;
 
@@ -686,7 +686,7 @@ export const updateNotificationSettings = asyncHandler(async (req, res, next) =>
  */
 export const deleteAccount = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { password } = req.body;
     const userId = req.user._id;
@@ -1017,7 +1017,7 @@ export const getDetailedStats = asyncHandler(async (req, res, next) => {
  */
 export const getProfile = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const user = await userModel
       .findById(req.user._id)
@@ -1143,7 +1143,7 @@ export const getNotificationSettings = asyncHandler(async (req, res, next) => {
  */
 export const getTopArtists = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;

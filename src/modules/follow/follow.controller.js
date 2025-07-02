@@ -1,7 +1,7 @@
 import followModel from '../../../DB/models/follow.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { ensureConnection } from '../../utils/mongodbUtils.js';
+import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import { createNotification } from '../notification/notification.controller.js';
 
 /**
@@ -9,7 +9,7 @@ import { createNotification } from '../notification/notification.controller.js';
  */
 export const toggleFollow = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const follower = req.user._id;
     const { artistId } = req.body;
@@ -54,7 +54,7 @@ export const toggleFollow = asyncHandler(async (req, res, next) => {
       // Send notification to artist
       try {
         await createNotification({
-          user: artistId,
+          userId: artistId,
           title: 'متابع جديد',
           message: `${req.user.displayName} بدأ بمتابعتك`,
           type: 'follow',
@@ -91,7 +91,7 @@ export const toggleFollow = asyncHandler(async (req, res, next) => {
  */
 export const getFollowers = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
@@ -140,7 +140,7 @@ export const getFollowers = asyncHandler(async (req, res, next) => {
  */
 export const getFollowing = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { userId } = req.params;
     const { page = 1, limit = 20 } = req.query;
@@ -189,7 +189,7 @@ export const getFollowing = asyncHandler(async (req, res, next) => {
  */
 export const checkFollowStatus = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const follower = req.user._id;
     const { artistId } = req.params;
@@ -214,7 +214,7 @@ export const checkFollowStatus = asyncHandler(async (req, res, next) => {
  */
 export const getFollowStats = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { userId } = req.params;
 

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as chatController from './chat.controller.js';
-import { requireAuth } from '../../middleware/authentication.middleware.js';
+import { isAuthenticated } from '../../middleware/authentication.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import {
   createChatSchema,
@@ -109,7 +109,7 @@ const router = Router();
  *       500:
  *         description: Server error
  */
-router.get('/', requireAuth, chatController.getChats);
+router.get('/', isAuthenticated, chatController.getChats);
 
 /**
  * @swagger
@@ -142,7 +142,7 @@ router.get('/', requireAuth, chatController.getChats);
  *       500:
  *         description: Server error
  */
-router.post('/create', requireAuth, chatController.getOrCreateChat);
+router.post('/create', isAuthenticated, chatController.getOrCreateChat);
 
 /**
  * @swagger
@@ -180,7 +180,7 @@ router.post('/create', requireAuth, chatController.getOrCreateChat);
  *       500:
  *         description: Server error
  */
-router.get('/:chatId/messages', requireAuth, chatController.getMessages);
+router.get('/:chatId/messages', isAuthenticated, chatController.getMessages);
 
 /**
  * @swagger
@@ -222,7 +222,7 @@ router.get('/:chatId/messages', requireAuth, chatController.getMessages);
  *       500:
  *         description: Server error
  */
-router.post('/:chatId/send', requireAuth, chatController.sendMessage);
+router.post('/:chatId/send', isAuthenticated, chatController.sendMessage);
 
 /**
  * @swagger
@@ -248,7 +248,7 @@ router.post('/:chatId/send', requireAuth, chatController.sendMessage);
  *       500:
  *         description: Server error
  */
-router.patch('/:chatId/read', requireAuth, chatController.markAsRead);
+router.patch('/:chatId/read', isAuthenticated, chatController.markAsRead);
 
 /**
  * @swagger
@@ -274,7 +274,7 @@ router.patch('/:chatId/read', requireAuth, chatController.markAsRead);
  *       500:
  *         description: Server error
  */
-router.delete('/:chatId', requireAuth, chatController.deleteChat);
+router.delete('/:chatId', isAuthenticated, chatController.deleteChat);
 
 // Get Socket Token (for real-time messaging)
 /**
@@ -313,6 +313,6 @@ router.delete('/:chatId', requireAuth, chatController.deleteChat);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/socket-token', requireAuth, chatController.getSocketToken);
+router.get('/socket-token', isAuthenticated, chatController.getSocketToken);
 
 export default router;

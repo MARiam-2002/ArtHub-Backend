@@ -4,7 +4,7 @@ import userModel from '../../../DB/models/user.model.js';
 import transactionModel from '../../../DB/models/transaction.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { getPaginationParams } from '../../utils/pagination.js';
-import { createNotificationHelper } from '../notification/notification.controller.js';
+import { createNotification } from '../notification/notification.controller.js';
 import mongoose from 'mongoose';
 
 /**
@@ -86,7 +86,7 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
 
   // إرسال إشعار للفنان
   try {
-    await createNotificationHelper({
+    await createNotification({
       userId: artworkDoc.artist,
       type: 'artwork_reviewed',
       title: 'تقييم جديد لعملك الفني',
@@ -338,7 +338,7 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
 
   // إرسال إشعار للفنان
   try {
-    await createNotificationHelper({
+    await createNotification({
       userId: artist,
       type: 'artist_reviewed',
       title: 'تقييم جديد لملفك الشخصي',
@@ -646,7 +646,7 @@ export const reportReview = asyncHandler(async (req, res, next) => {
   try {
     const admins = await userModel.find({ role: 'admin' }).select('_id');
     for (const admin of admins) {
-      await createNotificationHelper({
+      await createNotification({
         userId: admin._id,
         type: 'review_reported',
         title: 'تقييم مبلغ عنه',
@@ -892,7 +892,7 @@ export const moderateReview = asyncHandler(async (req, res, next) => {
     }
 
     if (notificationMessage) {
-      await createNotificationHelper({
+      await createNotification({
         userId: review.user,
         type: 'review_moderated',
         title: 'تحديث حالة التقييم',

@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import * as homeController from './home.controller.js';
-import { optionalAuth } from '../../middleware/authentication.middleware.js';
+// Optional auth middleware - allows both authenticated and non-authenticated requests
+const optionalAuth = (req, res, next) => {
+  // Skip authentication check for home route
+  next();
+};
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './home.validation.js';
 

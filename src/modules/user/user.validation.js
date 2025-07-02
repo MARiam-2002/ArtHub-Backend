@@ -325,16 +325,10 @@ export const userValidationSchemas = {
   toggleWishlistSchema,
   updateProfileSchema,
   changePasswordSchema,
-  discoverArtistsQuerySchema,
-  languagePreferenceSchema,
   notificationSettingsSchema,
   deleteAccountSchema,
-  reactivateAccountSchema,
-  followersQuerySchema,
-  userIdParamSchema,
-  artistIdParamSchema,
-  searchUsersSchema,
-  privacySettingsSchema
+  userIdSchema,
+  searchUsersSchema
 };
 
 export default userValidationSchemas; 

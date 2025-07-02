@@ -1,15 +1,15 @@
 import notificationModel from '../../../DB/models/notification.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { ensureConnection } from '../../utils/mongodbUtils.js';
+import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import { sendPushNotificationToUser } from '../../utils/pushNotifications.js';
 
 /**
- * Get user notifications
+ * Get user notifications with pagination
  */
 export const getNotifications = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const userId = req.user._id;
     const { page = 1, limit = 20, unreadOnly = false } = req.query;
@@ -76,7 +76,7 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
  */
 export const markAsRead = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { notificationId } = req.params;
     const userId = req.user._id;
@@ -106,7 +106,7 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
  */
 export const markAllAsRead = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const userId = req.user._id;
 
@@ -132,7 +132,7 @@ export const markAllAsRead = asyncHandler(async (req, res, next) => {
  */
 export const deleteNotification = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { notificationId } = req.params;
     const userId = req.user._id;
@@ -158,7 +158,7 @@ export const deleteNotification = asyncHandler(async (req, res, next) => {
  */
 export const getNotificationSettings = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const user = await userModel
       .findById(req.user._id)
@@ -192,7 +192,7 @@ export const getNotificationSettings = asyncHandler(async (req, res, next) => {
  */
 export const updateNotificationSettings = asyncHandler(async (req, res, next) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
     const { notificationSettings } = req.body;
     const userId = req.user._id;
@@ -215,46 +215,52 @@ export const updateNotificationSettings = asyncHandler(async (req, res, next) =>
 });
 
 /**
- * Create notification helper function
+ * Delete all notifications for user
+ */
+export const deleteAllNotifications = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const userId = req.user._id;
+
+    const result = await notificationModel.deleteMany({ user: userId });
+
+    res.success({
+      deletedCount: result.deletedCount
+    }, 'تم حذف جميع الإشعارات بنجاح');
+  } catch (error) {
+    console.error('Delete all notifications error:', error);
+    next(new Error('حدث خطأ أثناء حذف الإشعارات', { cause: 500 }));
+  }
+});
+
+/**
+ * Helper function to create notification
  */
 export const createNotification = async (data) => {
   try {
-    await ensureConnection();
+    await ensureDatabaseConnection();
     
-    const {
-      user,
-      title,
-      message,
-      type = 'general',
-      sender = null,
-      data: extraData = {},
-      ref = null,
-      refModel = null
-    } = data;
+    const { userId, type, title, message, sender, data: notificationData } = data;
 
     // Create notification
     const notification = await notificationModel.create({
-      user,
-      title: typeof title === 'string' ? { ar: title, en: title } : title,
-      message: typeof message === 'string' ? { ar: message, en: message } : message,
+      user: userId,
       type,
+      title,
+      message,
       sender,
-      data: extraData,
-      ref,
-      refModel
+      data: notificationData
     });
 
     // Send push notification if user has enabled it
-    const recipient = await userModel.findById(user).select('notificationSettings fcmTokens');
-    if (recipient?.notificationSettings?.pushNotifications !== false && recipient?.fcmTokens?.length > 0) {
-      await sendPushNotificationToUser(user, {
-        title: notification.title.ar,
-        body: notification.message.ar,
-        data: {
-          type: notification.type,
-          notificationId: notification._id.toString(),
-          ...extraData
-        }
+    const user = await userModel.findById(userId).select('notificationSettings fcmTokens');
+    
+    if (user?.notificationSettings?.pushNotifications !== false && user?.fcmTokens?.length > 0) {
+      await sendPushNotificationToUser(userId, {
+        title: title?.ar || title,
+        body: message?.ar || message,
+        data: notificationData || {}
       });
     }
 
