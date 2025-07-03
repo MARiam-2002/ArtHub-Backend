@@ -326,31 +326,12 @@
 				},
 				{
 					"name": "Reset Password",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200 OK\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Success message is correct\", function () {",
-									"    const responseData = pm.response.json();",
-									"    pm.expect(responseData.success).to.be.true;",
-									"    pm.expect(responseData.message).to.equal(\"تم إعادة تعيين كلمة المرور بنجاح\");",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"forgetCode\": \"1234\",\n    \"password\": \"NewPassword123!\",\n    \"confirmPassword\": \"NewPassword123!\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -358,18 +339,134 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/auth/reset-password",
+							"raw": "{{baseUrl}}/api/auth/reset-password",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
+								"api",
 								"auth",
 								"reset-password"
 							]
 						},
-						"description": "Sets a new password for the user after successful code verification."
+						"description": "Resets the user's password using the forget code."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Reset Password Correct",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"test@example.com\",\n    \"forgetCode\": \"VALID_CODE\",\n    \"password\": \"NewPassword123!\",\n    \"confirmPassword\": \"NewPassword123!\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/reset-password"
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"body": "{\n    \"success\": true,\n    \"message\": \"تم تغيير كلمة المرور بنجاح\"\n}"
+						},
+						{
+							"name": "Confirm Password",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"test@example.com\",\n    \"forgetCode\": \"VALID_CODE\",\n    \"password\": \"NewPassword123!\",\n    \"confirmPassword\": \"DIFFERENT_PASSWORD\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/reset-password"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": "{\n    \"success\": false,\n    \"message\": \"كلمة المرور وتأكيدها غير متطابقين\"\n}"
+						},
+						{
+							"name": "Password Validation",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"email\": \"test@example.com\",\n    \"forgetCode\": \"VALID_CODE\",\n    \"password\": \"123\",\n    \"confirmPassword\": \"123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/reset-password"
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"body": "{\n    \"success\": false,\n    \"message\": \"كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حروف وأرقام\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Change Password From Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"oldPassword\": \"Password123!\",\n    \"newPassword\": \"NewSecurePassword456!\",\n    \"confirmPassword\": \"NewSecurePassword456!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/user/change-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"change-password"
+							]
+						},
+						"description": "Allows a logged-in user to change their password from their profile."
+					},
+					"response": [
+						{
+							"name": "Must Send Token",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/user/change-password"
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"body": "{\n    \"success\": false,\n    \"message\": \"يجب تسجيل الدخول أولاً\"\n}"
+						}
+					]
 				},
 				{
 					"name": "Get Current User",
@@ -597,7 +694,7 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "https://art-hub-backend.vercel.app/api",
+			"value": "http://localhost:3002",
 			"type": "string"
 		},
 		{
