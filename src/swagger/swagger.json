@@ -645,11 +645,24 @@
         "tags": ["Authentication"],
         "summary": "Login with fingerprint",
         "description": "Login with device fingerprint",
-        "security": [
-          {
-            "BearerAuth": []
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fingerprint"],
+                "properties": {
+                  "fingerprint": {
+                    "type": "string",
+                    "description": "Device fingerprint for passwordless login",
+                    "example": "fp_1234567890abcdef_browser_chrome_os_windows"
+                  }
+                }
+              }
+            }
           }
-        ],
+        },
         "responses": {
           "200": {
             "description": "Login successful",
@@ -1281,25 +1294,25 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "معرف المحادثة"
           }
         ],
         "responses": {
           "200": {
-            "description": "List of messages",
+            "description": "تم جلب الرسائل بنجاح",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "example": true
+                      "type": "boolean"
                     },
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Message"
+                        "$ref": "#/components/schemas/ChatMessage"
                       }
                     }
                   }
@@ -1307,117 +1320,110 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized"
-          },
           "404": {
-            "description": "Chat not found"
+            "description": "المحادثة غير موجودة"
           }
         }
-      }
-    },
-    "/home": {
-      "get": {
-        "tags": ["Home"],
-        "summary": "Get home page data",
-        "description": "Get data for home page including featured artworks and categories",
+      },
+      "post": {
+        "tags": ["Chat"],
+        "summary": "إرسال رسالة",
+        "description": "إرسال رسالة جديدة في محادثة معينة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "نص الرسالة"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Home page data",
+          "201": {
+            "description": "تم إرسال الرسالة بنجاح",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "example": true
+                      "type": "boolean"
                     },
                     "data": {
-                      "type": "object",
-                      "properties": {
-                        "featuredArtworks": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/Artwork"
-                          }
-                        },
-                        "categories": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/Category"
-                          }
-                        }
-                      }
+                      "$ref": "#/components/schemas/ChatMessage"
                     }
                   }
                 }
               }
             }
+          },
+          "404": {
+            "description": "المحادثة غير موجودة"
           }
         }
       }
     },
-    "/home/search": {
-      "get": {
-        "tags": ["Home"],
-        "summary": "Search artworks and artists",
-        "description": "Search for artworks and artists by query term",
+    "/api/chat/{chatId}/read": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "تحديث حالة قراءة الرسائل",
+        "description": "تعيين جميع الرسائل في محادثة معينة كمقروءة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
-            "name": "q",
-            "in": "query",
+            "name": "chatId",
+            "in": "path",
+            "required": true,
             "schema": {
               "type": "string"
             },
-            "description": "Search query"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            }
+            "description": "معرف المحادثة"
           }
         ],
         "responses": {
           "200": {
-            "description": "Search results",
+            "description": "تم تحديث حالة القراءة بنجاح",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "example": true
+                      "type": "boolean"
                     },
                     "data": {
                       "type": "object",
                       "properties": {
-                        "artworks": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/Artwork"
-                          }
-                        },
-                        "artists": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/User"
-                          }
-                        },
-                        "pagination": {
-                          "$ref": "#/components/schemas/Pagination"
+                        "modifiedCount": {
+                          "type": "integer"
                         }
                       }
                     }
@@ -1425,11 +1431,14 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "المحادثة غير موجودة"
           }
         }
       }
     },
-    "/transactions/artwork": {
+    "/api/transactions/artwork": {
       "post": {
         "tags": ["Transactions"],
         "summary": "Purchase artwork",
@@ -1523,7 +1532,7 @@
         }
       }
     },
-    "/transactions/special-request": {
+    "/api/transactions/special-request": {
       "post": {
         "tags": ["Transactions"],
         "summary": "Pay for special request",
