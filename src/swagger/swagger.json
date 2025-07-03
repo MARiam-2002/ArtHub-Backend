@@ -490,7 +490,7 @@
         }
       }
     },
-    "/auth/register": {
+    "/api/auth/register": {
       "post": {
         "tags": ["Authentication"],
         "summary": "Register a new user",
@@ -570,7 +570,7 @@
         }
       }
     },
-    "/auth/login": {
+    "/api/auth/login": {
       "post": {
         "tags": ["Authentication"],
         "summary": "Login user",
@@ -640,7 +640,7 @@
         }
       }
     },
-    "/auth/login-with-fingerprint": {
+    "/api/auth/login-with-fingerprint": {
       "post": {
         "tags": ["Authentication"],
         "summary": "Login with fingerprint",
@@ -667,7 +667,7 @@
         }
       }
     },
-    "/auth/social-login": {
+    "/api/auth/firebase": {
       "post": {
         "tags": ["Authentication"],
         "summary": "Social login with Firebase",
@@ -705,7 +705,7 @@
         }
       }
     },
-    "/auth/forgetCode": {
+    "/api/auth/forgot-password": {
       "patch": {
         "tags": ["Authentication"],
         "summary": "Send password reset code",
@@ -737,7 +737,7 @@
         }
       }
     },
-    "/auth/resetPassword": {
+    "/api/auth/reset-password": {
       "patch": {
         "tags": ["Authentication"],
         "summary": "Reset password",
@@ -781,7 +781,7 @@
         }
       }
     },
-    "/auth/VerifyCode": {
+    "/api/auth/verify-code": {
       "patch": {
         "tags": ["Authentication"],
         "summary": "Verify account code",
@@ -820,7 +820,7 @@
         }
       }
     },
-    "/auth/verifyForgetCode": {
+    "/api/auth/verify-forget-code": {
       "post": {
         "tags": ["Authentication"],
         "summary": "Verify forget password code",
@@ -855,7 +855,7 @@
         }
       }
     },
-    "/auth/resetPasswordByCode": {
+    "/api/auth/reset-password-by-code": {
       "post": {
         "tags": ["Authentication"],
         "summary": "Reset password by code",
@@ -890,6 +890,275 @@
           },
           "400": {
             "description": "Invalid code or email"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh-token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh access token",
+        "description": "Get new access token using refresh token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث رمز الوصول بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token"
+          }
+        }
+      }
+    },
+    "/api/auth/fcm-token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Update FCM token",
+        "description": "Update user's FCM token for push notifications",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fcmToken"],
+                "properties": {
+                  "fcmToken": {
+                    "type": "string",
+                    "example": "fMEGG8-TQVSEJHBFrk-BZ3:APA91bHZKmJLnmRJHBFrk..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "FCM token updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث رمز الإشعارات بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get current user profile",
+        "description": "Get the profile of the currently authenticated user",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بيانات المستخدم بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout user",
+        "description": "Invalidate current access token or specific refresh token",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "Specific refresh token to invalidate (optional)",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تسجيل الخروج بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
+    },
+    "/api/auth/update-fingerprint": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Update device fingerprint",
+        "description": "Update or set device fingerprint for passwordless login",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fingerprint"],
+                "properties": {
+                  "fingerprint": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 500,
+                    "example": "fp_1234567890abcdef_browser_chrome_os_windows"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fingerprint updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث بصمة الجهاز بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fingerprint or already in use"
+          },
+          "401": {
+            "description": "Authentication required"
           }
         }
       }
