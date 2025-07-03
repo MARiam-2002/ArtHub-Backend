@@ -40,7 +40,7 @@ export const register = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     
-    const { email, password, confirmPassword, displayName, role = 'user' } = req.body;
+    const { email, password, confirmPassword, displayName, job, role = 'user' } = req.body;
 
     // Validate password confirmation
     if (password !== confirmPassword) {
@@ -60,7 +60,8 @@ export const register = asyncHandler(async (req, res, next) => {
     const user = await userModel.create({
       email,
       password: hashedPassword,
-      displayName,
+      displayName: displayName || email.split('@')[0], // Use email prefix if no displayName provided
+      job: job || 'مستخدم',
       role,
       isActive: true
     });

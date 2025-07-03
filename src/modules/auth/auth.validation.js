@@ -103,7 +103,31 @@ export const registerSchema = {
         'any.only': 'تأكيد كلمة المرور غير مطابق',
         'any.required': 'تأكيد كلمة المرور مطلوب'
       }),
-    displayName: displayNameSchema,
+    displayName: Joi.string()
+      .min(2)
+      .max(50)
+      .trim()
+      .optional()
+      .messages({
+        'string.min': 'الاسم يجب أن يكون حرفين على الأقل',
+        'string.max': 'الاسم يجب أن يكون أقل من 50 حرف'
+      }),
+    job: Joi.string()
+      .min(2)
+      .max(100)
+      .trim()
+      .optional()
+      .messages({
+        'string.min': 'المهنة يجب أن تكون حرفين على الأقل',
+        'string.max': 'المهنة يجب أن تكون أقل من 100 حرف'
+      }),
+    role: Joi.string()
+      .valid('user', 'artist')
+      .default('user')
+      .optional()
+      .messages({
+        'any.only': 'نوع المستخدم يجب أن يكون user أو artist'
+      }),
     phoneNumber: Joi.string()
       .pattern(/^\+[1-9]\d{1,14}$/)
       .optional()
