@@ -1,468 +1,619 @@
 {
-  "info": {
-    "name": "ArtHub Backend API Collection",
-    "description": "Complete API collection for ArtHub mobile app integration",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:3001/api",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    }
-  ],
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{token}}",
-        "type": "string"
-      }
-    ]
-  },
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "exec": [
-          "// Auto-set token from login response",
-          "if (pm.response && pm.response.json() && pm.response.json().data && pm.response.json().data.token) {",
-          "    pm.globals.set('token', pm.response.json().data.token);",
-          "}"
-        ],
-        "type": "text/javascript"
-      }
-    }
-  ],
-  "item": [
-    {
-      "name": "Authentication",
-      "item": [
-        {
-          "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    pm.globals.set('token', response.data.token);",
-                  "    pm.globals.set('userId', response.data.user._id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
-            }
-          }
-        },
-        {
-          "name": "Register",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"مستخدم جديد\",\n  \"role\": \"user\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "register"]
-            }
-          }
-        },
-        {
-          "name": "Forgot Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/forgot-password",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "forgot-password"]
-            }
-          }
-        },
-        {
-          "name": "Reset Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"resetCode\": \"123456\",\n  \"newPassword\": \"newPassword123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/reset-password",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "reset-password"]
-            }
-          }
-        },
-        {
-          "name": "Change Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"oldPassword123\",\n  \"newPassword\": \"newPassword123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/change-password",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "change-password"]
-            }
-          }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "logout"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Home & Feed",
-      "item": [
-        {
-          "name": "Get Home Feed",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/home/feed?page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["home", "feed"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Search Content",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/home/search?query=رسم&type=all&page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["home", "search"],
-              "query": [
-                {
-                  "key": "query",
-                  "value": "رسم"
-                },
-                {
-                  "key": "type",
-                  "value": "all"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Categories",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/category/",
-              "host": ["{{baseUrl}}"],
-              "path": ["category", ""]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "User Profile",
-      "item": [
-        {
-          "name": "Get Profile",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/user/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["user", "profile"]
-            }
-          }
-        },
-        {
-          "name": "Update Profile",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "displayName",
-                  "value": "اسم محدث",
-                  "type": "text"
-                },
-                {
-                  "key": "job",
-                  "value": "فنان",
-                  "type": "text"
-                },
-                {
-                  "key": "profileImage",
-                  "type": "file",
-                  "src": []
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseUrl}}/user/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["user", "profile"]
-            }
-          }
-        },
-        {
-          "name": "Get User Artworks",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/user/artworks?page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["user", "artworks"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Chat",
-      "item": [
-        {
-          "name": "Get Conversations",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/chat/conversations?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["chat", "conversations"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Send Message",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"conversationId\": \"conversation_id_here\",\n  \"content\": \"محتوى الرسالة\",\n  \"type\": \"text\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/chat/send",
-              "host": ["{{baseUrl}}"],
-              "path": ["chat", "send"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Notifications",
-      "item": [
-        {
-          "name": "Get Notifications",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/notification/?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["notification", ""],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Mark as Read",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/notification/:notificationId/read",
-              "host": ["{{baseUrl}}"],
-              "path": ["notification", ":notificationId", "read"],
-              "variable": [
-                {
-                  "key": "notificationId",
-                  "value": "notification_id_here"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Follow System",
-      "item": [
-        {
-          "name": "Follow User",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"followingId\": \"user_id_to_follow\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/follow/",
-              "host": ["{{baseUrl}}"],
-              "path": ["follow", ""]
-            }
-          }
-        },
-        {
-          "name": "Get Followers",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/follow/followers?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["follow", "followers"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    }
-  ]
+	"info": {
+		"_postman_id": "YOUR_COLLECTION_ID",
+		"name": "ArtHub Backend API - Authentication",
+		"description": "Complete and updated API collection for ArtHub authentication module.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"description": "All endpoints related to user authentication, registration, and session management.",
+			"item": [
+				{
+					"name": "Register New User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"});",
+									"",
+									"pm.test(\"Access and Refresh tokens are present\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.data.accessToken).to.exist;",
+									"    pm.expect(responseData.data.refreshToken).to.exist;",
+									"    ",
+									"    pm.collectionVariables.set(\"accessToken\", responseData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refreshToken\", responseData.data.refreshToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser_{{$randomInt}}@art.com\",\n  \"password\": \"Password123!\",\n  \"confirmPassword\": \"Password123!\",\n  \"displayName\": \"Test User\",\n  \"job\": \"Artist\",\n  \"role\": \"artist\",\n  \"fingerprint\": \"fp_{{$guid}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						},
+						"description": "Creates a new user account and returns access and refresh tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Login with Email & Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful and contains tokens\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"    pm.expect(responseData.data.accessToken).to.exist;",
+									"    pm.expect(responseData.data.refreshToken).to.exist;",
+									"    ",
+									"    pm.collectionVariables.set(\"accessToken\", responseData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refreshToken\", responseData.data.refreshToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Password123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						},
+						"description": "Authenticates a user and provides session tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Login with Fingerprint",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful and contains tokens\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"    pm.expect(responseData.data.accessToken).to.exist;",
+									"    pm.expect(responseData.data.refreshToken).to.exist;",
+									"    ",
+									"    pm.collectionVariables.set(\"accessToken\", responseData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refreshToken\", responseData.data.refreshToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fingerprint\": \"fp_{{$guid}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login-with-fingerprint",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login-with-fingerprint"
+							]
+						},
+						"description": "Logs in a user via their registered device fingerprint."
+					},
+					"response": []
+				},
+				{
+					"name": "Login with Firebase",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// This request requires a valid Firebase ID token.",
+									"// You need to obtain this token from your Firebase client SDK.",
+									"// For testing, you can manually set 'firebaseIdToken' in the collection variables."
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is successful and contains app tokens\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"    pm.expect(responseData.data.accessToken).to.exist;",
+									"    pm.expect(responseData.data.refreshToken).to.exist;",
+									"    ",
+									"    pm.collectionVariables.set(\"accessToken\", responseData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refreshToken\", responseData.data.refreshToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{firebaseIdToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/firebase",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"firebase"
+							]
+						},
+						"description": "Authenticates a user via a Firebase ID token and issues app-specific tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response indicates success\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"    pm.expect(responseData.message).to.include(\"تم إرسال رمز إعادة تعيين كلمة المرور\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Initiates the password reset process by sending a code to the user's email."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Forget Code",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response indicates success\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"    pm.expect(responseData.message).to.equal(\"تم التحقق من الرمز بنجاح\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"forgetCode\": \"1234\" // Replace with the actual code from email\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/verify-forget-code",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"verify-forget-code"
+							]
+						},
+						"description": "Verifies the password reset code sent to the user."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Success message is correct\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"    pm.expect(responseData.message).to.equal(\"تم إعادة تعيين كلمة المرور بنجاح\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Sets a new password for the user after successful code verification."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {},
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"description": "Fetches the profile information of the currently authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"New tokens are received\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"    pm.expect(responseData.data.accessToken).to.exist;",
+									"    pm.expect(responseData.data.refreshToken).to.exist;",
+									"    ",
+									"    // Update collection variables with new tokens",
+									"    pm.collectionVariables.set(\"accessToken\", responseData.data.accessToken);",
+									"    pm.collectionVariables.set(\"refreshToken\", responseData.data.refreshToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"refresh-token"
+							]
+						},
+						"description": "Provides a new access token and refresh token pair."
+					},
+					"response": []
+				},
+				{
+					"name": "Update FCM Token",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fcmToken\": \"fcm_token_{{$guid}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/fcm-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"fcm-token"
+							]
+						},
+						"description": "Updates the Firebase Cloud Messaging (FCM) token for push notifications."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Fingerprint",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fingerprint\": \"fp_updated_{{$guid}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/update-fingerprint",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"update-fingerprint"
+							]
+						},
+						"description": "Associates a new device fingerprint with the user's account."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Clears tokens after logout\", function () {",
+									"    pm.collectionVariables.unset(\"accessToken\");",
+									"    pm.collectionVariables.unset(\"refreshToken\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logs the user out by invalidating the current session tokens."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "noauth"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://art-hub-backend.vercel.app/api",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "firebaseIdToken",
+			"value": "your-firebase-id-token-here",
+			"type": "string"
+		}
+	]
 } 
