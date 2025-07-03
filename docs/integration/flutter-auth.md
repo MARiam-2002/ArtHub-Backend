@@ -290,6 +290,439 @@ https://your-api-url.com/api/auth
 }
 ```
 
+## 8. Device Fingerprint Authentication
+
+ArtHub supports passwordless authentication using device fingerprints for enhanced user experience.
+
+### 8.1 Setting Device Fingerprint During Registration
+
+You can optionally set a device fingerprint during registration:
+
+```dart
+Future<AuthResult> registerWithFingerprint(
+  String email,
+  String password,
+  String confirmPassword, {
+  String? displayName,
+  String? job,
+  String? role,
+  String? fingerprint,
+}) async {
+  try {
+    final response = await dio.post('/api/auth/register', data: {
+      'email': email,
+      'password': password,
+      'confirmPassword': confirmPassword,
+      if (displayName != null) 'displayName': displayName,
+      if (job != null) 'job': job,
+      if (role != null) 'role': role,
+      if (fingerprint != null) 'fingerprint': fingerprint,
+    });
+
+    if (response.data['success']) {
+      final userData = response.data['data'];
+      await _saveTokens(userData['accessToken'], userData['refreshToken']);
+      return AuthResult.success(User.fromJson(userData));
+    } else {
+      return AuthResult.failure(response.data['message']);
+    }
+  } catch (e) {
+    return AuthResult.failure(_handleError(e));
+  }
+}
+```
+
+### 8.2 Generating Device Fingerprint
+
+Use a device fingerprinting library to create a unique identifier:
+
+```dart
+// pubspec.yaml
+dependencies:
+  device_info_plus: ^9.1.0
+  crypto: ^3.0.3
+
+// device_fingerprint.dart
+import 'dart:convert';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:crypto/crypto.dart';
+
+class DeviceFingerprint {
+  static Future<String> generate() async {
+    final deviceInfo = DeviceInfoPlugin();
+    String fingerprint = '';
+
+    if (Platform.isAndroid) {
+      final androidInfo = await deviceInfo.androidInfo;
+      fingerprint = '${androidInfo.model}_${androidInfo.id}_${androidInfo.androidId}';
+    } else if (Platform.isIOS) {
+      final iosInfo = await deviceInfo.iosInfo;
+      fingerprint = '${iosInfo.model}_${iosInfo.identifierForVendor}_${iosInfo.systemVersion}';
+    }
+
+    // Add app-specific prefix and hash for security
+    final bytes = utf8.encode('arthub_$fingerprint');
+    final digest = sha256.convert(bytes);
+    return 'fp_${digest.toString().substring(0, 32)}_${Platform.operatingSystem}';
+  }
+}
+```
+
+### 8.3 Login with Fingerprint
+
+```dart
+Future<AuthResult> loginWithFingerprint() async {
+  try {
+    final fingerprint = await DeviceFingerprint.generate();
+    
+    final response = await dio.post('/api/auth/login-with-fingerprint', data: {
+      'fingerprint': fingerprint,
+    });
+
+    if (response.data['success']) {
+      final userData = response.data['data'];
+      await _saveTokens(userData['accessToken'], userData['refreshToken']);
+      return AuthResult.success(User.fromJson(userData));
+    } else {
+      return AuthResult.failure(response.data['message']);
+    }
+  } catch (e) {
+    return AuthResult.failure(_handleError(e));
+  }
+}
+```
+
+### 8.4 Update Device Fingerprint
+
+```dart
+Future<bool> updateFingerprint() async {
+  try {
+    final fingerprint = await DeviceFingerprint.generate();
+    
+    final response = await authenticatedDio.post('/api/auth/update-fingerprint', data: {
+      'fingerprint': fingerprint,
+    });
+
+    return response.data['success'] == true;
+  } catch (e) {
+    print('Error updating fingerprint: $e');
+    return false;
+  }
+}
+```
+
+### 8.5 Complete Auth Service with Fingerprint Support
+
+```dart
+class AuthService {
+  static const String _tokenKey = 'access_token';
+  static const String _refreshTokenKey = 'refresh_token';
+  static const String _fingerprintEnabledKey = 'fingerprint_enabled';
+
+  // Enable fingerprint for current user
+  Future<bool> enableFingerprintAuth() async {
+    try {
+      final success = await updateFingerprint();
+      if (success) {
+        await SharedPreferences.getInstance()
+            .then((prefs) => prefs.setBool(_fingerprintEnabledKey, true));
+      }
+      return success;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Check if fingerprint auth is enabled
+  Future<bool> isFingerprintEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_fingerprintEnabledKey) ?? false;
+  }
+
+  // Auto-login with fingerprint if enabled
+  Future<AuthResult> autoLogin() async {
+    if (await isFingerprintEnabled()) {
+      return await loginWithFingerprint();
+    } else {
+      return await loginWithStoredTokens();
+    }
+  }
+
+  // Disable fingerprint auth
+  Future<void> disableFingerprintAuth() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_fingerprintEnabledKey, false);
+  }
+}
+```
+
+### 8.6 UI Implementation Example
+
+```dart
+class LoginScreen extends StatefulWidget {
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _authService = AuthService();
+  bool _fingerprintEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFingerprintStatus();
+  }
+
+  Future<void> _checkFingerprintStatus() async {
+    final enabled = await _authService.isFingerprintEnabled();
+    setState(() {
+      _fingerprintEnabled = enabled;
+    });
+  }
+
+  Future<void> _loginWithFingerprint() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('جاري تسجيل الدخول...'),
+            ],
+          ),
+        ),
+      );
+
+      final result = await _authService.loginWithFingerprint();
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (result.isSuccess) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        _showError(result.error);
+      }
+    } catch (e) {
+      Navigator.of(context).pop();
+      _showError('فشل في تسجيل الدخول');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          // Regular login form
+          _buildLoginForm(),
+          
+          // Fingerprint login option
+          if (_fingerprintEnabled) ...[
+            SizedBox(height: 20),
+            Divider(),
+            SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _loginWithFingerprint,
+              icon: Icon(Icons.fingerprint),
+              label: Text('تسجيل الدخول بصمة الجهاز'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+```
+
+### 8.7 Settings Screen for Fingerprint
+
+```dart
+class SecuritySettingsScreen extends StatefulWidget {
+  @override
+  _SecuritySettingsScreenState createState() => _SecuritySettingsScreenState();
+}
+
+class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
+  final _authService = AuthService();
+  bool _fingerprintEnabled = false;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final enabled = await _authService.isFingerprintEnabled();
+    setState(() {
+      _fingerprintEnabled = enabled;
+    });
+  }
+
+  Future<void> _toggleFingerprint(bool value) async {
+    setState(() {
+      _loading = true;
+    });
+
+    try {
+      if (value) {
+        final success = await _authService.enableFingerprintAuth();
+        if (success) {
+          setState(() {
+            _fingerprintEnabled = true;
+          });
+          _showSuccess('تم تفعيل تسجيل الدخول بصمة الجهاز');
+        } else {
+          _showError('فشل في تفعيل بصمة الجهاز');
+        }
+      } else {
+        await _authService.disableFingerprintAuth();
+        setState(() {
+          _fingerprintEnabled = false;
+        });
+        _showSuccess('تم إلغاء تفعيل بصمة الجهاز');
+      }
+    } catch (e) {
+      _showError('حدث خطأ أثناء تحديث الإعدادات');
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('إعدادات الأمان'),
+      ),
+      body: ListView(
+        children: [
+          ListTile(
+            leading: Icon(Icons.fingerprint),
+            title: Text('تسجيل الدخول بصمة الجهاز'),
+            subtitle: Text('دخول سريع بدون كلمة مرور'),
+            trailing: _loading
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Switch(
+                    value: _fingerprintEnabled,
+                    onChanged: _toggleFingerprint,
+                  ),
+          ),
+          if (_fingerprintEnabled)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Card(
+                color: Colors.blue.shade50,
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'يمكنك الآن تسجيل الدخول بصمة هذا الجهاز في المرات القادمة',
+                          style: TextStyle(color: Colors.blue.shade700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+### 8.8 Error Handling for Fingerprint Auth
+
+```dart
+class FingerprintAuthErrors {
+  static String getMessage(String errorCode, String defaultMessage) {
+    switch (errorCode) {
+      case 'VALIDATION_ERROR':
+        return 'بيانات بصمة الجهاز غير صحيحة';
+      case 'NOT_FOUND':
+        return 'لم يتم العثور على حساب مرتبط بهذا الجهاز';
+      case 'ACCESS_DENIED':
+        return 'تم تعطيل هذا الحساب';
+      case 'CONFLICT':
+        return 'بصمة الجهاز مستخدمة بالفعل';
+      default:
+        return defaultMessage;
+    }
+  }
+}
+```
+
+### 8.9 Security Considerations
+
+1. **Device Uniqueness**: The fingerprint should be unique per device and app installation
+2. **Privacy**: Don't include personally identifiable information in the fingerprint
+3. **Fallback**: Always provide email/password login as a fallback option
+4. **Validation**: Validate fingerprint format and length on both client and server
+5. **Rotation**: Consider implementing fingerprint rotation for enhanced security
+
+### 8.10 Testing Fingerprint Authentication
+
+```dart
+void main() {
+  group('Fingerprint Authentication Tests', () {
+    late AuthService authService;
+
+    setUp(() {
+      authService = AuthService();
+    });
+
+    test('should generate unique device fingerprint', () async {
+      final fingerprint1 = await DeviceFingerprint.generate();
+      final fingerprint2 = await DeviceFingerprint.generate();
+      
+      expect(fingerprint1, isNotEmpty);
+      expect(fingerprint1, startsWith('fp_'));
+      expect(fingerprint1, equals(fingerprint2)); // Should be consistent
+    });
+
+    test('should enable fingerprint authentication', () async {
+      final result = await authService.enableFingerprintAuth();
+      expect(result, isTrue);
+      
+      final enabled = await authService.isFingerprintEnabled();
+      expect(enabled, isTrue);
+    });
+
+    test('should login with fingerprint', () async {
+      await authService.enableFingerprintAuth();
+      
+      final result = await authService.loginWithFingerprint();
+      expect(result.isSuccess, isTrue);
+      expect(result.user, isNotNull);
+    });
+  });
+}
+```
+
+This completes the fingerprint authentication integration for Flutter apps using the ArtHub API.
+
 ## رموز الأخطاء الشائعة
 
 | Error Code | Status | Description |

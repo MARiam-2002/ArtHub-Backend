@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as Validators from './auth.validation.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as authController from './controller/auth.js';
-import { authenticate, firebaseToJWT, optionalAuth } from '../../middleware/auth.middleware.js';
+import { authenticate, firebaseToJWT, optionalAuth, isAuthenticated } from '../../middleware/auth.middleware.js';
 import { fileUpload } from '../../utils/multer.js';
 import { refreshToken } from '../../middleware/refresh-token.middleware.js';
 
@@ -38,11 +38,22 @@ const router = Router();
  *           minLength: 2
  *           maxLength: 50
  *           example: "مريم فوزي"
+ *         job:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *           example: "فنانة تشكيلية"
  *         role:
  *           type: string
  *           enum: [user, artist]
  *           default: user
  *           example: "artist"
+ *         fingerprint:
+ *           type: string
+ *           minLength: 10
+ *           maxLength: 500
+ *           description: Optional device fingerprint for passwordless login
+ *           example: "fp_1234567890abcdef_browser_chrome_os_windows"
  *     
  *     LoginRequest:
  *       type: object
@@ -288,6 +299,181 @@ router.post('/register', isValidation(Validators.registerSchema), authController
  *                   example: "ACCESS_DENIED"
  */
 router.post('/login', isValidation(Validators.loginSchema), authController.login);
+
+/**
+ * @swagger
+ * /api/auth/login-with-fingerprint:
+ *   post:
+ *     summary: Login with device fingerprint
+ *     tags: [Authentication]
+ *     description: Authenticate user using device fingerprint for passwordless login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fingerprint
+ *             properties:
+ *               fingerprint:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 500
+ *                 description: Unique device fingerprint
+ *                 example: "fp_1234567890abcdef_browser_chrome_os_windows"
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Missing fingerprint
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "بصمة الجهاز مطلوبة"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "VALIDATION_ERROR"
+ *       404:
+ *         description: Device not registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "لم يتم العثور على حساب مرتبط بهذا الجهاز"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "NOT_FOUND"
+ *       403:
+ *         description: Account disabled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "تم تعطيل هذا الحساب"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "ACCESS_DENIED"
+ */
+router.post('/login-with-fingerprint', isValidation(Validators.fingerprintLoginSchema), authController.loginWithFingerprint);
+
+/**
+ * @swagger
+ * /api/auth/update-fingerprint:
+ *   post:
+ *     summary: Update device fingerprint
+ *     tags: [Authentication]
+ *     description: Update or set device fingerprint for passwordless login
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fingerprint
+ *             properties:
+ *               fingerprint:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 500
+ *                 description: Unique device fingerprint
+ *                 example: "fp_1234567890abcdef_browser_chrome_os_windows"
+ *     responses:
+ *       200:
+ *         description: Fingerprint updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث بصمة الجهاز بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fingerprint:
+ *                       type: string
+ *                       example: "fp_1234567890abcdef_browser_chrome_os_windows"
+ *       400:
+ *         description: Missing fingerprint
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "بصمة الجهاز مطلوبة"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "VALIDATION_ERROR"
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "يجب تسجيل الدخول أولاً"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "UNAUTHORIZED"
+ *       409:
+ *         description: Fingerprint already in use
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "بصمة الجهاز مستخدمة بالفعل من قبل مستخدم آخر"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "CONFLICT"
+ */
+router.post('/update-fingerprint', isAuthenticated, isValidation(Validators.updateFingerprintSchema), authController.updateFingerprint);
 
 /**
  * @swagger

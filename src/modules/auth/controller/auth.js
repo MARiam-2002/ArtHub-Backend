@@ -40,7 +40,7 @@ export const register = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     
-    const { email, password, confirmPassword, displayName, job, role = 'user' } = req.body;
+    const { email, password, confirmPassword, displayName, job, role = 'user', fingerprint } = req.body;
 
     // Validate password confirmation
     if (password !== confirmPassword) {
@@ -53,6 +53,14 @@ export const register = asyncHandler(async (req, res, next) => {
       return next(new Error('البريد الإلكتروني مستخدم بالفعل', { cause: 409 }));
     }
 
+    // Check if fingerprint is already used (if provided)
+    if (fingerprint) {
+      const existingFingerprint = await userModel.findOne({ fingerprint });
+      if (existingFingerprint) {
+        return next(new Error('بصمة الجهاز مستخدمة بالفعل من قبل مستخدم آخر', { cause: 409 }));
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcryptjs.hash(password, 10);
 
@@ -60,10 +68,10 @@ export const register = asyncHandler(async (req, res, next) => {
     const user = await userModel.create({
       email,
       password: hashedPassword,
-      displayName: displayName || email.split('@')[0], // Use email prefix if no displayName provided
-      job: job || 'مستخدم',
+      displayName: displayName || email.split('@')[0],
+      job,
       role,
-      isActive: true
+      fingerprint: fingerprint || undefined // Only set if provided
     });
 
     // Generate tokens
@@ -129,6 +137,106 @@ export const login = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم تسجيل الدخول بنجاح',
       data: createUserResponse(user, accessToken, refreshToken)
+    });
+  } catch (error) {
+    return handleDatabaseError(error, next);
+  }
+});
+
+/**
+ * Login with device fingerprint
+ * @route POST /api/auth/login-with-fingerprint
+ */
+export const loginWithFingerprint = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { fingerprint } = req.body;
+
+    // Validate fingerprint
+    if (!fingerprint) {
+      return next(new Error('بصمة الجهاز مطلوبة', { cause: 400 }));
+    }
+
+    // Find user by fingerprint
+    const user = await userModel.findOne({ fingerprint });
+    if (!user) {
+      return next(new Error('لم يتم العثور على حساب مرتبط بهذا الجهاز', { cause: 404 }));
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return next(new Error('تم تعطيل هذا الحساب، يرجى التواصل مع الدعم', { cause: 403 }));
+    }
+
+    if (user.isDeleted) {
+      return next(new Error('هذا الحساب محذوف', { cause: 403 }));
+    }
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    // Save token pair
+    await saveTokenPair(user._id, accessToken, refreshToken, req.headers['user-agent']);
+
+    // Update last active
+    user.lastActive = new Date();
+    await user.save();
+
+    // Send success response
+    return res.status(200).json({
+      success: true,
+      message: 'تم تسجيل الدخول بنجاح باستخدام بصمة الجهاز',
+      data: createUserResponse(user, accessToken, refreshToken)
+    });
+  } catch (error) {
+    return handleDatabaseError(error, next);
+  }
+});
+
+/**
+ * Update user fingerprint
+ * @route POST /api/auth/update-fingerprint
+ */
+export const updateFingerprint = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { fingerprint } = req.body;
+    const userId = req.user._id;
+
+    // Validate fingerprint
+    if (!fingerprint) {
+      return next(new Error('بصمة الجهاز مطلوبة', { cause: 400 }));
+    }
+
+    // Check if fingerprint is already used by another user
+    const existingUser = await userModel.findOne({ 
+      fingerprint, 
+      _id: { $ne: userId } 
+    });
+    
+    if (existingUser) {
+      return next(new Error('بصمة الجهاز مستخدمة بالفعل من قبل مستخدم آخر', { cause: 409 }));
+    }
+
+    // Update user fingerprint
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { fingerprint },
+      { new: true }
+    );
+
+    if (!user) {
+      return next(new Error('المستخدم غير موجود', { cause: 404 }));
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'تم تحديث بصمة الجهاز بنجاح',
+      data: {
+        fingerprint: user.fingerprint
+      }
     });
   } catch (error) {
     return handleDatabaseError(error, next);

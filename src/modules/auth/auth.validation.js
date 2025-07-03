@@ -123,16 +123,17 @@ export const registerSchema = {
       }),
     role: Joi.string()
       .valid('user', 'artist')
-      .default('user')
       .optional()
       .messages({
-        'any.only': 'نوع المستخدم يجب أن يكون user أو artist'
+        'any.only': 'نوع المستخدم يجب أن يكون مستخدم أو فنان'
       }),
-    phoneNumber: Joi.string()
-      .pattern(/^\+[1-9]\d{1,14}$/)
+    fingerprint: Joi.string()
+      .min(10)
+      .max(500)
       .optional()
       .messages({
-        'string.pattern.base': 'رقم الهاتف غير صحيح، يجب أن يبدأ بـ + ورمز الدولة'
+        'string.min': 'بصمة الجهاز قصيرة جداً',
+        'string.max': 'بصمة الجهاز طويلة جداً'
       })
   })
 };
@@ -145,6 +146,36 @@ export const loginSchema = {
       .required()
       .messages({
         'any.required': 'كلمة المرور مطلوبة'
+      })
+  })
+};
+
+// Fingerprint login validation
+export const fingerprintLoginSchema = {
+  body: Joi.object({
+    fingerprint: Joi.string()
+      .required()
+      .min(10)
+      .max(500)
+      .messages({
+        'any.required': 'بصمة الجهاز مطلوبة',
+        'string.min': 'بصمة الجهاز قصيرة جداً',
+        'string.max': 'بصمة الجهاز طويلة جداً'
+      })
+  })
+};
+
+// Update fingerprint validation
+export const updateFingerprintSchema = {
+  body: Joi.object({
+    fingerprint: Joi.string()
+      .required()
+      .min(10)
+      .max(500)
+      .messages({
+        'any.required': 'بصمة الجهاز مطلوبة',
+        'string.min': 'بصمة الجهاز قصيرة جداً',
+        'string.max': 'بصمة الجهاز طويلة جداً'
       })
   })
 };
@@ -213,6 +244,8 @@ export const refreshTokenSchema = {
 export default {
   registerSchema,
   loginSchema,
+  fingerprintLoginSchema,
+  updateFingerprintSchema,
   forgetPasswordSchema,
   verifyForgetCodeSchema,
   resetPasswordSchema,
