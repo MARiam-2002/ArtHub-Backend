@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as userController from './user.controller.js';
-import { isAuthenticated } from '../../middleware/authentication.middleware.js';
+import { authenticate as isAuthenticated } from '../../middleware/auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './user.validation.js';
 import { fileUpload, filterObject } from '../../utils/multer.js';

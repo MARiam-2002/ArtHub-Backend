@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import * as Validators from './auth.validation.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
-import * as userController from './controller/auth.js';
-import { isAuthenticated, invalidateToken, invalidateAllTokens } from '../../middleware/authentication.middleware.js';
-import { verifyFirebaseToken, firebaseToJWT } from '../../middleware/firebase-auth.middleware.js';
+import * as authController from './controller/auth.js';
+import { authenticate, firebaseToJWT, optionalAuth } from '../../middleware/auth.middleware.js';
 import { fileUpload } from '../../utils/multer.js';
 import { refreshToken } from '../../middleware/refresh-token.middleware.js';
 
@@ -13,7 +12,64 @@ const router = Router();
  * @swagger
  * components:
  *   schemas:
- *     VerificationCodeRequest:
+ *     RegisterRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *         - confirmPassword
+ *         - displayName
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: user@example.com
+ *         password:
+ *           type: string
+ *           format: password
+ *           minLength: 8
+ *           example: "Password123!"
+ *         confirmPassword:
+ *           type: string
+ *           format: password
+ *           example: "Password123!"
+ *         displayName:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 50
+ *           example: "مريم فوزي"
+ *         role:
+ *           type: string
+ *           enum: [user, artist]
+ *           default: user
+ *           example: "artist"
+ *     
+ *     LoginRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: user@example.com
+ *         password:
+ *           type: string
+ *           format: password
+ *           example: "Password123!"
+ *     
+ *     ForgotPasswordRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: user@example.com
+ *     
+ *     VerifyCodeRequest:
  *       type: object
  *       required:
  *         - email
@@ -27,6 +83,7 @@ const router = Router();
  *           type: string
  *           pattern: ^\d{4}$
  *           example: "1234"
+ *     
  *     ResetPasswordRequest:
  *       type: object
  *       required:
@@ -41,11 +98,22 @@ const router = Router();
  *         password:
  *           type: string
  *           format: password
+ *           minLength: 8
  *           example: "NewPassword123!"
  *         confirmPassword:
  *           type: string
  *           format: password
  *           example: "NewPassword123!"
+ *     
+ *     RefreshTokenRequest:
+ *       type: object
+ *       required:
+ *         - refreshToken
+ *       properties:
+ *         refreshToken:
+ *           type: string
+ *           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     
  *     FCMTokenRequest:
  *       type: object
  *       required:
@@ -54,7 +122,8 @@ const router = Router();
  *         fcmToken:
  *           type: string
  *           example: "fMEGG8-TQVSEJHBFrk-BZ3:APA91bHZKmJLnmRJHBFrk..."
- *     AuthSuccessResponse:
+ *     
+ *     AuthResponse:
  *       type: object
  *       properties:
  *         success:
@@ -69,13 +138,13 @@ const router = Router();
  *             _id:
  *               type: string
  *               example: "60d0fe4f5311236168a109ca"
- *             displayName:
- *               type: string
- *               example: "مريم فوزي"
  *             email:
  *               type: string
  *               format: email
  *               example: "user@example.com"
+ *             displayName:
+ *               type: string
+ *               example: "مريم فوزي"
  *             role:
  *               type: string
  *               enum: [user, artist]
@@ -87,59 +156,23 @@ const router = Router();
  *                   type: string
  *                   format: uri
  *                   example: "https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg"
+ *             isVerified:
+ *               type: boolean
+ *               example: true
  *             accessToken:
  *               type: string
  *               example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *             refreshToken:
  *               type: string
  *               example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *   responses:
- *     UnauthorizedError:
- *       description: غير مصرح - المصادقة مطلوبة
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               success:
- *                 type: boolean
- *                 example: false
- *               message:
- *                 type: string
- *                 example: "يجب تسجيل الدخول أولاً"
- *     BadRequestError:
- *       description: طلب غير صالح - مشكلة في البيانات المرسلة
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               success:
- *                 type: boolean
- *                 example: false
- *               message:
- *                 type: string
- *                 example: "بيانات غير صالحة"
- *     ServerError:
- *       description: خطأ في الخادم - فشل في معالجة الطلب
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               success:
- *                 type: boolean
- *                 example: false
- *               message:
- *                 type: string
- *                 example: "حدث خطأ في الخادم"
+ *   
  *   securitySchemes:
  *     BearerAuth:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
  *       description: JWT token obtained from login or registration
- *     firebaseAuth:
+ *     FirebaseAuth:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
@@ -150,11 +183,9 @@ const router = Router();
  * @swagger
  * /api/auth/register:
  *   post:
- *     summary: Register new user
+ *     summary: Register a new user
  *     tags: [Authentication]
- *     description: |
- *       Create a new user account with email and password.
- *       Returns access and refresh tokens for authentication.
+ *     description: Create a new user account with email and password
  *     requestBody:
  *       required: true
  *       content:
@@ -163,15 +194,13 @@ const router = Router();
  *             $ref: '#/components/schemas/RegisterRequest'
  *     responses:
  *       201:
- *         description: User registered successfully
+ *         description: User successfully created
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/AuthSuccessResponse'
+ *               $ref: '#/components/schemas/AuthResponse'
  *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       409:
- *         description: Email already registered
+ *         description: Invalid input data
  *         content:
  *           application/json:
  *             schema:
@@ -182,11 +211,28 @@ const router = Router();
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: البريد الإلكتروني مسجل بالفعل
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                   example: "كلمة المرور وتأكيدها غير متطابقين"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "VALIDATION_ERROR"
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "البريد الإلكتروني مستخدم بالفعل"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "DUPLICATE_ENTITY"
  */
-router.post('/register', isValidation(Validators.registerSchema), userController.register);
+router.post('/register', isValidation(Validators.registerSchema), authController.register);
 
 /**
  * @swagger
@@ -194,11 +240,7 @@ router.post('/register', isValidation(Validators.registerSchema), userController
  *   post:
  *     summary: Login user
  *     tags: [Authentication]
- *     description: |
- *       Authenticate user with email and password.
- *       This endpoint validates credentials, checks user status,
- *       and generates JWT tokens for API access.
- *       The tokens are also saved in the database for tracking active sessions.
+ *     description: Authenticate user with email and password
  *     requestBody:
  *       required: true
  *       content:
@@ -211,7 +253,7 @@ router.post('/register', isValidation(Validators.registerSchema), userController
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/AuthSuccessResponse'
+ *               $ref: '#/components/schemas/AuthResponse'
  *       400:
  *         description: Invalid credentials
  *         content:
@@ -224,9 +266,12 @@ router.post('/register', isValidation(Validators.registerSchema), userController
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: البريد الإلكتروني أو كلمة المرور غير صحيحة
- *       401:
- *         description: Account disabled or suspended
+ *                   example: "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "INVALID_PASSWORD"
+ *       403:
+ *         description: Account disabled
  *         content:
  *           application/json:
  *             schema:
@@ -237,26 +282,34 @@ router.post('/register', isValidation(Validators.registerSchema), userController
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: تم تعليق الحساب، يرجى التواصل مع الدعم الفني
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                   example: "تم تعطيل هذا الحساب"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "ACCESS_DENIED"
  */
-router.post('/login', isValidation(Validators.loginSchema), userController.login);
+router.post('/login', isValidation(Validators.loginSchema), authController.login);
 
 /**
  * @swagger
- * /api/auth/logout:
+ * /api/auth/firebase:
  *   post:
- *     summary: Logout user (invalidate current token)
+ *     summary: Login with Firebase token
  *     tags: [Authentication]
  *     description: |
- *       Invalidate the current authentication token, effectively logging the user out.
- *       This endpoint marks the token as invalid in the database to prevent further use.
+ *       Authenticate user with Firebase ID token.
+ *       This endpoint allows clients to login using a Firebase ID token.
+ *       If the user doesn't exist, a new account will be created automatically.
  *     security:
- *       - BearerAuth: []
+ *       - FirebaseAuth: []
  *     responses:
  *       200:
- *         description: Logout successful
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       401:
+ *         description: Invalid Firebase token
  *         content:
  *           application/json:
  *             schema:
@@ -264,73 +317,32 @@ router.post('/login', isValidation(Validators.loginSchema), userController.login
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
+ *                   example: false
  *                 message:
  *                   type: string
- *                   example: تم تسجيل الخروج بنجاح
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                   example: "رمز المصادقة غير صالح"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "FIREBASE_ERROR"
  */
-router.post('/logout', isAuthenticated, invalidateToken);
+router.post('/firebase', firebaseToJWT, authController.firebaseLogin);
 
 /**
  * @swagger
- * /api/auth/logout-all:
+ * /api/auth/forgot-password:
  *   post:
- *     summary: Logout from all devices
+ *     summary: Request password reset
  *     tags: [Authentication]
- *     description: |
- *       Invalidate all authentication tokens for the current user, effectively logging out from all devices.
- *       This endpoint marks all tokens as invalid in the database to prevent further use.
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Logout from all devices successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: تم تسجيل الخروج من جميع الأجهزة بنجاح
- *                 data:
- *                   type: object
- *                   properties:
- *                     invalidatedCount:
- *                       type: integer
- *                       example: 3
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
- */
-router.post('/logout-all', isAuthenticated, invalidateAllTokens);
-
-/**
- * @swagger
- * /api/auth/forget-password:
- *   post:
- *     summary: Send forget password code
- *     tags: [Authentication]
- *     description: |
- *       Send a 4-digit verification code to the user's email for password reset.
- *       For security, the response doesn't reveal if the email exists.
+ *     description: Send password reset code to user's email
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ForgetPasswordRequest'
+ *             $ref: '#/components/schemas/ForgotPasswordRequest'
  *     responses:
  *       200:
- *         description: Code sent (if email exists)
+ *         description: Reset code sent successfully
  *         content:
  *           application/json:
  *             schema:
@@ -341,27 +353,39 @@ router.post('/logout-all', isAuthenticated, invalidateAllTokens);
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *                   example: "تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني"
+ *       404:
+ *         description: Email not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "لا يوجد حساب مرتبط بهذا البريد الإلكتروني"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "NOT_FOUND"
  */
-router.post('/forget-password', isValidation(Validators.forgetPasswordSchema), userController.sendForgetCode);
+router.post('/forgot-password', isValidation(Validators.forgetPasswordSchema), authController.forgetPassword);
 
 /**
  * @swagger
  * /api/auth/verify-forget-code:
  *   post:
- *     summary: Verify forget password code
+ *     summary: Verify password reset code
  *     tags: [Authentication]
- *     description: |
- *       Verify the 4-digit code sent for password reset.
- *       Must be called before reset-password endpoint.
+ *     description: Verify the 4-digit code sent to user's email
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/VerificationCodeRequest'
+ *             $ref: '#/components/schemas/VerifyCodeRequest'
  *     responses:
  *       200:
  *         description: Code verified successfully
@@ -375,9 +399,9 @@ router.post('/forget-password', isValidation(Validators.forgetPasswordSchema), u
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: تم التحقق من الرمز بنجاح
+ *                   example: "تم التحقق من الرمز بنجاح"
  *       400:
- *         description: Invalid code
+ *         description: Invalid or expired code
  *         content:
  *           application/json:
  *             schema:
@@ -388,19 +412,20 @@ router.post('/forget-password', isValidation(Validators.forgetPasswordSchema), u
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: رمز التحقق غير صحيح أو منتهي الصلاحية
+ *                   example: "الرمز غير صحيح أو منتهي الصلاحية"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "INVALID_TOKEN"
  */
-router.post('/verify-forget-code', isValidation(Validators.verifyForgetCodeSchema), userController.verifyForgetCode);
+router.post('/verify-forget-code', isValidation(Validators.verifyForgetCodeSchema), authController.verifyForgetCode);
 
 /**
  * @swagger
  * /api/auth/reset-password:
  *   post:
- *     summary: Reset password using verified code
+ *     summary: Reset password
  *     tags: [Authentication]
- *     description: |
- *       Reset user password after code verification.
- *       Requires prior verification of forget code.
+ *     description: Reset user password using verified code
  *     requestBody:
  *       required: true
  *       content:
@@ -409,7 +434,7 @@ router.post('/verify-forget-code', isValidation(Validators.verifyForgetCodeSchem
  *             $ref: '#/components/schemas/ResetPasswordRequest'
  *     responses:
  *       200:
- *         description: Password reset successful
+ *         description: Password reset successfully
  *         content:
  *           application/json:
  *             schema:
@@ -420,9 +445,9 @@ router.post('/verify-forget-code', isValidation(Validators.verifyForgetCodeSchem
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: تم تحديث كلمة المرور بنجاح
+ *                   example: "تم إعادة تعيين كلمة المرور بنجاح"
  *       400:
- *         description: Invalid request
+ *         description: Invalid input or code not verified
  *         content:
  *           application/json:
  *             schema:
@@ -433,47 +458,78 @@ router.post('/verify-forget-code', isValidation(Validators.verifyForgetCodeSchem
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: يرجى التحقق من الكود أولاً
+ *                   example: "لم يتم التحقق من رمز إعادة التعيين"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "VALIDATION_ERROR"
  */
-router.post('/reset-password', isValidation(Validators.resetPasswordSchema), userController.resetPasswordByCode);
+router.post('/reset-password', isValidation(Validators.resetPasswordSchema), authController.resetPassword);
 
 /**
  * @swagger
- * /api/auth/firebase:
+ * /api/auth/refresh-token:
  *   post:
- *     summary: Login with Firebase token
+ *     summary: Refresh access token
  *     tags: [Authentication]
- *     description: |
- *       Authenticate user with Firebase token.
- *       This endpoint allows clients to login using a Firebase ID token.
- *       If the user doesn't exist, a new account will be created automatically.
- *     security:
- *       - firebaseAuth: []
+ *     description: Get new access token using refresh token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RefreshTokenRequest'
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Token refreshed successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/AuthSuccessResponse'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث رمز الوصول بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                     refreshToken:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
  *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "رمز التحديث غير صالح أو منتهي الصلاحية"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "INVALID_TOKEN"
  */
-router.post('/firebase', verifyFirebaseToken, firebaseToJWT, userController.firebaseLogin);
+router.post('/refresh-token', isValidation(Validators.refreshTokenSchema), authController.refreshToken);
 
 /**
  * @swagger
  * /api/auth/fcm-token:
  *   post:
- *     summary: Update FCM token for push notifications
+ *     summary: Update FCM token
  *     tags: [Authentication]
- *     description: |
- *       Update the Firebase Cloud Messaging (FCM) token for the current user.
- *       This token is used to send push notifications to the user's device.
+ *     description: Update user's FCM token for push notifications
  *     security:
  *       - BearerAuth: []
+ *       - FirebaseAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -493,49 +549,122 @@ router.post('/firebase', verifyFirebaseToken, firebaseToJWT, userController.fire
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: تم تحديث رمز الإشعارات بنجاح
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
+ *                   example: "تم تحديث رمز الإشعارات بنجاح"
  *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.post('/fcm-token', isAuthenticated, isValidation(Validators.fcmTokenSchema), userController.updateFCMToken);
-
-/**
- * @swagger
- * /api/auth/refresh-token:
- *   post:
- *     summary: Refresh access token using refresh token
- *     tags: [Authentication]
- *     description: |
- *       Generate a new access token using a valid refresh token.
- *       This endpoint allows clients to get a new access token without requiring the user to log in again.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/RefreshTokenRequest'
- *     responses:
- *       200:
- *         description: Token refreshed successfully
+ *         description: Authentication required
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/RefreshTokenResponse'
- *       400:
- *         $ref: '#/components/responses/BadRequestError'
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- *       500:
- *         $ref: '#/components/responses/ServerError'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "لم يتم توفير رمز المصادقة"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "UNAUTHORIZED"
  */
-router.post('/refresh-token', isValidation(Validators.refreshTokenSchema), refreshToken);
+router.post('/fcm-token', authenticate, isValidation(Validators.fcmTokenSchema), authController.updateFCMToken);
 
-// router.put(
-//   "/redHeart/:productId",
-//   isAuthenticated,
-// userController.redHeart
-// );
-// router.get("/wishlist", isAuthenticated, userController.wishlist);
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user profile
+ *     tags: [Authentication]
+ *     description: Get the profile of the currently authenticated user
+ *     security:
+ *       - BearerAuth: []
+ *       - FirebaseAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب بيانات المستخدم بنجاح"
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "لم يتم توفير رمز المصادقة"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "UNAUTHORIZED"
+ */
+router.get('/me', authenticate, authController.getCurrentUser);
+
+/**
+ * @swagger
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     tags: [Authentication]
+ *     description: Invalidate current access token or specific refresh token
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Specific refresh token to invalidate (optional)
+ *                 example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تسجيل الخروج بنجاح"
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "لم يتم توفير رمز المصادقة"
+ *                 errorCode:
+ *                   type: string
+ *                   example: "UNAUTHORIZED"
+ */
+router.post('/logout', authenticate, authController.logout);
+
 export default router;

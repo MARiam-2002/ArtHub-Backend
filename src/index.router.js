@@ -26,7 +26,7 @@ import followRouter from './modules/follow/follow.router.js';
 import notificationRouter from './modules/notification/notification.router.js';
 import mongoose from 'mongoose';
 import { checkDatabaseHealth, ensureDatabaseConnection } from './utils/mongodbUtils.js';
-import { verifyFirebaseToken, optionalFirebaseAuth } from './middleware/firebase-auth.middleware.js';
+import { authenticate as verifyFirebaseToken, optionalAuth as optionalFirebaseAuth } from './middleware/auth.middleware.js';
 
 export const bootstrap = (app, express) => {
   if (process.env.NODE_ENV == 'dev') {

@@ -17,7 +17,7 @@ import imageModel from '../../DB/models/image.model.js';
 import imageRouter from '../../src/modules/image/image.router.js';
 import { responseMiddleware } from '../../src/middleware/response.middleware.js';
 import { globalErrorHandling } from '../../src/middleware/error.middleware.js';
-import { isAuthenticated } from '../../src/middleware/authentication.middleware.js';
+import { authenticate as isAuthenticated } from '../../src/middleware/auth.middleware.js';
 
 // Mock external services
 jest.mock('../../src/utils/cloudinary.js', () => ({

@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import * as controller from './report.controller.js';
-import { isAuthenticated } from '../../middleware/authentication.middleware.js';
-import { verifyFirebaseToken } from '../../middleware/firebase-auth.middleware.js';
+import { authenticate as isAuthenticated, authenticate as verifyFirebaseToken } from '../../middleware/auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import {
   createReportSchema,

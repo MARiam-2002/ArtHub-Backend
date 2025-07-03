@@ -1,0 +1,1017 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ArtHub Backend API",
+    "version": "1.0.0",
+    "description": "Backend API for ArtHub platform - A marketplace for artists and art enthusiasts",
+    "contact": {
+      "name": "ArtHub Development Team",
+      "email": "dev@arthub.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local development server"
+    },
+    {
+      "url": "http://localhost:3002",
+      "description": "Alternative local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and authorization endpoints"
+    },
+    {
+      "name": "Users",
+      "description": "User management endpoints"
+    },
+    {
+      "name": "Artworks",
+      "description": "Artwork management endpoints"
+    },
+    {
+      "name": "Chat",
+      "description": "Chat and messaging endpoints"
+    },
+    {
+      "name": "Notifications",
+      "description": "Push notification endpoints"
+    },
+    {
+      "name": "Follow",
+      "description": "Follow/unfollow functionality"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from login or registration"
+      },
+      "FirebaseAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase ID token obtained from Firebase Authentication"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "60d0fe4f5311236168a109ca"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "مريم فوزي"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "artist", "admin"],
+            "example": "artist"
+          },
+          "profileImage": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg"
+              },
+              "publicId": {
+                "type": "string",
+                "example": "profile_images/user_123"
+              }
+            }
+          },
+          "coverImages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "publicId": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "bio": {
+            "type": "string",
+            "example": "فنانة تشكيلية متخصصة في الرسم الزيتي"
+          },
+          "location": {
+            "type": "string",
+            "example": "القاهرة، مصر"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "example": "+201234567890"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-05-15"
+          },
+          "isVerified": {
+            "type": "boolean",
+            "example": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": ["ar", "en"],
+            "example": "ar"
+          },
+          "notificationSettings": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "boolean",
+                "example": true
+              },
+              "push": {
+                "type": "boolean",
+                "example": true
+              },
+              "chat": {
+                "type": "boolean",
+                "example": true
+              },
+              "follow": {
+                "type": "boolean",
+                "example": true
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-01-15T10:30:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-01-15T10:30:00Z"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password", "confirmPassword", "displayName"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "example": "Password123!"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "format": "password",
+            "example": "Password123!"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "example": "مريم فوزي"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "artist"],
+            "default": "user",
+            "example": "artist"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "Password123!"
+          }
+        }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          }
+        }
+      },
+      "VerifyCodeRequest": {
+        "type": "object",
+        "required": ["email", "forgetCode"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "forgetCode": {
+            "type": "string",
+            "pattern": "^\\d{4}$",
+            "example": "1234"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": ["email", "password", "confirmPassword"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "example": "NewPassword123!"
+          },
+          "confirmPassword": {
+            "type": "string",
+            "format": "password",
+            "example": "NewPassword123!"
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        }
+      },
+      "FCMTokenRequest": {
+        "type": "object",
+        "required": ["fcmToken"],
+        "properties": {
+          "fcmToken": {
+            "type": "string",
+            "example": "fMEGG8-TQVSEJHBFrk-BZ3:APA91bHZKmJLnmRJHBFrk..."
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "تم تسجيل الدخول بنجاح"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "_id": {
+                "type": "string",
+                "example": "60d0fe4f5311236168a109ca"
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "example": "user@example.com"
+              },
+              "displayName": {
+                "type": "string",
+                "example": "مريم فوزي"
+              },
+              "role": {
+                "type": "string",
+                "enum": ["user", "artist", "admin"],
+                "example": "artist"
+              },
+              "profileImage": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg"
+                  }
+                }
+              },
+              "isVerified": {
+                "type": "boolean",
+                "example": true
+              },
+              "accessToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "refreshToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              }
+            }
+          }
+        }
+      },
+      "StandardResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "تم تنفيذ العملية بنجاح"
+          },
+          "data": {
+            "type": "object",
+            "description": "Response data (varies by endpoint)"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "status": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "example": "حدث خطأ في معالجة الطلب"
+          },
+          "errorCode": {
+            "type": "string",
+            "example": "VALIDATION_ERROR"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-01-15T10:30:00Z"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "req_1642248600000_abc123"
+          },
+          "details": {
+            "type": "object",
+            "description": "Additional error details (optional)"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "tags": ["Authentication"],
+        "description": "Create a new user account with email and password. Returns JWT tokens for immediate authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 400,
+                  "message": "كلمة المرور وتأكيدها غير متطابقين",
+                  "errorCode": "VALIDATION_ERROR",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 409,
+                  "message": "البريد الإلكتروني مستخدم بالفعل",
+                  "errorCode": "DUPLICATE_ENTITY",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login user",
+        "tags": ["Authentication"],
+        "description": "Authenticate user with email and password. Returns JWT tokens for API access.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 400,
+                  "message": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+                  "errorCode": "INVALID_PASSWORD",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 403,
+                  "message": "تم تعطيل هذا الحساب",
+                  "errorCode": "ACCESS_DENIED",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/firebase": {
+      "post": {
+        "summary": "Login with Firebase token",
+        "tags": ["Authentication"],
+        "description": "Authenticate user with Firebase ID token. If the user doesn't exist, a new account will be created automatically.",
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid Firebase token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 401,
+                  "message": "رمز المصادقة غير صالح",
+                  "errorCode": "FIREBASE_ERROR",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "summary": "Request password reset",
+        "tags": ["Authentication"],
+        "description": "Send a 4-digit password reset code to user's email",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset code sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Email not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 404,
+                  "message": "لا يوجد حساب مرتبط بهذا البريد الإلكتروني",
+                  "errorCode": "NOT_FOUND",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-forget-code": {
+      "post": {
+        "summary": "Verify password reset code",
+        "tags": ["Authentication"],
+        "description": "Verify the 4-digit code sent to user's email",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Code verified successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "تم التحقق من الرمز بنجاح"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 400,
+                  "message": "الرمز غير صحيح أو منتهي الصلاحية",
+                  "errorCode": "INVALID_TOKEN",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "summary": "Reset password",
+        "tags": ["Authentication"],
+        "description": "Reset user password using verified code",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "تم إعادة تعيين كلمة المرور بنجاح"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or code not verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 400,
+                  "message": "لم يتم التحقق من رمز إعادة التعيين",
+                  "errorCode": "VALIDATION_ERROR",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh-token": {
+      "post": {
+        "summary": "Refresh access token",
+        "tags": ["Authentication"],
+        "description": "Get new access token using refresh token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث رمز الوصول بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 401,
+                  "message": "رمز التحديث غير صالح أو منتهي الصلاحية",
+                  "errorCode": "INVALID_TOKEN",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/fcm-token": {
+      "post": {
+        "summary": "Update FCM token",
+        "tags": ["Authentication"],
+        "description": "Update user's FCM token for push notifications",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FCMTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "FCM token updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "تم تحديث رمز الإشعارات بنجاح"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 401,
+                  "message": "لم يتم توفير رمز المصادقة",
+                  "errorCode": "UNAUTHORIZED",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get current user profile",
+        "tags": ["Authentication"],
+        "description": "Get the profile of the currently authenticated user",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بيانات المستخدم بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 401,
+                  "message": "لم يتم توفير رمز المصادقة",
+                  "errorCode": "UNAUTHORIZED",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Logout user",
+        "tags": ["Authentication"],
+        "description": "Invalidate current access token",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "تم تسجيل الخروج بنجاح"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 401,
+                  "message": "لم يتم توفير رمز المصادقة",
+                  "errorCode": "UNAUTHORIZED",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout-all": {
+      "post": {
+        "summary": "Logout from all devices",
+        "tags": ["Authentication"],
+        "description": "Invalidate all access tokens for the user",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logout from all devices successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "تم تسجيل الخروج من جميع الأجهزة بنجاح"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "status": 401,
+                  "message": "لم يتم توفير رمز المصادقة",
+                  "errorCode": "UNAUTHORIZED",
+                  "timestamp": "2023-01-15T10:30:00Z",
+                  "requestId": "req_1642248600000_abc123"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} 

@@ -1,15 +1,25 @@
-import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import request from 'supertest';
+import express from 'express';
 import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+
+// Import modules to test
+import authRouter from '../../src/modules/auth/auth.router.js';
 import userModel from '../../DB/models/user.model.js';
 import tokenModel from '../../DB/models/token.model.js';
+import { authenticate, optionalAuth, authorize } from '../../src/middleware/auth.middleware.js';
+import { globalErrorHandler } from '../../src/utils/errorHandler.js';
 
-// Mock Firebase Admin SDK
+// Mock Firebase Admin
 jest.mock('../../src/utils/firebaseAdmin.js', () => ({
-  auth: jest.fn().mockReturnValue({
-    verifyIdToken: jest.fn()
-  })
+  default: {
+    auth: () => ({
+      verifyIdToken: jest.fn()
+    })
+  }
 }));
 
 // Mock email sending
@@ -22,427 +32,704 @@ jest.mock('../../src/utils/pushNotifications.js', () => ({
   updateUserFCMToken: jest.fn().mockResolvedValue(true)
 }));
 
-describe('Auth Controller', () => {
-  let req, res, next;
-  let testUser, testToken;
-  
-  // Import auth controller functions
-  let authController;
+describe('Authentication System - Complete Test Suite', () => {
+  let app;
+  let mongoServer;
+  let testUser;
+  let testToken;
 
-  beforeAll(async () => {
-    // Connect to test database
-    const mongoUri = process.env.TEST_DB_URI || 'mongodb://localhost:27017/arthub-test';
-    await mongoose.connect(mongoUri);
-    
-    // Import controller after mocks are set up
-    authController = await import('../../src/modules/auth/controller/auth.js');
-  });
+  // Test data
+  const validUserData = {
+    email: 'test@example.com',
+    password: 'TestPassword123!',
+    confirmPassword: 'TestPassword123!',
+    displayName: 'Test User',
+    role: 'user'
+  };
 
-  afterAll(async () => {
-    await mongoose.connection.close();
-  });
+  const validArtistData = {
+    email: 'artist@example.com',
+    password: 'ArtistPassword123!',
+    confirmPassword: 'ArtistPassword123!',
+    displayName: 'Test Artist',
+    role: 'artist'
+  };
+
+  const validLoginData = {
+    email: 'test@example.com',
+    password: 'TestPassword123!'
+  };
 
   beforeEach(async () => {
-    // Clear collections
-    await userModel.deleteMany({});
-    await tokenModel.deleteMany({});
+    // Setup test environment
+    process.env.NODE_ENV = 'test';
+    process.env.TOKEN_KEY = 'test-secret-key';
+    process.env.REFRESH_TOKEN_KEY = 'test-refresh-secret-key';
+
+    // Create Express app
+    app = express();
+    app.use(express.json());
+    app.use('/api/auth', authRouter);
+    app.use(globalErrorHandler);
+
+    // Setup in-memory MongoDB
+    mongoServer = await MongoMemoryServer.create();
+    const mongoUri = mongoServer.getUri();
+    await mongoose.connect(mongoUri);
 
     // Create test user
-    const hashedPassword = await bcryptjs.hash('Password123!', 10);
+    const hashedPassword = await bcryptjs.hash(validUserData.password, 10);
     testUser = await userModel.create({
-      email: 'test@example.com',
+      email: validUserData.email,
       password: hashedPassword,
-      displayName: 'Test User',
-      isActive: true
+      displayName: validUserData.displayName,
+      role: validUserData.role,
+      isActive: true,
+      isVerified: true
     });
 
-    // Setup request, response, and next mocks
-    req = {
-      body: {},
-      headers: {
-        'authorization': 'Bearer valid_token',
-        'user-agent': 'test-agent'
-      },
-      user: {
-        _id: testUser._id,
-        email: testUser.email,
-        displayName: testUser.displayName,
-        role: testUser.role
-      }
-    };
+    // Generate test token
+    testToken = jwt.sign(
+      { id: testUser._id, email: testUser.email, role: testUser.role },
+      process.env.TOKEN_KEY,
+      { expiresIn: '2h' }
+    );
 
-    res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn()
-    };
-
-    next = jest.fn();
-
-    // Reset all mocks
-    jest.clearAllMocks();
+    // Save token to database
+    await tokenModel.create({
+      userId: testUser._id,
+      accessToken: testToken,
+      refreshToken: 'test-refresh-token',
+      userAgent: 'test-agent',
+      isValid: true
+    });
   });
 
   afterEach(async () => {
-    // Clean up after each test
-    await userModel.deleteMany({});
-    await tokenModel.deleteMany({});
+    // Cleanup
+    await mongoose.connection.dropDatabase();
+    await mongoose.connection.close();
+    await mongoServer.stop();
+    jest.clearAllMocks();
   });
 
-  describe('User Registration', () => {
-    beforeEach(() => {
-      req.body = {
-        email: 'newuser@example.com',
-        password: 'Password123!',
-        confirmPassword: 'Password123!',
-        displayName: 'New User'
-      };
-    });
-
+  describe('POST /api/auth/register', () => {
     it('should register a new user successfully', async () => {
-      await authController.register(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: 'تم إنشاء الحساب بنجاح',
-          data: expect.objectContaining({
-            email: 'newuser@example.com',
-            displayName: 'New User',
-            accessToken: expect.any(String),
-            refreshToken: expect.any(String)
-          })
-        })
-      );
-    });
-
-    it('should reject registration with existing email', async () => {
-      req.body.email = testUser.email;
-      
-      await authController.register(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'البريد الإلكتروني مستخدم بالفعل',
-          cause: 409
-        })
-      );
-    });
-
-    it('should reject registration with mismatched passwords', async () => {
-      req.body.confirmPassword = 'DifferentPassword123!';
-      
-      await authController.register(req, res, next);
-
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'كلمة المرور وتأكيدها غير متطابقين',
-          cause: 400
-        })
-      );
-    });
-  });
-
-  describe('User Login', () => {
-    beforeEach(() => {
-      req.body = {
-        email: testUser.email,
-        password: 'Password123!'
+      const newUserData = {
+        ...validUserData,
+        email: 'newuser@example.com'
       };
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(newUserData);
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم إنشاء الحساب بنجاح');
+      expect(response.body.data).toHaveProperty('accessToken');
+      expect(response.body.data).toHaveProperty('refreshToken');
+      expect(response.body.data.email).toBe(newUserData.email);
+      expect(response.body.data.displayName).toBe(newUserData.displayName);
+      expect(response.body.data.role).toBe(newUserData.role);
     });
 
-    it('should login user successfully', async () => {
-      await authController.login(req, res, next);
+    it('should register an artist successfully', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(validArtistData);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: 'تم تسجيل الدخول بنجاح',
-          data: expect.objectContaining({
-            email: testUser.email,
-            displayName: testUser.displayName,
-            accessToken: expect.any(String),
-            refreshToken: expect.any(String)
-          })
-        })
-      );
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.role).toBe('artist');
     });
 
-    it('should reject login with invalid email', async () => {
-      req.body.email = 'nonexistent@example.com';
-      
-      await authController.login(req, res, next);
+    it('should fail when email already exists', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(validUserData);
 
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
-          cause: 400
-        })
-      );
+      expect(response.status).toBe(409);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('البريد الإلكتروني مستخدم بالفعل');
     });
 
-    it('should reject login with invalid password', async () => {
-      req.body.password = 'WrongPassword123!';
-      
-      await authController.login(req, res, next);
+    it('should fail when passwords do not match', async () => {
+      const invalidData = {
+        ...validUserData,
+        email: 'different@example.com',
+        confirmPassword: 'DifferentPassword123!'
+      };
 
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
-          cause: 400
-        })
-      );
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(invalidData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('كلمة المرور وتأكيدها غير متطابقين');
     });
 
-    it('should reject login for inactive user', async () => {
-      await userModel.findByIdAndUpdate(testUser._id, { isActive: false });
-      
-      await authController.login(req, res, next);
+    it('should fail with invalid email format', async () => {
+      const invalidData = {
+        ...validUserData,
+        email: 'invalid-email'
+      };
 
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'تم تعليق الحساب، يرجى التواصل مع الدعم الفني',
-          cause: 401
-        })
-      );
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(invalidData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should fail with weak password', async () => {
+      const invalidData = {
+        ...validUserData,
+        email: 'weak@example.com',
+        password: '123',
+        confirmPassword: '123'
+      };
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(invalidData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should fail with missing required fields', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'test@example.com'
+          // Missing password, confirmPassword, displayName
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
     });
   });
 
-  describe('Password Reset Flow', () => {
-    describe('Send Forget Code', () => {
-      beforeEach(() => {
-        req.body = { email: testUser.email };
-      });
+  describe('POST /api/auth/login', () => {
+    it('should login successfully with valid credentials', async () => {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(validLoginData);
 
-      it('should send forget code successfully', async () => {
-        await authController.sendForgetCode(req, res, next);
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم تسجيل الدخول بنجاح');
+      expect(response.body.data).toHaveProperty('accessToken');
+      expect(response.body.data).toHaveProperty('refreshToken');
+      expect(response.body.data.email).toBe(validLoginData.email);
+    });
 
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith(
-          expect.objectContaining({
-            success: true,
-            message: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'
-          })
-        );
+    it('should fail with invalid email', async () => {
+      const invalidData = {
+        ...validLoginData,
+        email: 'nonexistent@example.com'
+      };
 
-        // Check that forget code was saved
-        const updatedUser = await userModel.findById(testUser._id);
-        expect(updatedUser.forgetCode).toBeDefined();
-        expect(updatedUser.forgetCodeExpires).toBeDefined();
-      });
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(invalidData);
 
-      it('should not reveal non-existent email', async () => {
-        req.body.email = 'nonexistent@example.com';
-        
-        await authController.sendForgetCode(req, res, next);
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+    });
 
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith(
-          expect.objectContaining({
-            success: true,
-            message: expect.stringContaining('إذا كان البريد الإلكتروني')
-          })
-        );
+    it('should fail with invalid password', async () => {
+      const invalidData = {
+        ...validLoginData,
+        password: 'WrongPassword123!'
+      };
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(invalidData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+    });
+
+    it('should fail with inactive user', async () => {
+      // Deactivate user
+      await userModel.findByIdAndUpdate(testUser._id, { isActive: false });
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(validLoginData);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('تم تعطيل هذا الحساب، يرجى التواصل مع الدعم');
+    });
+
+    it('should fail with deleted user', async () => {
+      // Mark user as deleted
+      await userModel.findByIdAndUpdate(testUser._id, { isDeleted: true });
+
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send(validLoginData);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('هذا الحساب محذوف');
+    });
+
+    it('should fail with missing credentials', async () => {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com'
+          // Missing password
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe('POST /api/auth/forgot-password', () => {
+    it('should send reset code successfully', async () => {
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: testUser.email });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
+
+      // Check if forget code was saved
+      const updatedUser = await userModel.findById(testUser._id);
+      expect(updatedUser.forgetCode).toBeDefined();
+      expect(updatedUser.isForgetCodeVerified).toBe(false);
+    });
+
+    it('should fail with non-existent email', async () => {
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'nonexistent@example.com' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('لا يوجد حساب مرتبط بهذا البريد الإلكتروني');
+    });
+
+    it('should fail with invalid email format', async () => {
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'invalid-email' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe('POST /api/auth/verify-forget-code', () => {
+    beforeEach(async () => {
+      // Set up forget code for testing
+      await userModel.findByIdAndUpdate(testUser._id, {
+        forgetCode: '1234',
+        isForgetCodeVerified: false
       });
     });
 
-    describe('Verify Forget Code', () => {
-      let forgetCode;
-
-      beforeEach(async () => {
-        forgetCode = '1234';
-        await userModel.findByIdAndUpdate(testUser._id, {
-          forgetCode,
-          forgetCodeExpires: Date.now() + 10 * 60 * 1000 // 10 minutes
-        });
-
-        req.body = {
+    it('should verify forget code successfully', async () => {
+      const response = await request(app)
+        .post('/api/auth/verify-forget-code')
+        .send({
           email: testUser.email,
-          forgetCode
-        };
-      });
-
-      it('should verify forget code successfully', async () => {
-        await authController.verifyForgetCode(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith(
-          expect.objectContaining({
-            success: true,
-            message: 'تم التحقق من الرمز بنجاح'
-          })
-        );
-
-        // Check that code was marked as verified
-        const updatedUser = await userModel.findById(testUser._id);
-        expect(updatedUser.forgetCodeVerified).toBe(true);
-      });
-
-      it('should reject invalid forget code', async () => {
-        req.body.forgetCode = '9999';
-        
-        await authController.verifyForgetCode(req, res, next);
-
-        expect(next).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
-            cause: 400
-          })
-        );
-      });
-
-      it('should reject expired forget code', async () => {
-        await userModel.findByIdAndUpdate(testUser._id, {
-          forgetCodeExpires: Date.now() - 1000 // Expired
+          forgetCode: '1234'
         });
-        
-        await authController.verifyForgetCode(req, res, next);
 
-        expect(next).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: 'رمز التحقق غير صحيح أو منتهي الصلاحية',
-            cause: 400
-          })
-        );
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم التحقق من الرمز بنجاح، يمكنك الآن إعادة تعيين كلمة المرور');
+
+      // Check if code was marked as verified
+      const updatedUser = await userModel.findById(testUser._id);
+      expect(updatedUser.isForgetCodeVerified).toBe(true);
+    });
+
+    it('should fail with invalid code', async () => {
+      const response = await request(app)
+        .post('/api/auth/verify-forget-code')
+        .send({
+          email: testUser.email,
+          forgetCode: '9999'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('الرمز غير صحيح أو منتهي الصلاحية');
+    });
+
+    it('should fail with wrong email', async () => {
+      const response = await request(app)
+        .post('/api/auth/verify-forget-code')
+        .send({
+          email: 'wrong@example.com',
+          forgetCode: '1234'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('الرمز غير صحيح أو منتهي الصلاحية');
+    });
+  });
+
+  describe('POST /api/auth/reset-password', () => {
+    beforeEach(async () => {
+      // Set up verified forget code for testing
+      await userModel.findByIdAndUpdate(testUser._id, {
+        forgetCode: '1234',
+        isForgetCodeVerified: true
       });
     });
 
-    describe('Reset Password', () => {
-      beforeEach(async () => {
-        await userModel.findByIdAndUpdate(testUser._id, {
-          forgetCode: '1234',
-          forgetCodeExpires: Date.now() + 10 * 60 * 1000,
-          forgetCodeVerified: true
+    it('should reset password successfully', async () => {
+      const newPassword = 'NewPassword123!';
+      
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({
+          email: testUser.email,
+          password: newPassword,
+          confirmPassword: newPassword
         });
 
-        req.body = {
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم إعادة تعيين كلمة المرور بنجاح، يرجى تسجيل الدخول');
+
+      // Check if password was updated and reset fields cleared
+      const updatedUser = await userModel.findById(testUser._id).select('+password');
+      expect(updatedUser.forgetCode).toBeUndefined();
+      expect(updatedUser.isForgetCodeVerified).toBe(false);
+      
+      // Verify new password works
+      const isValid = await bcryptjs.compare(newPassword, updatedUser.password);
+      expect(isValid).toBe(true);
+    });
+
+    it('should fail when passwords do not match', async () => {
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({
+          email: testUser.email,
+          password: 'NewPassword123!',
+          confirmPassword: 'DifferentPassword123!'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('كلمة المرور وتأكيدها غير متطابقين');
+    });
+
+    it('should fail when forget code is not verified', async () => {
+      // Mark code as not verified
+      await userModel.findByIdAndUpdate(testUser._id, {
+        isForgetCodeVerified: false
+      });
+
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({
           email: testUser.email,
           password: 'NewPassword123!',
           confirmPassword: 'NewPassword123!'
-        };
-      });
-
-      it('should reset password successfully', async () => {
-        await authController.resetPasswordByCode(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(200);
-        expect(res.json).toHaveBeenCalledWith(
-          expect.objectContaining({
-            success: true,
-            message: 'تم تحديث كلمة المرور بنجاح'
-          })
-        );
-
-        // Verify password was updated
-        const updatedUser = await userModel.findById(testUser._id).select('+password');
-        const isNewPasswordValid = await bcryptjs.compare('NewPassword123!', updatedUser.password);
-        expect(isNewPasswordValid).toBe(true);
-      });
-
-      it('should reject reset without code verification', async () => {
-        await userModel.findByIdAndUpdate(testUser._id, {
-          forgetCodeVerified: false
         });
-        
-        await authController.resetPasswordByCode(req, res, next);
 
-        expect(next).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: 'يرجى التحقق من الكود أولاً',
-            cause: 400
-          })
-        );
-      });
-
-      it('should reject mismatched passwords', async () => {
-        req.body.confirmPassword = 'DifferentPassword123!';
-        
-        await authController.resetPasswordByCode(req, res, next);
-
-        expect(next).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: 'كلمة المرور وتأكيدها غير متطابقين',
-            cause: 400
-          })
-        );
-      });
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('لم يتم التحقق من رمز إعادة التعيين');
     });
   });
 
-  describe('Firebase Authentication', () => {
-    beforeEach(() => {
-      req.user = {
-        _id: 'firebase_user_id',
-        email: 'firebase@example.com',
-        displayName: 'Firebase User',
-        role: 'user',
-        accessToken: 'mock_access_token',
-        refreshToken: 'mock_refresh_token'
-      };
+  describe('POST /api/auth/refresh-token', () => {
+    let refreshToken;
+
+    beforeEach(async () => {
+      // Generate refresh token
+      refreshToken = jwt.sign(
+        { id: testUser._id, tokenType: 'refresh' },
+        process.env.REFRESH_TOKEN_KEY,
+        { expiresIn: '30d' }
+      );
+
+      // Save refresh token to database
+      await tokenModel.create({
+        userId: testUser._id,
+        accessToken: 'old-access-token',
+        refreshToken: refreshToken,
+        userAgent: 'test-agent',
+        isValid: true
+      });
     });
 
-    it('should handle Firebase login successfully', async () => {
-      await authController.firebaseLogin(req, res, next);
+    it('should refresh token successfully', async () => {
+      const response = await request(app)
+        .post('/api/auth/refresh-token')
+        .send({ refreshToken });
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: 'تم تسجيل الدخول بنجاح',
-          data: expect.objectContaining({
-            _id: 'firebase_user_id',
-            email: 'firebase@example.com',
-            displayName: 'Firebase User',
-            accessToken: 'mock_access_token',
-            refreshToken: 'mock_refresh_token'
-          })
-        })
-      );
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم تحديث رمز الوصول بنجاح');
+      expect(response.body.data).toHaveProperty('accessToken');
+      expect(response.body.data).toHaveProperty('refreshToken');
     });
 
-    it('should handle missing user data', async () => {
-      req.user = undefined;
-      
-      await authController.firebaseLogin(req, res, next);
+    it('should fail with invalid refresh token', async () => {
+      const response = await request(app)
+        .post('/api/auth/refresh-token')
+        .send({ refreshToken: 'invalid-token' });
 
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'فشل في مصادقة المستخدم',
-          cause: 401
-        })
-      );
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
     });
 
-    it('should handle missing tokens', async () => {
-      delete req.user.accessToken;
-      
-      await authController.firebaseLogin(req, res, next);
+    it('should fail with missing refresh token', async () => {
+      const response = await request(app)
+        .post('/api/auth/refresh-token')
+        .send({});
 
-      expect(next).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'فشل في مصادقة المستخدم',
-          cause: 401
-        })
-      );
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('رمز التحديث مطلوب');
     });
   });
 
-  describe('FCM Token Update', () => {
-    beforeEach(() => {
-      req.body = { fcmToken: 'test_fcm_token' };
+  describe('POST /api/auth/logout', () => {
+    it('should logout successfully', async () => {
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({});
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم تسجيل الخروج بنجاح');
     });
+
+    it('should logout with specific refresh token', async () => {
+      const refreshToken = 'test-refresh-token';
+      
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ refreshToken });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم تسجيل الخروج بنجاح');
+    });
+
+    it('should fail without authentication', async () => {
+      const response = await request(app)
+        .post('/api/auth/logout')
+        .send({});
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe('GET /api/auth/me', () => {
+    it('should get current user successfully', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${testToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم جلب بيانات المستخدم بنجاح');
+      expect(response.body.data._id).toBe(testUser._id.toString());
+      expect(response.body.data.email).toBe(testUser.email);
+      expect(response.body.data).not.toHaveProperty('password');
+    });
+
+    it('should fail without authentication', async () => {
+      const response = await request(app)
+        .get('/api/auth/me');
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should fail with invalid token', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', 'Bearer invalid-token');
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe('POST /api/auth/fcm-token', () => {
+    const fcmToken = 'test-fcm-token-123';
 
     it('should update FCM token successfully', async () => {
-      await authController.updateFCMToken(req, res, next);
+      const response = await request(app)
+        .post('/api/auth/fcm-token')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({ fcmToken });
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: true,
-          message: 'تم تحديث رمز الإشعارات بنجاح'
-        })
-      );
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('تم تحديث رمز الإشعارات بنجاح');
+    });
+
+    it('should fail without authentication', async () => {
+      const response = await request(app)
+        .post('/api/auth/fcm-token')
+        .send({ fcmToken });
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+    });
+
+    it('should fail without FCM token', async () => {
+      const response = await request(app)
+        .post('/api/auth/fcm-token')
+        .set('Authorization', `Bearer ${testToken}`)
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('رمز FCM مطلوب');
+    });
+  });
+
+  describe('Authentication Middleware Tests', () => {
+    it('should authenticate valid JWT token', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${testToken}`);
+
+      expect(response.status).toBe(200);
+    });
+
+    it('should reject invalid JWT token', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', 'Bearer invalid-token');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should reject missing authorization header', async () => {
+      const response = await request(app)
+        .get('/api/auth/me');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('should reject malformed authorization header', async () => {
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', 'InvalidFormat');
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('Integration Tests - Complete Auth Flow', () => {
+    it('should complete full registration and login flow', async () => {
+      const userData = {
+        email: 'integration@example.com',
+        password: 'IntegrationTest123!',
+        confirmPassword: 'IntegrationTest123!',
+        displayName: 'Integration Test User',
+        role: 'user'
+      };
+
+      // 1. Register
+      const registerResponse = await request(app)
+        .post('/api/auth/register')
+        .send(userData);
+
+      expect(registerResponse.status).toBe(201);
+      const { accessToken, refreshToken } = registerResponse.body.data;
+
+      // 2. Get user profile
+      const profileResponse = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(profileResponse.status).toBe(200);
+      expect(profileResponse.body.data.email).toBe(userData.email);
+
+      // 3. Logout
+      const logoutResponse = await request(app)
+        .post('/api/auth/logout')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ refreshToken });
+
+      expect(logoutResponse.status).toBe(200);
+
+      // 4. Login again
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: userData.email,
+          password: userData.password
+        });
+
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.body.data).toHaveProperty('accessToken');
+    });
+
+    it('should complete password reset flow', async () => {
+      // 1. Request password reset
+      const forgotResponse = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: testUser.email });
+
+      expect(forgotResponse.status).toBe(200);
+
+      // Get the forget code from database
+      const user = await userModel.findById(testUser._id);
+      const forgetCode = user.forgetCode;
+
+      // 2. Verify forget code
+      const verifyResponse = await request(app)
+        .post('/api/auth/verify-forget-code')
+        .send({
+          email: testUser.email,
+          forgetCode
+        });
+
+      expect(verifyResponse.status).toBe(200);
+
+      // 3. Reset password
+      const newPassword = 'NewIntegrationPassword123!';
+      const resetResponse = await request(app)
+        .post('/api/auth/reset-password')
+        .send({
+          email: testUser.email,
+          password: newPassword,
+          confirmPassword: newPassword
+        });
+
+      expect(resetResponse.status).toBe(200);
+
+      // 4. Login with new password
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: testUser.email,
+          password: newPassword
+        });
+
+      expect(loginResponse.status).toBe(200);
     });
   });
 });

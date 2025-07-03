@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { fileUpload, filterObject } from '../../utils/multer.js';
 import * as imageController from './controller/image.js';
-import { isAuthenticated } from '../../middleware/authentication.middleware.js';
+import { authenticate as isAuthenticated } from '../../middleware/auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import {
   uploadImageSchema,
