@@ -79,7 +79,7 @@ const router = Router();
 // Image Upload
 /**
  * @swagger
- * /api/image/upload:
+ * /image/upload:
  *   post:
  *     tags: [Images]
  *     summary: Upload image
@@ -161,7 +161,7 @@ router.post(
 // Get Images
 /**
  * @swagger
- * /api/image:
+ * /image:
  *   get:
  *     tags: [Images]
  *     summary: Get all images
@@ -241,7 +241,7 @@ router.get('/', isValidation(getImagesQuerySchema), imageController.getAllImages
 // Search Images
 /**
  * @swagger
- * /api/image/search:
+ * /image/search:
  *   get:
  *     tags: [Images]
  *     summary: Search images
@@ -285,14 +285,14 @@ router.get('/search', isValidation(searchImagesQuerySchema), imageController.sea
 // Get Image by ID
 /**
  * @swagger
- * /api/image/{imageId}:
+ * /image/{imageId}:
  *   get:
  *     tags: [Images]
  *     summary: Get image by ID
  *     description: Get detailed information about a specific image
  *     parameters:
  *       - in: path
- *         name: imageId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -319,7 +319,7 @@ router.get('/:imageId', isValidation(imageIdParamSchema), imageController.getIma
 // Update Image
 /**
  * @swagger
- * /api/image/{imageId}:
+ * /image/{imageId}:
  *   put:
  *     tags: [Images]
  *     summary: Update image
@@ -328,7 +328,7 @@ router.get('/:imageId', isValidation(imageIdParamSchema), imageController.getIma
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: imageId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -364,7 +364,7 @@ router.get('/:imageId', isValidation(imageIdParamSchema), imageController.getIma
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
- *         description: Only image owner can update
+ *         $ref: '#/components/responses/ForbiddenError'
  *       404:
  *         description: Image not found
  */
@@ -373,7 +373,7 @@ router.put('/:imageId', isAuthenticated, isValidation(imageIdParamSchema), isVal
 // Delete Image
 /**
  * @swagger
- * /api/image/{imageId}:
+ * /image/{imageId}:
  *   delete:
  *     tags: [Images]
  *     summary: Delete image
@@ -382,7 +382,7 @@ router.put('/:imageId', isAuthenticated, isValidation(imageIdParamSchema), isVal
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: imageId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -393,7 +393,7 @@ router.put('/:imageId', isAuthenticated, isValidation(imageIdParamSchema), isVal
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
- *         description: Only image owner can delete
+ *         $ref: '#/components/responses/ForbiddenError'
  *       404:
  *         description: Image not found
  */
@@ -402,7 +402,7 @@ router.delete('/:imageId', isAuthenticated, isValidation(imageIdParamSchema), im
 // My Images
 /**
  * @swagger
- * /api/image/my-images:
+ * /image/my-images:
  *   get:
  *     tags: [Images]
  *     summary: Get my images
@@ -439,7 +439,7 @@ router.get('/my-images', isAuthenticated, imageController.getMyImages);
 // Download Image
 /**
  * @swagger
- * /api/image/{imageId}/download:
+ * /image/{imageId}/download:
  *   get:
  *     tags: [Images]
  *     summary: Download image
@@ -468,10 +468,47 @@ router.get('/my-images', isAuthenticated, imageController.getMyImages);
  *               type: string
  *               format: binary
  *       403:
- *         description: Download not allowed
+ *         description: Download not allowed for this image
  *       404:
  *         description: Image not found
  */
 router.get('/:imageId/download', isValidation(imageIdParamSchema), imageController.downloadImage);
+
+// Get User Images
+/**
+ * @swagger
+ * /image/user/{userId}:
+ *   get:
+ *     tags: [Images]
+ *     summary: Get user images
+ *     description: Get all images uploaded by a specific user
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: User ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: User images retrieved successfully
+ *       404:
+ *         description: User not found
+ */
+router.get('/user/:userId', isValidation(getImagesQuerySchema), imageController.getUserImages);
 
 export default router;

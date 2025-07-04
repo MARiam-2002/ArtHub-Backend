@@ -12,7 +12,7 @@ const router = Router();
  *   name: Reviews
  *   description: إدارة التقييمات والمراجعات للأعمال الفنية والفنانين
  * 
- * /api/reviews/artwork:
+ * /reviews/artwork:
  *   post:
  *     tags: [Reviews]
  *     summary: إنشاء تقييم جديد لعمل فني
@@ -102,7 +102,7 @@ router.post(
 
 /**
  * @swagger
- * /api/reviews/artwork/{reviewId}:
+ * /reviews/artwork/{reviewId}:
  *   put:
  *     tags: [Reviews]
  *     summary: تحديث تقييم عمل فني موجود
@@ -169,7 +169,7 @@ router.put(
 
 /**
  * @swagger
- * /api/reviews/artwork/{artworkId}:
+ * /reviews/artwork/{artworkId}:
  *   get:
  *     tags: [Reviews]
  *     summary: جلب تقييمات عمل فني مع إحصائيات شاملة
@@ -264,7 +264,7 @@ router.get(
 
 /**
  * @swagger
- * /api/reviews/artist:
+ * /reviews/artist:
  *   post:
  *     tags: [Reviews]
  *     summary: إنشاء تقييم جديد لفنان
@@ -326,7 +326,7 @@ router.post(
 
 /**
  * @swagger
- * /api/reviews/artist/{reviewId}:
+ * /reviews/artist/{reviewId}:
  *   put:
  *     tags: [Reviews]
  *     summary: تحديث تقييم فنان موجود
@@ -369,7 +369,7 @@ router.put(
 
 /**
  * @swagger
- * /api/reviews/artist/{artistId}:
+ * /reviews/artist/{artistId}:
  *   get:
  *     tags: [Reviews]
  *     summary: جلب تقييمات فنان مع إحصائيات شاملة
@@ -458,7 +458,7 @@ router.get(
 
 /**
  * @swagger
- * /api/reviews/{reviewId}:
+ * /reviews/{reviewId}:
  *   delete:
  *     tags: [Reviews]
  *     summary: حذف تقييم
@@ -516,7 +516,7 @@ router.delete(
 
 /**
  * @swagger
- * /api/reviews/{reviewId}/helpful:
+ * /reviews/{reviewId}/helpful:
  *   post:
  *     tags: [Reviews]
  *     summary: تمييز التقييم كمفيد أو إلغاء التمييز
@@ -602,7 +602,7 @@ router.post(
 
 /**
  * @swagger
- * /api/reviews/{reviewId}/report:
+ * /reviews/{reviewId}/report:
  *   post:
  *     tags: [Reviews]
  *     summary: الإبلاغ عن تقييم
@@ -684,7 +684,7 @@ router.post(
 
 /**
  * @swagger
- * /api/reviews/my:
+ * /reviews/my:
  *   get:
  *     tags: [Reviews]
  *     summary: جلب تقييمات المستخدم
@@ -797,7 +797,7 @@ router.get(
 
 /**
  * @swagger
- * /api/reviews/admin/stats:
+ * /reviews/admin/stats:
  *   get:
  *     tags: [Reviews]
  *     summary: جلب إحصائيات التقييمات (للمدراء)
@@ -889,7 +889,7 @@ router.get(
 
 /**
  * @swagger
- * /api/reviews/{reviewId}/moderate:
+ * /reviews/{reviewId}/moderate:
  *   patch:
  *     tags: [Reviews]
  *     summary: إدارة التقييم (للمدراء)

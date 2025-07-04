@@ -23,7 +23,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/notifications:
+ * /notifications:
  *   get:
  *     summary: Get user notifications
  *     tags: [Notifications]
@@ -61,7 +61,7 @@ router.get('/', isAuthenticated, notificationController.getNotifications);
 
 /**
  * @swagger
- * /api/notifications/firebase:
+ * /notifications/firebase:
  *   get:
  *     tags:
  *       - Notifications
@@ -87,7 +87,7 @@ router.get(
 
 /**
  * @swagger
- * /api/notifications/stats:
+ * /notifications/stats:
  *   get:
  *     tags:
  *       - Notifications
@@ -161,7 +161,7 @@ router.get(
 
 /**
  * @swagger
- * /api/notifications/settings:
+ * /notifications/settings:
  *   get:
  *     summary: Get notification settings
  *     tags: [Notifications]
@@ -178,7 +178,7 @@ router.get('/settings', isAuthenticated, notificationController.getNotificationS
 
 /**
  * @swagger
- * /api/notifications/settings:
+ * /notifications/settings:
  *   put:
  *     summary: Update notification settings
  *     tags: [Notifications]
@@ -219,7 +219,7 @@ router.put('/settings', isAuthenticated, notificationController.updateNotificati
 
 /**
  * @swagger
- * /api/notifications/{notificationId}/read:
+ * /notifications/{notificationId}/read:
  *   patch:
  *     summary: Mark notification as read
  *     tags: [Notifications]
@@ -245,7 +245,7 @@ router.patch('/:notificationId/read', isAuthenticated, notificationController.ma
 
 /**
  * @swagger
- * /api/notifications/read-all:
+ * /notifications/read-all:
  *   patch:
  *     summary: Mark all notifications as read
  *     tags: [Notifications]
@@ -262,7 +262,7 @@ router.patch('/read-all', isAuthenticated, notificationController.markAllAsRead)
 
 /**
  * @swagger
- * /api/notifications/{notificationId}:
+ * /notifications/{notificationId}:
  *   delete:
  *     summary: Delete notification
  *     tags: [Notifications]
@@ -288,7 +288,7 @@ router.delete('/:notificationId', isAuthenticated, notificationController.delete
 
 /**
  * @swagger
- * /api/notifications:
+ * /notifications:
  *   delete:
  *     tags:
  *       - Notifications
@@ -371,7 +371,7 @@ router.post(
 
 /**
  * @swagger
- * /api/notifications/bulk:
+ * /notifications/bulk:
  *   post:
  *     tags:
  *       - Notifications
@@ -441,7 +441,7 @@ router.post(
 
 /**
  * @swagger
- * /api/notifications/token:
+ * /notifications/token:
  *   post:
  *     tags:
  *       - FCM Tokens
@@ -536,7 +536,7 @@ router.post(
 
 /**
  * @swagger
- * /api/notifications/token/firebase:
+ * /notifications/token/firebase:
  *   post:
  *     tags:
  *       - FCM Tokens

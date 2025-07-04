@@ -17,7 +17,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/reports:
+ * /reports:
  *   post:
  *     tags:
  *       - Reports
@@ -82,7 +82,7 @@ router.post('/firebase', verifyFirebaseToken, isValidation(createReportSchema), 
 
 /**
  * @swagger
- * /api/reports/my:
+ * /reports/my:
  *   get:
  *     tags:
  *       - Reports
@@ -132,7 +132,7 @@ router.get('/my/firebase', verifyFirebaseToken, isValidation(reportQuerySchema),
 
 /**
  * @swagger
- * /api/reports/{reportId}:
+ * /reports/{reportId}:
  *   get:
  *     tags:
  *       - Reports
@@ -175,7 +175,7 @@ router.get('/:reportId/firebase', verifyFirebaseToken, isValidation(reportIdSche
 
 /**
  * @swagger
- * /api/reports/{reportId}:
+ * /reports/{reportId}:
  *   delete:
  *     tags:
  *       - Reports
@@ -200,7 +200,7 @@ router.delete('/:reportId', isAuthenticated, controller.deleteReport);
 
 /**
  * @swagger
- * /api/reports/admin/stats:
+ * /reports/admin/stats:
  *   get:
  *     tags:
  *       - Reports
@@ -248,43 +248,7 @@ router.delete('/:reportId', isAuthenticated, controller.deleteReport);
  *                 success:
  *                   type: boolean
  *                 data:
- *                   type: object
- *                   properties:
- *                     summary:
- *                       type: object
- *                       properties:
- *                         total:
- *                           type: integer
- *                         pending:
- *                           type: integer
- *                         investigating:
- *                           type: integer
- *                         resolved:
- *                           type: integer
- *                         rejected:
- *                           type: integer
- *                         escalated:
- *                           type: integer
- *                     groupedBy:
- *                       type: object
- *                     topReasons:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           reason:
- *                             type: string
- *                           count:
- *                             type: integer
- *                     activity:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           date:
- *                             type: string
- *                           count:
- *                             type: integer
+ *                   $ref: '#/components/schemas/ReportStatsResponse'
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
@@ -292,7 +256,7 @@ router.get('/admin/stats', isAuthenticated, isValidation(reportStatsQuerySchema)
 
 /**
  * @swagger
- * /api/reports/admin/all:
+ * /reports/admin/all:
  *   get:
  *     tags:
  *       - Reports
@@ -334,7 +298,7 @@ router.get('/admin/all', isAuthenticated, controller.getAllReports);
 
 /**
  * @swagger
- * /api/reports/admin/{reportId}/status:
+ * /reports/admin/{reportId}/status:
  *   patch:
  *     tags:
  *       - Reports
@@ -370,7 +334,7 @@ router.get('/admin/all', isAuthenticated, controller.getAllReports);
  *       200:
  *         description: تم تحديث حالة التقرير بنجاح
  *       403:
- *         description: غير مصرح لك بتحديث حالة التقارير
+ *         $ref: '#/components/responses/Forbidden'
  *       404:
  *         description: التقرير غير موجود
  */
@@ -383,7 +347,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/reports/admin/bulk-update:
+ * /reports/admin/bulk-update:
  *   patch:
  *     tags:
  *       - Reports
@@ -405,11 +369,16 @@ router.patch(
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.patch('/admin/bulk-update', isAuthenticated, isValidation(bulkUpdateReportsSchema), controller.bulkUpdateReports);
+router.patch(
+  '/admin/bulk-update',
+  isAuthenticated,
+  isValidation(bulkUpdateReportsSchema),
+  controller.bulkUpdateReports
+);
 
 /**
  * @swagger
- * /api/reports/content/{contentType}/{contentId}:
+ * /reports/content/{contentType}/{contentId}:
  *   get:
  *     tags:
  *       - Reports
@@ -453,11 +422,16 @@ router.patch('/admin/bulk-update', isAuthenticated, isValidation(bulkUpdateRepor
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.get('/content/:contentType/:contentId', isAuthenticated, isValidation(contentReportsQuerySchema), controller.getContentReports);
+router.get(
+  '/content/:contentType/:contentId',
+  isAuthenticated,
+  isValidation(contentReportsQuerySchema),
+  controller.getContentReports
+);
 
 /**
  * @swagger
- * /api/reports/admin/export:
+ * /reports/admin/export:
  *   get:
  *     tags:
  *       - Reports
@@ -513,6 +487,8 @@ router.get('/content/:contentType/:contentId', isAuthenticated, isValidation(con
  *                 type: object
  *       403:
  *         $ref: '#/components/responses/Forbidden'
+ *       500:
+ *         description: خطأ في إنشاء الملف
  */
 router.get('/admin/export', isAuthenticated, isValidation(exportReportsSchema), controller.exportReports);
 

@@ -20,7 +20,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/transactions:
+ * /transactions:
  *   post:
  *     tags:
  *       - Transactions
@@ -126,7 +126,7 @@ router.post(
 
 /**
  * @swagger
- * /api/transactions:
+ * /transactions:
  *   get:
  *     tags:
  *       - Transactions
@@ -250,7 +250,7 @@ router.get(
 
 /**
  * @swagger
- * /api/transactions/stats:
+ * /transactions/stats:
  *   get:
  *     tags:
  *       - Transactions
@@ -340,7 +340,7 @@ router.get(
 
 /**
  * @swagger
- * /api/transactions/export:
+ * /transactions/export:
  *   get:
  *     tags:
  *       - Transactions
@@ -420,7 +420,7 @@ router.get(
 
 /**
  * @swagger
- * /api/transactions/bulk:
+ * /transactions/bulk:
  *   patch:
  *     tags:
  *       - Transactions
@@ -519,7 +519,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/transactions/{transactionId}:
+ * /transactions/{transactionId}:
  *   get:
  *     tags:
  *       - Transactions
@@ -583,7 +583,7 @@ router.get(
 
 /**
  * @swagger
- * /api/transactions/{transactionId}/status:
+ * /transactions/{transactionId}/status:
  *   patch:
  *     tags:
  *       - Transactions
@@ -686,7 +686,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/transactions/{transactionId}/tracking:
+ * /transactions/{transactionId}/tracking:
  *   patch:
  *     tags:
  *       - Transactions
@@ -772,7 +772,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/transactions/{transactionId}/refund:
+ * /transactions/{transactionId}/refund:
  *   post:
  *     tags:
  *       - Transactions
@@ -871,7 +871,7 @@ router.post(
 
 /**
  * @swagger
- * /api/transactions/{transactionId}/dispute:
+ * /transactions/{transactionId}/dispute:
  *   post:
  *     tags:
  *       - Transactions
@@ -967,7 +967,7 @@ router.post(
 
 /**
  * @swagger
- * /api/transactions/{transactionId}/installments/{installmentNumber}:
+ * /transactions/{transactionId}/installments/{installmentNumber}:
  *   post:
  *     tags:
  *       - Transactions
@@ -1075,7 +1075,7 @@ router.post(
 
 /**
  * @swagger
- * /api/transactions/{transactionId}/cancel:
+ * /transactions/{transactionId}/cancel:
  *   post:
  *     tags:
  *       - Transactions

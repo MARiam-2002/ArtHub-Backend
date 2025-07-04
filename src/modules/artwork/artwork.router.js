@@ -113,7 +113,7 @@ const router = Router();
 // Artwork CRUD Operations
 /**
  * @swagger
- * /api/artwork:
+ * /artworks:
  *   get:
  *     tags: [Artwork]
  *     summary: Get all artworks
@@ -210,7 +210,7 @@ router.get('/', isValidation(getArtworksQuerySchema), artworkController.getAllAr
 
 /**
  * @swagger
- * /api/artwork/search:
+ * /artworks/search:
  *   get:
  *     tags: [Artwork]
  *     summary: Search artworks
@@ -248,6 +248,7 @@ router.get('/', isValidation(getArtworksQuerySchema), artworkController.getAllAr
  *           type: integer
  *           minimum: 1
  *           default: 1
+ *         description: Page number for pagination
  *       - in: query
  *         name: limit
  *         schema:
@@ -257,22 +258,38 @@ router.get('/', isValidation(getArtworksQuerySchema), artworkController.getAllAr
  *           default: 10
  *     responses:
  *       200:
- *         description: Search results retrieved successfully
+ *         description: A list of artworks matching the search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artworks:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Artwork'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationMeta'
  *       400:
- *         $ref: '#/components/responses/BadRequestError'
+ *         description: Invalid search query
  */
 router.get('/search', isValidation(searchArtworksQuerySchema), artworkController.searchArtworks);
 
 /**
  * @swagger
- * /api/artwork/{artworkId}:
+ * /artworks/{id}:
  *   get:
  *     tags: [Artwork]
- *     summary: Get artwork by ID
+ *     summary: Get a single artwork by ID
  *     description: Get detailed information about a specific artwork
  *     parameters:
  *       - in: path
- *         name: artworkId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -293,12 +310,14 @@ router.get('/search', isValidation(searchArtworksQuerySchema), artworkController
  *                   $ref: '#/components/schemas/Artwork'
  *       404:
  *         description: Artwork not found
+ *       500:
+ *         description: Internal server error
  */
-router.get('/:artworkId', isValidation(artworkIdParamSchema), artworkController.getArtworkById);
+router.get('/:id', isValidation(artworkIdParamSchema), artworkController.getArtworkById);
 
 /**
  * @swagger
- * /api/artwork:
+ * /artworks:
  *   post:
  *     tags: [Artwork]
  *     summary: Create new artwork
@@ -333,12 +352,14 @@ router.get('/:artworkId', isValidation(artworkIdParamSchema), artworkController.
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         description: Only artists can create artworks
+ *       500:
+ *         description: Internal server error
  */
 router.post('/', isAuthenticated, isValidation(createArtworkSchema), artworkController.createArtwork);
 
 /**
  * @swagger
- * /api/artwork/{artworkId}:
+ * /artworks/{id}:
  *   put:
  *     tags: [Artwork]
  *     summary: Update artwork
@@ -347,7 +368,7 @@ router.post('/', isAuthenticated, isValidation(createArtworkSchema), artworkCont
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: artworkId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -369,12 +390,14 @@ router.post('/', isAuthenticated, isValidation(createArtworkSchema), artworkCont
  *         description: Only artwork owner can update
  *       404:
  *         description: Artwork not found
+ *       500:
+ *         description: Internal server error
  */
-router.put('/:artworkId', isAuthenticated, isValidation(artworkIdParamSchema), isValidation(updateArtworkSchema), artworkController.updateArtwork);
+router.put('/:id', isAuthenticated, isValidation(updateArtworkSchema), artworkController.updateArtwork);
 
 /**
  * @swagger
- * /api/artwork/{artworkId}:
+ * /artworks/{id}:
  *   delete:
  *     tags: [Artwork]
  *     summary: Delete artwork
@@ -383,7 +406,7 @@ router.put('/:artworkId', isAuthenticated, isValidation(artworkIdParamSchema), i
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: artworkId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -397,13 +420,15 @@ router.put('/:artworkId', isAuthenticated, isValidation(artworkIdParamSchema), i
  *         description: Only artwork owner can delete
  *       404:
  *         description: Artwork not found
+ *       500:
+ *         description: Internal server error
  */
-router.delete('/:artworkId', isAuthenticated, isValidation(artworkIdParamSchema), artworkController.deleteArtwork);
+router.delete('/:id', isAuthenticated, isValidation(artworkIdParamSchema), artworkController.deleteArtwork);
 
 // Artwork Interactions
 /**
  * @swagger
- * /api/artwork/{artworkId}/favorite:
+ * /artworks/{id}/favorite:
  *   post:
  *     tags: [Artwork]
  *     summary: Toggle artwork favorite
@@ -412,7 +437,7 @@ router.delete('/:artworkId', isAuthenticated, isValidation(artworkIdParamSchema)
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: artworkId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -436,12 +461,14 @@ router.delete('/:artworkId', isAuthenticated, isValidation(artworkIdParamSchema)
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
  *         description: Artwork not found
+ *       500:
+ *         description: Internal server error
  */
-router.post('/:artworkId/favorite', isAuthenticated, isValidation(artworkIdParamSchema), artworkController.toggleFavorite);
+router.post('/favorite', isAuthenticated, isValidation(toggleFavoriteSchema), artworkController.toggleFavorite);
 
 /**
  * @swagger
- * /api/artwork/{artworkId}/review:
+ * /artworks/{id}/reviews:
  *   post:
  *     tags: [Artwork]
  *     summary: Add artwork review
@@ -450,7 +477,7 @@ router.post('/:artworkId/favorite', isAuthenticated, isValidation(artworkIdParam
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: artworkId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -484,19 +511,21 @@ router.post('/:artworkId/favorite', isAuthenticated, isValidation(artworkIdParam
  *         description: Artwork not found
  *       409:
  *         description: User already reviewed this artwork
+ *       500:
+ *         description: Internal server error
  */
-router.post('/:artworkId/review', isAuthenticated, isValidation(artworkIdParamSchema), isValidation(addReviewSchema), artworkController.addReview);
+// router.post('/:id/reviews', isAuthenticated, isValidation(addReviewSchema), artworkController.addReviewToArtwork);
 
 /**
  * @swagger
- * /api/artwork/{artworkId}/reviews:
+ * /artworks/{id}/reviews:
  *   get:
  *     tags: [Artwork]
  *     summary: Get artwork reviews
  *     description: Get all reviews for a specific artwork
  *     parameters:
  *       - in: path
- *         name: artworkId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
@@ -520,12 +549,12 @@ router.post('/:artworkId/review', isAuthenticated, isValidation(artworkIdParamSc
  *       404:
  *         description: Artwork not found
  */
-router.get('/:artworkId/reviews', isValidation(artworkIdParamSchema), artworkController.getArtworkReviews);
+router.get('/:id/reviews', isValidation(artworkIdParamSchema), artworkController.getArtworkReviews);
 
 // Artist's Artworks
 /**
  * @swagger
- * /api/artwork/artist/{artistId}:
+ * /artworks/artist/{artistId}:
  *   get:
  *     tags: [Artwork]
  *     summary: Get artworks by artist
@@ -567,7 +596,7 @@ router.get('/artist/:artistId', artworkController.getArtworksByArtist);
 // My Artworks (for authenticated artists)
 /**
  * @swagger
- * /api/artwork/my-artworks:
+ * /artworks/my-artworks:
  *   get:
  *     tags: [Artwork]
  *     summary: Get my artworks

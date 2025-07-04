@@ -13,7 +13,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/special-requests:
+ * /special-requests:
  *   post:
  *     tags:
  *       - Special Requests
@@ -72,7 +72,7 @@ router.post(
 
 /**
  * @swagger
- * /api/special-requests/my:
+ * /special-requests/my:
  *   get:
  *     tags:
  *       - Special Requests
@@ -116,7 +116,7 @@ router.get('/my', isAuthenticated, controller.getUserRequests);
 
 /**
  * @swagger
- * /api/special-requests/artist:
+ * /special-requests/artist:
  *   get:
  *     tags:
  *       - Special Requests
@@ -151,7 +151,7 @@ router.get('/artist', isAuthenticated, controller.getArtistRequests);
 
 /**
  * @swagger
- * /api/special-requests/artist/stats:
+ * /special-requests/artist/stats:
  *   get:
  *     tags:
  *       - Special Requests
@@ -169,7 +169,7 @@ router.get('/artist/stats', isAuthenticated, controller.getArtistRequestStats);
 
 /**
  * @swagger
- * /api/special-requests/{requestId}:
+ * /special-requests/{requestId}:
  *   get:
  *     tags:
  *       - Special Requests
@@ -194,7 +194,7 @@ router.get('/:requestId', isAuthenticated, controller.getRequestById);
 
 /**
  * @swagger
- * /api/special-requests/{requestId}/status:
+ * /special-requests/{requestId}/status:
  *   patch:
  *     tags:
  *       - Special Requests
@@ -239,7 +239,7 @@ router.patch(
 
 /**
  * @swagger
- * /api/special-requests/{requestId}/response:
+ * /special-requests/{requestId}/response:
  *   post:
  *     tags:
  *       - Special Requests
@@ -272,16 +272,20 @@ router.patch(
  *       404:
  *         description: الطلب غير موجود
  */
-router.post('/:requestId/response', isAuthenticated, controller.addResponseToRequest);
+router.post(
+  '/:requestId/response',
+  isAuthenticated,
+  controller.addResponseToRequest
+);
 
 /**
  * @swagger
- * /api/special-requests/{requestId}/complete:
- *   patch:
+ * /special-requests/{requestId}/complete:
+ *   post:
  *     tags:
  *       - Special Requests
  *     summary: إكمال الطلب الخاص
- *     description: تحديث حالة الطلب إلى مكتمل مع إضافة روابط التسليم (للفنان فقط)
+ *     description: وضع علامة على الطلب الخاص كمكتمل (بواسطة الفنان)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -292,29 +296,24 @@ router.post('/:requestId/response', isAuthenticated, controller.addResponseToReq
  *           type: string
  *         description: معرف الطلب
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
  *             properties:
- *               deliverables:
+ *               finalWork:
  *                 type: array
  *                 items:
  *                   type: string
- *                   format: uri
- *                 description: روابط ملفات التسليم
- *               finalNote:
- *                 type: string
- *                 description: ملاحظة نهائية
+ *                 description: روابط العمل النهائي
  *     responses:
  *       200:
  *         description: تم إكمال الطلب بنجاح
- *       400:
- *         description: لا يمكن إكمال طلب غير مقبول
  *       404:
  *         description: الطلب غير موجود
  */
-router.patch(
+router.post(
   '/:requestId/complete',
   isAuthenticated,
   isValidation(completeRequestSchema),
@@ -323,55 +322,12 @@ router.patch(
 
 /**
  * @swagger
- * /api/special-requests/{requestId}/cancel:
- *   patch:
- *     tags:
- *       - Special Requests
- *     summary: إلغاء طلب خاص
- *     description: إلغاء طلب خاص من قبل المستخدم مع توفير سبب الإلغاء
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - name: requestId
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: معرف الطلب الخاص
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               cancellationReason:
- *                 type: string
- *                 description: سبب الإلغاء
- *     responses:
- *       200:
- *         description: تم إلغاء الطلب بنجاح
- *       400:
- *         description: لا يمكن إلغاء الطلب في حالته الحالية
- *       403:
- *         description: غير مصرح لك بإلغاء هذا الطلب
- *       404:
- *         description: الطلب غير موجود
- */
-router.patch(
-  '/:requestId/cancel',
-  isAuthenticated,
-  isValidation(cancelSpecialRequestSchema),
-  controller.cancelSpecialRequest
-);
-
-/**
- * @swagger
- * /api/special-requests/{requestId}:
+ * /special-requests/{requestId}/cancel:
  *   delete:
  *     tags:
  *       - Special Requests
- *     summary: حذف طلب خاص
- *     description: حذف طلب خاص (للمرسل فقط وفقط إذا كان الطلب قيد الانتظار أو مرفوضًا)
+ *     summary: إلغاء طلب خاص
+ *     description: إلغاء طلب خاص (بواسطة المستخدم)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -383,12 +339,15 @@ router.patch(
  *         description: معرف الطلب
  *     responses:
  *       200:
- *         description: تم حذف الطلب بنجاح
- *       400:
- *         description: لا يمكن حذف طلب مقبول أو مكتمل
+ *         description: تم إلغاء الطلب بنجاح
  *       404:
- *         description: الطلب غير موجود أو غير مصرح بحذفه
+ *         description: الطلب غير موجود
  */
-router.delete('/:requestId', isAuthenticated, controller.deleteRequest);
+// router.delete(
+//   '/:requestId/cancel',
+//   isAuthenticated,
+//   isValidation(cancelSpecialRequestSchema),
+//   controller.cancelRequest
+// );
 
 export default router;

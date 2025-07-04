@@ -19,7 +19,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/home:
+ * /home:
  *   get:
  *     summary: Get home screen data
  *     tags: [Home]
@@ -97,7 +97,7 @@ router.get('/', optionalAuth, homeController.getHomeData);
 
 /**
  * @swagger
- * /api/home/search:
+ * /home/search:
  *   get:
  *     summary: Search artworks and artists
  *     tags: [Home]
@@ -140,7 +140,7 @@ router.get('/search', homeController.search);
 
 /**
  * @swagger
- * /api/home/trending:
+ * /home/trending:
  *   get:
  *     summary: Get trending artworks
  *     tags: [Home]
@@ -191,7 +191,7 @@ router.get('/trending', isValidation(Validators.paginationSchema), homeControlle
 
 /**
  * @swagger
- * /api/home/explore:
+ * /home/explore:
  *   get:
  *     tags:
  *       - Home

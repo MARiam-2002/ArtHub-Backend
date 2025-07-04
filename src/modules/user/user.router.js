@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/user/profile:
+ * /user/profile:
  *   get:
  *     summary: Get current user profile
  *     tags: [User]
@@ -48,7 +48,7 @@ router.get('/profile', isAuthenticated, userController.getProfile);
 
 /**
  * @swagger
- * /api/user/profile:
+ * /user/profile:
  *   put:
  *     summary: Update user profile
  *     tags: [User]
@@ -93,7 +93,7 @@ router.put('/profile',
 
 /**
  * @swagger
- * /api/user/change-password:
+ * /user/change-password:
  *   put:
  *     summary: Change user password
  *     tags: [User]
@@ -135,7 +135,7 @@ router.put('/change-password',
 
 /**
  * @swagger
- * /api/user/wishlist:
+ * /user/wishlist:
  *   get:
  *     summary: Get user wishlist
  *     tags: [User]
@@ -194,7 +194,7 @@ router.get('/wishlist',
 
 /**
  * @swagger
- * /api/user/wishlist/toggle:
+ * /user/wishlist/toggle:
  *   post:
  *     summary: Toggle artwork in wishlist
  *     tags: [User]
@@ -258,7 +258,7 @@ router.post('/wishlist/toggle',
 
 /**
  * @swagger
- * /api/user/artist/{artistId}:
+ * /user/artist/{artistId}:
  *   get:
  *     summary: Get artist profile
  *     tags: [User]
@@ -300,7 +300,7 @@ router.get('/artist/:artistId',
 
 /**
  * @swagger
- * /api/user/my-artworks:
+ * /user/my-artworks:
  *   get:
  *     summary: Get user's own artworks
  *     tags: [User]
@@ -365,7 +365,7 @@ router.get('/my-artworks',
 
 /**
  * @swagger
- * /api/user/following:
+ * /user/following:
  *   get:
  *     summary: Get following artists
  *     tags: [User]
@@ -424,7 +424,7 @@ router.get('/following',
 
 /**
  * @swagger
- * /api/user/notification-settings:
+ * /user/notification-settings:
  *   get:
  *     summary: Get notification settings
  *     tags: [User]
@@ -459,7 +459,7 @@ router.get('/notification-settings',
 
 /**
  * @swagger
- * /api/user/notification-settings:
+ * /user/notification-settings:
  *   put:
  *     summary: Update notification settings
  *     tags: [User]
@@ -503,7 +503,7 @@ router.put('/notification-settings',
 
 /**
  * @swagger
- * /api/user/delete-account:
+ * /user/delete-account:
  *   delete:
  *     summary: Delete user account
  *     tags: [User]

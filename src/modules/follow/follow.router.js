@@ -133,7 +133,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/follow/toggle:
+ * /follow/toggle:
  *   post:
  *     summary: Toggle follow/unfollow artist
  *     tags: [Follow]
@@ -166,7 +166,7 @@ router.post('/toggle', isAuthenticated, followController.toggleFollow);
 
 /**
  * @swagger
- * /api/follow/followers/{userId}:
+ * /follow/followers/{userId}:
  *   get:
  *     summary: Get user followers
  *     tags: [Follow]
@@ -200,7 +200,7 @@ router.get('/followers/:userId', followController.getFollowers);
 
 /**
  * @swagger
- * /api/follow/following/{userId}:
+ * /follow/following/{userId}:
  *   get:
  *     summary: Get user following
  *     tags: [Follow]
@@ -234,7 +234,7 @@ router.get('/following/:userId', followController.getFollowing);
 
 /**
  * @swagger
- * /api/follow/status/{artistId}:
+ * /follow/status/{artistId}:
  *   get:
  *     summary: Check follow status
  *     tags: [Follow]
@@ -258,7 +258,7 @@ router.get('/status/:artistId', isAuthenticated, followController.checkFollowSta
 
 /**
  * @swagger
- * /api/follow/stats/{userId}:
+ * /follow/stats/{userId}:
  *   get:
  *     summary: Get follow statistics
  *     tags: [Follow]
@@ -280,7 +280,7 @@ router.get('/status/:artistId', isAuthenticated, followController.checkFollowSta
 
 /**
  * @swagger
- * /api/follow/follow:
+ * /follow/follow:
  *   post:
  *     summary: متابعة فنان
  *     tags: [Follow]
@@ -390,7 +390,7 @@ router.post(
 
 /**
  * @swagger
- * /api/follow/unfollow:
+ * /follow/unfollow:
  *   post:
  *     summary: إلغاء متابعة فنان
  *     tags: [Follow]
@@ -467,7 +467,7 @@ router.post(
 
 /**
  * @swagger
- * /api/follow/my-followers:
+ * /follow/my-followers:
  *   get:
  *     summary: جلب متابعيّ
  *     tags: [Follow]
@@ -545,7 +545,7 @@ router.get(
 
 /**
  * @swagger
- * /api/follow/my-following:
+ * /follow/my-following:
  *   get:
  *     summary: جلب متابعاتي
  *     tags: [Follow]
@@ -623,7 +623,7 @@ router.get(
 
 /**
  * @swagger
- * /api/follow/mutual/{userId}:
+ * /follow/mutual/{userId}:
  *   get:
  *     summary: جلب المتابعات المشتركة
  *     tags: [Follow]

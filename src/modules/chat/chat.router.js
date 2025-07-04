@@ -81,7 +81,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/chat:
+ * /chat:
  *   get:
  *     summary: Get user chats
  *     tags: [Chat]
@@ -113,7 +113,7 @@ router.get('/', isAuthenticated, chatController.getChats);
 
 /**
  * @swagger
- * /api/chat/create:
+ * /chat/create:
  *   post:
  *     summary: Get or create chat with user
  *     tags: [Chat]
@@ -146,7 +146,7 @@ router.post('/create', isAuthenticated, chatController.getOrCreateChat);
 
 /**
  * @swagger
- * /api/chat/{chatId}/messages:
+ * /chat/{chatId}/messages:
  *   get:
  *     summary: Get chat messages
  *     tags: [Chat]
@@ -184,7 +184,7 @@ router.get('/:chatId/messages', isAuthenticated, chatController.getMessages);
 
 /**
  * @swagger
- * /api/chat/{chatId}/send:
+ * /chat/{chatId}/send:
  *   post:
  *     summary: Send message
  *     tags: [Chat]
@@ -226,33 +226,7 @@ router.post('/:chatId/send', isAuthenticated, chatController.sendMessage);
 
 /**
  * @swagger
- * /api/chat/{chatId}/read:
- *   patch:
- *     summary: Mark messages as read
- *     tags: [Chat]
- *     description: Mark all messages in a chat as read
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: chatId
- *         required: true
- *         schema:
- *           type: string
- *         description: Chat ID
- *     responses:
- *       200:
- *         description: Messages marked as read
- *       404:
- *         description: Chat not found
- *       500:
- *         description: Server error
- */
-router.patch('/:chatId/read', isAuthenticated, chatController.markAsRead);
-
-/**
- * @swagger
- * /api/chat/{chatId}:
+ * /chat/{chatId}:
  *   delete:
  *     summary: Delete chat
  *     tags: [Chat]
@@ -279,10 +253,10 @@ router.delete('/:chatId', isAuthenticated, chatController.deleteChat);
 // Get Socket Token (for real-time messaging)
 /**
  * @swagger
- * /api/chat/socket-token:
+ * /chat/socket-token:
  *   get:
  *     tags: [Chat]
- *     summary: Get socket token
+ *     summary: Get socket connection token
  *     description: Get a temporary token for Socket.io connection
  *     security:
  *       - BearerAuth: []
