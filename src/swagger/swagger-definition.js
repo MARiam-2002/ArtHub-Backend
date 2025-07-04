@@ -51,15 +51,15 @@ export const swaggerDefinition = {
   },
   servers: [
     {
-      url: '/api',
+      url: '/',
       description: 'خادم API الرئيسي'
     },
     {
-      url: 'https://arthub-api.vercel.app/api',
+      url: 'https://arthub-api.vercel.app',
       description: 'خادم الإنتاج'
     },
     {
-      url: 'http://localhost:5000/api',
+      url: 'http://localhost:5000',
       description: 'خادم التطوير المحلي'
     }
   ],
