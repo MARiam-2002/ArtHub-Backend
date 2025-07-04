@@ -28,188 +28,6 @@
     }
   ],
   "components": {
-    "securitySchemes": {
-      "BearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "JWT token obtained from login or registration"
-      },
-      "FirebaseAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "Firebase ID token obtained from Firebase Authentication"
-      }
-    },
-    "responses": {
-      "UnauthorizedError": {
-        "description": "غير مصرح - المصادقة مطلوبة",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": false
-                },
-                "message": {
-                  "type": "string",
-                  "example": "غير مصرح بالوصول"
-                },
-                "error": {
-                  "type": "string",
-                  "example": "رمز المصادقة غير صالح أو منتهي الصلاحية"
-                },
-                "status": {
-                  "type": "integer",
-                  "example": 401
-                }
-              }
-            }
-          }
-        }
-      },
-      "BadRequestError": {
-        "description": "طلب غير صالح - مشكلة في البيانات المرسلة",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": false
-                },
-                "message": {
-                  "type": "string",
-                  "example": "بيانات غير صالحة"
-                },
-                "error": {
-                  "type": "string",
-                  "example": "حقل البريد الإلكتروني مطلوب"
-                },
-                "status": {
-                  "type": "integer",
-                  "example": 400
-                },
-                "validationErrors": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "field": {
-                        "type": "string",
-                        "example": "email"
-                      },
-                      "message": {
-                        "type": "string",
-                        "example": "يجب إدخال بريد إلكتروني صالح"
-                      }
-                    }
-                  },
-                  "example": [
-                    {
-                      "field": "email",
-                      "message": "يجب إدخال بريد إلكتروني صالح"
-                    },
-                    {
-                      "field": "password",
-                      "message": "كلمة المرور يجب أن تكون 8 أحرف على الأقل"
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      },
-      "NotFoundError": {
-        "description": "غير موجود - المورد المطلوب غير متاح",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": false
-                },
-                "message": {
-                  "type": "string",
-                  "example": "المورد غير موجود"
-                },
-                "error": {
-                  "type": "string",
-                  "example": "لم يتم العثور على العنصر بالمعرف المحدد"
-                },
-                "status": {
-                  "type": "integer",
-                  "example": 404
-                }
-              }
-            }
-          }
-        }
-      },
-      "ServerError": {
-        "description": "خطأ في الخادم - فشل في معالجة الطلب",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": false
-                },
-                "message": {
-                  "type": "string",
-                  "example": "خطأ داخلي في الخادم"
-                },
-                "error": {
-                  "type": "string",
-                  "example": "فشل في الاتصال بقاعدة البيانات"
-                },
-                "status": {
-                  "type": "integer",
-                  "example": 500
-                }
-              }
-            }
-          }
-        }
-      },
-      "ForbiddenError": {
-        "description": "محظور - ليس لديك صلاحية الوصول إلى هذا المورد",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": false
-                },
-                "message": {
-                  "type": "string",
-                  "example": "غير مسموح بالوصول"
-                },
-                "error": {
-                  "type": "string",
-                  "example": "لا تملك الصلاحية للوصول إلى هذا المورد"
-                },
-                "status": {
-                  "type": "integer",
-                  "example": 403
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "schemas": {
       "SuccessResponse": {
         "type": "object",
@@ -2861,6 +2679,188 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from login or registration"
+      },
+      "FirebaseAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase ID token obtained from Firebase Authentication"
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "غير مصرح - المصادقة مطلوبة",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "غير مصرح بالوصول"
+                },
+                "error": {
+                  "type": "string",
+                  "example": "رمز المصادقة غير صالح أو منتهي الصلاحية"
+                },
+                "status": {
+                  "type": "integer",
+                  "example": 401
+                }
+              }
+            }
+          }
+        }
+      },
+      "BadRequestError": {
+        "description": "طلب غير صالح - مشكلة في البيانات المرسلة",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "بيانات غير صالحة"
+                },
+                "error": {
+                  "type": "string",
+                  "example": "حقل البريد الإلكتروني مطلوب"
+                },
+                "status": {
+                  "type": "integer",
+                  "example": 400
+                },
+                "validationErrors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string",
+                        "example": "email"
+                      },
+                      "message": {
+                        "type": "string",
+                        "example": "يجب إدخال بريد إلكتروني صالح"
+                      }
+                    }
+                  },
+                  "example": [
+                    {
+                      "field": "email",
+                      "message": "يجب إدخال بريد إلكتروني صالح"
+                    },
+                    {
+                      "field": "password",
+                      "message": "كلمة المرور يجب أن تكون 8 أحرف على الأقل"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "غير موجود - المورد المطلوب غير متاح",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "المورد غير موجود"
+                },
+                "error": {
+                  "type": "string",
+                  "example": "لم يتم العثور على العنصر بالمعرف المحدد"
+                },
+                "status": {
+                  "type": "integer",
+                  "example": 404
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "خطأ في الخادم - فشل في معالجة الطلب",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "خطأ داخلي في الخادم"
+                },
+                "error": {
+                  "type": "string",
+                  "example": "فشل في الاتصال بقاعدة البيانات"
+                },
+                "status": {
+                  "type": "integer",
+                  "example": 500
+                }
+              }
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "محظور - ليس لديك صلاحية الوصول إلى هذا المورد",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "غير مسموح بالوصول"
+                },
+                "error": {
+                  "type": "string",
+                  "example": "لا تملك الصلاحية للوصول إلى هذا المورد"
+                },
+                "status": {
+                  "type": "integer",
+                  "example": 403
+                }
+              }
+            }
           }
         }
       }

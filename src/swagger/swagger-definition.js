@@ -64,6 +64,61 @@ export const swaggerDefinition = {
     }
   ],
   components: {
+    schemas: {
+      User: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          _id: { type: 'string', description: 'Auto-generated MongoDB ID' },
+          fingerprint: { type: 'string', description: 'Device fingerprint for passwordless login' },
+          googleId: { type: 'string', description: 'Google OAuth ID' },
+          facebookId: { type: 'string', description: 'Facebook OAuth ID' },
+          email: { type: 'string', format: 'email', description: 'User email address (unique)' },
+          job: { type: 'string', description: 'User job or profession' },
+          forgetCode: { type: 'string', description: 'Password reset verification code' },
+          isForgetCodeVerified: { type: 'boolean', description: 'Whether the forget code has been verified' },
+          password: { type: 'string', format: 'password', description: 'Hashed password (not returned in queries)' },
+          role: { type: 'string', enum: ['user', 'artist'], description: 'User role in the system' },
+          wishlist: { type: 'array', items: { type: 'string' }, description: "Array of product IDs in user's wishlist" },
+          profileImage: {
+            type: 'object',
+            properties: {
+              url: { type: 'string', format: 'uri' },
+              id: { type: 'string' }
+            },
+            description: "User's profile image details"
+          },
+          coverImages: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                url: { type: 'string', format: 'uri' },
+                id: { type: 'string' }
+              }
+            },
+            description: "User's cover images"
+          },
+          firebaseUid: { type: 'string', description: 'Firebase user ID for authentication' },
+          displayName: { type: 'string', description: 'User display name' },
+          photoURL: { type: 'string', format: 'uri', description: 'User photo URL from social login' },
+          isVerified: { type: 'boolean', description: "Whether the user's account is verified" },
+          preferredLanguage: { type: 'string', enum: ['ar', 'en'], description: "User's preferred language" },
+          notificationSettings: {
+            type: 'object',
+            properties: {
+              enablePush: { type: 'boolean', description: 'Whether the user wants to receive push notifications' },
+              enableEmail: { type: 'boolean', description: 'Whether the user wants to receive email notifications' },
+              muteChat: { type: 'boolean', description: 'Whether the user wants to mute chat notifications' }
+            }
+          },
+          isActive: { type: 'boolean', description: 'Whether the user is active' },
+          isDeleted: { type: 'boolean', description: 'Whether the user is deleted' },
+          fcmTokens: { type: 'array', items: { type: 'string' }, description: 'Array of FCM tokens for push notifications' },
+          lastActive: { type: 'date', description: 'Last active time of the user' }
+        }
+      }
+    },
     securitySchemes: {
       BearerAuth: {
         type: 'http',
