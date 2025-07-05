@@ -1,4 +1,5 @@
 import mongoose, { Schema, Types, model } from 'mongoose';
+import bcrypt from 'bcrypt';
 
 const userSchema = new Schema(
   {
@@ -36,8 +37,14 @@ const userSchema = new Schema(
 
     role: {
       type: String,
-      enum: ['user', 'artist'],
+      enum: ['user', 'artist', 'admin', 'superadmin'],
       default: 'user'
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'banned'],
+      default: 'active',
+      index: true
     },
 
     wishlist: [
@@ -128,6 +135,16 @@ const userSchema = new Schema(
   },
   { timestamps: true }
 );
+
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 const userModel = mongoose.models.User || model('User', userSchema);
 export default userModel;

@@ -2330,19 +2330,14 @@ export const swaggerDefinition = {
       'x-displayName': 'الإشعارات'
     },
     {
-      name: 'Settings',
-      description: 'واجهات API لإعدادات المستخدم',
-      'x-displayName': 'الإعدادات'
-    },
-    {
       name: 'Profile',
       description: 'واجهات API لإدارة الملفات الشخصية',
       'x-displayName': 'الملف الشخصي'
     },
     {
-      name: 'Users',
-      description: 'واجهات API لإدارة المستخدمين',
-      'x-displayName': 'المستخدمين'
+      name: 'Dashboard',
+      description: 'واجهات API للوحة التحكم الإدارية',
+      'x-displayName': 'لوحة التحكم'
     }
   ],
   'x-tagGroups': [
@@ -2364,7 +2359,7 @@ export const swaggerDefinition = {
     },
     {
       name: 'الإدارة',
-      tags: ['Users', 'Settings']
+      tags: ['Profile', 'Dashboard']
     }
   ]
 };

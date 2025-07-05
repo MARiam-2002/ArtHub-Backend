@@ -3155,23 +3155,9 @@
       "x-displayName": "الإشعارات"
     },
     {
-      "name": "Settings",
-      "description": "واجهات API لإعدادات المستخدم",
-      "x-displayName": "الإعدادات"
-    },
-    {
       "name": "Profile",
       "description": "واجهات API لإدارة الملفات الشخصية",
       "x-displayName": "الملف الشخصي"
-    },
-    {
-      "name": "Users",
-      "description": "واجهات API لإدارة المستخدمين",
-      "x-displayName": "المستخدمين"
-    },
-    {
-      "name": "User",
-      "description": "User management endpoints"
     }
   ],
   "x-tagGroups": [
@@ -3211,8 +3197,7 @@
     {
       "name": "الإدارة",
       "tags": [
-        "Users",
-        "Settings"
+        "Profile"
       ]
     }
   ],
@@ -12031,7 +12016,7 @@
       "get": {
         "summary": "Get current user profile",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Get the authenticated user's profile with statistics",
         "security": [
@@ -12074,7 +12059,7 @@
       "put": {
         "summary": "Update user profile",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Update the authenticated user's profile information",
         "security": [
@@ -12132,7 +12117,7 @@
       "put": {
         "summary": "Change user password",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Change the authenticated user's password",
         "security": [
@@ -12187,7 +12172,7 @@
       "get": {
         "summary": "Get user wishlist",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Get the authenticated user's wishlist with pagination",
         "security": [
@@ -12266,7 +12251,7 @@
       "post": {
         "summary": "Toggle artwork in wishlist",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Add or remove an artwork from the user's wishlist",
         "security": [
@@ -12355,7 +12340,7 @@
       "get": {
         "summary": "Get artist profile",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Get public artist profile with statistics and recent artworks",
         "parameters": [
@@ -12408,7 +12393,7 @@
       "get": {
         "summary": "Get user's own artworks",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Get artworks created by the authenticated artist",
         "security": [
@@ -12499,7 +12484,7 @@
       "get": {
         "summary": "Get following artists",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Get list of artists that the user is following",
         "security": [
@@ -12578,9 +12563,9 @@
       "get": {
         "summary": "Get notification settings",
         "tags": [
-          "User"
+          "Profile"
         ],
-        "description": "Get user's notification preferences",
+        "description": "Get the authenticated user's notification settings",
         "security": [
           {
             "BearerAuth": []
@@ -12621,9 +12606,9 @@
       "put": {
         "summary": "Update notification settings",
         "tags": [
-          "User"
+          "Profile"
         ],
-        "description": "Update user's notification preferences",
+        "description": "Update the authenticated user's notification settings",
         "security": [
           {
             "BearerAuth": []
@@ -12679,7 +12664,7 @@
       "delete": {
         "summary": "Delete user account",
         "tags": [
-          "User"
+          "Profile"
         ],
         "description": "Permanently delete user account (soft delete)",
         "security": [

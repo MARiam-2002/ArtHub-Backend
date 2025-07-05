@@ -27,6 +27,8 @@ import notificationRouter from './modules/notification/notification.router.js';
 import mongoose from 'mongoose';
 import { checkDatabaseHealth, ensureDatabaseConnection } from './utils/mongodbUtils.js';
 import { authenticate as verifyFirebaseToken, optionalAuth as optionalFirebaseAuth } from './middleware/auth.middleware.js';
+import adminRouter from './modules/admin/admin.router.js';
+import dashboardRouter from './modules/dashboard/dashboard.router.js';
 
 export const bootstrap = (app, express) => {
   if (process.env.NODE_ENV == 'dev') {
@@ -101,6 +103,8 @@ export const bootstrap = (app, express) => {
   app.use('/api/notifications', notificationRouter);
   app.use('/api/categories', categoryRouter);
   app.use('/api/user', userRouter);
+  app.use('/api/admin', adminRouter);
+  app.use('/api/dashboard', dashboardRouter);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

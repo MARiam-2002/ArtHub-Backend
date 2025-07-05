@@ -9,17 +9,10 @@ const router = Router();
 
 /**
  * @swagger
- * tags:
- *   name: User
- *   description: User management endpoints
- */
-
-/**
- * @swagger
  * /user/profile:
  *   get:
  *     summary: Get current user profile
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Get the authenticated user's profile with statistics
  *     security:
  *       - BearerAuth: []
@@ -51,7 +44,7 @@ router.get('/profile', isAuthenticated, userController.getProfile);
  * /user/profile:
  *   put:
  *     summary: Update user profile
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Update the authenticated user's profile information
  *     security:
  *       - BearerAuth: []
@@ -96,7 +89,7 @@ router.put('/profile',
  * /user/change-password:
  *   put:
  *     summary: Change user password
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Change the authenticated user's password
  *     security:
  *       - BearerAuth: []
@@ -138,7 +131,7 @@ router.put('/change-password',
  * /user/wishlist:
  *   get:
  *     summary: Get user wishlist
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Get the authenticated user's wishlist with pagination
  *     security:
  *       - BearerAuth: []
@@ -197,7 +190,7 @@ router.get('/wishlist',
  * /user/wishlist/toggle:
  *   post:
  *     summary: Toggle artwork in wishlist
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Add or remove an artwork from the user's wishlist
  *     security:
  *       - BearerAuth: []
@@ -261,7 +254,7 @@ router.post('/wishlist/toggle',
  * /user/artist/{artistId}:
  *   get:
  *     summary: Get artist profile
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Get public artist profile with statistics and recent artworks
  *     parameters:
  *       - in: path
@@ -303,7 +296,7 @@ router.get('/artist/:artistId',
  * /user/my-artworks:
  *   get:
  *     summary: Get user's own artworks
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Get artworks created by the authenticated artist
  *     security:
  *       - BearerAuth: []
@@ -368,7 +361,7 @@ router.get('/my-artworks',
  * /user/following:
  *   get:
  *     summary: Get following artists
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Get list of artists that the user is following
  *     security:
  *       - BearerAuth: []
@@ -427,8 +420,8 @@ router.get('/following',
  * /user/notification-settings:
  *   get:
  *     summary: Get notification settings
- *     tags: [User]
- *     description: Get user's notification preferences
+ *     tags: [Profile]
+ *     description: Get the authenticated user's notification settings
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -462,8 +455,8 @@ router.get('/notification-settings',
  * /user/notification-settings:
  *   put:
  *     summary: Update notification settings
- *     tags: [User]
- *     description: Update user's notification preferences
+ *     tags: [Profile]
+ *     description: Update the authenticated user's notification settings
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -506,7 +499,7 @@ router.put('/notification-settings',
  * /user/delete-account:
  *   delete:
  *     summary: Delete user account
- *     tags: [User]
+ *     tags: [Profile]
  *     description: Permanently delete user account (soft delete)
  *     security:
  *       - BearerAuth: []
