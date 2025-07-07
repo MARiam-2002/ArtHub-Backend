@@ -156,7 +156,7 @@ export const resetPassword = (userName, code) => `<!DOCTYPE html>
             <img src="https://i.ibb.co/ksqMN9QL/Art-Hub-06-1-1.png" alt="ArtHub Logo">
         </div>
         <div class="content">
-            <h1>مرحباً ${userName},</h1>
+            <h1>مرحباً ${userName}</h1>
             <p>لقد تلقينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك. استخدم الرمز أدناه للمتابعة.</p>
             <div class="code-container">
                 <p style="margin:0; font-size: 16px;">رمز التحقق الخاص بك هو:</p>
