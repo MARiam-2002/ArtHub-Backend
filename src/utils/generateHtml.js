@@ -106,12 +106,12 @@ export const resetPassword = (userName, code) => `<!DOCTYPE html>
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
         .header {
-            background-color: #112B47;
+            background-color: #C1D1E6;
             padding: 20px;
             text-align: center;
         }
         .header img {
-            max-width: 120px;
+            max-width: 150px;
         }
         .content {
             padding: 40px;
@@ -138,14 +138,14 @@ export const resetPassword = (userName, code) => `<!DOCTYPE html>
             letter-spacing: 10px;
         }
         .footer {
-            background-color: #112B47;
+            background-color: #C1D1E6;
             padding: 20px;
             text-align: center;
-            color: #E0ECFC;
+            color: #112B47;
             font-size: 14px;
         }
         .footer a {
-            color: #FFC1C8;
+            color: #112B47;
             text-decoration: none;
         }
     </style>
