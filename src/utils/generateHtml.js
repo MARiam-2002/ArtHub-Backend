@@ -159,7 +159,7 @@ export const resetPassword = (userName, code) => `<!DOCTYPE html>
             <h1>مرحباً ${userName}</h1>
             <p>لقد تلقينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك. استخدم الرمز أدناه للمتابعة.</p>
             <div class="code-container">
-                <p style="margin:0; font-size: 16px;">رمز التحقق الخاص بك هو:</p>
+                <p style="margin:0; font-size: 16px;">:رمز التحقق الخاص بك هو</p>
                 <p class="code">${code}</p>
             </div>
             <p>إذا لم تطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذا البريد الإلكتروني بأمان.</p>
