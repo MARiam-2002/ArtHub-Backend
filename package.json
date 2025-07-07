@@ -23,7 +23,8 @@
     "test:notification": "node --experimental-vm-modules node_modules/jest/bin/jest.js notification",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:seed": "node scripts/seed.js"
   },
   "engines": {
     "node": "18.x || >= 16"

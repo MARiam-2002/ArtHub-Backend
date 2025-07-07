@@ -319,7 +319,11 @@ export const forgetPassword = asyncHandler(async (req, res, next) => {
     // Send reset email
     try {
       const emailContent = resetPasswordTemplate(user.displayName, forgetCode);
-      await sendEmail(email, 'إعادة تعيين كلمة المرور - ArtHub', emailContent);
+      await sendEmail({
+        to: email,
+        subject: 'إعادة تعيين كلمة المرور - ArtHub',
+        html: emailContent
+      });
     } catch (emailError) {
       console.error('Failed to send reset email:', emailError);
       return next(new Error('فشل في إرسال رمز إعادة التعيين، يرجى المحاولة مرة أخرى', { cause: 500 }));
