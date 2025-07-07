@@ -83,7 +83,7 @@ body{background-color: #88BDBF;margin: 0px;}
 </body>
 </html>`;
 
-export const resetPassword = code => `<!DOCTYPE html>
+export const resetPassword = (userName, code) => `<!DOCTYPE html>
 <html>
 
     <head>
@@ -255,11 +255,19 @@ export const resetPassword = code => `<!DOCTYPE html>
 
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px;">
 
-                        <!-- <tr>
-                            <td bgcolor="#FFFFFF" align="left" style="padding: 20px 30px 20px 30px; color: #666666; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;">
-                                <p style="margin: 0; text-align:center">YOUR OPT : *****</p>
+                        <tr>
+
+                            <td bgcolor="#FFFFFF" align="center"
+                                style="padding: 20px 30px 40px 30px; color: #000000; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;">
+                                <p style="margin: 0;">
+                                    Reset Your Password
+                                </p>
+                                <p style="margin: 0;">
+                                    We received a request to reset your password. Use this code to reset it.
+                                </p>
                             </td>
-                        </tr>-->
+
+                        </tr>
 
                         <tr>
 
@@ -269,22 +277,17 @@ export const resetPassword = code => `<!DOCTYPE html>
 
                                     <tr>
 
-                                        <td bgcolor="#FFFFFF" align="center" style="padding: 20px 30px 30px 30px;">
+                                        <td bgcolor="#FFFFFF" align="center" style="padding: 20px 30px 60px 30px;">
 
                                             <table border="0" cellspacing="0" cellpadding="0">
 
                                                 <tr>
 
-                                                    <td align="center" style="border-radius: 3px;" bgcolor="#E071C0">
-
-                                                        <div 
-                                                            href="#"
-                                                            style="font-size: 20px; font-family: Helvetica, Arial, sans-serif; color: #FFFFFF ; text-decoration: none; text-decoration: none; padding: 15px 25px; border-radius: 2px; border: 1px solid #E071C0; display: inline-block;"
-                                                        >
+                                                    <td align="center" style="border-radius: 3px; background-color: #E26D99"
+                                                        ><p 
+                                                            style="font-size: 20px; font-family: Helvetica, Arial, sans-serif; color: #FFFFFF; text-decoration: none; padding: 15px 25px; border-radius: 2px; border: 1px solid #E26D99; display: inline-block;">
                                                             ${code}
-                                                        </div>
-
-                                                    </td>
+                                                        </p></td>
 
                                                 </tr>
 
@@ -298,23 +301,38 @@ export const resetPassword = code => `<!DOCTYPE html>
 
                             </td>
 
-                        </tr> <!-- COPY -->
+                        </tr>
 
                         <tr>
-                            
-                            <td 
-                                bgcolor="#FFFFFF" align="left"
-                                style="padding: 0px 30px 20px 30px; color: #515151; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;"
-                            >
-                                <p style="margin: 0; text-align:center;">
-                                    If you have any questions, just reply to this email&mdash;we're always
-                                    happy to help out.
+
+                            <td bgcolor="#FFFFFF" align="center"
+                                style="padding: 0px 30px 20px 30px; color: #000000; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;">
+
+                                <p style="margin: 0;">
+                                    If you did not request a password reset, you can safely ignore this email.
+                                </p>
+                                <p style="margin: 0;">
+                                    Only a person with access to your email can reset your password.
                                 </p>
 
                             </td>
 
                         </tr>
 
+                        <tr>
+
+                            <td bgcolor="#FFFFFF" align="center"
+                                style="padding: 0px 30px 40px 30px; border-radius: 0px 0px 4px 4px; color: #000000; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;">
+
+                                <p style="margin: 0;">
+                                    Cheers,
+                                    <br />
+                                    The Watfa Team
+                                </p>
+
+                            </td>
+
+                        </tr>
 
                     </table>
 
@@ -330,21 +348,15 @@ export const resetPassword = code => `<!DOCTYPE html>
 
                         <tr>
 
-                            <td 
-                                bgcolor="#5C2C80" align="center"
-                                style="padding: 30px 30px 30px 30px; border-radius: 4px 4px 4px 4px; color: #FFFFFF; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;"
-                            >
-                                <h2 style="font-size: 20px; font-weight: 400; color: #FFFFFF; margin: 0;">Need more help?</h2>
-                                
+                            <td bgcolor="#5C2C80" align="center"
+                                style="padding: 30px 30px 30px 30px; border-radius: 4px 4px 4px 4px; color: #FFFFFF; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 18px; font-weight: 400; line-height: 25px;">
+
+                                <h2 style="font-size: 20px; font-weight: 400; color: #FFFFFF; margin: 0;">
+                                    Need more help?
+                                </h2>
+
                                 <p style="margin: 0;">
-
-                                    <a 
-                                        href="mailto:portal_app_team@svkm.ac.in" target="_blank"
-                                        style="color: #FFFFFF;"
-                                    >
-                                        We&rsquo;re here to help you out
-                                    </a>
-
+                                    If you have any questions, just reply to this email—we're always happy to help out.
                                 </p>
 
                             </td>
@@ -365,17 +377,18 @@ export const resetPassword = code => `<!DOCTYPE html>
 
                         <tr>
 
-                            <td 
-                                bgcolor="#FFFFFF" align="left"
-                                style="padding: 0px 30px 30px 30px; color: #515151; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 400; line-height: 18px;"
-                            >
+                            <td bgcolor="#FFFFFF" align="center"
+                                style="padding: 0px 30px 30px 30px; color: #000000; font-family: 'Lato', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 400; line-height: 18px;">
                                 <br>
-
-                                <p style="margin: 0; text-align: center;">
-                                    If these emails get annoying, please feel free to 
-                                    <a href="#" target="_blank" style="color: #000000; font-weight: 700;">unsubscribe</a>.
+                                <p style="margin: 0;">
+                                    <a href="#" target="_blank" style="color: #000000;">
+                                        Terms & Conditions
+                                    </a>
+                                    |
+                                    <a href="#" target="_blank" style="color: #000000;">
+                                        Privacy
+                                    </a>
                                 </p>
-
                             </td>
 
                         </tr>
