@@ -2,7 +2,7 @@ import userModel from '../../../../DB/models/user.model.js';
 import { asyncHandler } from '../../../utils/errorHandler.js';
 import { handleDatabaseError, handleAuthError } from '../../../utils/errorHandler.js';
 import { generateTokens, saveTokenPair } from '../../../middleware/auth.middleware.js';
-import bcryptjs from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../../../utils/sendEmails.js';
@@ -61,13 +61,10 @@ export const register = asyncHandler(async (req, res, next) => {
       }
     }
 
-    // Hash password
-    const hashedPassword = await bcryptjs.hash(password, 10);
-
-    // Create new user
+    // Create new user - Hashing is handled by the pre-save hook in the model
     const user = await userModel.create({
       email,
-      password: hashedPassword,
+      password, // Pass the plain password
       displayName: displayName || email.split('@')[0],
       job,
       role,
@@ -107,8 +104,8 @@ export const login = asyncHandler(async (req, res, next) => {
       return next(new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة', { cause: 400 }));
     }
 
-    // Verify password
-    const isPasswordValid = await bcryptjs.compare(password, user.password);
+    // Verify password using the model's method
+    const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return next(new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة', { cause: 400 }));
     }
@@ -388,11 +385,8 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
       return next(new Error('لم يتم التحقق من رمز إعادة التعيين', { cause: 400 }));
     }
 
-    // Hash new password
-    const hashedPassword = await bcryptjs.hash(password, 10);
-
-    // Update user password and clear reset fields
-    user.password = hashedPassword;
+    // Set new password (hashing will be handled by pre-save hook)
+    user.password = password;
     user.forgetCode = undefined;
     user.isForgetCodeVerified = false;
     await user.save();
