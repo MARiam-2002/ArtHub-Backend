@@ -251,7 +251,7 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
     
     next();
   } catch (error) {
-    // We don't want to throw an error, just continue
+    // In optional auth, we don't want to throw an error, just continue
     next();
   }
 });
@@ -261,7 +261,7 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
  * @param {...string} roles - Allowed roles
  * @returns {Function} - Express middleware
  */
-export const authorize = (...roles) => {
+const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
@@ -364,12 +364,14 @@ export const logoutAll = asyncHandler(async (req, res, next) => {
   }
 });
 
-// Export utilities
+// All exports should be consolidated here
 export {
   generateTokens,
   saveTokenPair,
   verifyFirebaseTokenInternal as verifyFirebaseToken,
-  optionalAuth
+  authenticate,
+  optionalAuth,
+  authorize
 };
 
 // Legacy aliases for backward compatibility
