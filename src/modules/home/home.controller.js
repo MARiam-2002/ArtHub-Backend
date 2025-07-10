@@ -13,9 +13,9 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
 
     // Get all data in parallel for better performance
-    const [categories, featuredArtists, featuredArtworks, latestArtworks] = await Promise.all([
-      // Categories for home screen
-      categoryModel.find({ isActive: true })
+    const [categories, featuredArtists, latestArtists, featuredArtworks] = await Promise.all([
+      // Categories for home screen - Removed isActive flag
+      categoryModel.find()
         .select('name image')
         .limit(8)
         .lean(),
@@ -68,6 +68,13 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         }
       ]),
 
+      // Latest Artists
+      userModel.find({ role: 'artist', isActive: true })
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .select('displayName profileImage job')
+        .lean(),
+
       // Featured Artworks (trending)
       artworkModel
         .find({ isAvailable: true })
@@ -76,16 +83,6 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         .populate('artist', 'displayName profileImage job')
         .populate('category', 'name')
         .select('title images price currency artist category viewCount likeCount createdAt')
-        .lean(),
-
-      // Latest Artworks
-      artworkModel
-        .find({ isAvailable: true })
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .populate('artist', 'displayName profileImage job')
-        .populate('category', 'name')
-        .select('title images price currency artist category createdAt')
         .lean()
     ]);
 
@@ -105,7 +102,12 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         artworksCount: artist.artworksCount || 0
       })),
       featuredArtworks: formatArtworks(featuredArtworks),
-      latestArtworks: formatArtworks(latestArtworks)
+      latestArtists: latestArtists.map(artist => ({
+        _id: artist._id,
+        displayName: artist.displayName,
+        profileImage: artist.profileImage?.url,
+        job: artist.job,
+      })),
     };
 
     res.success(responseData, 'تم جلب بيانات الصفحة الرئيسية بنجاح');
