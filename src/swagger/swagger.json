@@ -6572,7 +6572,7 @@
         "x-screen": "MutualFollowsScreen"
       }
     },
-    "/home": {
+    "/api/home": {
       "get": {
         "summary": "Get home screen data",
         "tags": [
@@ -6688,7 +6688,7 @@
         }
       }
     },
-    "/home/search": {
+    "/api/home/search": {
       "get": {
         "summary": "Search artworks and artists",
         "tags": [
@@ -6751,7 +6751,7 @@
         }
       }
     },
-    "/home/trending": {
+    "/api/home/trending": {
       "get": {
         "summary": "Get trending artworks",
         "tags": [
@@ -6822,7 +6822,7 @@
         }
       }
     },
-    "/home/explore": {
+    "/api/home/explore": {
       "get": {
         "tags": [
           "Home"
