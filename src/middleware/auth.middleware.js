@@ -248,10 +248,10 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
     if (user) {
       req.user = user;
     }
+    
     next();
   } catch (error) {
-    // In optional auth, we don't want to throw an error, just continue
-    console.warn('Optional authentication failed:', error.message);
+    // We don't want to throw an error, just continue
     next();
   }
 });
@@ -263,14 +263,12 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
  */
 export const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!req.user || !req.user.role) {
-      return next(new Error('غير مصرح لك بالوصول', { cause: 403 }));
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بالوصول إلى هذا المورد'
+      });
     }
-
-    if (!roles.includes(req.user.role)) {
-      return next(new Error('غير مصرح لك بالوصول لهذا المورد', { cause: 403 }));
-    }
-
     next();
   };
 };
@@ -367,7 +365,12 @@ export const logoutAll = asyncHandler(async (req, res, next) => {
 });
 
 // Export utilities
-export { generateTokens, saveTokenPair, verifyFirebaseTokenInternal, optionalAuth };
+export {
+  generateTokens,
+  saveTokenPair,
+  verifyFirebaseTokenInternal as verifyFirebaseToken,
+  optionalAuth
+};
 
 // Legacy aliases for backward compatibility
 export const isAuthenticated = authenticate;
