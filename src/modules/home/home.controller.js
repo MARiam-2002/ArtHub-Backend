@@ -23,7 +23,7 @@ function formatArtists(artists) {
     _id: artist._id,
     displayName: artist.displayName,
     job: artist.job,
-    profileImage: getImageUrl(artist.profileImage),
+    profileImage: artist.profileImage?.url || artist.photoURL || null, // Access URL directly
     rating: artist.averageRating ? parseFloat(artist.averageRating.toFixed(1)) : 0,
     reviewsCount: artist.reviewsCount || 0,
   }));
@@ -37,26 +37,26 @@ function formatArtworks(artworks) {
   return artworks.map(artwork => ({
     _id: artwork._id,
     title: artwork.title?.ar || artwork.title,
-    image: getImageUrl(artwork.images),
+    image: Array.isArray(artwork.images) && artwork.images.length > 0 ? artwork.images[0] : (artwork.image || null), // Access URL directly
     price: artwork.price,
     currency: artwork.currency || 'SAR',
     artist: artwork.artist ? {
       _id: artwork.artist._id,
       displayName: artwork.artist.displayName,
-      profileImage: getImageUrl(artwork.artist.profileImage),
+      profileImage: artwork.artist.profileImage?.url || artwork.artist.photoURL || null,
     } : null,
     category: artwork.category ? {
       _id: artwork.category._id,
       name: artwork.category.name?.ar || artwork.category.name,
     } : null,
     likeCount: artwork.likeCount || 0,
-    rating: artwork.averageRating ? parseFloat(artwork.averageRating.toFixed(1)) : 0,
+    rating: artwork.averageRating ? parseFloat(artwork.averageRating.toFixed(1)) : (artwork.rating?.average || 0),
   }));
 }
 
 /**
  * Main controller to get all data for the home screen.
- * Final correct version with fixed aggregations and populations.
+ * Final version with simplified queries and no image population.
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
@@ -71,7 +71,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       mostRatedArtworks,
     ] = await Promise.all([
       // 1. Categories
-      categoryModel.find().limit(8).select('name image').populate('image', 'url').lean(),
+      categoryModel.find().limit(8).select('name image').lean(),
 
       // 2. Featured Artists (Top Rated)
       userModel.aggregate([
@@ -85,34 +85,26 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         },
         { $sort: { averageRating: -1, reviewsCount: -1 } },
         { $limit: 6 },
-        { $lookup: { from: 'images', localField: 'profileImage', foreignField: '_id', as: 'profileImage' } },
-        { $unwind: { path: '$profileImage', preserveNullAndEmptyArrays: true } },
-        { $project: { displayName: 1, profileImage: 1, averageRating: 1, reviewsCount: 1, job: 1 } }
+        { $project: { displayName: 1, profileImage: 1, photoURL: 1, averageRating: 1, reviewsCount: 1, job: 1 } }
       ]),
 
-      // 3. Featured Artworks (Trending)
+      // 3. Featured Artworks (Trending) - No populate for images
       artworkModel.find({ isAvailable: true })
         .sort({ viewCount: -1, likeCount: -1 })
         .limit(6)
-        .populate({ path: 'images', select: 'url' })
-        .populate({
-          path: 'artist',
-          select: 'displayName profileImage',
-          populate: { path: 'profileImage', select: 'url' }
-        })
+        .populate({ path: 'artist', select: 'displayName profileImage photoURL' })
         .populate({ path: 'category', select: 'name' })
-        .select('title images price currency artist category likeCount')
+        .select('title images image price currency artist category likeCount')
         .lean(),
 
-      // 4. Latest Artists
+      // 4. Latest Artists - No populate for images
       userModel.find({ role: 'artist', isActive: true })
         .sort({ createdAt: -1 })
         .limit(6)
-        .select('displayName profileImage job')
-        .populate('profileImage', 'url')
+        .select('displayName profileImage photoURL job')
         .lean(),
         
-      // 5. Most Rated Artworks - Using Aggregation correctly now
+      // 5. Most Rated Artworks - Using Aggregation, no image lookups
       artworkModel.aggregate([
         { $match: { isAvailable: true } },
         { $lookup: { from: 'reviews', localField: '_id', foreignField: 'artwork', as: 'reviews' } },
@@ -125,62 +117,44 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         { $match: { reviewsCount: { $gt: 0 } } },
         { $sort: { averageRating: -1, reviewsCount: -1 } },
         { $limit: 6 },
-        { $lookup: { from: 'images', localField: 'images', foreignField: '_id', as: 'images' } },
         { $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' } },
         { $unwind: { path: '$artist', preserveNullAndEmptyArrays: true } },
-        { $lookup: { from: 'images', localField: 'artist.profileImage', foreignField: '_id', as: 'artist.profileImage' } },
-        { $unwind: { path: '$artist.profileImage', preserveNullAndEmptyArrays: true } },
         { $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'category' } },
         { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
         {
           $project: {
-            title: 1,
-            images: 1,
-            price: 1,
-            currency: 1,
-            'artist._id': '$artist._id',
-            'artist.displayName': '$artist.displayName',
-            'artist.profileImage': '$artist.profileImage',
-            'category._id': '$category._id',
-            'category.name': '$category.name',
-            likeCount: 1,
-            averageRating: 1,
+            title: 1, images: 1, image: 1, price: 1, currency: 1, artist: 1, category: 1,
+            likeCount: 1, averageRating: 1,
           },
         },
       ]),
     ]);
 
-    // 6. Personalized Artworks
+    // 6. Personalized Artworks - No populate for images
     let personalizedArtworks = [];
     if (userId) {
       const user = await userModel.findById(userId).select('recentlyViewed.category').lean();
       const recentCategories = user?.recentlyViewed?.map(h => h.category).filter(Boolean) || [];
+      const excludedIds = [
+        ...featuredArtworks.map(a => a._id),
+        ...mostRatedArtworks.map(a => a._id),
+      ].map(id => new mongoose.Types.ObjectId(id));
 
       if (recentCategories.length > 0) {
-        const excludedIds = [
-          ...featuredArtworks.map(a => a._id),
-          ...mostRatedArtworks.map(a => a._id),
-        ].map(id => new mongoose.Types.ObjectId(id));
-
         personalizedArtworks = await artworkModel.find({
-            category: { $in: recentCategories },
-            _id: { $nin: excludedIds },
-            isAvailable: true,
-          })
-          .limit(6)
-          .populate({ path: 'images', select: 'url' })
-          .populate({
-            path: 'artist',
-            select: 'displayName profileImage',
-            populate: { path: 'profileImage', select: 'url' },
-          })
-          .populate({ path: 'category', select: 'name' })
-          .select('title images price currency artist category likeCount rating')
-          .lean();
+          category: { $in: recentCategories },
+          _id: { $nin: excludedIds },
+          isAvailable: true,
+        })
+        .limit(6)
+        .populate('artist', 'displayName profileImage photoURL')
+        .populate('category', 'name')
+        .select('title images image price currency artist category likeCount')
+        .lean();
       }
     }
     
-    // Fallback for personalized content
+    // Fallback for personalized content - No populate for images
     if (personalizedArtworks.length < 6) {
         const extraNeeded = 6 - personalizedArtworks.length;
         const allExcludedIds = [
@@ -192,14 +166,9 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         const fallbackArtworks = await artworkModel.find({ isAvailable: true, _id: { $nin: allExcludedIds } })
             .sort({ likeCount: -1, createdAt: -1 })
             .limit(extraNeeded)
-            .populate({ path: 'images', select: 'url' })
-            .populate({
-                path: 'artist',
-                select: 'displayName profileImage',
-                populate: { path: 'profileImage', select: 'url' }
-            })
-            .populate({ path: 'category', select: 'name' })
-            .select('title images price currency artist category likeCount rating')
+            .populate('artist', 'displayName profileImage photoURL')
+            .populate('category', 'name')
+            .select('title images image price currency artist category likeCount')
             .lean();
         personalizedArtworks.push(...fallbackArtworks);
     }
@@ -208,7 +177,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
       data: {
-        categories: categories.map(c => ({ _id: c._id, name: c.name?.ar || c.name, image: getImageUrl(c.image) })),
+        categories: categories.map(c => ({ _id: c._id, name: c.name?.ar || c.name, image: c.image?.url || c.image || null })),
         featuredArtists: formatArtists(featuredArtists),
         featuredArtworks: formatArtworks(featuredArtworks),
         latestArtists: formatArtists(latestArtists),
