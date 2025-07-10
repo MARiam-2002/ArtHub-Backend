@@ -5,16 +5,54 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 
 /**
+ * Helper function to format artwork data for responses
+ */
+function formatArtworks(artworks) {
+  if (!Array.isArray(artworks)) return [];
+  return artworks.map(artwork => ({
+    _id: artwork._id,
+    title: artwork.title,
+    // Ensure `images` is an array of strings (URLs)
+    images: (artwork.images || [])
+      .map(img => (typeof img === 'object' && img.url ? img.url : img))
+      .filter(Boolean),
+    price: artwork.price,
+    currency: artwork.currency || 'SAR',
+    artist: {
+      _id: artwork.artist?._id,
+      displayName: artwork.artist?.displayName,
+      profileImage: artwork.artist?.profileImage?.url || artwork.artist?.profileImage,
+      job: artwork.artist?.job,
+    },
+    category: {
+      _id: artwork.category?._id,
+      name: artwork.category?.name?.ar || artwork.category?.name,
+    },
+    viewCount: artwork.viewCount || 0,
+    likeCount: artwork.likeCount || 0,
+    createdAt: artwork.createdAt,
+  }));
+}
+
+/**
  * Get home screen data - optimized for mobile app
  * Returns categories, featured artists, and artworks sections
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
+    const userId = req.user?._id;
 
     // Get all data in parallel for better performance
-    const [categories, featuredArtists, latestArtists, featuredArtworks] = await Promise.all([
-      // Categories for home screen - Removed isActive flag
+    const [
+      categories,
+      featuredArtists,
+      latestArtists,
+      featuredArtworks,
+      mostRatedArtworks,
+      personalizedArtworks
+    ] = await Promise.all([
+      // Categories for home screen
       categoryModel.find()
         .select('name image')
         .limit(8)
@@ -79,12 +117,58 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       artworkModel
         .find({ isAvailable: true })
         .sort({ viewCount: -1, likeCount: -1 })
-        .limit(10)
+        .limit(6) // Reduced limit
         .populate('artist', 'displayName profileImage job')
         .populate('category', 'name')
         .select('title images price currency artist category viewCount likeCount createdAt')
-        .lean()
+        .lean(),
+
+      // Most Rated Artworks
+      artworkModel
+        .aggregate([
+          { $match: { isAvailable: true } },
+          {
+            $lookup: {
+              from: 'reviews',
+              localField: '_id',
+              foreignField: 'artwork',
+              as: 'reviews'
+            }
+          },
+          {
+            $addFields: {
+              averageRating: { $avg: '$reviews.rating' },
+              reviewCount: { $size: '$reviews' }
+            }
+          },
+          { $sort: { averageRating: -1, reviewCount: -1 } },
+          { $limit: 6 } // Reduced limit
+        ]),
+
+      // Personalized Artworks (if user is logged in)
+      userId ? userModel.findById(userId).then(async (user) => {
+        if (!user) return [];
+        const followedArtists = user.following || [];
+        const likedCategories = user.likedCategories || []; // Assuming this field exists
+
+        const query = {
+          isAvailable: true,
+          $or: [
+            { artist: { $in: followedArtists } },
+            { category: { $in: likedCategories } }
+          ],
+          _id: { $nin: featuredArtworks.map(a => a._id).concat(mostRatedArtworks.map(a => a._id)) }
+        };
+        return artworkModel.find(query).limit(6).populate('artist', 'displayName profileImage job').populate('category', 'name').lean();
+      }) : Promise.resolve([])
     ]);
+    
+    // Manually populate artist and category for aggregated artworks
+    await artworkModel.populate(mostRatedArtworks, [
+      { path: 'artist', select: 'displayName profileImage job' },
+      { path: 'category', select: 'name' }
+    ]);
+
 
     const responseData = {
       categories: categories.map(cat => ({
@@ -108,6 +192,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         profileImage: artist.profileImage?.url,
         job: artist.job,
       })),
+      mostRatedArtworks: formatArtworks(mostRatedArtworks),
+      personalizedArtworks: formatArtworks(personalizedArtworks)
     };
 
     res.success(responseData, 'تم جلب بيانات الصفحة الرئيسية بنجاح');
@@ -255,32 +341,3 @@ export const getTrendingArtworks = asyncHandler(async (req, res, next) => {
     next(new Error('حدث خطأ أثناء جلب الأعمال الرائجة', { cause: 500 }));
   }
 });
-
-/**
- * Format artworks for consistent response
- */
-function formatArtworks(artworks) {
-  return artworks.map(artwork => ({
-    _id: artwork._id,
-    title: artwork.title?.ar || artwork.title,
-    images: artwork.images?.map(img => ({
-      url: img.url,
-      optimizedUrl: img.optimizedUrl || img.url
-    })) || [],
-    price: artwork.price,
-    currency: artwork.currency || 'SAR',
-    artist: {
-      _id: artwork.artist?._id,
-      displayName: artwork.artist?.displayName,
-      profileImage: artwork.artist?.profileImage?.url,
-      job: artwork.artist?.job
-    },
-    category: {
-      _id: artwork.category?._id,
-      name: artwork.category?.name?.ar || artwork.category?.name
-    },
-    viewCount: artwork.viewCount || 0,
-    likeCount: artwork.likeCount || 0,
-    createdAt: artwork.createdAt
-  }));
-}

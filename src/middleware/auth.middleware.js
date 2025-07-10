@@ -248,10 +248,10 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
     if (user) {
       req.user = user;
     }
-    
     next();
   } catch (error) {
-    console.warn('Optional authentication error:', error);
+    // In optional auth, we don't want to throw an error, just continue
+    console.warn('Optional authentication failed:', error.message);
     next();
   }
 });
@@ -367,7 +367,7 @@ export const logoutAll = asyncHandler(async (req, res, next) => {
 });
 
 // Export utilities
-export { generateTokens, saveTokenPair };
+export { generateTokens, saveTokenPair, verifyFirebaseTokenInternal, optionalAuth };
 
 // Legacy aliases for backward compatibility
 export const isAuthenticated = authenticate;
