@@ -149,7 +149,7 @@ const verifyJWTToken = async (token) => {
  * Main authentication middleware
  * Supports both Firebase and JWT tokens
  */
-export const authenticate = asyncHandler(async (req, res, next) => {
+const authenticate = asyncHandler(async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     
@@ -203,7 +203,7 @@ export const authenticate = asyncHandler(async (req, res, next) => {
  * Optional authentication middleware
  * Continues even if authentication fails
  */
-export const optionalAuth = asyncHandler(async (req, res, next) => {
+const optionalAuth = asyncHandler(async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     
@@ -273,110 +273,12 @@ const authorize = (...roles) => {
   };
 };
 
-/**
- * Firebase to JWT conversion middleware
- * Converts Firebase authentication to JWT tokens
- */
-export const firebaseToJWT = asyncHandler(async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next(new Error('لم يتم توفير رمز المصادقة', { cause: 401 }));
-    }
-
-    const firebaseToken = authHeader.split(' ')[1];
-    if (!firebaseToken) {
-      return next(new Error('رمز المصادقة غير صالح', { cause: 401 }));
-    }
-
-    // Verify Firebase token and get/create user
-    const user = await verifyFirebaseTokenInternal(firebaseToken);
-
-    // Generate JWT tokens
-    const { accessToken, refreshToken } = generateTokens(user);
-
-    // Save token pair to database
-    await saveTokenPair(user._id, accessToken, refreshToken, req.headers['user-agent']);
-
-    // Add tokens to user object
-    req.user = {
-      ...user.toObject(),
-      accessToken,
-      refreshToken
-    };
-
-    next();
-  } catch (error) {
-    console.error('Firebase to JWT conversion error:', error);
-    next(new Error('فشل في تحويل المصادقة', { cause: 401 }));
-  }
-});
-
-/**
- * Logout middleware - invalidate current token
- */
-export const logout = asyncHandler(async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    
-    if (!token) {
-      return next(new Error('لم يتم توفير رمز المصادقة', { cause: 400 }));
-    }
-    
-    // Invalidate token
-    const result = await tokenModel.invalidateToken(token);
-    
-    if (!result) {
-      return next(new Error('رمز المصادقة غير موجود', { cause: 404 }));
-    }
-    
-    return res.status(200).json({
-      success: true,
-      message: 'تم تسجيل الخروج بنجاح'
-    });
-  } catch (error) {
-    console.error('Logout error:', error);
-    return next(new Error('فشل في تسجيل الخروج', { cause: 500 }));
-  }
-});
-
-/**
- * Logout from all devices - invalidate all user tokens
- */
-export const logoutAll = asyncHandler(async (req, res, next) => {
-  try {
-    if (!req.user || !req.user._id) {
-      return next(new Error('لم يتم توفير بيانات المستخدم', { cause: 400 }));
-    }
-    
-    // Invalidate all tokens for user
-    const result = await tokenModel.invalidateAllUserTokens(req.user._id);
-    
-    return res.status(200).json({
-      success: true,
-      message: 'تم تسجيل الخروج من جميع الأجهزة بنجاح',
-      data: result
-    });
-  } catch (error) {
-    console.error('Logout all error:', error);
-    return next(new Error('فشل في تسجيل الخروج من جميع الأجهزة', { cause: 500 }));
-  }
-});
-
-// All exports should be consolidated here
+// --- Single, consolidated export block ---
 export {
   generateTokens,
   saveTokenPair,
-  verifyFirebaseTokenInternal as verifyFirebaseToken,
+  verifyFirebaseTokenInternal,
   authenticate,
   optionalAuth,
   authorize
 };
-
-// Legacy aliases for backward compatibility
-export const isAuthenticated = authenticate;
-export const optionalFirebaseAuth = optionalAuth;
-export const allowedRoles = authorize;
-export const invalidateToken = logout;
-export const invalidateAllTokens = logoutAll; 
