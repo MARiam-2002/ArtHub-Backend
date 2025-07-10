@@ -3,6 +3,23 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
+import mongoose from 'mongoose';
+
+/**
+ * Helper function to format artist data for responses.
+ * This simplifies the artist object and ensures consistency.
+ */
+function formatArtists(artists) {
+  if (!Array.isArray(artists)) return [];
+  return artists.map(artist => ({
+    _id: artist._id,
+    displayName: artist.displayName,
+    job: artist.job,
+    profileImage: artist.profileImage?.url || null, // Expect a populated image object
+    rating: artist.averageRating ? parseFloat(artist.averageRating.toFixed(1)) : (artist.rating || 0),
+    reviewsCount: artist.reviewsCount || 0,
+  }));
+}
 
 /**
  * Helper function to format artwork data for responses, returning only the first image.
@@ -10,10 +27,20 @@ import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 function formatArtworks(artworks) {
   if (!Array.isArray(artworks)) return [];
   return artworks.map(artwork => {
-    // Extract the first image URL, if available
-    const mainImage = (artwork.images && artwork.images.length > 0)
-      ? (typeof artwork.images[0] === 'object' ? artwork.images[0].url : artwork.images[0])
-      : null;
+    const mainImage = Array.isArray(artwork.images) && artwork.images.length > 0
+      ? artwork.images[0]?.url
+      : (artwork.image || null);
+
+    const artistInfo = artwork.artist ? {
+      _id: artwork.artist._id,
+      displayName: artwork.artist.displayName,
+      profileImage: artwork.artist.profileImage?.url || null,
+    } : null;
+
+    const categoryInfo = artwork.category ? {
+      _id: artwork.category._id,
+      name: artwork.category.name?.ar || artwork.category.name,
+    } : null;
 
     return {
       _id: artwork._id,
@@ -21,22 +48,17 @@ function formatArtworks(artworks) {
       image: mainImage,
       price: artwork.price,
       currency: artwork.currency || 'SAR',
-      artist: {
-        _id: artwork.artist?._id,
-        displayName: artwork.artist?.displayName,
-        profileImage: artwork.artist?.profileImage?.url || artwork.artist?.profileImage,
-      },
-      category: {
-        _id: artwork.category?._id,
-        name: artwork.category?.name?.ar || artwork.category?.name,
-      },
+      artist: artistInfo,
+      category: categoryInfo,
       likeCount: artwork.likeCount || 0,
+      rating: artwork.averageRating ? parseFloat(artwork.averageRating.toFixed(1)) : (artwork.rating || 0),
     };
   });
 }
 
+
 /**
- * Get home screen data - Rewritten for performance and stability
+ * Get home screen data - Final version with aggregations for accurate ratings.
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
@@ -51,22 +73,33 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       mostRatedArtworks,
     ] = await Promise.all([
       // 1. Categories
-      categoryModel.find().limit(8).select('name image').lean(),
+      categoryModel.find().limit(8).select('name image').populate('image', 'url').lean(),
 
-      // 2. Featured Artists (Top Rated) - Simplified Query
-      userModel.find({ role: 'artist', isActive: true })
-        .sort({ rating: -1, reviewCount: -1 })
-        .limit(6)
-        .select('displayName profileImage job rating reviewCount')
-        .lean(),
+      // 2. Featured Artists (Top Rated) - Using Aggregation
+      userModel.aggregate([
+        { $match: { role: 'artist', isActive: true } },
+        { $lookup: { from: 'reviews', localField: '_id', foreignField: 'artist', as: 'reviews' } },
+        { $lookup: { from: 'images', localField: 'profileImage', foreignField: '_id', as: 'profileImage' } },
+        { $unwind: { path: '$profileImage', preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            reviewsCount: { $size: '$reviews' },
+            averageRating: { $ifNull: [{ $avg: '$reviews.rating' }, 0] },
+          },
+        },
+        { $sort: { averageRating: -1, reviewsCount: -1 } },
+        { $limit: 6 },
+        { $project: { displayName: 1, profileImage: 1, averageRating: 1, reviewsCount: 1, job: 1 } },
+      ]),
 
       // 3. Featured Artworks (Trending)
       artworkModel.find({ isAvailable: true })
         .sort({ viewCount: -1, likeCount: -1 })
         .limit(6)
+        .populate({ path: 'artist', select: 'displayName profileImage', populate: { path: 'profileImage', select: 'url' } })
+        .populate({ path: 'category', select: 'name' })
+        .populate({ path: 'images', select: 'url' })
         .select('title images price currency artist category likeCount')
-        .populate('artist', 'displayName profileImage')
-        .populate('category', 'name')
         .lean(),
 
       // 4. Latest Artists
@@ -74,16 +107,35 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         .sort({ createdAt: -1 })
         .limit(6)
         .select('displayName profileImage job')
+        .populate('profileImage', 'url')
         .lean(),
         
-      // 5. Most Rated Artworks
-      artworkModel.find({ isAvailable: true, 'rating.average': { $gt: 0 } })
-        .sort({ 'rating.average': -1, 'rating.count': -1 })
-        .limit(6)
-        .select('title images price currency artist category likeCount')
-        .populate('artist', 'displayName profileImage')
-        .populate('category', 'name')
-        .lean(),
+      // 5. Most Rated Artworks - Using Aggregation
+      artworkModel.aggregate([
+          { $match: { isAvailable: true } },
+          { $lookup: { from: 'reviews', localField: '_id', foreignField: 'artwork', as: 'reviews' } },
+          {
+            $addFields: {
+              averageRating: { $ifNull: [ { $avg: '$reviews.rating' }, 0 ] },
+              reviewsCount: { $size: '$reviews' },
+            },
+          },
+          { $match: { reviewsCount: { $gt: 0 } } }, // Fetch artworks with at least one review
+          { $sort: { averageRating: -1, reviewsCount: -1 } },
+          { $limit: 6 },
+          { $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' } },
+          { $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'category' } },
+          { $lookup: { from: 'images', localField: 'images', foreignField: '_id', as: 'images' } },
+          { $unwind: { path: '$artist', preserveNullAndEmptyArrays: true } },
+          { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+          { $lookup: { from: 'images', localField: 'artist.profileImage', foreignField: '_id', as: 'artist.profileImage'}},
+          { $unwind: { path: '$artist.profileImage', preserveNullAndEmptyArrays: true }},
+          { $project: { 
+              title: 1, images: 1, price: 1, currency: 1, 'artist.displayName': 1, 
+              'artist.profileImage': 1, 'artist._id': 1, 'category.name': 1, 
+              'category._id': 1, likeCount: 1, averageRating: 1 
+          }}
+      ])
     ]);
 
     // 6. Personalized Artworks (if user is logged in)
@@ -96,7 +148,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         const excludedIds = [
           ...featuredArtworks.map(a => a._id),
           ...mostRatedArtworks.map(a => a._id),
-        ];
+        ].map(id => new mongoose.Types.ObjectId(id));
 
         personalizedArtworks = await artworkModel.find({
             category: { $in: recentCategories },
@@ -104,40 +156,40 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             isAvailable: true
           })
           .limit(6)
-          .select('title images price currency artist category likeCount')
           .populate('artist', 'displayName profileImage')
           .populate('category', 'name')
+          .select('title images price currency artist category likeCount')
           .lean();
       }
     }
     
-    // If no personalized artworks, fill with more trending ones
+    // Fallback for personalized content
     if (personalizedArtworks.length < 6) {
         const extraNeeded = 6 - personalizedArtworks.length;
         const allExcludedIds = [
             ...featuredArtworks.map(a => a._id),
             ...mostRatedArtworks.map(a => a._id),
             ...personalizedArtworks.map(a => a._id),
-        ];
+        ].map(id => new mongoose.Types.ObjectId(id));
+
         const fallbackArtworks = await artworkModel.find({ isAvailable: true, _id: { $nin: allExcludedIds } })
             .sort({ likeCount: -1, createdAt: -1 })
             .limit(extraNeeded)
-            .select('title images price currency artist category likeCount')
             .populate('artist', 'displayName profileImage')
             .populate('category', 'name')
+            .select('title images price currency artist category likeCount')
             .lean();
         personalizedArtworks.push(...fallbackArtworks);
     }
-
 
     res.status(200).json({
       success: true,
       message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
       data: {
-        categories: categories.map(c => ({ _id: c._id, name: c.name?.ar || c.name, image: c.image?.url || c.image })),
-        featuredArtists,
+        categories: categories.map(c => ({ _id: c._id, name: c.name?.ar || c.name, image: c.image?.url || null })),
+        featuredArtists: formatArtists(featuredArtists),
         featuredArtworks: formatArtworks(featuredArtworks),
-        latestArtists,
+        latestArtists: formatArtists(latestArtists),
         mostRatedArtworks: formatArtworks(mostRatedArtworks),
         personalizedArtworks: formatArtworks(personalizedArtworks),
       },

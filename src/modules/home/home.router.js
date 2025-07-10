@@ -208,7 +208,7 @@ router.get('/trending', isValidation(Validators.paginationSchema), homeControlle
  *       200:
  *         description: Explore content retrieved successfully
  */
-router.get('/explore', getExploreContent);
+router.get('/explore', homeController.getExploreContent);
 
 /**
  * @swagger
@@ -237,15 +237,3 @@ router.get('/explore', getExploreContent);
  */
 
 export default router;
-
-function getTrendingContent(req, res) {
-  // Implementation will be in the controller file
-  // This is just a placeholder for the router
-  res.status(501).json({ success: false, message: 'Not implemented yet' });
-}
-
-function getExploreContent(req, res) {
-  // Implementation will be in the controller file
-  // This is just a placeholder for the router
-  res.status(501).json({ success: false, message: 'Not implemented yet' });
-}
