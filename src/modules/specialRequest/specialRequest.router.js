@@ -13,12 +13,59 @@ const router = Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Special Requests
+ *   description: Special requests management for custom artwork commissions
+ */
+
+/**
+ * @swagger
+ * /special-requests/types:
+ *   get:
+ *     summary: Get request types
+ *     tags: [Special Requests]
+ *     description: Get all available request types for dropdown selection
+ *     responses:
+ *       200:
+ *         description: Request types retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب أنواع الطلبات بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     requestTypes:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           value:
+ *                             type: string
+ *                           label:
+ *                             type: string
+ *                           icon:
+ *                             type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/types', controller.getRequestTypes);
+
+/**
+ * @swagger
  * /special-requests:
  *   post:
  *     tags:
  *       - Special Requests
  *     summary: إنشاء طلب خاص
- *     description: إرسال طلب خاص لفنان محدد
+ *     description: إرسال طلب خاص لفنان محدد مع تفاصيل كاملة
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -30,6 +77,7 @@ const router = Router();
  *             required:
  *               - artist
  *               - requestType
+ *               - title
  *               - description
  *               - budget
  *             properties:
@@ -38,30 +86,150 @@ const router = Router();
  *                 description: معرف الفنان
  *               requestType:
  *                 type: string
+ *                 enum: [custom_artwork, portrait, logo_design, illustration, digital_art, traditional_art, animation, graphic_design, character_design, concept_art, other]
  *                 description: نوع الطلب الخاص
+ *               title:
+ *                 type: string
+ *                 minLength: 5
+ *                 maxLength: 100
+ *                 description: عنوان الطلب
  *               description:
  *                 type: string
+ *                 minLength: 20
+ *                 maxLength: 2000
  *                 description: وصف تفصيلي للطلب
  *               budget:
  *                 type: number
+ *                 minimum: 10
+ *                 maximum: 100000
  *                 description: الميزانية المقترحة
+ *               currency:
+ *                 type: string
+ *                 enum: [SAR, USD, EUR, AED]
+ *                 default: SAR
+ *                 description: العملة
  *               deadline:
  *                 type: string
  *                 format: date-time
  *                 description: الموعد النهائي (اختياري)
- *               attachments:
+ *               priority:
+ *                 type: string
+ *                 enum: [low, medium, high, urgent]
+ *                 default: medium
+ *                 description: أولوية الطلب
+ *               category:
+ *                 type: string
+ *                 description: معرف الفئة (اختياري)
+ *               tags:
  *                 type: array
  *                 items:
  *                   type: string
- *                   format: uri
- *                 description: روابط ملفات مرفقة (اختياري)
+ *                 maxItems: 10
+ *                 description: علامات الطلب
+ *               attachments:
+ *                 type: array
+ *                 maxItems: 10
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       format: uri
+ *                     type:
+ *                       type: string
+ *                       enum: [image, document, reference]
+ *                     name:
+ *                       type: string
+ *                       maxLength: 100
+ *                     description:
+ *                       type: string
+ *                       maxLength: 200
+ *                 description: ملفات مرفقة (اختياري)
+ *               specifications:
+ *                 type: object
+ *                 properties:
+ *                   dimensions:
+ *                     type: object
+ *                     properties:
+ *                       width:
+ *                         type: number
+ *                       height:
+ *                         type: number
+ *                       unit:
+ *                         type: string
+ *                         enum: [px, cm, in, mm]
+ *                   format:
+ *                     type: string
+ *                     enum: [digital, print, both]
+ *                   resolution:
+ *                     type: number
+ *                   colorMode:
+ *                     type: string
+ *                     enum: [RGB, CMYK, Grayscale]
+ *                   fileFormat:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                       enum: [PNG, JPG, JPEG, SVG, PDF, AI, PSD, EPS]
+ *                 description: مواصفات العمل المطلوب
+ *               communicationPreferences:
+ *                 type: object
+ *                 properties:
+ *                   preferredMethod:
+ *                     type: string
+ *                     enum: [chat, email, phone, video_call]
+ *                     default: chat
+ *                   timezone:
+ *                     type: string
+ *                   availableHours:
+ *                     type: object
+ *                     properties:
+ *                       start:
+ *                         type: string
+ *                         pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+ *                       end:
+ *                         type: string
+ *                         pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+ *                 description: تفضيلات التواصل
+ *               isPrivate:
+ *                 type: boolean
+ *                 default: false
+ *                 description: هل الطلب خاص
+ *               allowRevisions:
+ *                 type: boolean
+ *                 default: true
+ *                 description: السماح بالتعديلات
+ *               maxRevisions:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 10
+ *                 default: 3
+ *                 description: الحد الأقصى للتعديلات
  *     responses:
  *       201:
  *         description: تم إنشاء الطلب الخاص بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إنشاء الطلب الخاص بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     specialRequest:
+ *                       $ref: '#/components/schemas/SpecialRequest'
  *       400:
  *         description: بيانات غير صالحة
  *       404:
  *         description: الفنان غير موجود
+ *       500:
+ *         description: خطأ في الخادم
  */
 router.post(
   '/',
@@ -77,7 +245,7 @@ router.post(
  *     tags:
  *       - Special Requests
  *     summary: عرض طلباتي الخاصة
- *     description: عرض الطلبات الخاصة التي أرسلها المستخدم
+ *     description: عرض الطلبات الخاصة التي أرسلها المستخدم مع فلترة وترتيب
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -85,32 +253,88 @@ router.post(
  *         in: query
  *         schema:
  *           type: integer
+ *           default: 1
  *         description: رقم الصفحة
  *       - name: limit
  *         in: query
  *         schema:
  *           type: integer
+ *           default: 10
  *         description: عدد العناصر في الصفحة
  *       - name: status
  *         in: query
  *         schema:
  *           type: string
- *           enum: [pending, accepted, rejected, completed]
+ *           enum: [pending, accepted, rejected, in_progress, review, completed, cancelled]
  *         description: تصفية حسب الحالة
+ *       - name: requestType
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [custom_artwork, portrait, logo_design, illustration, digital_art, traditional_art, animation, graphic_design, character_design, concept_art, other]
+ *         description: تصفية حسب نوع الطلب
+ *       - name: priority
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high, urgent]
+ *         description: تصفية حسب الأولوية
  *       - name: sortBy
  *         in: query
  *         schema:
  *           type: string
+ *           default: createdAt
  *         description: ترتيب حسب الحقل
  *       - name: sortOrder
  *         in: query
  *         schema:
  *           type: string
  *           enum: [asc, desc]
+ *           default: desc
  *         description: طريقة الترتيب
  *     responses:
  *       200:
  *         description: تم جلب طلبات المستخدم بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب الطلبات بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     requests:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/SpecialRequest'
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: number
+ *                         totalPages:
+ *                           type: number
+ *                         totalItems:
+ *                           type: number
+ *                         hasNextPage:
+ *                           type: boolean
+ *                         hasPrevPage:
+ *                           type: boolean
+ *                     statusCounts:
+ *                       type: object
+ *                       description: عدد الطلبات حسب الحالة
+ *                     totalCount:
+ *                       type: number
+ *       401:
+ *         description: غير مصرح
+ *       500:
+ *         description: خطأ في الخادم
  */
 router.get('/my', isAuthenticated, controller.getUserRequests);
 
@@ -120,8 +344,8 @@ router.get('/my', isAuthenticated, controller.getUserRequests);
  *   get:
  *     tags:
  *       - Special Requests
- *     summary: عرض الطلبات الموجهة للفنان
- *     description: عرض الطلبات الخاصة المرسلة إلى الفنان
+ *     summary: عرض طلبات الفنان
+ *     description: عرض الطلبات الخاصة المرسلة للفنان (للفنانين فقط)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -129,43 +353,54 @@ router.get('/my', isAuthenticated, controller.getUserRequests);
  *         in: query
  *         schema:
  *           type: integer
+ *           default: 1
  *         description: رقم الصفحة
  *       - name: limit
  *         in: query
  *         schema:
  *           type: integer
+ *           default: 10
  *         description: عدد العناصر في الصفحة
  *       - name: status
  *         in: query
  *         schema:
  *           type: string
- *           enum: [pending, accepted, rejected, completed]
+ *           enum: [pending, accepted, rejected, in_progress, review, completed, cancelled]
  *         description: تصفية حسب الحالة
+ *       - name: requestType
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [custom_artwork, portrait, logo_design, illustration, digital_art, traditional_art, animation, graphic_design, character_design, concept_art, other]
+ *         description: تصفية حسب نوع الطلب
+ *       - name: priority
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [low, medium, high, urgent]
+ *         description: تصفية حسب الأولوية
+ *       - name: sortBy
+ *         in: query
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *         description: ترتيب حسب الحقل
+ *       - name: sortOrder
+ *         in: query
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: طريقة الترتيب
  *     responses:
  *       200:
  *         description: تم جلب طلبات الفنان بنجاح
  *       403:
- *         description: غير مصرح لك بعرض طلبات الفنانين
+ *         description: غير مصرح (ليس فنان)
+ *       500:
+ *         description: خطأ في الخادم
  */
 router.get('/artist', isAuthenticated, controller.getArtistRequests);
-
-/**
- * @swagger
- * /special-requests/artist/stats:
- *   get:
- *     tags:
- *       - Special Requests
- *     summary: إحصائيات الطلبات للفنان
- *     description: عرض إحصائيات الطلبات الخاصة للفنان
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: تم جلب إحصائيات الطلبات بنجاح
- *       403:
- *         description: غير مصرح لك بعرض إحصائيات الفنانين
- */
-router.get('/artist/stats', isAuthenticated, controller.getArtistRequestStats);
 
 /**
  * @swagger
@@ -174,7 +409,7 @@ router.get('/artist/stats', isAuthenticated, controller.getArtistRequestStats);
  *     tags:
  *       - Special Requests
  *     summary: تفاصيل طلب خاص
- *     description: عرض تفاصيل طلب خاص محدد
+ *     description: عرض تفاصيل طلب خاص محدد مع معلومات الصلاحيات
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -187,8 +422,47 @@ router.get('/artist/stats', isAuthenticated, controller.getArtistRequestStats);
  *     responses:
  *       200:
  *         description: تم جلب تفاصيل الطلب بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب تفاصيل الطلب بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     specialRequest:
+ *                       $ref: '#/components/schemas/SpecialRequest'
+ *                     userRelation:
+ *                       type: object
+ *                       properties:
+ *                         isSender:
+ *                           type: boolean
+ *                         isArtist:
+ *                           type: boolean
+ *                         canEdit:
+ *                           type: boolean
+ *                         canAccept:
+ *                           type: boolean
+ *                         canReject:
+ *                           type: boolean
+ *                         canComplete:
+ *                           type: boolean
+ *                         canCancel:
+ *                           type: boolean
+ *       400:
+ *         description: معرف الطلب غير صالح
+ *       403:
+ *         description: غير مصرح لك بعرض هذا الطلب
  *       404:
  *         description: الطلب غير موجود
+ *       500:
+ *         description: خطأ في الخادم
  */
 router.get('/:requestId', isAuthenticated, controller.getRequestById);
 
@@ -220,15 +494,47 @@ router.get('/:requestId', isAuthenticated, controller.getRequestById);
  *             properties:
  *               status:
  *                 type: string
- *                 enum: [pending, accepted, rejected, completed]
+ *                 enum: [pending, accepted, rejected, in_progress, review, completed, cancelled]
+ *                 description: الحالة الجديدة
  *               response:
  *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 1000
  *                 description: رد أو ملاحظات إضافية
+ *               estimatedDelivery:
+ *                 type: string
+ *                 format: date-time
+ *                 description: تاريخ التسليم المتوقع (مطلوب عند القبول)
+ *               quotedPrice:
+ *                 type: number
+ *                 minimum: 0
+ *                 description: السعر المقتبس (مطلوب عند القبول)
  *     responses:
  *       200:
  *         description: تم تحديث حالة الطلب بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     specialRequest:
+ *                       $ref: '#/components/schemas/SpecialRequest'
+ *       400:
+ *         description: بيانات غير صالحة
+ *       403:
+ *         description: غير مصرح (ليس فنان)
  *       404:
  *         description: الطلب غير موجود
+ *       500:
+ *         description: خطأ في الخادم
  */
 router.patch(
   '/:requestId/status',
@@ -265,12 +571,55 @@ router.patch(
  *             properties:
  *               response:
  *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 1000
  *                 description: الرد أو التعليق
+ *               attachments:
+ *                 type: array
+ *                 maxItems: 5
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       format: uri
+ *                     type:
+ *                       type: string
+ *                       enum: [image, document, reference]
+ *                     name:
+ *                       type: string
+ *                       maxLength: 100
+ *                     description:
+ *                       type: string
+ *                       maxLength: 200
+ *                 description: مرفقات إضافية
  *     responses:
  *       200:
  *         description: تم إضافة الرد بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إضافة الرد بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     specialRequest:
+ *                       $ref: '#/components/schemas/SpecialRequest'
+ *       400:
+ *         description: بيانات غير صالحة
+ *       403:
+ *         description: غير مصرح لك بإضافة رد
  *       404:
  *         description: الطلب غير موجود
+ *       500:
+ *         description: خطأ في الخادم
  */
 router.post(
   '/:requestId/response',
@@ -285,7 +634,7 @@ router.post(
  *     tags:
  *       - Special Requests
  *     summary: إكمال الطلب الخاص
- *     description: وضع علامة على الطلب الخاص كمكتمل (بواسطة الفنان)
+ *     description: وضع علامة على الطلب الخاص كمكتمل مع تسليم الملفات النهائية (بواسطة الفنان)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -301,17 +650,67 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - deliverables
  *             properties:
- *               finalWork:
+ *               deliverables:
  *                 type: array
+ *                 minItems: 1
  *                 items:
- *                   type: string
- *                 description: روابط العمل النهائي
+ *                   type: object
+ *                   required:
+ *                     - url
+ *                     - type
+ *                     - name
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       format: uri
+ *                       description: رابط الملف النهائي
+ *                     type:
+ *                       type: string
+ *                       enum: [final, preview, source, documentation]
+ *                       description: نوع الملف
+ *                     name:
+ *                       type: string
+ *                       maxLength: 100
+ *                       description: اسم الملف
+ *                     description:
+ *                       type: string
+ *                       maxLength: 200
+ *                       description: وصف الملف
+ *                 description: ملفات التسليم النهائية
+ *               finalNote:
+ *                 type: string
+ *                 maxLength: 1000
+ *                 description: ملاحظة نهائية
  *     responses:
  *       200:
  *         description: تم إكمال الطلب بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إكمال الطلب بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     specialRequest:
+ *                       $ref: '#/components/schemas/SpecialRequest'
+ *       400:
+ *         description: بيانات غير صالحة أو لا يمكن إكمال الطلب
+ *       403:
+ *         description: غير مصرح (ليس فنان)
  *       404:
  *         description: الطلب غير موجود
+ *       500:
+ *         description: خطأ في الخادم
  */
 router.post(
   '/:requestId/complete',
@@ -323,11 +722,74 @@ router.post(
 /**
  * @swagger
  * /special-requests/{requestId}/cancel:
- *   delete:
+ *   post:
  *     tags:
  *       - Special Requests
  *     summary: إلغاء طلب خاص
- *     description: إلغاء طلب خاص (بواسطة المستخدم)
+ *     description: إلغاء طلب خاص (يمكن للمرسل والفنان إلغاءه)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - name: requestId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: معرف الطلب
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cancellationReason:
+ *                 type: string
+ *                 maxLength: 500
+ *                 description: سبب الإلغاء
+ *     responses:
+ *       200:
+ *         description: تم إلغاء الطلب بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إلغاء الطلب الخاص بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     specialRequest:
+ *                       $ref: '#/components/schemas/SpecialRequest'
+ *       400:
+ *         description: لا يمكن إلغاء الطلب في حالته الحالية
+ *       403:
+ *         description: غير مصرح لك بإلغاء هذا الطلب
+ *       404:
+ *         description: الطلب غير موجود
+ *       500:
+ *         description: خطأ في الخادم
+ */
+router.post(
+  '/:requestId/cancel',
+  isAuthenticated,
+  isValidation(cancelSpecialRequestSchema),
+  controller.cancelSpecialRequest
+);
+
+/**
+ * @swagger
+ * /special-requests/{requestId}:
+ *   delete:
+ *     tags:
+ *       - Special Requests
+ *     summary: حذف طلب خاص
+ *     description: حذف طلب خاص نهائياً (فقط للطلبات المرفوضة أو الملغاة)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -339,15 +801,260 @@ router.post(
  *         description: معرف الطلب
  *     responses:
  *       200:
- *         description: تم إلغاء الطلب بنجاح
+ *         description: تم حذف الطلب بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم حذف الطلب بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletedRequestId:
+ *                       type: string
+ *       400:
+ *         description: لا يمكن حذف الطلب في حالته الحالية
+ *       403:
+ *         description: غير مصرح لك بحذف هذا الطلب
  *       404:
  *         description: الطلب غير موجود
+ *       500:
+ *         description: خطأ في الخادم
  */
-// router.delete(
-//   '/:requestId/cancel',
-//   isAuthenticated,
-//   isValidation(cancelSpecialRequestSchema),
-//   controller.cancelRequest
-// );
+router.delete('/:requestId', isAuthenticated, controller.deleteRequest);
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     SpecialRequest:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *           description: معرف الطلب
+ *         title:
+ *           type: string
+ *           description: عنوان الطلب
+ *         description:
+ *           type: string
+ *           description: وصف الطلب
+ *         requestType:
+ *           type: string
+ *           enum: [custom_artwork, portrait, logo_design, illustration, digital_art, traditional_art, animation, graphic_design, character_design, concept_art, other]
+ *           description: نوع الطلب
+ *         requestTypeLabel:
+ *           type: string
+ *           description: تسمية نوع الطلب
+ *         budget:
+ *           type: number
+ *           description: الميزانية المقترحة
+ *         currency:
+ *           type: string
+ *           enum: [SAR, USD, EUR, AED]
+ *           description: العملة
+ *         quotedPrice:
+ *           type: number
+ *           nullable: true
+ *           description: السعر المقتبس من الفنان
+ *         finalPrice:
+ *           type: number
+ *           nullable: true
+ *           description: السعر النهائي المتفق عليه
+ *         status:
+ *           type: string
+ *           enum: [pending, accepted, rejected, in_progress, review, completed, cancelled]
+ *           description: حالة الطلب
+ *         statusLabel:
+ *           type: string
+ *           description: تسمية حالة الطلب
+ *         priority:
+ *           type: string
+ *           enum: [low, medium, high, urgent]
+ *           description: أولوية الطلب
+ *         priorityLabel:
+ *           type: string
+ *           description: تسمية أولوية الطلب
+ *         sender:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *             displayName:
+ *               type: string
+ *             profileImage:
+ *               type: string
+ *             job:
+ *               type: string
+ *             rating:
+ *               type: number
+ *             reviewsCount:
+ *               type: number
+ *             isVerified:
+ *               type: boolean
+ *             role:
+ *               type: string
+ *             email:
+ *               type: string
+ *             phone:
+ *               type: string
+ *           description: معلومات المرسل
+ *         artist:
+ *           type: object
+ *           properties:
+ *             _id:
+ *               type: string
+ *             displayName:
+ *               type: string
+ *             profileImage:
+ *               type: string
+ *             job:
+ *               type: string
+ *             rating:
+ *               type: number
+ *             reviewsCount:
+ *               type: number
+ *             isVerified:
+ *               type: boolean
+ *             role:
+ *               type: string
+ *             email:
+ *               type: string
+ *             phone:
+ *               type: string
+ *           description: معلومات الفنان
+ *         category:
+ *           type: object
+ *           nullable: true
+ *           properties:
+ *             _id:
+ *               type: string
+ *             name:
+ *               type: string
+ *             image:
+ *               type: string
+ *           description: معلومات الفئة
+ *         attachments:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               size:
+ *                 type: number
+ *               uploadedAt:
+ *                 type: string
+ *                 format: date-time
+ *           description: المرفقات
+ *         deliverables:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               url:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               size:
+ *                 type: number
+ *               uploadedAt:
+ *                 type: string
+ *                 format: date-time
+ *           description: ملفات التسليم
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: علامات الطلب
+ *         response:
+ *           type: string
+ *           nullable: true
+ *           description: رد الفنان
+ *         finalNote:
+ *           type: string
+ *           nullable: true
+ *           description: ملاحظة نهائية
+ *         currentProgress:
+ *           type: number
+ *           description: نسبة التقدم الحالية
+ *         usedRevisions:
+ *           type: number
+ *           description: عدد التعديلات المستخدمة
+ *         maxRevisions:
+ *           type: number
+ *           description: الحد الأقصى للتعديلات
+ *         allowRevisions:
+ *           type: boolean
+ *           description: السماح بالتعديلات
+ *         deadline:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: الموعد النهائي
+ *         estimatedDelivery:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: تاريخ التسليم المتوقع
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: تاريخ الإنشاء
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: تاريخ آخر تحديث
+ *         acceptedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: تاريخ القبول
+ *         completedAt:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           description: تاريخ الإكمال
+ *         specifications:
+ *           type: object
+ *           nullable: true
+ *           description: مواصفات العمل
+ *         communicationPreferences:
+ *           type: object
+ *           nullable: true
+ *           description: تفضيلات التواصل
+ *         isPrivate:
+ *           type: boolean
+ *           description: هل الطلب خاص
+ *         remainingDays:
+ *           type: number
+ *           nullable: true
+ *           description: الأيام المتبقية للموعد النهائي
+ *         canEdit:
+ *           type: boolean
+ *           description: هل يمكن تعديل الطلب
+ *         canCancel:
+ *           type: boolean
+ *           description: هل يمكن إلغاء الطلب
+ *         canComplete:
+ *           type: boolean
+ *           description: هل يمكن إكمال الطلب
+ */
 
 export default router;

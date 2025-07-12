@@ -1,450 +1,1211 @@
 import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import userModel from '../../../DB/models/user.model.js';
+import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
+import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
 import { getPaginationParams } from '../../utils/pagination.js';
 import { sendPushNotificationToUser } from '../../utils/pushNotifications.js';
 
 /**
- * إنشاء طلب خاص جديد
+ * Helper function to safely format image URLs
  */
-export const createSpecialRequest = asyncHandler(async (req, res) => {
-  const { artist, requestType, description, budget, deadline, attachments } = req.body;
-  const sender = req.user._id;
-
-  // التحقق من وجود الفنان
-  const artistExists = await userModel.findOne({ _id: artist, role: 'artist' });
-  if (!artistExists) {
-    return res.fail(null, 'الفنان غير موجود', 404);
+function getImageUrl(imageField, defaultUrl = null) {
+  if (!imageField) return defaultUrl;
+  
+  if (typeof imageField === 'string') return imageField;
+  if (imageField.url) return imageField.url;
+  if (Array.isArray(imageField) && imageField.length > 0) {
+    return imageField[0].url || imageField[0];
   }
+  
+  return defaultUrl;
+}
 
-  // إنشاء الطلب
-  const specialRequest = await specialRequestModel.create({
-    sender,
-    artist,
-    requestType,
-    description,
-    budget,
-    deadline: deadline ? new Date(deadline) : undefined,
-    attachments: attachments || []
-  });
+/**
+ * Helper function to get multiple image URLs from array
+ */
+function getImageUrls(imagesField, limit = 10) {
+  if (!imagesField || !Array.isArray(imagesField)) return [];
+  
+  return imagesField.slice(0, limit).map(img => {
+    if (typeof img === 'string') return img;
+    return img.url || img;
+  }).filter(Boolean);
+}
 
-  // إرسال إشعار للفنان
-  const user = await userModel.findById(sender).select('displayName');
+/**
+ * Helper function to format attachment data for Flutter
+ */
+function formatAttachments(attachments) {
+  if (!Array.isArray(attachments)) return [];
+  
+  return attachments.map(attachment => ({
+    url: attachment.url || attachment,
+    type: attachment.type || 'image',
+    name: attachment.name || 'مرفق',
+    description: attachment.description || '',
+    size: attachment.size || 0,
+    uploadedAt: attachment.uploadedAt || new Date()
+  }));
+}
 
-  // إرسال إشعار للفنان
-  await sendPushNotificationToUser(
-    artist,
-    {
-      title: 'طلب خاص جديد',
-      body: `لديك طلب خاص جديد من ${user.displayName}`
-    },
-    {
-      screen: 'SPECIAL_REQUEST_DETAILS',
-      requestId: specialRequest._id.toString(),
-      type: 'new_special_request'
+/**
+ * Helper function to format user data for special requests
+ */
+function formatUserForRequest(user) {
+  if (!user) return null;
+  
+  return {
+    _id: user._id,
+    displayName: user.displayName || 'مستخدم',
+    profileImage: getImageUrl(user.profileImage, user.photoURL),
+    job: user.job || 'فنان',
+    rating: user.averageRating ? parseFloat(user.averageRating.toFixed(1)) : 0,
+    reviewsCount: user.reviewsCount || 0,
+    isVerified: user.isVerified || false,
+    role: user.role || 'user',
+    email: user.email || '',
+    phone: user.phone || ''
+  };
+}
+
+/**
+ * Helper function to format special request data for Flutter
+ */
+function formatSpecialRequest(request) {
+  if (!request) return null;
+  
+  return {
+    _id: request._id,
+    title: request.title || 'طلب خاص',
+    description: request.description || '',
+    requestType: request.requestType || 'other',
+    requestTypeLabel: getRequestTypeLabel(request.requestType),
+    budget: request.budget || 0,
+    currency: request.currency || 'SAR',
+    quotedPrice: request.quotedPrice || null,
+    finalPrice: request.finalPrice || null,
+    status: request.status || 'pending',
+    statusLabel: getStatusLabel(request.status),
+    priority: request.priority || 'medium',
+    priorityLabel: getPriorityLabel(request.priority),
+    
+    // User information
+    sender: formatUserForRequest(request.sender),
+    artist: formatUserForRequest(request.artist),
+    
+    // Category information
+    category: request.category ? {
+      _id: request.category._id,
+      name: request.category.name?.ar || request.category.name || 'فئة',
+      image: getImageUrl(request.category.image)
+    } : null,
+    
+    // Media and attachments
+    attachments: formatAttachments(request.attachments),
+    deliverables: formatAttachments(request.deliverables),
+    
+    // Additional information
+    tags: request.tags || [],
+    response: request.response || null,
+    finalNote: request.finalNote || null,
+    
+    // Progress tracking
+    currentProgress: request.currentProgress || 0,
+    usedRevisions: request.usedRevisions || 0,
+    maxRevisions: request.maxRevisions || 3,
+    allowRevisions: request.allowRevisions !== false,
+    
+    // Dates
+    deadline: request.deadline || null,
+    estimatedDelivery: request.estimatedDelivery || null,
+    createdAt: request.createdAt,
+    updatedAt: request.updatedAt,
+    acceptedAt: request.acceptedAt || null,
+    completedAt: request.completedAt || null,
+    
+    // Specifications
+    specifications: request.specifications || null,
+    communicationPreferences: request.communicationPreferences || null,
+    
+    // Metadata
+    isPrivate: request.isPrivate || false,
+    
+    // Calculated fields
+    remainingDays: request.remainingDays || null,
+    canEdit: request.status === 'pending',
+    canCancel: ['pending', 'accepted'].includes(request.status),
+    canComplete: request.status === 'in_progress' || request.status === 'review'
+  };
+}
+
+/**
+ * Helper function to get request type label
+ */
+function getRequestTypeLabel(type) {
+  const labels = {
+    'custom_artwork': 'عمل فني مخصص',
+    'portrait': 'بورتريه',
+    'logo_design': 'تصميم شعار',
+    'illustration': 'رسم توضيحي',
+    'digital_art': 'فن رقمي',
+    'traditional_art': 'فن تقليدي',
+    'animation': 'رسوم متحركة',
+    'graphic_design': 'تصميم جرافيك',
+    'character_design': 'تصميم شخصيات',
+    'concept_art': 'فن تصوري',
+    'other': 'أخرى'
+  };
+  return labels[type] || 'نوع غير محدد';
+}
+
+/**
+ * Helper function to get status label
+ */
+function getStatusLabel(status) {
+  const labels = {
+    'pending': 'في الانتظار',
+    'accepted': 'مقبول',
+    'rejected': 'مرفوض',
+    'in_progress': 'قيد التنفيذ',
+    'review': 'قيد المراجعة',
+    'completed': 'مكتمل',
+    'cancelled': 'ملغي'
+  };
+  return labels[status] || 'حالة غير محددة';
+}
+
+/**
+ * Helper function to get priority label
+ */
+function getPriorityLabel(priority) {
+  const labels = {
+    'low': 'منخفض',
+    'medium': 'متوسط',
+    'high': 'عالي',
+    'urgent': 'عاجل'
+  };
+  return labels[priority] || 'أولوية غير محددة';
+}
+
+/**
+ * إنشاء طلب خاص جديد - Enhanced for Flutter
+ */
+export const createSpecialRequest = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { 
+      artist, 
+      requestType, 
+      title,
+      description, 
+      budget, 
+      currency = 'SAR',
+      deadline, 
+      attachments = [],
+      priority = 'medium',
+      category,
+      tags = [],
+      specifications,
+      communicationPreferences,
+      isPrivate = false,
+      allowRevisions = true,
+      maxRevisions = 3
+    } = req.body;
+    
+    const senderId = req.user._id;
+
+    // Validate required fields
+    if (!artist || !requestType || !title || !description || !budget) {
+      return res.status(400).json({
+        success: false,
+        message: 'المعلومات المطلوبة: الفنان، نوع الطلب، العنوان، الوصف، والميزانية',
+        data: null
+      });
     }
-  );
 
-  res.status(201).success(specialRequest, 'تم إنشاء الطلب الخاص بنجاح');
-});
-
-/**
- * الحصول على طلبات المستخدم
- */
-export const getUserRequests = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
-  const { page, limit, skip } = getPaginationParams(req.query);
-  const { status } = req.query;
-
-  // بناء الاستعلام
-  const query = { sender: userId };
-  if (status && ['pending', 'accepted', 'rejected', 'completed'].includes(status)) {
-    query.status = status;
-  }
-
-  // تنفيذ الاستعلام
-  const [requests, totalCount] = await Promise.all([
-    specialRequestModel
-      .find(query)
-      .populate('artist', 'displayName profileImage')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-    specialRequestModel.countDocuments(query)
-  ]);
-
-  // إعداد معلومات الصفحات
-  const paginationMeta = {
-    currentPage: page,
-    totalPages: Math.ceil(totalCount / limit),
-    totalItems: totalCount,
-    itemsPerPage: limit
-  };
-
-  res.success({ requests, pagination: paginationMeta }, 'تم جلب الطلبات بنجاح');
-});
-
-/**
- * الحصول على طلبات الفنان
- */
-export const getArtistRequests = asyncHandler(async (req, res) => {
-  const artistId = req.user._id;
-  const { page, limit, skip } = getPaginationParams(req.query);
-  const { status } = req.query;
-
-  // التحقق من أن المستخدم فنان
-  if (req.user.role !== 'artist') {
-    return res.fail(null, 'غير مصرح لك بعرض طلبات الفنانين', 403);
-  }
-
-  // بناء الاستعلام
-  const query = { artist: artistId };
-  if (status && ['pending', 'accepted', 'rejected', 'completed'].includes(status)) {
-    query.status = status;
-  }
-
-  // تنفيذ الاستعلام
-  const [requests, totalCount] = await Promise.all([
-    specialRequestModel
-      .find(query)
-      .populate('sender', 'displayName profileImage')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
-    specialRequestModel.countDocuments(query)
-  ]);
-
-  // إعداد معلومات الصفحات
-  const paginationMeta = {
-    currentPage: page,
-    totalPages: Math.ceil(totalCount / limit),
-    totalItems: totalCount,
-    itemsPerPage: limit
-  };
-
-  res.success({ requests, pagination: paginationMeta }, 'تم جلب طلبات الفنان بنجاح');
-});
-
-/**
- * الحصول على إحصائيات طلبات الفنان
- */
-export const getArtistRequestStats = asyncHandler(async (req, res) => {
-  const artistId = req.user._id;
-
-  // التحقق من أن المستخدم فنان
-  if (req.user.role !== 'artist') {
-    return res.fail(null, 'غير مصرح لك بعرض إحصائيات الفنانين', 403);
-  }
-
-  // الحصول على إحصائيات الطلبات
-  const stats = await specialRequestModel.aggregate([
-    { $match: { artist: mongoose.Types.ObjectId(artistId) } },
-    {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 },
-        totalBudget: { $sum: '$budget' }
-      }
+    // Validate artist ID
+    if (!mongoose.Types.ObjectId.isValid(artist)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف الفنان غير صالح',
+        data: null
+      });
     }
-  ]);
 
-  // تنسيق النتائج
-  const formattedStats = {
-    pending: 0,
-    accepted: 0,
-    rejected: 0,
-    completed: 0,
-    totalBudget: 0
-  };
+    // التحقق من وجود الفنان وأنه نشط
+    const artistExists = await userModel.findOne({ 
+      _id: artist, 
+      role: 'artist',
+      isActive: true,
+      isDeleted: false
+    }).select('displayName profileImage photoURL job averageRating reviewsCount isVerified email phone').lean();
 
-  stats.forEach(stat => {
-    if (stat._id) {
-      formattedStats[stat._id] = stat.count;
-      if (stat._id === 'completed') {
-        formattedStats.totalBudget = stat.totalBudget;
-      }
+    if (!artistExists) {
+      return res.status(404).json({
+        success: false,
+        message: 'الفنان غير موجود أو غير نشط',
+        data: null
+      });
     }
-  });
 
-  // إضافة العدد الإجمالي
-  formattedStats.total =
-    formattedStats.pending +
-    formattedStats.accepted +
-    formattedStats.rejected +
-    formattedStats.completed;
+    // Validate category if provided
+    let categoryData = null;
+    if (category && mongoose.Types.ObjectId.isValid(category)) {
+      categoryData = await categoryModel.findById(category).lean();
+    }
 
-  res.success(formattedStats, 'تم جلب إحصائيات الطلبات بنجاح');
-});
+    // إنشاء الطلب
+    const requestData = {
+      sender: senderId,
+      artist,
+      requestType,
+      title: title.trim(),
+      description: description.trim(),
+      budget: Number(budget),
+      currency,
+      priority,
+      attachments: attachments || [],
+      tags: tags || [],
+      specifications: specifications || {},
+      communicationPreferences: communicationPreferences || {},
+      isPrivate,
+      allowRevisions,
+      maxRevisions: Number(maxRevisions),
+      status: 'pending'
+    };
 
-/**
- * الحصول على تفاصيل طلب محدد
- */
-export const getRequestById = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-  const userId = req.user._id;
+    if (deadline) {
+      requestData.deadline = new Date(deadline);
+    }
 
-  // جلب الطلب
-  const request = await specialRequestModel
-    .findById(requestId)
-    .populate('sender', 'displayName profileImage email')
-    .populate('artist', 'displayName profileImage email');
+    if (categoryData) {
+      requestData.category = category;
+    }
 
-  if (!request) {
-    return res.fail(null, 'الطلب غير موجود', 404);
-  }
+    const specialRequest = await specialRequestModel.create(requestData);
 
-  // التحقق من أن المستخدم هو صاحب الطلب أو الفنان
-  const isSender = request.sender._id.toString() === userId.toString();
-  const isArtist = request.artist._id.toString() === userId.toString();
+    // Populate the created request
+    const populatedRequest = await specialRequestModel.findById(specialRequest._id)
+      .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .populate('category', 'name image')
+      .lean();
 
-  if (!isSender && !isArtist) {
-    return res.fail(null, 'غير مصرح لك بعرض هذا الطلب', 403);
-  }
+    // إرسال إشعار للفنان
+    const senderUser = await userModel.findById(senderId).select('displayName').lean();
+    const senderName = senderUser?.displayName || 'مستخدم';
 
-  res.success(request, 'تم جلب تفاصيل الطلب بنجاح');
-});
+    try {
+      await sendPushNotificationToUser(
+        artist,
+        {
+          title: 'طلب خاص جديد',
+          body: `لديك طلب خاص جديد من ${senderName}: ${title}`
+        },
+        {
+          screen: 'SPECIAL_REQUEST_DETAILS',
+          requestId: specialRequest._id.toString(),
+          type: 'new_special_request'
+        }
+      );
+    } catch (notificationError) {
+      console.warn('Push notification failed:', notificationError);
+    }
 
-/**
- * تحديث حالة الطلب
- */
-export const updateRequestStatus = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-  const { status, response } = req.body;
-  const artistId = req.user._id;
-
-  // التحقق من أن المستخدم فنان
-  if (req.user.role !== 'artist') {
-    return res.fail(null, 'غير مصرح لك بتحديث حالة الطلب', 403);
-  }
-
-  // جلب الطلب
-  const request = await specialRequestModel.findOne({
-    _id: requestId,
-    artist: artistId
-  });
-
-  if (!request) {
-    return res.fail(null, 'الطلب غير موجود', 404);
-  }
-
-  // تحديث حالة الطلب
-  request.status = status;
-  if (response) {
-    request.response = response;
-  }
-
-  // إذا تم إكمال الطلب، تعيين تاريخ الإكمال
-  if (status === 'completed') {
-    request.completedAt = new Date();
-  }
-
-  await request.save();
-
-  // إرسال إشعار للمستخدم
-  const statusMessages = {
-    accepted: 'تم قبول طلبك الخاص',
-    rejected: 'تم رفض طلبك الخاص',
-    completed: 'تم إكمال طلبك الخاص'
-  };
-
-  if (statusMessages[status]) {
-    await sendPushNotificationToUser(
-      request.sender.toString(),
-      {
-        title: statusMessages[status],
-        body:
-          response ||
-          `تم ${status === 'accepted' ? 'قبول' : status === 'rejected' ? 'رفض' : 'إكمال'} طلبك الخاص`
+    const response = {
+      success: true,
+      message: 'تم إنشاء الطلب الخاص بنجاح',
+      data: {
+        specialRequest: formatSpecialRequest(populatedRequest)
       },
-      {
-        screen: 'SPECIAL_REQUEST_DETAILS',
-        requestId: request._id.toString(),
-        type: 'special_request_update'
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: senderId
       }
-    );
-  }
+    };
 
-  res.success(request, `تم تحديث حالة الطلب إلى "${status}" بنجاح`);
+    res.status(201).json(response);
+
+  } catch (error) {
+    console.error('Create special request error:', error);
+    next(new Error('حدث خطأ أثناء إنشاء الطلب الخاص', { cause: 500 }));
+  }
 });
 
 /**
- * إضافة رد على الطلب
+ * الحصول على طلبات المستخدم - Enhanced for Flutter
  */
-export const addResponseToRequest = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-  const { response } = req.body;
-  const userId = req.user._id;
+export const getUserRequests = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const userId = req.user._id;
+    const { page = 1, limit = 10, status, requestType, priority, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const { skip } = getPaginationParams({ page, limit });
 
-  // جلب الطلب
-  const request = await specialRequestModel.findById(requestId);
-
-  if (!request) {
-    return res.fail(null, 'الطلب غير موجود', 404);
-  }
-
-  // التحقق من أن المستخدم هو صاحب الطلب أو الفنان
-  const isSender = request.sender.toString() === userId.toString();
-  const isArtist = request.artist.toString() === userId.toString();
-
-  if (!isSender && !isArtist) {
-    return res.fail(null, 'غير مصرح لك بإضافة رد على هذا الطلب', 403);
-  }
-
-  // إضافة الرد
-  request.response = response;
-  await request.save();
-
-  // إرسال إشعار للطرف الآخر
-  const recipientId = isSender ? request.artist.toString() : request.sender.toString();
-  const sender = await userModel.findById(userId).select('displayName');
-
-  await sendPushNotificationToUser(
-    recipientId,
-    {
-      title: 'رد جديد على الطلب الخاص',
-      body: `تم إضافة رد جديد من ${sender.displayName} على الطلب الخاص`
-    },
-    {
-      screen: 'SPECIAL_REQUEST_DETAILS',
-      requestId: request._id.toString(),
-      type: 'special_request_response'
+    // بناء الاستعلام
+    const query = { sender: userId };
+    
+    if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+      query.status = status;
     }
-  );
-
-  res.success(request, 'تم إضافة الرد بنجاح');
-});
-
-/**
- * إكمال الطلب
- */
-export const completeRequest = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-  const { deliverables, finalNote } = req.body;
-  const artistId = req.user._id;
-
-  // التحقق من أن المستخدم فنان
-  if (req.user.role !== 'artist') {
-    return res.fail(null, 'غير مصرح لك بإكمال الطلب', 403);
-  }
-
-  // جلب الطلب
-  const request = await specialRequestModel.findOne({
-    _id: requestId,
-    artist: artistId
-  });
-
-  if (!request) {
-    return res.fail(null, 'الطلب غير موجود', 404);
-  }
-
-  // التحقق من أن الطلب مقبول
-  if (request.status !== 'accepted') {
-    return res.fail(null, 'لا يمكن إكمال طلب غير مقبول', 400);
-  }
-
-  // تحديث الطلب
-  request.status = 'completed';
-  request.deliverables = deliverables || [];
-  if (finalNote) {
-    request.finalNote = finalNote;
-  }
-  request.completedAt = new Date();
-
-  await request.save();
-
-  // إرسال إشعار للمستخدم
-  await sendPushNotificationToUser(
-    request.sender.toString(),
-    {
-      title: 'تم إكمال طلبك الخاص',
-      body: 'قام الفنان بإكمال طلبك الخاص وتسليم العمل'
-    },
-    {
-      screen: 'SPECIAL_REQUEST_DETAILS',
-      requestId: request._id.toString(),
-      type: 'special_request_completed'
+    
+    if (requestType) {
+      query.requestType = requestType;
     }
-  );
-
-  res.success(request, 'تم إكمال الطلب بنجاح');
-});
-
-/**
- * حذف طلب
- */
-export const deleteRequest = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-  const userId = req.user._id;
-
-  // جلب الطلب
-  const request = await specialRequestModel.findById(requestId);
-
-  if (!request) {
-    return res.fail(null, 'الطلب غير موجود', 404);
-  }
-
-  // التحقق من أن المستخدم هو صاحب الطلب
-  if (request.sender.toString() !== userId.toString()) {
-    return res.fail(null, 'غير مصرح لك بحذف هذا الطلب', 403);
-  }
-
-  // التحقق من أن حالة الطلب تسمح بالحذف
-  if (request.status !== 'pending' && request.status !== 'rejected') {
-    return res.fail(null, 'لا يمكن حذف طلب مقبول أو مكتمل', 400);
-  }
-
-  // حذف الطلب
-  await specialRequestModel.findByIdAndDelete(requestId);
-
-  res.success(null, 'تم حذف الطلب بنجاح');
-});
-
-/**
- * إلغاء طلب خاص
- */
-export const cancelSpecialRequest = asyncHandler(async (req, res) => {
-  const { requestId } = req.params;
-  const userId = req.user._id;
-
-  // البحث عن الطلب
-  const request = await specialRequestModel.findById(requestId);
-
-  if (!request) {
-    return res.fail(null, 'الطلب غير موجود', 404);
-  }
-
-  // التحقق من أن المستخدم هو صاحب الطلب
-  if (request.sender.toString() !== userId.toString()) {
-    return res.fail(null, 'غير مصرح لك بإلغاء هذا الطلب', 403);
-  }
-
-  // التحقق من حالة الطلب (يمكن إلغاء الطلبات في حالة الانتظار أو المقبولة فقط)
-  if (!['pending', 'accepted'].includes(request.status)) {
-    return res.fail(null, 'لا يمكن إلغاء هذا الطلب في حالته الحالية', 400);
-  }
-
-  // تحديث حالة الطلب إلى ملغي
-  request.status = 'cancelled';
-  request.cancellationReason = req.body.cancellationReason || 'تم الإلغاء من قبل المستخدم';
-  request.cancelledAt = new Date();
-  await request.save();
-
-  // إرسال إشعار للفنان
-  const user = await userModel.findById(userId).select('displayName');
-
-  await sendPushNotificationToUser(
-    request.artist,
-    {
-      title: 'تم إلغاء طلب خاص',
-      body: `قام ${user.displayName} بإلغاء الطلب الخاص`
-    },
-    {
-      screen: 'SPECIAL_REQUEST_DETAILS',
-      requestId: request._id.toString(),
-      type: 'cancelled_special_request'
+    
+    if (priority) {
+      query.priority = priority;
     }
-  );
 
-  res.success({ success: true }, 'تم إلغاء الطلب الخاص بنجاح');
+    // بناء خيارات الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // تنفيذ الاستعلام
+    const [requests, totalCount] = await Promise.all([
+      specialRequestModel
+        .find(query)
+        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('category', 'name image')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      specialRequestModel.countDocuments(query)
+    ]);
+
+    // Format requests for Flutter
+    const formattedRequests = requests.map(request => formatSpecialRequest(request));
+
+    // إعداد معلومات الصفحات
+    const paginationMeta = {
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalCount / Number(limit)),
+      totalItems: totalCount,
+      itemsPerPage: Number(limit),
+      hasNextPage: skip + requests.length < totalCount,
+      hasPrevPage: Number(page) > 1
+    };
+
+    // Get status counts for filters
+    const statusCounts = await specialRequestModel.aggregate([
+      { $match: { sender: userId } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    const statusCountsMap = statusCounts.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {});
+
+    const response = {
+      success: true,
+      message: 'تم جلب الطلبات بنجاح',
+      data: {
+        requests: formattedRequests,
+        pagination: paginationMeta,
+        statusCounts: statusCountsMap,
+        totalCount
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId,
+        filters: { status, requestType, priority, sortBy, sortOrder }
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Get user requests error:', error);
+    next(new Error('حدث خطأ أثناء جلب الطلبات', { cause: 500 }));
+  }
 });
+
+/**
+ * الحصول على طلبات الفنان - Enhanced for Flutter
+ */
+export const getArtistRequests = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const artistId = req.user._id;
+    const { page = 1, limit = 10, status, requestType, priority, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const { skip } = getPaginationParams({ page, limit });
+
+    // التحقق من أن المستخدم فنان
+    if (req.user.role !== 'artist') {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بعرض طلبات الفنانين',
+        data: null
+      });
+    }
+
+    // بناء الاستعلام
+    const query = { artist: artistId };
+    
+    if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+      query.status = status;
+    }
+    
+    if (requestType) {
+      query.requestType = requestType;
+    }
+    
+    if (priority) {
+      query.priority = priority;
+    }
+
+    // بناء خيارات الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // تنفيذ الاستعلام
+    const [requests, totalCount] = await Promise.all([
+      specialRequestModel
+        .find(query)
+        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('category', 'name image')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      specialRequestModel.countDocuments(query)
+    ]);
+
+    // Format requests for Flutter
+    const formattedRequests = requests.map(request => formatSpecialRequest(request));
+
+    // إعداد معلومات الصفحات
+    const paginationMeta = {
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalCount / Number(limit)),
+      totalItems: totalCount,
+      itemsPerPage: Number(limit),
+      hasNextPage: skip + requests.length < totalCount,
+      hasPrevPage: Number(page) > 1
+    };
+
+    // Get status counts for filters
+    const statusCounts = await specialRequestModel.aggregate([
+      { $match: { artist: artistId } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    const statusCountsMap = statusCounts.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {});
+
+    const response = {
+      success: true,
+      message: 'تم جلب طلبات الفنان بنجاح',
+      data: {
+        requests: formattedRequests,
+        pagination: paginationMeta,
+        statusCounts: statusCountsMap,
+        totalCount
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: artistId,
+        filters: { status, requestType, priority, sortBy, sortOrder }
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Get artist requests error:', error);
+    next(new Error('حدث خطأ أثناء جلب طلبات الفنان', { cause: 500 }));
+  }
+});
+
+/**
+ * الحصول على تفاصيل طلب محدد - Enhanced for Flutter
+ */
+export const getRequestById = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { requestId } = req.params;
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف الطلب غير صالح',
+        data: null
+      });
+    }
+
+    // جلب الطلب مع تفاصيل كاملة
+    const request = await specialRequestModel
+      .findById(requestId)
+      .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .populate('category', 'name image')
+      .lean();
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'الطلب غير موجود',
+        data: null
+      });
+    }
+
+    // التحقق من أن المستخدم هو صاحب الطلب أو الفنان
+    const isSender = request.sender._id.toString() === userId.toString();
+    const isArtist = request.artist._id.toString() === userId.toString();
+
+    if (!isSender && !isArtist) {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بعرض هذا الطلب',
+        data: null
+      });
+    }
+
+    const response = {
+      success: true,
+      message: 'تم جلب تفاصيل الطلب بنجاح',
+      data: {
+        specialRequest: formatSpecialRequest(request),
+        userRelation: {
+          isSender,
+          isArtist,
+          canEdit: isSender && request.status === 'pending',
+          canAccept: isArtist && request.status === 'pending',
+          canReject: isArtist && request.status === 'pending',
+          canComplete: isArtist && ['accepted', 'in_progress'].includes(request.status),
+          canCancel: (isSender && ['pending', 'accepted'].includes(request.status)) || 
+                    (isArtist && request.status === 'pending')
+        }
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Get request by ID error:', error);
+    next(new Error('حدث خطأ أثناء جلب تفاصيل الطلب', { cause: 500 }));
+  }
+});
+
+/**
+ * تحديث حالة الطلب - Enhanced for Flutter
+ */
+export const updateRequestStatus = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { requestId } = req.params;
+    const { status, response: responseText, estimatedDelivery, quotedPrice } = req.body;
+    const artistId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف الطلب غير صالح',
+        data: null
+      });
+    }
+
+    // التحقق من أن المستخدم فنان
+    if (req.user.role !== 'artist') {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بتحديث حالة الطلب',
+        data: null
+      });
+    }
+
+    // Validate status
+    if (!['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'حالة الطلب غير صالحة',
+        data: null
+      });
+    }
+
+    // جلب الطلب
+    const request = await specialRequestModel.findOne({
+      _id: requestId,
+      artist: artistId
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'الطلب غير موجود',
+        data: null
+      });
+    }
+
+    // تحديث حالة الطلب
+    const updateData = {
+      status,
+      updatedAt: new Date()
+    };
+
+    if (responseText) {
+      updateData.response = responseText;
+    }
+
+    if (estimatedDelivery) {
+      updateData.estimatedDelivery = new Date(estimatedDelivery);
+    }
+
+    if (quotedPrice) {
+      updateData.quotedPrice = Number(quotedPrice);
+    }
+
+    // Set status-specific timestamps
+    if (status === 'accepted') {
+      updateData.acceptedAt = new Date();
+      if (!request.startedAt) {
+        updateData.startedAt = new Date();
+      }
+    } else if (status === 'completed') {
+      updateData.completedAt = new Date();
+    } else if (status === 'rejected') {
+      updateData.rejectedAt = new Date();
+    }
+
+    const updatedRequest = await specialRequestModel.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    )
+    .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('category', 'name image')
+    .lean();
+
+    // إرسال إشعار للمستخدم
+    const statusMessages = {
+      accepted: 'تم قبول طلبك الخاص',
+      rejected: 'تم رفض طلبك الخاص',
+      in_progress: 'بدء العمل على طلبك الخاص',
+      review: 'طلبك الخاص قيد المراجعة',
+      completed: 'تم إكمال طلبك الخاص'
+    };
+
+    if (statusMessages[status]) {
+      try {
+        await sendPushNotificationToUser(
+          request.sender.toString(),
+          {
+            title: statusMessages[status],
+            body: responseText || `تم تحديث حالة طلبك الخاص إلى: ${getStatusLabel(status)}`
+          },
+          {
+            screen: 'SPECIAL_REQUEST_DETAILS',
+            requestId: request._id.toString(),
+            type: 'special_request_update'
+          }
+        );
+      } catch (notificationError) {
+        console.warn('Push notification failed:', notificationError);
+      }
+    }
+
+    const response = {
+      success: true,
+      message: `تم تحديث حالة الطلب إلى "${getStatusLabel(status)}" بنجاح`,
+      data: {
+        specialRequest: formatSpecialRequest(updatedRequest)
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: artistId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Update request status error:', error);
+    next(new Error('حدث خطأ أثناء تحديث حالة الطلب', { cause: 500 }));
+  }
+});
+
+/**
+ * إضافة رد على الطلب - Enhanced for Flutter
+ */
+export const addResponseToRequest = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { requestId } = req.params;
+    const { response: responseText, attachments = [] } = req.body;
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف الطلب غير صالح',
+        data: null
+      });
+    }
+
+    if (!responseText || !responseText.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'نص الرد مطلوب',
+        data: null
+      });
+    }
+
+    // جلب الطلب
+    const request = await specialRequestModel.findById(requestId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'الطلب غير موجود',
+        data: null
+      });
+    }
+
+    // التحقق من أن المستخدم هو صاحب الطلب أو الفنان
+    const isSender = request.sender.toString() === userId.toString();
+    const isArtist = request.artist.toString() === userId.toString();
+
+    if (!isSender && !isArtist) {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بإضافة رد على هذا الطلب',
+        data: null
+      });
+    }
+
+    // إضافة الرد
+    const updateData = {
+      response: responseText.trim(),
+      updatedAt: new Date()
+    };
+
+    if (attachments && attachments.length > 0) {
+      updateData.attachments = [
+        ...request.attachments,
+        ...attachments.map(attachment => ({
+          url: attachment.url || attachment,
+          type: attachment.type || 'document',
+          name: attachment.name || 'مرفق الرد',
+          description: attachment.description || 'مرفق مع الرد',
+          uploadedAt: new Date()
+        }))
+      ];
+    }
+
+    const updatedRequest = await specialRequestModel.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    )
+    .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('category', 'name image')
+    .lean();
+
+    // إرسال إشعار للطرف الآخر
+    const recipientId = isSender ? request.artist.toString() : request.sender.toString();
+    const sender = await userModel.findById(userId).select('displayName').lean();
+    const senderName = sender?.displayName || 'مستخدم';
+
+    try {
+      await sendPushNotificationToUser(
+        recipientId,
+        {
+          title: 'رد جديد على الطلب الخاص',
+          body: `تم إضافة رد جديد من ${senderName} على الطلب الخاص`
+        },
+        {
+          screen: 'SPECIAL_REQUEST_DETAILS',
+          requestId: request._id.toString(),
+          type: 'special_request_response'
+        }
+      );
+    } catch (notificationError) {
+      console.warn('Push notification failed:', notificationError);
+    }
+
+    const response = {
+      success: true,
+      message: 'تم إضافة الرد بنجاح',
+      data: {
+        specialRequest: formatSpecialRequest(updatedRequest)
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Add response error:', error);
+    next(new Error('حدث خطأ أثناء إضافة الرد', { cause: 500 }));
+  }
+});
+
+/**
+ * إكمال الطلب - Enhanced for Flutter
+ */
+export const completeRequest = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { requestId } = req.params;
+    const { deliverables = [], finalNote } = req.body;
+    const artistId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف الطلب غير صالح',
+        data: null
+      });
+    }
+
+    // التحقق من أن المستخدم فنان
+    if (req.user.role !== 'artist') {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بإكمال الطلب',
+        data: null
+      });
+    }
+
+    // Validate deliverables
+    if (!deliverables || deliverables.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'يجب إرفاق ملفات التسليم',
+        data: null
+      });
+    }
+
+    // جلب الطلب
+    const request = await specialRequestModel.findOne({
+      _id: requestId,
+      artist: artistId
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'الطلب غير موجود',
+        data: null
+      });
+    }
+
+    // التحقق من أن الطلب مقبول أو قيد التنفيذ
+    if (!['accepted', 'in_progress', 'review'].includes(request.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا يمكن إكمال طلب في هذه الحالة',
+        data: null
+      });
+    }
+
+    // تحديث الطلب
+    const updateData = {
+      status: 'completed',
+      deliverables: deliverables.map(deliverable => ({
+        url: deliverable.url,
+        type: deliverable.type || 'final',
+        name: deliverable.name || 'ملف التسليم',
+        description: deliverable.description || '',
+        uploadedAt: new Date()
+      })),
+      currentProgress: 100,
+      completedAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (finalNote) {
+      updateData.finalNote = finalNote;
+    }
+
+    const updatedRequest = await specialRequestModel.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    )
+    .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('category', 'name image')
+    .lean();
+
+    // إرسال إشعار للمستخدم
+    try {
+      await sendPushNotificationToUser(
+        request.sender.toString(),
+        {
+          title: 'تم إكمال طلبك الخاص',
+          body: 'قام الفنان بإكمال طلبك الخاص وتسليم العمل'
+        },
+        {
+          screen: 'SPECIAL_REQUEST_DETAILS',
+          requestId: request._id.toString(),
+          type: 'special_request_completed'
+        }
+      );
+    } catch (notificationError) {
+      console.warn('Push notification failed:', notificationError);
+    }
+
+    const response = {
+      success: true,
+      message: 'تم إكمال الطلب بنجاح',
+      data: {
+        specialRequest: formatSpecialRequest(updatedRequest)
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: artistId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Complete request error:', error);
+    next(new Error('حدث خطأ أثناء إكمال الطلب', { cause: 500 }));
+  }
+});
+
+/**
+ * حذف طلب - Enhanced for Flutter
+ */
+export const deleteRequest = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { requestId } = req.params;
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف الطلب غير صالح',
+        data: null
+      });
+    }
+
+    // جلب الطلب
+    const request = await specialRequestModel.findById(requestId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'الطلب غير موجود',
+        data: null
+      });
+    }
+
+    // التحقق من أن المستخدم هو صاحب الطلب
+    if (request.sender.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بحذف هذا الطلب',
+        data: null
+      });
+    }
+
+    // التحقق من أن حالة الطلب تسمح بالحذف
+    if (!['pending', 'rejected', 'cancelled'].includes(request.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا يمكن حذف طلب مقبول أو مكتمل',
+        data: null
+      });
+    }
+
+    // حذف الطلب
+    await specialRequestModel.findByIdAndDelete(requestId);
+
+    const response = {
+      success: true,
+      message: 'تم حذف الطلب بنجاح',
+      data: {
+        deletedRequestId: requestId
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Delete request error:', error);
+    next(new Error('حدث خطأ أثناء حذف الطلب', { cause: 500 }));
+  }
+});
+
+/**
+ * إلغاء طلب خاص - Enhanced for Flutter
+ */
+export const cancelSpecialRequest = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { requestId } = req.params;
+    const { cancellationReason } = req.body;
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف الطلب غير صالح',
+        data: null
+      });
+    }
+
+    // البحث عن الطلب
+    const request = await specialRequestModel.findById(requestId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'الطلب غير موجود',
+        data: null
+      });
+    }
+
+    // التحقق من أن المستخدم هو صاحب الطلب أو الفنان
+    const isSender = request.sender.toString() === userId.toString();
+    const isArtist = request.artist.toString() === userId.toString();
+
+    if (!isSender && !isArtist) {
+      return res.status(403).json({
+        success: false,
+        message: 'غير مصرح لك بإلغاء هذا الطلب',
+        data: null
+      });
+    }
+
+    // التحقق من حالة الطلب (يمكن إلغاء الطلبات في حالة الانتظار أو المقبولة فقط)
+    if (!['pending', 'accepted', 'in_progress'].includes(request.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا يمكن إلغاء هذا الطلب في حالته الحالية',
+        data: null
+      });
+    }
+
+    // تحديث حالة الطلب إلى ملغي
+    const updateData = {
+      status: 'cancelled',
+      cancellationReason: cancellationReason || 'تم الإلغاء من قبل المستخدم',
+      cancelledAt: new Date(),
+      cancelledBy: userId,
+      updatedAt: new Date()
+    };
+
+    const updatedRequest = await specialRequestModel.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    )
+    .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+    .populate('category', 'name image')
+    .lean();
+
+    // إرسال إشعار للطرف الآخر
+    const recipientId = isSender ? request.artist.toString() : request.sender.toString();
+    const user = await userModel.findById(userId).select('displayName').lean();
+    const userName = user?.displayName || 'مستخدم';
+
+    try {
+      await sendPushNotificationToUser(
+        recipientId,
+        {
+          title: 'تم إلغاء طلب خاص',
+          body: `قام ${userName} بإلغاء الطلب الخاص`
+        },
+        {
+          screen: 'SPECIAL_REQUEST_DETAILS',
+          requestId: request._id.toString(),
+          type: 'cancelled_special_request'
+        }
+      );
+    } catch (notificationError) {
+      console.warn('Push notification failed:', notificationError);
+    }
+
+    const response = {
+      success: true,
+      message: 'تم إلغاء الطلب الخاص بنجاح',
+      data: {
+        specialRequest: formatSpecialRequest(updatedRequest)
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Cancel request error:', error);
+    next(new Error('حدث خطأ أثناء إلغاء الطلب', { cause: 500 }));
+  }
+});
+
+/**
+ * Get request types for dropdown/selection
+ */
+export const getRequestTypes = asyncHandler(async (req, res, next) => {
+  try {
+    const requestTypes = [
+      { value: 'custom_artwork', label: 'عمل فني مخصص', icon: 'palette' },
+      { value: 'portrait', label: 'بورتريه', icon: 'person' },
+      { value: 'logo_design', label: 'تصميم شعار', icon: 'business' },
+      { value: 'illustration', label: 'رسم توضيحي', icon: 'brush' },
+      { value: 'digital_art', label: 'فن رقمي', icon: 'computer' },
+      { value: 'traditional_art', label: 'فن تقليدي', icon: 'colorize' },
+      { value: 'animation', label: 'رسوم متحركة', icon: 'movie' },
+      { value: 'graphic_design', label: 'تصميم جرافيك', icon: 'design_services' },
+      { value: 'character_design', label: 'تصميم شخصيات', icon: 'face' },
+      { value: 'concept_art', label: 'فن تصوري', icon: 'lightbulb' },
+      { value: 'other', label: 'أخرى', icon: 'more_horiz' }
+    ];
+
+    const response = {
+      success: true,
+      message: 'تم جلب أنواع الطلبات بنجاح',
+      data: {
+        requestTypes
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Get request types error:', error);
+    next(new Error('حدث خطأ أثناء جلب أنواع الطلبات', { cause: 500 }));
+  }
+});
+
+

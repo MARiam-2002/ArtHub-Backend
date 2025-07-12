@@ -10,132 +10,171 @@ import { sendToChat, sendToUser } from '../../utils/socketService.js';
 import jwt from 'jsonwebtoken';
 
 /**
- * Get user chats
+ * Helper function to safely format image URLs
+ */
+function getImageUrl(imageField, defaultUrl = null) {
+  if (!imageField) return defaultUrl;
+  
+  if (typeof imageField === 'string') return imageField;
+  if (imageField.url) return imageField.url;
+  if (Array.isArray(imageField) && imageField.length > 0) {
+    return imageField[0].url || imageField[0];
+  }
+  
+  return defaultUrl;
+}
+
+/**
+ * Helper function to format user data for chat
+ */
+function formatUserForChat(user) {
+  if (!user) return null;
+  
+  return {
+    _id: user._id,
+    displayName: user.displayName || 'مستخدم',
+    profileImage: getImageUrl(user.profileImage, user.photoURL),
+    isOnline: user.isOnline || false,
+    lastSeen: user.lastSeen || user.updatedAt,
+    isVerified: user.isVerified || false,
+    role: user.role || 'user'
+  };
+}
+
+/**
+ * Helper function to format message data for Flutter
+ */
+function formatMessage(message, currentUserId) {
+  if (!message) return null;
+  
+  return {
+    _id: message._id,
+    content: message.content || message.text || '',
+    messageType: message.messageType || 'text',
+    isFromMe: message.sender?._id?.toString() === currentUserId?.toString(),
+    sender: formatUserForChat(message.sender),
+    attachments: message.attachments || [],
+    images: message.images || [],
+    isRead: message.isRead || false,
+    readAt: message.readAt,
+    isEdited: message.isEdited || false,
+    isDeleted: message.isDeleted || false,
+    replyTo: message.replyTo ? {
+      _id: message.replyTo._id,
+      content: message.replyTo.content || message.replyTo.text || '',
+      sender: formatUserForChat(message.replyTo.sender)
+    } : null,
+    sentAt: message.sentAt || message.createdAt,
+    createdAt: message.createdAt,
+    updatedAt: message.updatedAt
+  };
+}
+
+/**
+ * Helper function to format chat data for Flutter
+ */
+function formatChat(chat, currentUserId) {
+  if (!chat) return null;
+  
+  // Get the other user in the chat
+  const otherUser = chat.members?.find(member => 
+    member._id?.toString() !== currentUserId?.toString()
+  );
+  
+  return {
+    _id: chat._id,
+    otherUser: formatUserForChat(otherUser),
+    lastMessage: chat.lastMessage ? formatMessage(chat.lastMessage, currentUserId) : null,
+    unreadCount: chat.unreadCount || 0,
+    isArchived: chat.isArchived || false,
+    isMuted: chat.isMuted || false,
+    lastActivity: chat.lastActivity || chat.updatedAt,
+    createdAt: chat.createdAt,
+    updatedAt: chat.updatedAt
+  };
+}
+
+/**
+ * Get user chats with enhanced formatting for Flutter
  */
 export const getChats = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     
     const userId = req.user._id;
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search = '' } = req.query;
     const skip = (page - 1) * limit;
 
-    // Get chats with other user info and last message
-    const chats = await chatModel.aggregate([
-      {
-        $match: {
-          members: userId,
-          isDeleted: { $ne: true }
-        }
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'members',
-          foreignField: '_id',
-          as: 'memberDetails'
-        }
-      },
-      {
-        $lookup: {
-          from: 'messages',
-          localField: 'lastMessage',
-          foreignField: '_id',
-          as: 'lastMessageDetails'
-        }
-      },
-      {
-        $addFields: {
-          otherUser: {
-            $arrayElemAt: [
-              {
-                $filter: {
-                  input: '$memberDetails',
-                  cond: { $ne: ['$$this._id', userId] }
-                }
-              },
-              0
-            ]
-          },
-          lastMessage: { $arrayElemAt: ['$lastMessageDetails', 0] }
-        }
-      },
-      {
-        $lookup: {
-          from: 'messages',
-          let: { chatId: '$_id', currentUserId: userId },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$chat', '$$chatId'] },
-                    { $ne: ['$sender', '$$currentUserId'] },
-                    { $eq: ['$isRead', false] }
-                  ]
-                }
-              }
-            },
-            { $count: 'unread' }
-          ],
-          as: 'unreadCount'
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          otherUser: {
-            _id: '$otherUser._id',
-            displayName: '$otherUser.displayName',
-            profileImage: '$otherUser.profileImage'
-          },
-          lastMessage: {
-            content: '$lastMessage.content',
-            sender: '$lastMessage.sender',
-            createdAt: '$lastMessage.createdAt'
-          },
-          unreadCount: { $ifNull: [{ $arrayElemAt: ['$unreadCount.unread', 0] }, 0] },
-          updatedAt: 1
-        }
-      },
-      { $sort: { updatedAt: -1 } },
-      { $skip: skip },
-      { $limit: Number(limit) }
+    // Build query for searching
+    let searchQuery = { 
+      members: userId, 
+      isDeleted: { $ne: true } 
+    };
+
+    if (search.trim()) {
+      // Search in other user's display name
+      const searchUsers = await userModel.find({
+        displayName: { $regex: search, $options: 'i' }
+      }).select('_id');
+      
+      const userIds = searchUsers.map(user => user._id);
+      searchQuery.members = { $in: [userId, ...userIds] };
+    }
+
+    const [chats, totalCount] = await Promise.all([
+      chatModel
+        .find(searchQuery)
+        .populate({
+          path: 'members',
+          select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+        })
+        .populate({
+          path: 'lastMessage',
+          select: 'content text messageType sender isRead readAt sentAt createdAt',
+          populate: {
+            path: 'sender',
+            select: 'displayName profileImage photoURL'
+          }
+        })
+        .sort({ lastActivity: -1, updatedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      chatModel.countDocuments(searchQuery)
     ]);
 
-    // Format chats for mobile app
-    const formattedChats = chats.map(chat => ({
-      _id: chat._id,
-      otherUser: {
-        _id: chat.otherUser._id,
-        displayName: chat.otherUser.displayName,
-        profileImage: chat.otherUser.profileImage?.url
-      },
-      lastMessage: chat.lastMessage ? {
-        content: chat.lastMessage.content,
-        isFromMe: chat.lastMessage.sender?.toString() === userId.toString(),
-        createdAt: chat.lastMessage.createdAt
-      } : null,
-      unreadCount: chat.unreadCount,
-      updatedAt: chat.updatedAt
-    }));
+    // Format chats for Flutter
+    const formattedChats = chats.map(chat => formatChat(chat, userId));
 
-    const totalCount = await chatModel.countDocuments({
-      members: userId,
-      isDeleted: { $ne: true }
+    // Get total unread count
+    const totalUnreadCount = await messageModel.countDocuments({
+      chat: { $in: chats.map(chat => chat._id) },
+      sender: { $ne: userId },
+      isRead: false
     });
 
     const response = {
-      chats: formattedChats,
-      pagination: {
-        currentPage: Number(page),
-        totalPages: Math.ceil(totalCount / limit),
-        totalItems: totalCount,
-        hasNextPage: skip + chats.length < totalCount
+      success: true,
+      message: 'تم جلب المحادثات بنجاح',
+      data: {
+        chats: formattedChats,
+        totalUnreadCount,
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          hasNextPage: skip + chats.length < totalCount,
+          hasPrevPage: Number(page) > 1
+        }
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
       }
     };
 
-    res.success(response, 'تم جلب المحادثات بنجاح');
+    res.status(200).json(response);
+
   } catch (error) {
     console.error('Get chats error:', error);
     next(new Error('حدث خطأ أثناء جلب المحادثات', { cause: 500 }));
@@ -143,7 +182,7 @@ export const getChats = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Get or create chat with user
+ * Get or create chat with user - Enhanced for Flutter
  */
 export const getOrCreateChat = asyncHandler(async (req, res, next) => {
   try {
@@ -152,39 +191,79 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
     const { otherUserId } = req.body;
 
-    // Check if user exists
+    if (!mongoose.Types.ObjectId.isValid(otherUserId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف المستخدم غير صالح',
+        data: null
+      });
+    }
+
+    // Check if user exists and is active
     const otherUser = await userModel
-      .findOne({ _id: otherUserId, isActive: true })
-      .select('displayName profileImage')
+      .findOne({ _id: otherUserId, isActive: true, isDeleted: false })
+      .select('displayName profileImage photoURL isOnline lastSeen isVerified role')
       .lean();
 
     if (!otherUser) {
-      return res.fail(null, 'المستخدم غير موجود', 404);
+      return res.status(404).json({
+        success: false,
+        message: 'المستخدم غير موجود أو غير نشط',
+        data: null
+      });
     }
 
     // Check if chat already exists
     let chat = await chatModel.findOne({
       members: { $all: [userId, otherUserId] },
       isDeleted: { $ne: true }
-    });
+    })
+    .populate({
+      path: 'members',
+      select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+    })
+    .populate({
+      path: 'lastMessage',
+      select: 'content text messageType sender isRead readAt sentAt createdAt',
+      populate: {
+        path: 'sender',
+        select: 'displayName profileImage photoURL'
+      }
+    })
+    .lean();
 
     if (!chat) {
       // Create new chat
       chat = await chatModel.create({
         members: [userId, otherUserId],
-        createdBy: userId
+        sender: userId,
+        receiver: otherUserId,
+        chatType: 'private'
       });
+
+      // Populate the newly created chat
+      chat = await chatModel.findById(chat._id)
+        .populate({
+          path: 'members',
+          select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+        })
+        .lean();
     }
 
-    res.success({
-      _id: chat._id,
-      otherUser: {
-        _id: otherUser._id,
-        displayName: otherUser.displayName,
-        profileImage: otherUser.profileImage?.url
+    const response = {
+      success: true,
+      message: 'تم إنشاء المحادثة بنجاح',
+      data: {
+        chat: formatChat(chat, userId)
       },
-      createdAt: chat.createdAt
-    }, 'تم إنشاء المحادثة بنجاح');
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(201).json(response);
+
   } catch (error) {
     console.error('Get or create chat error:', error);
     next(new Error('حدث خطأ أثناء إنشاء المحادثة', { cause: 500 }));
@@ -192,7 +271,7 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Get chat messages
+ * Get chat messages with enhanced formatting for Flutter
  */
 export const getMessages = asyncHandler(async (req, res, next) => {
   try {
@@ -203,42 +282,61 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     const { page = 1, limit = 50 } = req.query;
     const skip = (page - 1) * limit;
 
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف المحادثة غير صالح',
+        data: null
+      });
+    }
+
     // Check if user is member of chat
     const chat = await chatModel.findOne({
       _id: chatId,
       members: userId,
       isDeleted: { $ne: true }
-    }).lean();
+    })
+    .populate({
+      path: 'members',
+      select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+    })
+    .lean();
 
     if (!chat) {
-      return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
+      return res.status(404).json({
+        success: false,
+        message: 'المحادثة غير موجودة أو غير مصرح بالوصول إليها',
+        data: null
+      });
     }
 
     // Get messages
     const [messages, totalCount] = await Promise.all([
       messageModel
-        .find({ chat: chatId })
-        .populate('sender', 'displayName profileImage')
+        .find({ chat: chatId, isDeleted: { $ne: true } })
+        .populate({
+          path: 'sender',
+          select: 'displayName profileImage photoURL isVerified role'
+        })
+        .populate({
+          path: 'replyTo',
+          select: 'content text messageType sender createdAt',
+          populate: {
+            path: 'sender',
+            select: 'displayName profileImage photoURL'
+          }
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit))
         .lean(),
-      messageModel.countDocuments({ chat: chatId })
+      messageModel.countDocuments({ chat: chatId, isDeleted: { $ne: true } })
     ]);
 
-    // Format messages for mobile app
-    const formattedMessages = messages.reverse().map(message => ({
-      _id: message._id,
-      content: message.content,
-      isFromMe: message.sender._id.toString() === userId.toString(),
-      sender: {
-        _id: message.sender._id,
-        displayName: message.sender.displayName,
-        profileImage: message.sender.profileImage?.url
-      },
-      isRead: message.isRead,
-      createdAt: message.createdAt
-    }));
+    // Format messages for Flutter
+    const formattedMessages = messages
+      .reverse()
+      .map(message => formatMessage(message, userId));
 
     // Mark messages as read
     await messageModel.updateMany(
@@ -247,20 +345,34 @@ export const getMessages = asyncHandler(async (req, res, next) => {
         sender: { $ne: userId },
         isRead: false
       },
-      { isRead: true, readAt: new Date() }
+      { 
+        isRead: true, 
+        readAt: new Date() 
+      }
     );
 
     const response = {
-      messages: formattedMessages,
-      pagination: {
-        currentPage: Number(page),
-        totalPages: Math.ceil(totalCount / limit),
-        totalItems: totalCount,
-        hasNextPage: skip + messages.length < totalCount
+      success: true,
+      message: 'تم جلب الرسائل بنجاح',
+      data: {
+        chat: formatChat(chat, userId),
+        messages: formattedMessages,
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          hasNextPage: skip + messages.length < totalCount,
+          hasPrevPage: Number(page) > 1
+        }
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
       }
     };
 
-    res.success(response, 'تم جلب الرسائل بنجاح');
+    res.status(200).json(response);
+
   } catch (error) {
     console.error('Get messages error:', error);
     next(new Error('حدث خطأ أثناء جلب الرسائل', { cause: 500 }));
@@ -268,18 +380,31 @@ export const getMessages = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Send message
+ * Send message with enhanced features for Flutter
  */
 export const sendMessage = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     
     const { chatId } = req.params;
-    const { content } = req.body;
+    const { content, messageType = 'text', attachments = [], images = [], replyTo } = req.body;
     const userId = req.user._id;
 
-    if (!content?.trim()) {
-      return res.fail(null, 'محتوى الرسالة مطلوب', 400);
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف المحادثة غير صالح',
+        data: null
+      });
+    }
+
+    // Validate message content
+    if (!content?.trim() && (!attachments || attachments.length === 0) && (!images || images.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'محتوى الرسالة أو المرفقات مطلوبة',
+        data: null
+      });
     }
 
     // Check if user is member of chat
@@ -287,67 +412,130 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       _id: chatId,
       members: userId,
       isDeleted: { $ne: true }
-    });
+    }).lean();
 
     if (!chat) {
-      return res.fail(null, 'المحادثة غير موجودة أو غير مصرح بالوصول إليها', 404);
+      return res.status(404).json({
+        success: false,
+        message: 'المحادثة غير موجودة أو غير مصرح بالوصول إليها',
+        data: null
+      });
     }
 
     // Get receiver ID
     const receiverId = chat.members.find(member => member.toString() !== userId.toString());
 
+    // Validate reply-to message if provided
+    let replyToMessage = null;
+    if (replyTo && mongoose.Types.ObjectId.isValid(replyTo)) {
+      replyToMessage = await messageModel.findOne({
+        _id: replyTo,
+        chat: chatId
+      }).lean();
+    }
+
     // Create message
-    const message = await messageModel.create({
+    const messageData = {
       chat: chatId,
       sender: userId,
-      content: content.trim(),
-      isRead: false
-    });
+      content: content?.trim() || '',
+      messageType,
+      attachments: attachments || [],
+      images: images || [],
+      isRead: false,
+      sentAt: new Date()
+    };
 
-    // Update chat last message
+    // Add reply reference if valid
+    if (replyToMessage) {
+      messageData.replyTo = replyTo;
+    }
+
+    // Support legacy 'text' field for backward compatibility
+    if (messageType === 'text') {
+      messageData.text = content?.trim() || '';
+    }
+
+    const message = await messageModel.create(messageData);
+
+    // Update chat last message and activity
     await chatModel.findByIdAndUpdate(chatId, {
       lastMessage: message._id,
-      updatedAt: new Date()
+      lastActivity: new Date()
     });
 
     // Populate message with sender info
     const populatedMessage = await messageModel
       .findById(message._id)
-      .populate('sender', 'displayName profileImage')
+      .populate({
+        path: 'sender',
+        select: 'displayName profileImage photoURL isVerified role'
+      })
+      .populate({
+        path: 'replyTo',
+        select: 'content text messageType sender createdAt',
+        populate: {
+          path: 'sender',
+          select: 'displayName profileImage photoURL'
+        }
+      })
       .lean();
 
     // Format message for response
-    const formattedMessage = {
-      _id: populatedMessage._id,
-      content: populatedMessage.content,
-      isFromMe: true,
-      sender: {
-        _id: populatedMessage.sender._id,
-        displayName: populatedMessage.sender.displayName,
-        profileImage: populatedMessage.sender.profileImage?.url
-      },
-      isRead: populatedMessage.isRead,
-      createdAt: populatedMessage.createdAt
-    };
+    const formattedMessage = formatMessage(populatedMessage, userId);
 
-    // Send notification to receiver
+    // Send real-time notification via Socket.IO
     try {
-      await createNotification({
-        userId: receiverId,
-        title: 'رسالة جديدة',
-        message: `${req.user.displayName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
-        type: 'message',
-        sender: userId,
-        data: {
-          chatId: chatId.toString(),
-          messageId: message._id.toString()
-        }
-      });
-    } catch (notificationError) {
-      console.error('Failed to send message notification:', notificationError);
+      sendToChat(chatId, 'new_message', formattedMessage);
+    } catch (socketError) {
+      console.warn('Socket.IO notification failed:', socketError);
     }
 
-    res.success(formattedMessage, 'تم إرسال الرسالة بنجاح');
+    // Send push notification to receiver
+    if (receiverId) {
+      try {
+        const sender = await userModel.findById(userId).select('displayName').lean();
+        const senderName = sender?.displayName || 'مستخدم';
+        
+        let notificationBody = '';
+        if (messageType === 'text') {
+          notificationBody = `${senderName}: ${content?.substring(0, 50) || ''}${(content?.length || 0) > 50 ? '...' : ''}`;
+        } else if (messageType === 'image') {
+          notificationBody = `${senderName}: أرسل صورة`;
+        } else {
+          notificationBody = `${senderName}: أرسل مرفق`;
+        }
+
+        await sendChatMessageNotification(
+          receiverId,
+          'رسالة جديدة',
+          notificationBody,
+          {
+            type: 'chat',
+            chatId,
+            senderId: userId,
+            messageId: message._id.toString()
+          }
+        );
+      } catch (notificationError) {
+        console.warn('Push notification failed:', notificationError);
+      }
+    }
+
+    const response = {
+      success: true,
+      message: 'تم إرسال الرسالة بنجاح',
+      data: {
+        message: formattedMessage
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(201).json(response);
+
   } catch (error) {
     console.error('Send message error:', error);
     next(new Error('حدث خطأ أثناء إرسال الرسالة', { cause: 500 }));
@@ -355,7 +543,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Mark messages as read
+ * Mark chat messages as read
  */
 export const markAsRead = asyncHandler(async (req, res, next) => {
   try {
@@ -364,15 +552,27 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
     const { chatId } = req.params;
     const userId = req.user._id;
 
+    if (!mongoose.Types.ObjectId.isValid(chatId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف المحادثة غير صالح',
+        data: null
+      });
+    }
+
     // Check if user is member of chat
     const chat = await chatModel.findOne({
       _id: chatId,
       members: userId,
       isDeleted: { $ne: true }
-    });
+    }).lean();
 
     if (!chat) {
-      return res.fail(null, 'المحادثة غير موجودة', 404);
+      return res.status(404).json({
+        success: false,
+        message: 'المحادثة غير موجودة أو غير مصرح بالوصول إليها',
+        data: null
+      });
     }
 
     // Mark messages as read
@@ -388,12 +588,190 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
       }
     );
 
-    res.success({
-      markedCount: result.modifiedCount
-    }, 'تم وضع علامة مقروء على الرسائل');
+    // Send real-time notification about read status
+    try {
+      sendToChat(chatId, 'messages_read', {
+        chatId,
+        readBy: userId,
+        readAt: new Date().toISOString()
+      });
+    } catch (socketError) {
+      console.warn('Socket.IO read notification failed:', socketError);
+    }
+
+    const response = {
+      success: true,
+      message: 'تم تمييز الرسائل كمقروءة بنجاح',
+      data: {
+        modifiedCount: result.modifiedCount
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
   } catch (error) {
     console.error('Mark as read error:', error);
-    next(new Error('حدث خطأ أثناء تحديث حالة الرسائل', { cause: 500 }));
+    next(new Error('حدث خطأ أثناء تمييز الرسائل كمقروءة', { cause: 500 }));
+  }
+});
+
+/**
+ * Delete message - Enhanced for Flutter
+ */
+export const deleteMessage = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { chatId, messageId } = req.params;
+    const userId = req.user._id;
+    const { deleteForEveryone = false } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(chatId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'معرف المحادثة أو الرسالة غير صالح',
+        data: null
+      });
+    }
+
+    // Check if user is member of chat
+    const chat = await chatModel.findOne({
+      _id: chatId,
+      members: userId,
+      isDeleted: { $ne: true }
+    }).lean();
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'المحادثة غير موجودة أو غير مصرح بالوصول إليها',
+        data: null
+      });
+    }
+
+    // Find the message
+    const message = await messageModel.findOne({
+      _id: messageId,
+      chat: chatId
+    }).lean();
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'الرسالة غير موجودة',
+        data: null
+      });
+    }
+
+    // Check if user can delete this message
+    const isMessageOwner = message.sender.toString() === userId.toString();
+    const messageAgeInMinutes = (new Date() - new Date(message.createdAt)) / (1000 * 60);
+
+    if (deleteForEveryone && (!isMessageOwner || messageAgeInMinutes > 60)) {
+      return res.status(403).json({
+        success: false,
+        message: 'لا يمكن حذف الرسالة للجميع بعد مرور ساعة أو إذا لم تكن مالك الرسالة',
+        data: null
+      });
+    }
+
+    let updateQuery = {};
+    if (deleteForEveryone) {
+      // Delete for everyone
+      updateQuery = {
+        isDeleted: true,
+        deletedAt: new Date(),
+        content: 'تم حذف هذه الرسالة',
+        text: 'تم حذف هذه الرسالة'
+      };
+    } else {
+      // Delete for current user only
+      updateQuery = {
+        $addToSet: { deletedFor: userId }
+      };
+    }
+
+    await messageModel.findByIdAndUpdate(messageId, updateQuery);
+
+    // Send real-time notification about message deletion
+    try {
+      sendToChat(chatId, 'message_deleted', {
+        messageId,
+        deletedBy: userId,
+        deleteForEveryone,
+        deletedAt: new Date().toISOString()
+      });
+    } catch (socketError) {
+      console.warn('Socket.IO delete notification failed:', socketError);
+    }
+
+    const response = {
+      success: true,
+      message: deleteForEveryone ? 'تم حذف الرسالة للجميع' : 'تم حذف الرسالة لك',
+      data: {
+        messageId,
+        deleteForEveryone
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Delete message error:', error);
+    next(new Error('حدث خطأ أثناء حذف الرسالة', { cause: 500 }));
+  }
+});
+
+/**
+ * Get unread messages count
+ */
+export const getUnreadCount = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const userId = req.user._id;
+
+    // Get all user's chats
+    const userChats = await chatModel.find({
+      members: userId,
+      isDeleted: { $ne: true }
+    }).select('_id').lean();
+
+    const chatIds = userChats.map(chat => chat._id);
+
+    // Count unread messages
+    const unreadCount = await messageModel.countDocuments({
+      chat: { $in: chatIds },
+      sender: { $ne: userId },
+      isRead: false,
+      isDeleted: { $ne: true }
+    });
+
+    const response = {
+      success: true,
+      message: 'تم جلب عدد الرسائل غير المقروءة بنجاح',
+      data: {
+        unreadCount
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Get unread count error:', error);
+    next(new Error('حدث خطأ أثناء جلب عدد الرسائل غير المقروءة', { cause: 500 }));
   }
 });
 

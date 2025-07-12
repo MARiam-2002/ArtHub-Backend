@@ -79,7 +79,7 @@ router.get('/profile', isAuthenticated, userController.getProfile);
  */
 router.put('/profile', 
   isAuthenticated,
-  fileUpload(filterObject.image).single('profileImage'),
+  fileUpload().single('profileImage'),
   isValidation(Validators.updateProfileSchema),
   userController.updateProfile
 );

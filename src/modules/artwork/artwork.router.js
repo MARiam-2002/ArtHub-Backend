@@ -11,6 +11,7 @@ import {
   addReviewSchema,
   toggleFavoriteSchema
 } from './artwork.validation.js';
+import { fileUpload } from '../../utils/multer.js';
 
 const router = Router();
 
@@ -355,7 +356,12 @@ router.get('/:id', isValidation(artworkIdParamSchema), artworkController.getArtw
  *       500:
  *         description: Internal server error
  */
-router.post('/', isAuthenticated, isValidation(createArtworkSchema), artworkController.createArtwork);
+router.post('/',
+  isAuthenticated,
+  fileUpload().array('images', 10),
+  isValidation(createArtworkSchema),
+  artworkController.createArtwork
+);
 
 /**
  * @swagger

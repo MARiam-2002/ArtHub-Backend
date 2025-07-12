@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as homeController from './home.controller.js';
-import { optionalAuth } from '../../middleware/auth.middleware.js';
+import { optionalAuth, authenticate } from '../../middleware/auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './home.validation.js';
 
@@ -76,13 +76,19 @@ const router = Router();
  *                             type: string
  *                           title:
  *                             type: string
+ *                           mainImage:
+ *                             type: string
  *                           images:
  *                             type: array
  *                           price:
  *                             type: number
  *                           artist:
  *                             type: object
- *                     latestArtworks:
+ *                     trendingArtworks:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     personalizedArtworks:
  *                       type: array
  *                       items:
  *                         type: object
@@ -97,7 +103,7 @@ router.get('/', optionalAuth, homeController.getHomeData);
  *   get:
  *     summary: Search artworks and artists
  *     tags: [Home]
- *     description: Search for artworks and artists
+ *     description: Search for artworks and artists with advanced filtering
  *     parameters:
  *       - in: query
  *         name: q
@@ -112,6 +118,13 @@ router.get('/', optionalAuth, homeController.getHomeData);
  *           enum: [all, artworks, artists]
  *           default: all
  *         description: Search type
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [relevance, price_low, price_high, rating, newest, popular]
+ *           default: relevance
+ *         description: Sort options
  *       - in: query
  *         name: page
  *         schema:
@@ -136,8 +149,263 @@ router.get('/search', homeController.search);
 
 /**
  * @swagger
+ * /home/trending:
+ *   get:
+ *     summary: Get trending artworks
+ *     tags: [Home]
+ *     description: Get trending artworks for explore section
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Trending artworks retrieved successfully
+ *       500:
+ *         description: Server error
+ */
+router.get('/trending', homeController.getTrendingArtworks);
+
+/**
+ * @swagger
+ * /home/artwork/{id}:
+ *   get:
+ *     summary: Get single artwork details
+ *     tags: [Home]
+ *     description: Get detailed information about a single artwork
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Artwork ID
+ *     responses:
+ *       200:
+ *         description: Artwork details retrieved successfully
+ *       400:
+ *         description: Invalid artwork ID
+ *       404:
+ *         description: Artwork not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/artwork/:id', optionalAuth, homeController.getSingleArtwork);
+
+/**
+ * @swagger
+ * /home/artist/{id}:
+ *   get:
+ *     summary: Get artist profile
+ *     tags: [Home]
+ *     description: Get artist profile with their artworks
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Artist ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for artworks
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Artist profile retrieved successfully
+ *       400:
+ *         description: Invalid artist ID
+ *       404:
+ *         description: Artist not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/artist/:id', optionalAuth, homeController.getArtistProfile);
+
+/**
+ * @swagger
+ * /home/category/{id}:
+ *   get:
+ *     summary: Get artworks by category
+ *     tags: [Home]
+ *     description: Get artworks filtered by category
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Category ID
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [newest, price_low, price_high, rating, popular]
+ *           default: newest
+ *         description: Sort options
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Category artworks retrieved successfully
+ *       400:
+ *         description: Invalid category ID
+ *       404:
+ *         description: Category not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/category/:id', homeController.getArtworksByCategory);
+
+/**
+ * @swagger
  * components:
  *   schemas:
+ *     HomeData:
+ *       type: object
+ *       properties:
+ *         categories:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Category'
+ *         featuredArtists:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Artist'
+ *         featuredArtworks:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Artwork'
+ *         trendingArtworks:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Artwork'
+ *         personalizedArtworks:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/Artwork'
+ *     Category:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         name:
+ *           type: string
+ *         image:
+ *           type: string
+ *         artworksCount:
+ *           type: number
+ *     Artist:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         displayName:
+ *           type: string
+ *         profileImage:
+ *           type: string
+ *         coverImages:
+ *           type: array
+ *           items:
+ *             type: string
+ *         job:
+ *           type: string
+ *         rating:
+ *           type: number
+ *         reviewsCount:
+ *           type: number
+ *         followersCount:
+ *           type: number
+ *         artworksCount:
+ *           type: number
+ *         isVerified:
+ *           type: boolean
+ *     Artwork:
+ *       type: object
+ *       properties:
+ *         _id:
+ *           type: string
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         mainImage:
+ *           type: string
+ *         images:
+ *           type: array
+ *           items:
+ *             type: string
+ *         allImages:
+ *           type: array
+ *           items:
+ *             type: string
+ *         price:
+ *           type: number
+ *         currency:
+ *           type: string
+ *         dimensions:
+ *           type: object
+ *         medium:
+ *           type: string
+ *         year:
+ *           type: number
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *         artist:
+ *           $ref: '#/components/schemas/Artist'
+ *         category:
+ *           $ref: '#/components/schemas/Category'
+ *         stats:
+ *           type: object
+ *           properties:
+ *             likeCount:
+ *               type: number
+ *             viewCount:
+ *               type: number
+ *             rating:
+ *               type: number
+ *             reviewsCount:
+ *               type: number
+ *         availability:
+ *           type: object
+ *           properties:
+ *             isAvailable:
+ *               type: boolean
+ *             isFeatured:
+ *               type: boolean
  *     Banner:
  *       type: object
  *       properties:

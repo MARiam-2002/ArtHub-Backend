@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // قراءة ملف swagger.json بدلاً من استخدام assert
-const swaggerJsonPath = path.join(__dirname, 'swagger.json');
+const swaggerJsonPath = path.join(__dirname, 'arthub-swagger.json');
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerJsonPath, 'utf8'));
 
 // إضافة dashboard paths إلى swagger document

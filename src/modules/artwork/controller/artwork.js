@@ -226,10 +226,16 @@ export const createArtwork = asyncHandler(async (req, res) => {
     return res.fail(null, 'لديك عمل فني بنفس العنوان بالفعل', 400);
   }
 
+  // إضافة الصور المرفوعة إذا وجدت
+  let imagesArr = images;
+  if (req.files && req.files.length > 0) {
+    imagesArr = req.files.map(f => f.path);
+  }
+
   const artwork = await artworkModel.create({
     title: title.trim(),
     description: description?.trim() || '',
-    images,
+    images: imagesArr,
     price,
     category,
     artist,

@@ -1,0 +1,2800 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ArtHub API",
+    "description": "واجهة برمجة التطبيقات للفنانين والمبدعين - ArtHub Platform",
+    "version": "2.0.0",
+    "contact": {
+      "name": "فريق دعم ArtHub",
+      "email": "support@arthub.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "خادم API الرئيسي"
+    },
+    {
+      "url": "https://arthub-api.vercel.app/api",
+      "description": "خادم الإنتاج"
+    },
+    {
+      "url": "http://localhost:5000/api",
+      "description": "خادم التطوير المحلي"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "المصادقة وإدارة المستخدمين"
+    },
+    {
+      "name": "Home",
+      "description": "الصفحة الرئيسية والاستكشاف"
+    },
+    {
+      "name": "Profile",
+      "description": "الملف الشخصي والإعدادات"
+    },
+    {
+      "name": "Artworks",
+      "description": "الأعمال الفنية"
+    },
+    {
+      "name": "Categories",
+      "description": "التصنيفات"
+    },
+    {
+      "name": "Chat",
+      "description": "المحادثات والرسائل"
+    },
+    {
+      "name": "Follow",
+      "description": "المتابعة والمتابعين"
+    },
+    {
+      "name": "Notifications",
+      "description": "الإشعارات"
+    },
+    {
+      "name": "Reviews",
+      "description": "التقييمات والمراجعات"
+    },
+    {
+      "name": "Reports",
+      "description": "البلاغات والتقارير"
+    },
+    {
+      "name": "Special Requests",
+      "description": "الطلبات الخاصة"
+    },
+    {
+      "name": "Transactions",
+      "description": "المعاملات المالية"
+    },
+    {
+      "name": "Dashboard",
+      "description": "لوحة التحكم (للمدراء)"
+    },
+    {
+      "name": "Admin",
+      "description": "إدارة النظام (للمدراء)"
+    }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "تسجيل مستخدم جديد",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء الحساب بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "تسجيل الدخول",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/auth/login-with-fingerprint": {
+      "post": {
+        "summary": "تسجيل الدخول ببصمة الجهاز",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fingerprint"],
+                "properties": {
+                  "fingerprint": {
+                    "type": "string",
+                    "description": "بصمة الجهاز"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/update-fingerprint": {
+      "post": {
+        "summary": "تحديث بصمة الجهاز",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fingerprint"],
+                "properties": {
+                  "fingerprint": {
+                    "type": "string",
+                    "description": "بصمة الجهاز الجديدة"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث بصمة الجهاز بنجاح"
+          }
+        }
+      }
+    },
+    "/auth/firebase": {
+      "post": {
+        "summary": "تسجيل الدخول باستخدام Firebase",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "تسجيل الخروج",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الخروج بنجاح"
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "نسيت كلمة المرور",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إرسال رمز إعادة التعيين"
+          }
+        }
+      }
+    },
+    "/auth/verify-forget-code": {
+      "post": {
+        "summary": "التحقق من رمز إعادة التعيين",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم التحقق من الرمز بنجاح"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "summary": "إعادة تعيين كلمة المرور",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إعادة تعيين كلمة المرور بنجاح"
+          }
+        }
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "summary": "تحديث رمز الوصول",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث رمز الوصول"
+          }
+        }
+      }
+    },
+    "/auth/fcm-token": {
+      "post": {
+        "summary": "تحديث رمز FCM",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FCMTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث رمز الإشعارات"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "الحصول على بيانات المستخدم الحالي",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب بيانات المستخدم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/home": {
+      "get": {
+        "summary": "بيانات الصفحة الرئيسية",
+        "tags": ["Home"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب بيانات الصفحة الرئيسية",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeData"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/home/search": {
+      "get": {
+        "summary": "البحث في الأعمال والفنانين",
+        "tags": ["Home"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "نص البحث"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": ["all", "artworks", "artists"],
+              "default": "all"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": ["relevance", "price_low", "price_high", "rating", "newest", "popular"],
+              "default": "relevance"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "نتائج البحث"
+          }
+        }
+      }
+    },
+    "/home/trending": {
+      "get": {
+        "summary": "الأعمال الرائجة",
+        "tags": ["Home"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "الأعمال الرائجة"
+          }
+        }
+      }
+    },
+    "/home/artwork/{id}": {
+      "get": {
+        "summary": "تفاصيل عمل فني",
+        "tags": ["Home"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل العمل الفني"
+          }
+        }
+      }
+    },
+    "/home/artist/{id}": {
+      "get": {
+        "summary": "ملف الفنان",
+        "tags": ["Home"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "بيانات الفنان"
+          }
+        }
+      }
+    },
+    "/home/category/{id}": {
+      "get": {
+        "summary": "أعمال التصنيف",
+        "tags": ["Home"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": ["newest", "price_low", "price_high", "rating", "popular"],
+              "default": "newest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "أعمال التصنيف"
+          }
+        }
+      }
+    },
+    "/user/profile": {
+      "get": {
+        "summary": "الملف الشخصي",
+        "tags": ["Profile"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "بيانات الملف الشخصي"
+          }
+        }
+      },
+      "patch": {
+        "summary": "تحديث الملف الشخصي",
+        "tags": ["Profile"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "bio": {
+                    "type": "string"
+                  },
+                  "job": {
+                    "type": "string"
+                  },
+                  "profileImage": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث الملف الشخصي"
+          }
+        }
+      }
+    },
+    "/user/update-password": {
+      "patch": {
+        "summary": "تغيير كلمة المرور",
+        "tags": ["Profile"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["oldPassword", "password", "confirmPassword"],
+                "properties": {
+                  "oldPassword": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "confirmPassword": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تغيير كلمة المرور"
+          }
+        }
+      }
+    },
+    "/user/update-cover-images": {
+      "patch": {
+        "summary": "تحديث صور الغلاف",
+        "tags": ["Profile"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "coverImages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث صور الغلاف"
+          }
+        }
+      }
+    },
+    "/chat": {
+      "get": {
+        "summary": "قائمة المحادثات",
+        "tags": ["Chat"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة المحادثات"
+          }
+        }
+      }
+    },
+    "/chat/{chatId}": {
+      "get": {
+        "summary": "تفاصيل محادثة",
+        "tags": ["Chat"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل المحادثة"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف محادثة",
+        "tags": ["Chat"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف المحادثة"
+          }
+        }
+      }
+    },
+    "/chat/{chatId}/messages": {
+      "get": {
+        "summary": "رسائل المحادثة",
+        "tags": ["Chat"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "رسائل المحادثة"
+          }
+        }
+      },
+      "post": {
+        "summary": "إرسال رسالة",
+        "tags": ["Chat"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["content", "messageType"],
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "messageType": {
+                    "type": "string",
+                    "enum": ["text", "image", "file", "audio"],
+                    "default": "text"
+                  },
+                  "specialRequestId": {
+                    "type": "string"
+                  },
+                  "replyTo": {
+                    "type": "string"
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال الرسالة"
+          }
+        }
+      }
+    },
+    "/chat/or-create": {
+      "post": {
+        "summary": "إنشاء أو الحصول على محادثة",
+        "tags": ["Chat"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userId"],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "المحادثة"
+          }
+        }
+      }
+    },
+    "/special-requests": {
+      "post": {
+        "summary": "إنشاء طلب خاص",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artist", "category", "title", "description", "budget"],
+                "properties": {
+                  "artist": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "budget": {
+                    "type": "number"
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "requirements": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء الطلب"
+          }
+        }
+      }
+    },
+    "/special-requests/user": {
+      "get": {
+        "summary": "طلباتي الخاصة",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "accepted", "rejected", "in_progress", "completed", "cancelled"]
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الطلبات"
+          }
+        }
+      }
+    },
+    "/special-requests/artist": {
+      "get": {
+        "summary": "الطلبات الواردة للفنان",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الطلبات"
+          }
+        }
+      }
+    },
+    "/special-requests/{requestId}": {
+      "get": {
+        "summary": "تفاصيل طلب خاص",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل الطلب"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف طلب خاص",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف الطلب"
+          }
+        }
+      }
+    },
+    "/special-requests/{requestId}/status": {
+      "patch": {
+        "summary": "تحديث حالة الطلب",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["accepted", "rejected", "in_progress", "review"]
+                  },
+                  "rejectionReason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث الحالة"
+          }
+        }
+      }
+    },
+    "/special-requests/{requestId}/response": {
+      "post": {
+        "summary": "إضافة رد على الطلب",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["response"],
+                "properties": {
+                  "response": {
+                    "type": "string"
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إضافة الرد"
+          }
+        }
+      }
+    },
+    "/special-requests/{requestId}/complete": {
+      "post": {
+        "summary": "إكمال الطلب",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["deliverables"],
+                "properties": {
+                  "deliverables": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "finalNote": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إكمال الطلب"
+          }
+        }
+      }
+    },
+    "/special-requests/{requestId}/cancel": {
+      "post": {
+        "summary": "إلغاء طلب خاص",
+        "tags": ["Special Requests"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "requestId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cancellationReason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إلغاء الطلب"
+          }
+        }
+      }
+    },
+    "/special-requests/types": {
+      "get": {
+        "summary": "أنواع الطلبات الخاصة",
+        "tags": ["Special Requests"],
+        "responses": {
+          "200": {
+            "description": "قائمة الأنواع"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "summary": "قائمة الإشعارات",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "unreadOnly",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الإشعارات"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف جميع الإشعارات",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف الإشعارات"
+          }
+        }
+      }
+    },
+    "/notifications/{notificationId}": {
+      "patch": {
+        "summary": "تحديد الإشعار كمقروء",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notificationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التحديث"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف إشعار",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notificationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
+          }
+        }
+      }
+    },
+    "/notifications/mark-all-read": {
+      "patch": {
+        "summary": "تحديد جميع الإشعارات كمقروءة",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم التحديث"
+          }
+        }
+      }
+    },
+    "/notifications/settings": {
+      "get": {
+        "summary": "إعدادات الإشعارات",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "الإعدادات"
+          }
+        }
+      },
+      "patch": {
+        "summary": "تحديث إعدادات الإشعارات",
+        "tags": ["Notifications"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "emailNotifications": {
+                    "type": "boolean"
+                  },
+                  "pushNotifications": {
+                    "type": "boolean"
+                  },
+                  "newMessage": {
+                    "type": "boolean"
+                  },
+                  "newFollower": {
+                    "type": "boolean"
+                  },
+                  "newOrder": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم التحديث"
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "summary": "قائمة التصنيفات",
+        "tags": ["Categories"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeStats",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"],
+              "default": "false"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة التصنيفات"
+          }
+        }
+      },
+      "post": {
+        "summary": "إنشاء تصنيف جديد",
+        "tags": ["Categories"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء التصنيف"
+          }
+        }
+      }
+    },
+    "/categories/{id}": {
+      "get": {
+        "summary": "تفاصيل التصنيف",
+        "tags": ["Categories"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل التصنيف"
+          }
+        }
+      },
+      "patch": {
+        "summary": "تحديث تصنيف",
+        "tags": ["Categories"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "image": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم التحديث"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف تصنيف",
+        "tags": ["Categories"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
+          }
+        }
+      }
+    },
+    "/artworks": {
+      "get": {
+        "summary": "قائمة الأعمال الفنية",
+        "tags": ["Artworks"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["available", "sold", "reserved"]
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": ["newest", "price_low", "price_high", "rating", "popular"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة الأعمال"
+          }
+        }
+      },
+      "post": {
+        "summary": "إنشاء عمل فني جديد",
+        "tags": ["Artworks"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "description", "price", "category", "images"],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "dimensions": {
+                    "type": "object",
+                    "properties": {
+                      "width": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      },
+                      "depth": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "materials": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء العمل"
+          }
+        }
+      }
+    },
+    "/artworks/{id}": {
+      "get": {
+        "summary": "تفاصيل عمل فني",
+        "tags": ["Artworks"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل العمل"
+          }
+        }
+      },
+      "patch": {
+        "summary": "تحديث عمل فني",
+        "tags": ["Artworks"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": ["available", "sold", "reserved"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم التحديث"
+          }
+        }
+      },
+      "delete": {
+        "summary": "حذف عمل فني",
+        "tags": ["Artworks"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحذف"
+          }
+        }
+      }
+    },
+    "/artworks/{id}/favorite": {
+      "post": {
+        "summary": "إضافة للمفضلة",
+        "tags": ["Artworks"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تمت الإضافة"
+          }
+        }
+      },
+      "delete": {
+        "summary": "إزالة من المفضلة",
+        "tags": ["Artworks"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تمت الإزالة"
+          }
+        }
+      }
+    },
+    "/reviews/artwork": {
+      "post": {
+        "summary": "إضافة تقييم لعمل فني",
+        "tags": ["Reviews"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artwork", "rating"],
+                "properties": {
+                  "artwork": {
+                    "type": "string"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "comment": {
+                    "type": "string"
+                  },
+                  "pros": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cons": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "subRatings": {
+                    "type": "object",
+                    "properties": {
+                      "creativity": {
+                        "type": "integer"
+                      },
+                      "technique": {
+                        "type": "integer"
+                      },
+                      "composition": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "isRecommended": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إضافة التقييم"
+          }
+        }
+      }
+    },
+    "/reviews/artist": {
+      "post": {
+        "summary": "تقييم فنان",
+        "tags": ["Reviews"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artist", "rating", "orderItem"],
+                "properties": {
+                  "artist": {
+                    "type": "string"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "orderItem": {
+                    "type": "string"
+                  },
+                  "comment": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إضافة التقييم"
+          }
+        }
+      }
+    },
+    "/reviews/artwork/{artworkId}": {
+      "get": {
+        "summary": "تقييمات عمل فني",
+        "tags": ["Reviews"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artworkId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة التقييمات"
+          }
+        }
+      }
+    },
+    "/reports": {
+      "post": {
+        "summary": "إرسال بلاغ",
+        "tags": ["Reports"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["contentType", "contentId", "reason"],
+                "properties": {
+                  "contentType": {
+                    "type": "string",
+                    "enum": ["artwork", "user", "review", "comment"]
+                  },
+                  "contentId": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": ["inappropriate", "harassment", "spam", "fake", "copyright", "other"]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"],
+                    "default": "medium"
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال البلاغ"
+          }
+        }
+      }
+    },
+    "/transactions": {
+      "get": {
+        "summary": "قائمة المعاملات",
+        "tags": ["Transactions"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "processing", "completed", "failed", "refunded", "cancelled"]
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": ["artwork_purchase", "special_request"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة المعاملات"
+          }
+        }
+      },
+      "post": {
+        "summary": "إنشاء معاملة جديدة",
+        "tags": ["Transactions"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["items", "payment", "shipping"],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "artworkId": {
+                          "type": "string"
+                        },
+                        "specialRequestId": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "payment": {
+                    "type": "object",
+                    "required": ["method", "provider"],
+                    "properties": {
+                      "method": {
+                        "type": "string",
+                        "enum": ["credit_card", "mada", "apple_pay", "stc_pay"]
+                      },
+                      "provider": {
+                        "type": "string",
+                        "enum": ["stripe", "hyperpay", "moyasar"]
+                      },
+                      "transactionId": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "shipping": {
+                    "type": "object",
+                    "required": ["address"],
+                    "properties": {
+                      "address": {
+                        "type": "object",
+                        "required": ["fullName", "addressLine1", "city", "country", "phoneNumber"],
+                        "properties": {
+                          "fullName": {
+                            "type": "string"
+                          },
+                          "addressLine1": {
+                            "type": "string"
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "country": {
+                            "type": "string"
+                          },
+                          "phoneNumber": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "method": {
+                        "type": "string",
+                        "enum": ["standard", "express"]
+                      }
+                    }
+                  },
+                  "installments": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean"
+                      },
+                      "totalInstallments": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء المعاملة"
+          }
+        }
+      }
+    },
+    "/transactions/{id}": {
+      "get": {
+        "summary": "تفاصيل معاملة",
+        "tags": ["Transactions"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تفاصيل المعاملة"
+          }
+        }
+      }
+    },
+    "/follow/artist/{artistId}": {
+      "post": {
+        "summary": "متابعة فنان",
+        "tags": ["Follow"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تمت المتابعة"
+          }
+        }
+      },
+      "delete": {
+        "summary": "إلغاء متابعة فنان",
+        "tags": ["Follow"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم إلغاء المتابعة"
+          }
+        }
+      }
+    },
+    "/follow/followers": {
+      "get": {
+        "summary": "قائمة المتابعين",
+        "tags": ["Follow"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة المتابعين"
+          }
+        }
+      }
+    },
+    "/follow/following": {
+      "get": {
+        "summary": "قائمة المتابَعين",
+        "tags": ["Follow"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "قائمة المتابَعين"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "FirebaseAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Firebase Token"
+      }
+    },
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password", "confirmPassword", "displayName"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "confirmPassword": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "job": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "artist"],
+            "default": "user"
+          },
+          "fingerprint": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "VerifyCodeRequest": {
+        "type": "object",
+        "required": ["email", "forgetCode"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "forgetCode": {
+            "type": "string",
+            "pattern": "^\\d{4}$"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": ["email", "password", "confirmPassword"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "confirmPassword": {
+            "type": "string"
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "FCMTokenRequest": {
+        "type": "object",
+        "required": ["fcmToken"],
+        "properties": {
+          "fcmToken": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "_id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "accessToken": {
+                "type": "string"
+              },
+              "refreshToken": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "profileImage": {
+            "type": "object"
+          },
+          "coverImages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "HomeData": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "featuredArtists": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "featuredArtworks": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "latestArtists": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "mostRatedArtworks": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "trendingArtworks": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "personalizedArtworks": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "طلب غير صالح",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "غير مصرح",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "غير مصرح بالوصول"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "محظور",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "ليس لديك صلاحية الوصول"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "غير موجود",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "المورد المطلوب غير موجود"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "تعارض",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "البريد الإلكتروني مستخدم بالفعل"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "خطأ في الخادم",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "message": {
+                  "type": "string",
+                  "example": "حدث خطأ في الخادم"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} 

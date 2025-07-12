@@ -136,7 +136,9 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     });
 
     // Handle profile image if provided
-    if (req.body.profileImage) {
+    if (req.file) {
+      updateData.profileImage = { url: req.file.path };
+    } else if (req.body.profileImage) {
       updateData.profileImage = req.body.profileImage;
     }
 
