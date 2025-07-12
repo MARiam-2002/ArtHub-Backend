@@ -490,6 +490,10 @@ router.put('/:id', isAuthenticated, isValidation(updateArtworkSchema), artworkCo
  */
 router.delete('/:id', isAuthenticated, isValidation(artworkIdParamSchema), artworkController.deleteArtwork);
 
+// Move these two routes up to avoid conflicts
+router.get('/artist/:artistId', artworkController.getArtworksByArtist);
+router.get('/my-artworks', isAuthenticated, artworkController.getMyArtworks);
+
 // Artwork Interactions
 /**
  * @swagger
@@ -529,7 +533,7 @@ router.delete('/:id', isAuthenticated, isValidation(artworkIdParamSchema), artwo
  *       500:
  *         description: Internal server error
  */
-router.post('/favorite', isAuthenticated, isValidation(toggleFavoriteSchema), artworkController.toggleFavorite);
+router.post('/:id/favorite', isAuthenticated, isValidation(toggleFavoriteSchema), artworkController.toggleFavorite);
 
 /**
  * @swagger
@@ -615,84 +619,5 @@ router.post('/favorite', isAuthenticated, isValidation(toggleFavoriteSchema), ar
  *         description: Artwork not found
  */
 router.get('/:id/reviews', isValidation(artworkIdParamSchema), artworkController.getArtworkReviews);
-
-// Artist's Artworks
-/**
- * @swagger
- * /artworks/artist/{artistId}:
- *   get:
- *     tags: [Artwork]
- *     summary: Get artworks by artist
- *     description: Get all artworks created by a specific artist
- *     parameters:
- *       - in: path
- *         name: artistId
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 10
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [available, sold, reserved]
- *         description: Filter by status
- *     responses:
- *       200:
- *         description: Artist artworks retrieved successfully
- *       404:
- *         description: Artist not found
- */
-router.get('/artist/:artistId', artworkController.getArtworksByArtist);
-
-// My Artworks (for authenticated artists)
-/**
- * @swagger
- * /artworks/my-artworks:
- *   get:
- *     tags: [Artwork]
- *     summary: Get my artworks
- *     description: Get all artworks created by the authenticated user
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 50
- *           default: 10
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [available, sold, reserved]
- *     responses:
- *       200:
- *         description: User artworks retrieved successfully
- *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
- */
-router.get('/my-artworks', isAuthenticated, artworkController.getMyArtworks);
 
 export default router;

@@ -332,8 +332,8 @@ export const addReviewSchema = {
 
 // Favorite validation
 export const toggleFavoriteSchema = {
-  body: Joi.object({
-    artworkId: Joi.string()
+  params: Joi.object({
+    id: Joi.string()
       .pattern(objectIdPattern)
       .required()
       .messages({

@@ -933,7 +933,7 @@ export const getMyArtworks = asyncHandler(async (req, res) => {
  * Toggle artwork favorite status
  */
 export const toggleFavorite = asyncHandler(async (req, res) => {
-  const { artworkId } = req.params;
+  const { id: artworkId } = req.params;
   const userId = req.user._id;
 
   // Check if artwork exists
