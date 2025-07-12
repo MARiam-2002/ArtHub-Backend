@@ -500,8 +500,42 @@ router.get('/my-artworks', isAuthenticated, artworkController.getMyArtworks);
  * /artworks/{id}/favorite:
  *   post:
  *     tags: [Artwork]
- *     summary: Toggle artwork favorite
- *     description: Add or remove artwork from favorites
+ *     summary: Add artwork to favorites
+ *     description: Add artwork to user's favorites
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *     responses:
+ *       200:
+ *         description: Favorite status toggled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 action:
+ *                   type: string
+ *                   enum: [added, removed]
+ *                 message:
+ *                   type: string
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: Artwork not found
+ *       500:
+ *         description: Internal server error
+ *   delete:
+ *     tags: [Artwork]
+ *     summary: Remove artwork from favorites
+ *     description: Remove artwork from user's favorites
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -534,6 +568,7 @@ router.get('/my-artworks', isAuthenticated, artworkController.getMyArtworks);
  *         description: Internal server error
  */
 router.post('/:id/favorite', isAuthenticated, isValidation(toggleFavoriteSchema), artworkController.toggleFavorite);
+router.delete('/:id/favorite', isAuthenticated, isValidation(toggleFavoriteSchema), artworkController.toggleFavorite);
 
 /**
  * @swagger
