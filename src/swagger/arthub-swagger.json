@@ -1725,9 +1725,7 @@
         "description": "إنشاء عمل فني جديد مع رفع الصور (للفنانين فقط)\n\n**ملاحظات مهمة حول رفع الصور:**\n- يمكن رفع من 1 إلى 10 صور\n- الصيغ المدعومة: JPG, PNG, GIF, WEBP\n- الحد الأقصى لحجم الصورة: 5MB\n- سيتم تحسين الصور تلقائياً للحصول على أفضل جودة",
         "tags": ["Artworks"],
         "security": [
-          {
-            "BearerAuth": []
-          }
+          { "BearerAuth": [] }
         ],
         "requestBody": {
           "required": true,
@@ -1735,44 +1733,21 @@
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["title", "price", "category"],
+                "required": ["title", "price", "category", "images"],
                 "properties": {
-                  "title": {
-                    "type": "string",
-                    "description": "عنوان العمل الفني",
-                    "example": "لوحة المناظر الطبيعية"
-                  },
-                  "description": {
-                    "type": "string",
-                    "description": "وصف العمل الفني",
-                    "example": "لوحة جميلة تصور المناظر الطبيعية الخلابة"
-                  },
-                  "price": {
-                    "type": "number",
-                    "description": "سعر العمل الفني",
-                    "example": 500
-                  },
-                  "category": {
-                    "type": "string",
-                    "description": "معرف الفئة",
-                    "example": "60d0fe4f5311236168a109ca"
-                  },
+                  "title": { "type": "string", "description": "عنوان العمل الفني" },
+                  "description": { "type": "string", "description": "وصف العمل الفني" },
+                  "price": { "type": "number", "description": "سعر العمل الفني" },
+                  "category": { "type": "string", "description": "معرف الفئة" },
                   "images": {
                     "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "binary"
-                    },
-                    "description": "صور العمل الفني (1-10 صور) - يمكن رفع ملفات الصور مباشرة\n\n**متطلبات الصور:**\n- الصيغ المدعومة: JPG, PNG, GIF, WEBP\n- الحد الأقصى لحجم الصورة: 5MB\n- الحد الأدنى: 1 صورة، الحد الأقصى: 10 صور\n- سيتم تحسين الصور تلقائياً للحصول على أفضل جودة",
-                    "example": "اختر ملفات الصور من جهازك"
+                    "items": { "type": "string", "format": "binary" },
+                    "description": "صور العمل الفني (1-10 صور) - يمكن رفع ملفات الصور مباشرة\n\n**متطلبات الصور:**\n- الصيغ المدعومة: JPG, PNG, GIF, WEBP\n- الحد الأقصى لحجم الصورة: 5MB\n- الحد الأدنى: 1 صورة، الحد الأقصى: 10 صور\n- سيتم تحسين الصور تلقائياً للحصول على أفضل جودة"
                   },
                   "tags": {
                     "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "وسوم العمل الفني",
-                    "example": ["طبيعة", "رسم", "زيتي"]
+                    "items": { "type": "string" },
+                    "description": "وسوم العمل الفني"
                   },
                   "status": {
                     "type": "string",
@@ -1788,106 +1763,15 @@
                   "dimensions": {
                     "type": "object",
                     "properties": {
-                      "width": {
-                        "type": "number",
-                        "description": "العرض"
-                      },
-                      "height": {
-                        "type": "number",
-                        "description": "الارتفاع"
-                      },
-                      "depth": {
-                        "type": "number",
-                        "description": "العمق"
-                      }
+                      "width": { "type": "number", "description": "العرض" },
+                      "height": { "type": "number", "description": "الارتفاع" },
+                      "depth": { "type": "number", "description": "العمق" }
                     },
                     "description": "أبعاد العمل الفني"
                   },
                   "materials": {
                     "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "المواد المستخدمة"
-                  }
-                }
-              }
-            },
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["title", "price", "category"],
-                "properties": {
-                  "title": {
-                    "type": "string",
-                    "description": "عنوان العمل الفني",
-                    "example": "لوحة المناظر الطبيعية"
-                  },
-                  "description": {
-                    "type": "string",
-                    "description": "وصف العمل الفني",
-                    "example": "لوحة جميلة تصور المناظر الطبيعية الخلابة"
-                  },
-                  "price": {
-                    "type": "number",
-                    "description": "سعر العمل الفني",
-                    "example": 500
-                  },
-                  "category": {
-                    "type": "string",
-                    "description": "معرف الفئة",
-                    "example": "60d0fe4f5311236168a109ca"
-                  },
-                  "images": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "روابط الصور (للتطوير فقط - استخدم multipart/form-data للإنتاج)",
-                    "example": ["https://example.com/image1.jpg"]
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "وسوم العمل الفني",
-                    "example": ["طبيعة", "رسم", "زيتي"]
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["available", "sold", "reserved"],
-                    "default": "available",
-                    "description": "حالة العمل الفني"
-                  },
-                  "isFramed": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "هل العمل مؤطر"
-                  },
-                  "dimensions": {
-                    "type": "object",
-                    "properties": {
-                      "width": {
-                        "type": "number",
-                        "description": "العرض"
-                      },
-                      "height": {
-                        "type": "number",
-                        "description": "الارتفاع"
-                      },
-                      "depth": {
-                        "type": "number",
-                        "description": "العمق"
-                      }
-                    },
-                    "description": "أبعاد العمل الفني"
-                  },
-                  "materials": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
+                    "items": { "type": "string" },
                     "description": "المواد المستخدمة"
                   }
                 }
