@@ -11,7 +11,7 @@ import transactionModel from '../DB/models/transaction.model.js';
 import notificationModel from '../DB/models/notification.model.js';
 import specialRequestModel from '../DB/models/specialRequest.model.js';
 import reportModel from '../DB/models/report.model.js';
-import imageModel from '../DB/models/image.model.js';
+// import imageModel from '../DB/models/image.model.js';
 import chatModel from '../DB/models/chat.model.js';
 import messageModel from '../DB/models/message.model.js';
 import tokenModel from '../DB/models/token.model.js';
@@ -284,6 +284,13 @@ const seedArtworks = async (users, categories, images) => {
 
 // دالة لإنشاء التقييمات
 const seedReviews = async (users, artworks) => {
+  if (USE_STATIC_MOCK_DATA) {
+    console.log(chalk.blue('🔄 Inserting static mock reviews...'));
+    await reviewModel.deleteMany({});
+    const created = await reviewModel.insertMany(STATIC_REVIEWS);
+    console.log(chalk.green(`✅ Inserted ${created.length} static reviews`));
+    return created;
+  }
   console.log(chalk.blue('🔄 Creating reviews...'));
   
   const regularUsers = users.filter(u => u.role === 'user');
@@ -319,6 +326,13 @@ const seedReviews = async (users, artworks) => {
 
 // دالة لإنشاء المتابعات
 const seedFollows = async (users) => {
+  if (USE_STATIC_MOCK_DATA) {
+    console.log(chalk.blue('🔄 Inserting static mock follows...'));
+    await followModel.deleteMany({});
+    const created = await followModel.insertMany(STATIC_FOLLOWS);
+    console.log(chalk.green(`✅ Inserted ${created.length} static follows`));
+    return created;
+  }
   console.log(chalk.blue('🔄 Creating follows...'));
   
   const regularUsers = users.filter(u => u.role === 'user');
@@ -498,6 +512,15 @@ const seedReports = async (users, artworks) => {
 
 // دالة لإنشاء المحادثات والرسائل
 const seedChatsAndMessages = async (users) => {
+  if (USE_STATIC_MOCK_DATA) {
+    console.log(chalk.blue('🔄 Inserting static mock chats/messages...'));
+    await chatModel.deleteMany({});
+    await messageModel.deleteMany({});
+    const createdChats = await chatModel.insertMany(STATIC_CHATS);
+    const createdMessages = await messageModel.insertMany(STATIC_MESSAGES);
+    console.log(chalk.green(`✅ Inserted ${createdChats.length} static chats, ${createdMessages.length} static messages`));
+    return { chats: createdChats, messages: createdMessages };
+  }
   console.log(chalk.blue('🔄 Creating chats and messages...'));
 
   const artists = users.filter(u => u.role === 'artist');
@@ -568,6 +591,13 @@ const seedChatsAndMessages = async (users) => {
 
 // دالة لإنشاء الإشعارات
 const seedNotifications = async (users, artworks, transactions, follows) => {
+  if (USE_STATIC_MOCK_DATA) {
+    console.log(chalk.blue('🔄 Inserting static mock notifications...'));
+    await notificationModel.deleteMany({});
+    const created = await notificationModel.insertMany(STATIC_NOTIFICATIONS);
+    console.log(chalk.green(`✅ Inserted ${created.length} static notifications`));
+    return created;
+  }
   console.log(chalk.blue('🔄 Creating notifications...'));
   
   const notifications = [];
@@ -654,6 +684,412 @@ const seedTokens = async (users) => {
   return createdTokens;
 };
 
+// استخدم بيانات ثابتة إذا كان هذا المتغير true
+const USE_STATIC_MOCK_DATA = true;
+
+// بيانات mock ثابتة (users, categories, artworks, ...)
+const STATIC_USERS = [
+  {
+    _id: new mongoose.Types.ObjectId('664a1a1a1a1a1a1a1a1a1a11'),
+    email: 'artist1@arthub.com',
+    displayName: 'فنان رقم 1',
+    role: 'artist',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341475/image_18_quawcy.png' },
+    isActive: true,
+    password: 'Artist123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664a1a1a1a1a1a1a1a1a1a12'),
+    email: 'artist2@arthub.com',
+    displayName: 'فنان رقم 2',
+    role: 'artist',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341476/image_17_fxhxxx.png' },
+    isActive: true,
+    password: 'Artist123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664a1a1a1a1a1a1a1a1a1a13'),
+    email: 'artist3@arthub.com',
+    displayName: 'فنان رقم 3',
+    role: 'artist',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341476/image_16_dpoqac.png' },
+    isActive: true,
+    password: 'Artist123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664a1a1a1a1a1a1a1a1a1a14'),
+    email: 'user1@arthub.com',
+    displayName: 'مستخدم رقم 1',
+    role: 'user',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341478/image_15_n1tr7z.png' },
+    isActive: true,
+    password: 'User123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664a1a1a1a1a1a1a1a1a1a15'),
+    email: 'user2@arthub.com',
+    displayName: 'مستخدم رقم 2',
+    role: 'user',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341480/image_14_ap4jkk.png' },
+    isActive: true,
+    password: 'User123!'
+  }
+];
+
+const STATIC_CATEGORIES = [
+  {
+    _id: new mongoose.Types.ObjectId('664b1b1b1b1b1b1b1b1b1b11'),
+    name: 'أدوات فنية',
+    description: 'كل ما يخص الأدوات الفنية',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342439/image_19_nfmzd7.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664b1b1b1b1b1b1b1b1b1b12'),
+    name: 'تصوير',
+    description: 'فن التصوير الفوتوغرافي',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342437/image_20_dhgba9.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664b1b1b1b1b1b1b1b1b1b13'),
+    name: 'خزف',
+    description: 'فن الخزف وصناعة الفخار',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342435/image_21_yrnnuf.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664b1b1b1b1b1b1b1b1b1b14'),
+    name: 'نحت',
+    description: 'فن النحت',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342433/image_22_hqxfdk.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('664b1b1b1b1b1b1b1b1b1b15'),
+    name: 'رسم',
+    description: 'فن الرسم بأنواعه',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342433/image_23_nl8fnr.png'
+  }
+];
+
+const STATIC_ARTWORKS = [
+  {
+    _id: new mongoose.Types.ObjectId('665c1c1c1c1c1c1c1c1c1c11'),
+    title: 'لوحة الطبيعة الساحرة',
+    description: 'لوحة تعبر عن جمال الطبيعة',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341482/image_13_mhcq4w.png'
+    ],
+    price: 1200,
+    category: STATIC_CATEGORIES[4]._id,
+    artist: STATIC_USERS[0]._id,
+    tags: ['طبيعة', 'رسم', 'ألوان زيتية'],
+    status: 'available',
+    isFramed: true,
+    dimensions: { width: 80, height: 60, depth: 2 },
+    materials: ['زيت على قماش'],
+    viewCount: 10
+  },
+  {
+    _id: new mongoose.Types.ObjectId('665c1c1c1c1c1c1c1c1c1c12'),
+    title: 'صورة فوتوغرافية للمدينة',
+    description: 'صورة ليلية لمدينة مزدحمة',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341484/image_12_qm6jdx.png'
+    ],
+    price: 800,
+    category: STATIC_CATEGORIES[1]._id,
+    artist: STATIC_USERS[1]._id,
+    tags: ['تصوير', 'مدينة', 'ليل'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 60, height: 40, depth: 1 },
+    materials: ['ورق تصوير'],
+    viewCount: 7
+  },
+  {
+    _id: new mongoose.Types.ObjectId('665c1c1c1c1c1c1c1c1c1c13'),
+    title: 'منحوتة حديثة',
+    description: 'عمل نحتي معاصر',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341485/image_11_unagay.png'
+    ],
+    price: 2000,
+    category: STATIC_CATEGORIES[3]._id,
+    artist: STATIC_USERS[2]._id,
+    tags: ['نحت', 'فن حديث'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 30, height: 50, depth: 20 },
+    materials: ['رخام'],
+    viewCount: 5
+  },
+  {
+    _id: new mongoose.Types.ObjectId('665c1c1c1c1c1c1c1c1c1c14'),
+    title: 'خزف مزخرف',
+    description: 'قطعة خزفية مزخرفة يدوياً',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341487/image_10_ov2cpb.png'
+    ],
+    price: 600,
+    category: STATIC_CATEGORIES[2]._id,
+    artist: STATIC_USERS[0]._id,
+    tags: ['خزف', 'زخرفة'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 20, height: 20, depth: 20 },
+    materials: ['خزف'],
+    viewCount: 3
+  },
+  {
+    _id: new mongoose.Types.ObjectId('665c1c1c1c1c1c1c1c1c1c15'),
+    title: 'مجموعة أدوات فنية',
+    description: 'مجموعة أدوات للرسم والتلوين',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341489/image_9_ls6uwm.png'
+    ],
+    price: 300,
+    category: STATIC_CATEGORIES[0]._id,
+    artist: STATIC_USERS[1]._id,
+    tags: ['أدوات', 'رسم', 'تلوين'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 40, height: 30, depth: 5 },
+    materials: ['خشب', 'بلاستيك'],
+    viewCount: 2
+  }
+];
+
+const STATIC_FOLLOWS = [
+  {
+    _id: new mongoose.Types.ObjectId('666d1d1d1d1d1d1d1d1d1d11'),
+    follower: STATIC_USERS[3]._id, // user1
+    following: STATIC_USERS[0]._id // artist1
+  }
+];
+
+const STATIC_REVIEWS = [
+  {
+    _id: new mongoose.Types.ObjectId('669a2a2a2a2a2a2a2a2a2a11'),
+    artwork: STATIC_ARTWORKS[0]._id,
+    user: STATIC_USERS[3]._id, // user1
+    artist: STATIC_USERS[0]._id, // artist1
+    rating: 5,
+    comment: 'عمل رائع جداً!'
+  }
+];
+
+const STATIC_CHATS = [
+  {
+    _id: new mongoose.Types.ObjectId('667e1e1e1e1e1e1e1e1e1e11'),
+    members: [STATIC_USERS[3]._id, STATIC_USERS[0]._id] // user1, artist1
+  }
+];
+
+const STATIC_MESSAGES = [
+  {
+    _id: new mongoose.Types.ObjectId('668f1f1f1f1f1f1f1f1f1f11'),
+    chat: STATIC_CHATS[0]._id,
+    sender: STATIC_USERS[3]._id,
+    receiver: STATIC_USERS[0]._id,
+    text: 'مرحبا! أريد الاستفسار عن لوحة الطبيعة الساحرة.',
+    read: false
+  },
+  {
+    _id: new mongoose.Types.ObjectId('668f1f1f1f1f1f1f1f1f1f12'),
+    chat: STATIC_CHATS[0]._id,
+    sender: STATIC_USERS[0]._id,
+    receiver: STATIC_USERS[3]._id,
+    text: 'أهلاً بك! تفضل بأي سؤال.',
+    read: true
+  }
+];
+
+const STATIC_NOTIFICATIONS = [
+  {
+    _id: new mongoose.Types.ObjectId('66ab3b3b3b3b3b3b3b3b3b11'),
+    user: STATIC_USERS[3]._id,
+    title: { ar: 'تمت إضافة عمل فني جديد' },
+    message: { ar: 'تمت إضافة لوحة الطبيعة الساحرة بواسطة فنان رقم 1' },
+    type: 'system',
+    isRead: false
+  }
+];
+
+// إضافة مجموعة ثانية من المستخدمين والفنانين
+const STATIC_USERS_EXTRA = [
+  {
+    _id: new mongoose.Types.ObjectId('774a1a1a1a1a1a1a1a1a1a11'),
+    email: 'artist4@arthub.com',
+    displayName: 'فنان رقم 4',
+    role: 'artist',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341475/image_18_quawcy.png' },
+    isActive: true,
+    password: 'Artist123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774a1a1a1a1a1a1a1a1a1a12'),
+    email: 'artist5@arthub.com',
+    displayName: 'فنان رقم 5',
+    role: 'artist',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341476/image_17_fxhxxx.png' },
+    isActive: true,
+    password: 'Artist123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774a1a1a1a1a1a1a1a1a1a13'),
+    email: 'artist6@arthub.com',
+    displayName: 'فنان رقم 6',
+    role: 'artist',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341476/image_16_dpoqac.png' },
+    isActive: true,
+    password: 'Artist123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774a1a1a1a1a1a1a1a1a1a14'),
+    email: 'user3@arthub.com',
+    displayName: 'مستخدم رقم 3',
+    role: 'user',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341478/image_15_n1tr7z.png' },
+    isActive: true,
+    password: 'User123!'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774a1a1a1a1a1a1a1a1a1a15'),
+    email: 'user4@arthub.com',
+    displayName: 'مستخدم رقم 4',
+    role: 'user',
+    profileImage: { url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341480/image_14_ap4jkk.png' },
+    isActive: true,
+    password: 'User123!'
+  }
+];
+
+// إضافة تصنيفات جديدة
+const STATIC_CATEGORIES_EXTRA = [
+  {
+    _id: new mongoose.Types.ObjectId('774b1b1b1b1b1b1b1b1b1b11'),
+    name: 'فن الخط',
+    description: 'كل ما يخص الخط العربي',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342439/image_19_nfmzd7.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774b1b1b1b1b1b1b1b1b1b12'),
+    name: 'فن البورتريه',
+    description: 'رسم الوجوه والشخصيات',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342437/image_20_dhgba9.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774b1b1b1b1b1b1b1b1b1b13'),
+    name: 'فن الطبيعة',
+    description: 'لوحات الطبيعة والمناظر الطبيعية',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342435/image_21_yrnnuf.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774b1b1b1b1b1b1b1b1b1b14'),
+    name: 'فن الأطفال',
+    description: 'رسومات للأطفال',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342433/image_22_hqxfdk.png'
+  },
+  {
+    _id: new mongoose.Types.ObjectId('774b1b1b1b1b1b1b1b1b1b15'),
+    name: 'فن الكولاج',
+    description: 'أعمال فنية مركبة',
+    image: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752342433/image_23_nl8fnr.png'
+  }
+];
+
+// إضافة أعمال فنية جديدة
+const STATIC_ARTWORKS_EXTRA = [
+  {
+    _id: new mongoose.Types.ObjectId('775c1c1c1c1c1c1c1c1c1c11'),
+    title: 'لوحة الخط العربي',
+    description: 'لوحة بخط الثلث العربي',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341482/image_13_mhcq4w.png'
+    ],
+    price: 1500,
+    category: STATIC_CATEGORIES_EXTRA[0]._id,
+    artist: STATIC_USERS_EXTRA[0]._id,
+    tags: ['خط', 'عربي', 'فن'],
+    status: 'available',
+    isFramed: true,
+    dimensions: { width: 90, height: 60, depth: 2 },
+    materials: ['حبر على ورق'],
+    viewCount: 8
+  },
+  {
+    _id: new mongoose.Types.ObjectId('775c1c1c1c1c1c1c1c1c1c12'),
+    title: 'بورتريه كلاسيكي',
+    description: 'رسم وجه امرأة بأسلوب كلاسيكي',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341484/image_12_qm6jdx.png'
+    ],
+    price: 1100,
+    category: STATIC_CATEGORIES_EXTRA[1]._id,
+    artist: STATIC_USERS_EXTRA[1]._id,
+    tags: ['بورتريه', 'رسم', 'شخصية'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 70, height: 50, depth: 1 },
+    materials: ['ألوان زيتية'],
+    viewCount: 6
+  },
+  {
+    _id: new mongoose.Types.ObjectId('775c1c1c1c1c1c1c1c1c1c13'),
+    title: 'منظر طبيعي جديد',
+    description: 'لوحة جديدة للطبيعة الخضراء',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341485/image_11_unagay.png'
+    ],
+    price: 900,
+    category: STATIC_CATEGORIES_EXTRA[2]._id,
+    artist: STATIC_USERS_EXTRA[2]._id,
+    tags: ['طبيعة', 'خضرة', 'رسم'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 60, height: 40, depth: 1 },
+    materials: ['أكريليك'],
+    viewCount: 4
+  },
+  {
+    _id: new mongoose.Types.ObjectId('775c1c1c1c1c1c1c1c1c1c14'),
+    title: 'رسمة أطفال ملونة',
+    description: 'رسمة مرحة للأطفال',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341487/image_10_ov2cpb.png'
+    ],
+    price: 400,
+    category: STATIC_CATEGORIES_EXTRA[3]._id,
+    artist: STATIC_USERS_EXTRA[0]._id,
+    tags: ['أطفال', 'ألوان', 'مرح'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 30, height: 20, depth: 1 },
+    materials: ['ألوان خشبية'],
+    viewCount: 2
+  },
+  {
+    _id: new mongoose.Types.ObjectId('775c1c1c1c1c1c1c1c1c1c15'),
+    title: 'كولاج معاصر',
+    description: 'عمل كولاج بمواد مختلطة',
+    images: [
+      'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341489/image_9_ls6uwm.png'
+    ],
+    price: 700,
+    category: STATIC_CATEGORIES_EXTRA[4]._id,
+    artist: STATIC_USERS_EXTRA[1]._id,
+    tags: ['كولاج', 'فن معاصر'],
+    status: 'available',
+    isFramed: false,
+    dimensions: { width: 50, height: 40, depth: 2 },
+    materials: ['ورق', 'قماش'],
+    viewCount: 1
+  }
+];
+
+// دمج البيانات الأصلية والجديدة في mock النهائي
+const ALL_STATIC_USERS = [...STATIC_USERS, ...STATIC_USERS_EXTRA];
+const ALL_STATIC_CATEGORIES = [...STATIC_CATEGORIES, ...STATIC_CATEGORIES_EXTRA];
+const ALL_STATIC_ARTWORKS = [...STATIC_ARTWORKS, ...STATIC_ARTWORKS_EXTRA];
+
 // الدالة الرئيسية
 const seedDatabase = async () => {
   try {
@@ -668,7 +1104,7 @@ const seedDatabase = async () => {
       userModel.deleteMany({}),
       categoryModel.deleteMany({}),
       artworkModel.deleteMany({}),
-      imageModel.deleteMany({}),
+      // imageModel.deleteMany({}),
       reviewModel.deleteMany({}),
       followModel.deleteMany({}),
       transactionModel.deleteMany({}),
@@ -683,8 +1119,7 @@ const seedDatabase = async () => {
     // إنشاء البيانات الجديدة بالترتيب الصحيح وتمريرها
     const users = await seedUsers();
     const categories = await seedCategories();
-    const images = await seedImages(users, categories);
-    const artworks = await seedArtworks(users, categories, images);
+    const artworks = await seedArtworks(users, categories, []);
     const reviews = await seedReviews(users, artworks);
     const follows = await seedFollows(users);
     const transactions = await seedTransactions(users, artworks);

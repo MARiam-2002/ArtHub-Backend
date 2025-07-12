@@ -24,7 +24,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "db:seed:mock": "node scripts/seed-database.js",
+    "test:mock": "node scripts/test-mock-data.js",
+    "db:check": "node scripts/check-data.js"
   },
   "engines": {
     "node": "18.x || >= 16"

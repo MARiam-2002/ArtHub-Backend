@@ -1,7 +1,6 @@
 import reportModel from '../../../DB/models/report.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
-import imageModel from '../../../DB/models/image.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { getPaginationParams } from '../../utils/pagination.js';
@@ -35,15 +34,6 @@ export const createReport = asyncHandler(async (req, res) => {
           contentExists = true;
           targetUser = artwork.artist;
           contentTitle = artwork.title || 'عمل فني';
-        }
-        break;
-        
-      case 'image':
-        const image = await imageModel.findById(contentId).lean();
-        if (image) {
-          contentExists = true;
-          targetUser = image.user;
-          contentTitle = image.title || 'صورة';
         }
         break;
         

@@ -1,6 +1,5 @@
 import userModel from '../../../DB/models/user.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
-import imageModel from '../../../DB/models/image.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import bcryptjs from 'bcryptjs';
 import followModel from '../../../DB/models/follow.model.js';
@@ -351,17 +350,16 @@ export const getUserStats = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   // Get artwork and image counts
-  const [artworksCount, imagesCount, wishlistCount, followingCount, followersCount] =
+  const [artworksCount, wishlistCount, followingCount, followersCount] =
     await Promise.all([
       artworkModel.countDocuments({ artist: userId }),
-      imageModel.countDocuments({ user: userId }),
       userModel.findById(userId).then(user => user?.wishlist?.length || 0),
       followModel.countDocuments({ follower: userId }),
       followModel.countDocuments({ following: userId })
     ]);
 
   res.success(
-    { artworksCount, imagesCount, wishlistCount, followingCount, followersCount },
+    { artworksCount, wishlistCount, followingCount, followersCount },
     'تم جلب إحصائيات المستخدم بنجاح'
   );
 });
@@ -833,16 +831,12 @@ export const getMyProfile = asyncHandler(async (req, res, next) => {
       followersCount,
       followingCount,
       artworksCount,
-      imagesCount,
-      wishlistCount,
       salesCount,
       reviewsCount
     ] = await Promise.all([
       followModel.countDocuments({ following: userId }),
       followModel.countDocuments({ follower: userId }),
       artworkModel.countDocuments({ artist: userId, isAvailable: true }),
-      imageModel.countDocuments({ user: userId }),
-      userModel.findById(userId).then(u => u?.wishlist?.length || 0),
       transactionModel.countDocuments({ seller: userId, status: 'completed' }),
       reviewModel.countDocuments({ artist: userId })
     ]);
@@ -859,8 +853,6 @@ export const getMyProfile = asyncHandler(async (req, res, next) => {
         followersCount,
         followingCount,
         artworksCount,
-        imagesCount,
-        wishlistCount,
         salesCount,
         reviewsCount,
         avgRating: avgRating[0]?.avgRating || 0
@@ -946,7 +938,6 @@ export const getDetailedStats = asyncHandler(async (req, res, next) => {
     // الإحصائيات الأساسية
     const [
       totalArtworks,
-      totalImages,
       totalFollowers,
       totalFollowing,
       totalSales,
@@ -954,7 +945,6 @@ export const getDetailedStats = asyncHandler(async (req, res, next) => {
       totalViews
     ] = await Promise.all([
       artworkModel.countDocuments({ artist: userId, ...dateFilter }),
-      imageModel.countDocuments({ user: userId, ...dateFilter }),
       followModel.countDocuments({ following: userId, ...dateFilter }),
       followModel.countDocuments({ follower: userId, ...dateFilter }),
       transactionModel.countDocuments({ seller: userId, status: 'completed', ...dateFilter }),
@@ -998,7 +988,6 @@ export const getDetailedStats = asyncHandler(async (req, res, next) => {
     res.success({
       overview: {
         totalArtworks,
-        totalImages,
         totalFollowers,
         totalFollowing,
         totalSales,
