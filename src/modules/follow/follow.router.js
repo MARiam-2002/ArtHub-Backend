@@ -721,4 +721,125 @@ router.get(
  */
 // Mutual follows endpoint temporarily disabled - function not implemented
 
+/**
+ * @swagger
+ * /follow/artist/{artistId}:
+ *   post:
+ *     summary: متابعة فنان
+ *     tags: [Follow]
+ *     description: |
+ *       متابعة فنان محدد باستخدام معرف الفنان في الرابط.
+ *       لا يمكن للمستخدم متابعة نفسه.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: ^[0-9a-fA-F]{24}$
+ *         description: معرف الفنان المراد متابعته
+ *         example: "60d0fe4f5311236168a109ca"
+ *     responses:
+ *       200:
+ *         description: تمت المتابعة بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تمت المتابعة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artistId:
+ *                       type: string
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     isFollowing:
+ *                       type: boolean
+ *                       example: true
+ *                     followedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-05-15T10:30:45.123Z"
+ *       400:
+ *         description: خطأ في البيانات أو لا يمكن متابعة نفسك
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: الفنان غير موجود
+ *       409:
+ *         description: أنت تتابع هذا الفنان بالفعل
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *   delete:
+ *     summary: إلغاء متابعة فنان
+ *     tags: [Follow]
+ *     description: |
+ *       إلغاء متابعة فنان محدد باستخدام معرف الفنان في الرابط.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: ^[0-9a-fA-F]{24}$
+ *         description: معرف الفنان المراد إلغاء متابعته
+ *         example: "60d0fe4f5311236168a109ca"
+ *     responses:
+ *       200:
+ *         description: تم إلغاء المتابعة بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إلغاء المتابعة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artistId:
+ *                       type: string
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     isFollowing:
+ *                       type: boolean
+ *                       example: false
+ *                     unfollowedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-05-15T10:30:45.123Z"
+ *       400:
+ *         description: أنت لا تتابع هذا الفنان
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: الفنان غير موجود
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
+router.post('/artist/:artistId', isAuthenticated, (req, res, next) => {
+  // Add artistId to request body for the existing controller
+  req.body.artistId = req.params.artistId;
+  return followController.toggleFollow(req, res, next);
+});
+
+router.delete('/artist/:artistId', isAuthenticated, (req, res, next) => {
+  // Add artistId to request body for the existing controller
+  req.body.artistId = req.params.artistId;
+  return followController.toggleFollow(req, res, next);
+});
+
 export default router;
