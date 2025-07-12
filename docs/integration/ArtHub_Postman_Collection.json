@@ -686,6 +686,271 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Artworks",
+			"description": "All endpoints related to artwork management, creation, and retrieval.",
+			"item": [
+				{
+					"name": "Create New Artwork (with Images)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response is successful\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.success).to.be.true;",
+									"});",
+									"",
+									"pm.test(\"Artwork data is present\", function () {",
+									"    const responseData = pm.response.json();",
+									"    pm.expect(responseData.data).to.exist;",
+									"    pm.expect(responseData.data.title).to.exist;",
+									"    pm.expect(responseData.data.images).to.be.an('array');",
+									"    ",
+									"    // Store artwork ID for future requests",
+									"    pm.collectionVariables.set(\"artworkId\", responseData.data._id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "لوحة المناظر الطبيعية",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "لوحة جميلة تصور المناظر الطبيعية الخلابة",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "500",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "{{categoryId}}",
+									"type": "text"
+								},
+								{
+									"key": "tags[]",
+									"value": "طبيعة",
+									"type": "text"
+								},
+								{
+									"key": "tags[]",
+									"value": "رسم",
+									"type": "text"
+								},
+								{
+									"key": "tags[]",
+									"value": "زيتي",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "available",
+									"type": "text"
+								},
+								{
+									"key": "isFramed",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "dimensions[width]",
+									"value": "60",
+									"type": "text"
+								},
+								{
+									"key": "dimensions[height]",
+									"value": "40",
+									"type": "text"
+								},
+								{
+									"key": "dimensions[depth]",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "materials[]",
+									"value": "زيت على قماش",
+									"type": "text"
+								},
+								{
+									"key": "materials[]",
+									"value": "أكريليك",
+									"type": "text"
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "images",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/artworks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"artworks"
+							]
+						},
+						"description": "Creates a new artwork with uploaded images. Supports 1-10 images in JPG, PNG, GIF, WEBP formats (max 5MB each)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Artworks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/artworks?page=1&limit=10&status=available",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"artworks"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "status",
+									"value": "available"
+								}
+							]
+						},
+						"description": "Retrieves a paginated list of available artworks."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Artwork by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/artworks/{{artworkId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"artworks",
+								"{{artworkId}}"
+							]
+						},
+						"description": "Retrieves detailed information about a specific artwork."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Artwork",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"لوحة المناظر الطبيعية - محدثة\",\n  \"description\": \"وصف محدث للوحة\",\n  \"price\": 600,\n  \"status\": \"available\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/artworks/{{artworkId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"artworks",
+								"{{artworkId}}"
+							]
+						},
+						"description": "Updates an existing artwork (owner only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Artwork",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{accessToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/artworks/{{artworkId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"artworks",
+								"{{artworkId}}"
+							]
+						},
+						"description": "Deletes an artwork (owner only)."
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"auth": {
@@ -710,6 +975,16 @@
 		{
 			"key": "firebaseIdToken",
 			"value": "your-firebase-id-token-here",
+			"type": "string"
+		},
+		{
+			"key": "artworkId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "categoryId",
+			"value": "60d0fe4f5311236168a109ca",
 			"type": "string"
 		}
 	]

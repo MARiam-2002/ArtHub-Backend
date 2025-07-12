@@ -165,6 +165,14 @@ const imagesSchema = Joi.array()
     'array.max': 'يمكن إضافة 10 صور على الأكثر'
   });
 
+// Schema for file upload validation (used in controller)
+const fileUploadSchema = Joi.object({
+  files: Joi.array().min(1).max(10).messages({
+    'array.min': 'يجب إضافة صورة واحدة على الأقل',
+    'array.max': 'يمكن إضافة 10 صور على الأكثر'
+  })
+});
+
 const tagsSchema = Joi.array()
   .items(Joi.string().trim().min(2).max(30).messages({
     'string.min': 'الوسم يجب أن يكون حرفين على الأقل',
@@ -220,7 +228,7 @@ export const createArtworkSchema = {
     category: categorySchema.required().messages({
       'any.required': 'فئة العمل الفني مطلوبة'
     }),
-    images: imagesSchema.required().messages({
+    images: imagesSchema.optional().messages({
       'any.required': 'صور العمل الفني مطلوبة'
     }),
     tags: tagsSchema,

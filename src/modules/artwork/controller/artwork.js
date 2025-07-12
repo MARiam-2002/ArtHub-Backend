@@ -226,10 +226,26 @@ export const createArtwork = asyncHandler(async (req, res) => {
     return res.fail(null, 'لديك عمل فني بنفس العنوان بالفعل', 400);
   }
 
-  // إضافة الصور المرفوعة إذا وجدت
-  let imagesArr = images;
+  // معالجة الصور المرفوعة
+  let imagesArr = [];
+  
+  // إذا تم رفع ملفات
   if (req.files && req.files.length > 0) {
     imagesArr = req.files.map(f => f.path);
+  } 
+  // إذا تم إرسال روابط صور
+  else if (images && Array.isArray(images)) {
+    imagesArr = images;
+  }
+  
+  // التحقق من وجود صور على الأقل
+  if (imagesArr.length === 0) {
+    return res.fail(null, 'يجب إضافة صورة واحدة على الأقل للعمل الفني', 400);
+  }
+
+  // التحقق من عدد الصور
+  if (imagesArr.length > 10) {
+    return res.fail(null, 'يمكن إضافة 10 صور على الأكثر', 400);
   }
 
   const artwork = await artworkModel.create({

@@ -1,23 +1,28 @@
-# دليل تكامل مصادقة Flutter مع ArtHub
+# دليل تكامل Flutter مع ArtHub
 
-## رفع الصور (البروفايل والأعمال الفنية)
+## رفع الصور
 
-- **رفع صورة البروفايل:** يتم فقط عبر endpoint:
-  - `PATCH /user/profile` (مع إرسال الصورة في الحقل `profileImage` ضمن `multipart/form-data`)
-- **رفع صور الأعمال الفنية:** يتم فقط عبر endpoint:
-  - `POST /artworks` أو `PATCH /artworks/:id` (مع إرسال الصور في الحقل `images[]` ضمن `multipart/form-data`)
+### رفع صورة البروفايل
+- **Endpoint:** `PATCH /user/profile`
+- **Content-Type:** `multipart/form-data`
+- **Field:** `profileImage`
+
+### رفع صور الأعمال الفنية
+- **Endpoint:** `POST /artworks`
+- **Content-Type:** `multipart/form-data`
+- **Field:** `images[]` (1-10 صور)
 
 > **ملاحظة:** لا يوجد مكتبة صور عامة أو endpoint منفصل لرفع الصور. كل صورة تُرفع فقط مع بيانات البروفايل أو العمل الفني.
 
 ## مثال Flutter (Dio)
 
+### رفع صورة البروفايل
 ```dart
 final dio = Dio();
 final formData = FormData.fromMap({
   'profileImage': await MultipartFile.fromFile(profileImagePath),
-  // أو للأعمال الفنية:
-  // 'images': [await MultipartFile.fromFile(img1), await MultipartFile.fromFile(img2)],
-  ...otherFields,
+  'displayName': 'اسم المستخدم',
+  'bio': 'نبذة شخصية',
 });
 final response = await dio.patch(
   'https://your-api.com/user/profile',
@@ -26,8 +31,31 @@ final response = await dio.patch(
 );
 ```
 
+### إنشاء عمل فني مع رفع الصور
+```dart
+final dio = Dio();
+final formData = FormData.fromMap({
+  'title': 'عنوان العمل الفني',
+  'description': 'وصف العمل الفني',
+  'price': '500.00',
+  'category': 'category_id',
+  'images': [
+    await MultipartFile.fromFile(image1Path),
+    await MultipartFile.fromFile(image2Path),
+  ],
+});
+final response = await dio.post(
+  'https://your-api.com/artworks',
+  data: formData,
+  options: Options(headers: {'Authorization': 'Bearer YOUR_TOKEN'}),
+);
+```
+
 ## الرد من السيرفر
 - سيحتوي الرد على رابط الصورة المرفوعة ضمن بيانات المستخدم أو العمل الفني.
+
+## دليل مفصل لإنشاء الأعمال الفنية
+راجع الملف: `FLUTTER_ARTWORK_CREATION_GUIDE.md` للحصول على دليل مفصل لإنشاء الأعمال الفنية مع رفع الصور.
 
 ---
 

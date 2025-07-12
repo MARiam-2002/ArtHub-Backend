@@ -322,15 +322,74 @@ router.get('/:id', isValidation(artworkIdParamSchema), artworkController.getArtw
  *   post:
  *     tags: [Artwork]
  *     summary: Create new artwork
- *     description: Create a new artwork (artists only)
+ *     description: Create a new artwork with image uploads (artists only)
  *     security:
  *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/CreateArtworkRequest'
+ *             type: object
+ *             required:
+ *               - title
+ *               - price
+ *               - category
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: عنوان العمل الفني
+ *                 example: "لوحة فنية جميلة"
+ *               description:
+ *                 type: string
+ *                 description: وصف العمل الفني
+ *                 example: "وصف اللوحة الفنية"
+ *               price:
+ *                 type: number
+ *                 description: سعر العمل الفني
+ *                 example: 500.00
+ *               category:
+ *                 type: string
+ *                 description: معرف الفئة
+ *                 example: "60d0fe4f5311236168a109ca"
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: صور العمل الفني (1-10 صور)
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: وسوم العمل الفني
+ *                 example: ["فن", "لوحة", "زيتي"]
+ *               status:
+ *                 type: string
+ *                 enum: [available, sold, reserved]
+ *                 default: available
+ *                 description: حالة العمل الفني
+ *               isFramed:
+ *                 type: boolean
+ *                 default: false
+ *                 description: هل العمل مؤطر
+ *               dimensions:
+ *                 type: object
+ *                 properties:
+ *                   width:
+ *                     type: number
+ *                     description: العرض
+ *                   height:
+ *                     type: number
+ *                     description: الارتفاع
+ *                   depth:
+ *                     type: number
+ *                     description: العمق
+ *               materials:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: المواد المستخدمة
  *     responses:
  *       201:
  *         description: Artwork created successfully
