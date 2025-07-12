@@ -200,6 +200,79 @@ router.get('/followers/:userId', followController.getFollowers);
 
 /**
  * @swagger
+ * /follow/followers:
+ *   get:
+ *     summary: قائمة المتابعين
+ *     tags: [Follow]
+ *     description: |
+ *       جلب قائمة مقسمة من المتابعين للمستخدم الحالي.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد المتابعين في الصفحة
+ *         example: 20
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *         description: البحث في أسماء المتابعين
+ *         example: "أحمد"
+ *     responses:
+ *       200:
+ *         description: تم جلب قائمة متابعيك بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب قائمة متابعيك بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     followers:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/FollowUser'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: MyFollowersScreen
+ */
+router.get('/followers', isAuthenticated, (req, res, next) => {
+  // Add current user ID to params for the existing controller
+  req.params.userId = req.user._id;
+  return followController.getFollowers(req, res, next);
+});
+
+/**
+ * @swagger
  * /follow/following/{userId}:
  *   get:
  *     summary: Get user following
@@ -231,6 +304,79 @@ router.get('/followers/:userId', followController.getFollowers);
  *         description: Server error
  */
 router.get('/following/:userId', followController.getFollowing);
+
+/**
+ * @swagger
+ * /follow/following:
+ *   get:
+ *     summary: قائمة المتابَعين
+ *     tags: [Follow]
+ *     description: |
+ *       جلب قائمة مقسمة من الفنانين الذين يتابعهم المستخدم الحالي.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد المتابَعين في الصفحة
+ *         example: 20
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *         description: البحث في أسماء الفنانين
+ *         example: "فاطمة"
+ *     responses:
+ *       200:
+ *         description: تم جلب قائمة متابعاتك بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب قائمة متابعاتك بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     following:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/FollowUser'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: MyFollowingScreen
+ */
+router.get('/following', isAuthenticated, (req, res, next) => {
+  // Add current user ID to params for the existing controller
+  req.params.userId = req.user._id;
+  return followController.getFollowing(req, res, next);
+});
 
 /**
  * @swagger
