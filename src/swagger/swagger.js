@@ -300,6 +300,16 @@ router.get('/', (req, res) => {
         syntaxHighlight: {
           activate: true,
           theme: 'agate'
+        },
+        tryItOutEnabled: true,
+        supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+        requestInterceptor: function(request) {
+          // إضافة headers إضافية إذا لزم الأمر
+          return request;
+        },
+        responseInterceptor: function(response) {
+          // معالجة الاستجابة إذا لزم الأمر
+          return response;
         }
       });
       window.ui = ui;
