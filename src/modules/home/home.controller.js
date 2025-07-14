@@ -545,12 +545,52 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
     // Increment view count
     await artworkModel.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
 
+    // Get reviews for this artwork
+    const reviewModel = (await import('../../../DB/models/review.model.js')).default;
+    const reviews = await reviewModel.find({ artwork: id, status: 'active' })
+      .populate('user', 'displayName profileImage')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Calculate average rating and count
+    const reviewsCount = reviews.length;
+    const rating = reviewsCount
+      ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount).toFixed(2))
+      : 0;
+
+    // Format reviews for frontend
+    const reviewsList = reviews.map(r => ({
+      _id: r._id,
+      user: {
+        _id: r.user?._id,
+        displayName: r.user?.displayName,
+        profileImage: r.user?.profileImage,
+      },
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.createdAt,
+    }));
+
+    // Get user review if exists
+    let userReview = null;
+    if (userId) {
+      const myReview = reviews.find(r => r.user && r.user._id && r.user._id.toString() === userId.toString());
+      if (myReview) {
+        userReview = {
+          _id: myReview._id,
+          rating: myReview.rating,
+          comment: myReview.comment,
+          createdAt: myReview.createdAt,
+        };
+      }
+    }
+
     // Get related artworks
     const relatedArtworks = await artworkModel.find({
       _id: { $ne: id },
       $or: [
-        { category: artwork.category },
-        { artist: artwork.artist }
+        { category: artwork.category?._id },
+        { artist: artwork.artist?._id }
       ],
       isAvailable: true
     })
@@ -571,17 +611,27 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
     let isLiked = false;
     if (userId) {
       const user = await userModel.findById(userId).select('wishlist').lean();
-      isLiked = user?.wishlist?.includes(id) || false;
+      isLiked = user?.wishlist?.some(wid => wid.toString() === id.toString()) || false;
     }
+
+    // Build response
+    const formattedArtwork = {
+      ...formatArtworks([artwork])[0],
+      isLiked: isLiked,
+      stats: {
+        ...formatArtworks([artwork])[0].stats,
+        rating,
+        reviewsCount
+      }
+    };
 
     const response = {
       success: true,
       message: 'تم جلب تفاصيل العمل الفني بنجاح',
       data: {
-        artwork: {
-          ...formatArtworks([artwork])[0],
-          isLiked: isLiked
-        },
+        artwork: formattedArtwork,
+        reviews: reviewsList,
+        userReview,
         relatedArtworks: formatArtworks(relatedArtworks)
       },
       meta: {
