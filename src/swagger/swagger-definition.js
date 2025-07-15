@@ -2346,6 +2346,47 @@ export const swaggerDefinition = {
           status: 200,
           timestamp: '2023-06-12T08:15:30.123Z'
         }
+      },
+      ArtistReviewMinimal: {
+        value: {
+          artist: '60d0fe4f5311236168a109ca',
+          rating: 5
+        }
+      },
+      ArtistReviewSimple: {
+        value: {
+          artist: '60d0fe4f5311236168a109ca',
+          rating: 4,
+          comment: 'فنان ممتاز، أنصح بالتعامل معه'
+        }
+      },
+      ArtistReviewBasic: {
+        value: {
+          artist: '60d0fe4f5311236168a109ca',
+          rating: 5,
+          title: 'فنان محترف',
+          comment: 'تعامل ممتاز وجودة عالية في العمل',
+          isRecommended: true
+        }
+      },
+      ArtistReviewDetailed: {
+        value: {
+          artist: '60d0fe4f5311236168a109ca',
+          rating: 5,
+          title: 'فنان محترف',
+          comment: 'تعامل ممتاز وجودة عالية في العمل',
+          pros: ['سرعة في التنفيذ', 'جودة عالية'],
+          cons: ['الأسعار مرتفعة قليلاً'],
+          isRecommended: true,
+          subRatings: {
+            professionalism: 5,
+            communication: 4,
+            delivery: 5,
+            creativity: 5,
+            valueForMoney: 4,
+            responsiveness: 5
+          }
+        }
       }
     },
     parameters: {

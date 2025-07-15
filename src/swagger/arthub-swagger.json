@@ -2196,16 +2196,37 @@
                 }
               },
               "examples": {
+                "minimal_review": {
+                  "summary": "تقييم بسيط (الحد الأدنى)",
+                  "description": "أبسط مثال يعمل - فقط معرف الفنان والتقييم",
+                  "value": {
+                    "artist": "60d0fe4f5311236168a109ca",
+                    "rating": 5
+                  }
+                },
+                "simple_review": {
+                  "summary": "تقييم بسيط مع تعليق",
+                  "description": "مثال بسيط مع إضافة تعليق",
+                  "value": {
+                    "artist": "60d0fe4f5311236168a109ca",
+                    "rating": 4,
+                    "comment": "فنان ممتاز، أنصح بالتعامل معه"
+                  }
+                },
                 "basic_review": {
                   "summary": "تقييم أساسي",
+                  "description": "مثال أساسي مع عنوان وتوصية",
                   "value": {
                     "artist": "60d0fe4f5311236168a109ca",
                     "rating": 5,
-                    "comment": "فنان ممتاز"
+                    "title": "فنان محترف",
+                    "comment": "تعامل ممتاز وجودة عالية في العمل",
+                    "isRecommended": true
                   }
                 },
                 "detailed_review": {
                   "summary": "تقييم مفصل",
+                  "description": "مثال مفصل مع جميع الحقول",
                   "value": {
                     "artist": "60d0fe4f5311236168a109ca",
                     "rating": 5,
