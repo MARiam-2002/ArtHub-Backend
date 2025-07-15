@@ -558,38 +558,21 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount).toFixed(2))
       : 0;
 
-    // Format reviews for frontend
-    const reviewsList = reviews.map(r => ({
-      _id: r._id,
-      user: {
-        _id: r.user?._id,
-        displayName: r.user?.displayName,
-        profileImage: getImageUrl(r.user?.profileImage),
-      },
-      rating: r.rating,
-      comment: r.comment,
-      createdAt: r.createdAt,
-    }));
+    // Format reviews for frontend (show all reviews)
+    const reviewsList = reviews
+      .map(r => ({
+        _id: r._id,
+        user: {
+          _id: r.user?._id,
+          displayName: r.user?.displayName,
+          profileImage: getImageUrl(r.user?.profileImage),
+        },
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+      }));
 
-    // Get user review if exists
-    let userReview = null;
-    if (userId) {
-      // Search specifically for user's review
-      const myReview = await reviewModel.findOne({ 
-        artwork: id, 
-        user: userId, 
-        status: 'active' 
-      }).lean();
-      
-      if (myReview) {
-        userReview = {
-          _id: myReview._id,
-          rating: myReview.rating,
-          comment: myReview.comment,
-          createdAt: myReview.createdAt,
-        };
-      }
-    }
+    // Removed user review section - only showing all reviews
 
     // Get artist reviews (reviews for the artist, not the artwork)
     let artistReviews = [];
@@ -616,17 +599,19 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
 
       console.log('Found artist reviews:', artistReviewsData.length);
 
-      artistReviews = artistReviewsData.map(r => ({
-        _id: r._id,
-        user: {
-          _id: r.user?._id,
-          displayName: r.user?.displayName,
-          profileImage: getImageUrl(r.user?.profileImage),
-        },
-        rating: r.rating,
-        comment: r.comment,
-        createdAt: r.createdAt,
-      }));
+      // Format artist reviews (show all reviews)
+      artistReviews = artistReviewsData
+        .map(r => ({
+          _id: r._id,
+          user: {
+            _id: r.user?._id,
+            displayName: r.user?.displayName,
+            profileImage: getImageUrl(r.user?.profileImage),
+          },
+          rating: r.rating,
+          comment: r.comment,
+          createdAt: r.createdAt,
+        }));
 
       // Calculate artist average rating for artist reviews only
       const artistStats = await artistReviewModel.aggregate([
@@ -722,14 +707,16 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       message: 'تم جلب تفاصيل العمل الفني بنجاح',
       data: {
         artwork: formattedArtwork,
+        // All artwork reviews
         reviews: reviewsList,
-        userReview,
+        // Artist reviews section
         artistReviews: {
           rating: artistRating,
           reviewsCount: artistReviewsCount,
           reviews: artistReviews,
           userReview: userArtistReview
         },
+        // Related artworks
         relatedArtworks: formatArtworks(relatedArtworks)
       },
       meta: {
