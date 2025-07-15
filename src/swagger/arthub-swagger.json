@@ -1742,98 +1742,52 @@
                   "images": {
                     "type": "array",
                     "items": { "type": "string", "format": "binary" },
-                    "description": "صور العمل الفني (1-10 صور) - يمكن رفع ملفات الصور مباشرة\n\n**متطلبات الصور:**\n- الصيغ المدعومة: JPG, PNG, GIF, WEBP\n- الحد الأقصى لحجم الصورة: 5MB\n- الحد الأدنى: 1 صورة، الحد الأقصى: 10 صور\n- سيتم تحسين الصور تلقائياً للحصول على أفضل جودة"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "وسوم العمل الفني"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": ["available", "sold", "reserved"],
-                    "default": "available",
-                    "description": "حالة العمل الفني"
-                  },
-                  "isFramed": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "هل العمل مؤطر"
-                  },
-                  "dimensions": {
-                    "type": "object",
-                    "properties": {
-                      "width": { "type": "number", "description": "العرض" },
-                      "height": { "type": "number", "description": "الارتفاع" },
-                      "depth": { "type": "number", "description": "العمق" }
-                    },
-                    "description": "أبعاد العمل الفني"
-                  },
-                  "materials": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "المواد المستخدمة"
-                  }
-                }
+                    "description": "صور العمل الفني (1-10 صور) - يمكن رفع ملفات الصور مباشرة\n\n**متطلبات الصور:**\n- الصيغ المدعومة: JPG, PNG, GIF, WEBP\n- الحد الأقصى لحجم الصورة: 5MB\n- الحد الأدنى: 1 صورة، الحد الأقصى: 10 صور\n- سيتم تحسين الصور تلقائياً للحصول على أفضل جودة",
+            "example": "اختر ملفات الصور من جهازك"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "وسوم العمل الفني",
+            "example": ["فن", "لوحة", "زيتي"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["available", "sold", "reserved"],
+            "default": "available",
+            "description": "حالة العمل الفني"
+          },
+          "isFramed": {
+            "type": "boolean",
+            "default": false,
+            "description": "هل العمل مؤطر"
+          },
+          "dimensions": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number",
+                "description": "العرض"
+              },
+              "height": {
+                "type": "number",
+                "description": "الارتفاع"
+              },
+              "depth": {
+                "type": "number",
+                "description": "العمق"
               }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إنشاء العمل الفني بنجاح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "تم إنشاء العمل الفني بنجاح"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Artwork"
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "أبعاد العمل الفني"
           },
-          "413": {
-            "description": "حجم الملفات كبير جداً",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "حجم الملفات يتجاوز الحد المسموح"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "description": "فقط الفنانين يمكنهم إنشاء أعمال فنية"
-          },
-          "500": {
-            "description": "خطأ في الخادم"
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "المواد المستخدمة"
           }
         }
       }
@@ -1981,645 +1935,11 @@
         }
       }
     },
-    "/reviews/artwork": {
+    "/artworks/{id}/reviews": {
       "post": {
-        "summary": "إضافة تقييم لعمل فني",
+        "summary": "إضافة تقييم للعمل الفني",
         "tags": ["Reviews"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["artwork", "rating"],
-                "properties": {
-                  "artwork": {
-                    "type": "string"
-                  },
-                  "rating": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 5
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "comment": {
-                    "type": "string"
-                  },
-                  "pros": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "cons": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "subRatings": {
-                    "type": "object",
-                    "properties": {
-                      "creativity": {
-                        "type": "integer"
-                      },
-                      "technique": {
-                        "type": "integer"
-                      },
-                      "composition": {
-                        "type": "integer"
-                      }
-                    }
-                  },
-                  "isRecommended": {
-                    "type": "boolean"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إضافة التقييم"
-          }
-        }
-      }
-    },
-    "/reviews/artist": {
-      "post": {
-        "summary": "تقييم فنان",
-        "description": "إضافة تقييم وتعليق لفنان مع إمكانية إضافة نقاط إيجابية وسلبية",
-        "tags": ["Reviews"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["artist", "rating"],
-                "properties": {
-                  "artist": {
-                    "type": "string",
-                    "pattern": "^[0-9a-fA-F]{24}$",
-                    "description": "معرف الفنان المراد تقييمه",
-                    "example": "60d0fe4f5311236168a109ca"
-                  },
-                  "rating": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 5,
-                    "description": "التقييم من 1 إلى 5 نجوم",
-                    "example": 5
-                  },
-                  "title": {
-                    "type": "string",
-                    "minLength": 5,
-                    "maxLength": 100,
-                    "description": "عنوان التقييم (اختياري)",
-                    "example": "فنان ممتاز"
-                  },
-                  "comment": {
-                    "type": "string",
-                    "minLength": 10,
-                    "maxLength": 2000,
-                    "description": "التعليق التفصيلي (اختياري)",
-                    "example": "فنان محترف ومبدع"
-                  },
-                  "pros": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 3,
-                      "maxLength": 200
-                    },
-                    "maxItems": 10,
-                    "description": "النقاط الإيجابية (اختياري)",
-                    "example": ["احترافية عالية", "جودة ممتازة"]
-                  },
-                  "cons": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "minLength": 3,
-                      "maxLength": 200
-                    },
-                    "maxItems": 10,
-                    "description": "النقاط السلبية (اختياري)",
-                    "example": ["بطء في التسليم"]
-                  },
-                  "isRecommended": {
-                    "type": "boolean",
-                    "description": "هل توصي بهذا الفنان (اختياري)",
-                    "example": true
-                  },
-                  "subRatings": {
-                    "type": "object",
-                    "description": "التقييمات الفرعية (اختياري)",
-                    "properties": {
-                      "professionalism": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 5,
-                        "description": "تقييم الاحترافية",
-                        "example": 5
-                      },
-                      "communication": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 5,
-                        "description": "تقييم التواصل",
-                        "example": 5
-                      },
-                      "delivery": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 5,
-                        "description": "تقييم التسليم",
-                        "example": 5
-                      },
-                      "creativity": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 5,
-                        "description": "تقييم الإبداع",
-                        "example": 5
-                      },
-                      "valueForMoney": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 5,
-                        "description": "تقييم القيمة مقابل المال",
-                        "example": 5
-                      },
-                      "responsiveness": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 5,
-                        "description": "تقييم سرعة الاستجابة",
-                        "example": 5
-                      }
-                    }
-                  },
-                  "workingExperience": {
-                    "type": "object",
-                    "description": "تجربة العمل مع الفنان (اختياري)",
-                    "properties": {
-                      "projectType": {
-                        "type": "string",
-                        "enum": ["commission", "collaboration", "purchase", "consultation", "other"],
-                        "description": "نوع المشروع",
-                        "example": "commission"
-                      },
-                      "duration": {
-                        "type": "string",
-                        "enum": ["less_than_week", "one_to_two_weeks", "two_to_four_weeks", "one_to_three_months", "more_than_three_months"],
-                        "description": "مدة المشروع",
-                        "example": "less_than_week"
-                      },
-                      "budget": {
-                        "type": "string",
-                        "enum": ["under_100", "100_500", "500_1000", "1000_5000", "over_5000"],
-                        "description": "نطاق الميزانية",
-                        "example": "under_100"
-                      }
-                    }
-                  },
-                  "anonymous": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "نشر التقييم بشكل مجهول (اختياري)",
-                    "example": false
-                  }
-                }
-              },
-              "examples": {
-                "default": {
-                  "summary": "مثال بسيط",
-                  "description": "مثال بسيط - فقط الحقول الأساسية",
-                  "value": {
-                    "artist": "60d0fe4f5311236168a109ca",
-                    "rating": 5
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إضافة تقييم الفنان بنجاح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "تم إضافة تقييم الفنان بنجاح"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "_id": {
-                          "type": "string",
-                          "example": "60d0fe4f5311236168a109ca"
-                        },
-                        "artist": {
-                          "type": "string",
-                          "example": "60d0fe4f5311236168a109ca"
-                        },
-                        "rating": {
-                          "type": "integer",
-                          "example": 5
-                        },
-                        "title": {
-                          "type": "string",
-                          "example": "فنان ممتاز"
-                        },
-                        "comment": {
-                          "type": "string",
-                          "example": "فنان محترف ومبدع"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "example": "2023-05-15T10:30:45.123Z"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "بيانات غير صحيحة أو لا يمكن تقييم نفسك",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "لا يمكنك تقييم نفسك"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "غير مصرح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "غير مصرح - يرجى تسجيل الدخول"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "الفنان غير موجود",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "الفنان غير موجود"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "لقد قمت بتقييم هذا الفنان مسبقاً",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "لقد قمت بتقييم هذا الفنان مسبقاً. يمكنك تحديث تقييمك بدلاً من ذلك."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "خطأ في الخادم",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "حدث خطأ في الخادم"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/reviews/artwork/{artworkId}": {
-      "get": {
-        "summary": "تقييمات عمل فني",
-        "tags": ["Reviews"],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "artworkId",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 10
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "قائمة التقييمات"
-          }
-        }
-      }
-    },
-    "/reports": {
-      "post": {
-        "summary": "إرسال بلاغ",
-        "tags": ["Reports"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["contentType", "contentId", "reason"],
-                "properties": {
-                  "contentType": {
-                    "type": "string",
-                    "enum": ["artwork", "user", "review", "comment"]
-                  },
-                  "contentId": {
-                    "type": "string"
-                  },
-                  "reason": {
-                    "type": "string",
-                    "enum": ["inappropriate", "harassment", "spam", "fake", "copyright", "other"]
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": ["low", "medium", "high"],
-                    "default": "medium"
-                  },
-                  "evidence": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إرسال البلاغ"
-          }
-        }
-      }
-    },
-    "/transactions": {
-      "get": {
-        "summary": "قائمة المعاملات",
-        "tags": ["Transactions"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            }
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": ["pending", "processing", "completed", "failed", "refunded", "cancelled"]
-            }
-          },
-          {
-            "in": "query",
-            "name": "type",
-            "schema": {
-              "type": "string",
-              "enum": ["artwork_purchase", "special_request"]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "قائمة المعاملات"
-          }
-        }
-      },
-      "post": {
-        "summary": "إنشاء معاملة جديدة",
-        "tags": ["Transactions"],
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["items", "payment", "shipping"],
-                "properties": {
-                  "items": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "artworkId": {
-                          "type": "string"
-                        },
-                        "specialRequestId": {
-                          "type": "string"
-                        },
-                        "quantity": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  },
-                  "payment": {
-                    "type": "object",
-                    "required": ["method", "provider"],
-                    "properties": {
-                      "method": {
-                        "type": "string",
-                        "enum": ["credit_card", "mada", "apple_pay", "stc_pay"]
-                      },
-                      "provider": {
-                        "type": "string",
-                        "enum": ["stripe", "hyperpay", "moyasar"]
-                      },
-                      "transactionId": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "shipping": {
-                    "type": "object",
-                    "required": ["address"],
-                    "properties": {
-                      "address": {
-                        "type": "object",
-                        "required": ["fullName", "addressLine1", "city", "country", "phoneNumber"],
-                        "properties": {
-                          "fullName": {
-                            "type": "string"
-                          },
-                          "addressLine1": {
-                            "type": "string"
-                          },
-                          "city": {
-                            "type": "string"
-                          },
-                          "country": {
-                            "type": "string"
-                          },
-                          "phoneNumber": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "method": {
-                        "type": "string",
-                        "enum": ["standard", "express"]
-                      }
-                    }
-                  },
-                  "installments": {
-                    "type": "object",
-                    "properties": {
-                      "enabled": {
-                        "type": "boolean"
-                      },
-                      "totalInstallments": {
-                        "type": "integer"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إنشاء المعاملة"
-          }
-        }
-      }
-    },
-    "/transactions/{id}": {
-      "get": {
-        "summary": "تفاصيل معاملة",
-        "tags": ["Transactions"],
+        "description": "إضافة تقييم وتعليق لعمل فني معين",
         "security": [
           {
             "BearerAuth": []
@@ -2631,15 +1951,292 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف العمل الفني"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating"],
+                "properties": {
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "التقييم من 1 إلى 5",
+                    "example": 5
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "تعليق التقييم (اختياري)",
+                    "example": "عمل فني رائع!"
+                  }
+                }
+              }
             }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إضافة التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إضافة التقييم بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Review"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "العمل الفني غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "العمل الفني غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "لقد قمت بتقييم هذا العمل الفني من قبل",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "لقد قمت بتقييم هذا العمل الفني من قبل"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "ArtworkDetailsScreen"
+      },
+      "get": {
+        "summary": "جلب تقييمات العمل الفني",
+        "tags": ["Reviews"],
+        "description": "جلب جميع التقييمات لعمل فني معين",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف العمل الفني"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد التقييمات في الصفحة"
           }
         ],
         "responses": {
           "200": {
-            "description": "تفاصيل المعاملة"
+            "description": "تم جلب التقييمات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب التقييمات بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reviews": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Review"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "averageRating": {
+                              "type": "number",
+                              "example": 4.5
+                            },
+                            "totalReviews": {
+                              "type": "integer",
+                              "example": 25
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "العمل الفني غير موجود"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
           }
-        }
+        },
+        "x-screen": "ArtworkDetailsScreen"
+      }
+    },
+    "/reviews/artist": {
+      "post": {
+        "summary": "إضافة تقييم للفنان",
+        "tags": ["Reviews"],
+        "description": "إضافة تقييم وتعليق لفنان معين",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artistId", "rating"],
+                "properties": {
+                  "artistId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "description": "معرف الفنان",
+                    "example": "60d0fe4f5311236168a109ca"
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "التقييم من 1 إلى 5",
+                    "example": 5
+                  },
+                  "comment": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "تعليق التقييم (اختياري)",
+                    "example": "فنان موهوب جداً!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إضافة التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إضافة التقييم بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Review"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          },
+          "409": {
+            "description": "لقد قمت بتقييم هذا الفنان من قبل"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "ArtistProfileScreen"
       }
     },
     "/follow/artist/{artistId}": {
@@ -2758,6 +2355,549 @@
             "description": "قائمة المتابَعين"
           }
         }
+      }
+    },
+    "/user/wishlist": {
+      "get": {
+        "summary": "جلب قائمة المفضلة",
+        "tags": ["Profile"],
+        "description": "جلب قائمة مقسمة من الأعمال الفنية المفضلة للمستخدم الحالي",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة",
+            "example": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب قائمة المفضلة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب قائمة المفضلة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "wishlist": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Artwork"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "WishlistScreen"
+      }
+    },
+    "/user/wishlist/toggle": {
+      "post": {
+        "summary": "إضافة/إزالة من المفضلة",
+        "tags": ["Profile"],
+        "description": "إضافة أو إزالة عمل فني من قائمة المفضلة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artworkId"],
+                "properties": {
+                  "artworkId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "example": "60d0fe4f5311236168a109ca",
+                    "description": "معرف العمل الفني"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث المفضلة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إضافة العمل الفني إلى المفضلة"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string",
+                          "enum": ["added", "removed"],
+                          "example": "added"
+                        },
+                        "artworkId": {
+                          "type": "string",
+                          "example": "60d0fe4f5311236168a109ca"
+                        },
+                        "isInWishlist": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "العمل الفني غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "العمل الفني غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "ArtworkDetailsScreen"
+      }
+    },
+    "/follow/toggle": {
+      "post": {
+        "summary": "متابعة/إلغاء متابعة فنان",
+        "tags": ["Follow"],
+        "description": "متابعة أو إلغاء متابعة فنان (تبديل الحالة)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artistId"],
+                "properties": {
+                  "artistId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "example": "60d0fe4f5311236168a109ca",
+                    "description": "معرف الفنان المراد متابعته/إلغاء متابعته"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث حالة المتابعة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تمت المتابعة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string",
+                          "enum": ["followed", "unfollowed"],
+                          "example": "followed"
+                        },
+                        "artistId": {
+                          "type": "string",
+                          "example": "60d0fe4f5311236168a109ca"
+                        },
+                        "isFollowing": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2023-05-15T10:30:45.123Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "الفنان غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الفنان غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "ArtistProfileScreen"
+      }
+    },
+    "/follow/followers": {
+      "get": {
+        "summary": "قائمة المتابعين",
+        "tags": ["Follow"],
+        "description": "جلب قائمة مقسمة من المتابعين للمستخدم الحالي",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد المتابعين في الصفحة",
+            "example": 20
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "description": "البحث في أسماء المتابعين",
+            "example": "أحمد"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب قائمة متابعيك بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب قائمة متابعيك بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "followers": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/FollowUser"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "MyFollowersScreen"
+      }
+    },
+    "/follow/following": {
+      "get": {
+        "summary": "قائمة المتابَعين",
+        "tags": ["Follow"],
+        "description": "جلب قائمة مقسمة من الفنانين الذين يتابعهم المستخدم الحالي",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد المتابَعين في الصفحة",
+            "example": 20
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "description": "البحث في أسماء الفنانين",
+            "example": "فاطمة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب قائمة متابعاتك بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب قائمة متابعاتك بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "following": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/FollowUser"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "MyFollowingScreen"
+      }
+    },
+    "/follow/status/{artistId}": {
+      "get": {
+        "summary": "فحص حالة المتابعة",
+        "tags": ["Follow"],
+        "description": "فحص ما إذا كان المستخدم الحالي يتابع فنان معين",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم فحص حالة المتابعة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artistId": {
+                          "type": "string",
+                          "example": "60d0fe4f5311236168a109ca"
+                        },
+                        "isFollowing": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "x-screen": "ArtistProfileScreen"
       }
     }
   },
@@ -3196,6 +3336,74 @@
             "format": "date-time"
           }
         }
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "artworkId": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "pros": {
+            "type": "array"
+          },
+          "cons": {
+            "type": "array"
+          },
+          "subRatings": {
+            "type": "object"
+          },
+          "isRecommended": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FollowUser": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "profileImage": {
+            "type": "object"
+          }
+        }
+      },
+      "PaginationResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          }
+        }
       }
     },
     "responses": {
@@ -3321,3 +3529,7 @@
     }
   }
 } 
+}
+    }
+  }
+}
