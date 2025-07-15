@@ -173,7 +173,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             as: 'artistReviews'
           }
         },
-        // Get all reviews for artist's artworks (not used in rating now)
+        // Get all reviews for artist's artworks
         {
           $lookup: {
             from: 'reviews',
@@ -204,16 +204,41 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         },
         {
           $addFields: {
-            // Only artist reviews are used for rating
-            totalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-            totalReviewsCount: { $size: '$artistReviews' },
+            // Combined rating: artist reviews + artwork reviews
+            artistTotalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+            artistReviewsCount: { $size: '$artistReviews' },
+            artworkTotalRating: { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] },
+            artworkReviewsCount: { $size: '$artworkReviews' },
+            // Combined totals
+            totalRating: { 
+              $add: [
+                { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+              ]
+            },
+            totalReviewsCount: { 
+              $add: [
+                { $size: '$artistReviews' },
+                { $size: '$artworkReviews' }
+              ]
+            },
             averageRating: {
               $cond: {
-                if: { $gt: [{ $size: '$artistReviews' }, 0] },
+                if: { 
+                  $gt: [
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }, 
+                    0
+                  ] 
+                },
                 then: { 
                   $divide: [
-                    { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-                    { $size: '$artistReviews' }
+                    { 
+                      $add: [
+                        { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                        { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+                      ]
+                    },
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }
                   ]
                 },
                 else: 0
@@ -333,16 +358,41 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         },
         {
           $addFields: {
-            // Only artist reviews are used for rating
-            totalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-            totalReviewsCount: { $size: '$artistReviews' },
+            // Combined rating: artist reviews + artwork reviews
+            artistTotalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+            artistReviewsCount: { $size: '$artistReviews' },
+            artworkTotalRating: { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] },
+            artworkReviewsCount: { $size: '$artworkReviews' },
+            // Combined totals
+            totalRating: { 
+              $add: [
+                { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+              ]
+            },
+            totalReviewsCount: { 
+              $add: [
+                { $size: '$artistReviews' },
+                { $size: '$artworkReviews' }
+              ]
+            },
             averageRating: {
               $cond: {
-                if: { $gt: [{ $size: '$artistReviews' }, 0] },
+                if: { 
+                  $gt: [
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }, 
+                    0
+                  ] 
+                },
                 then: { 
                   $divide: [
-                    { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-                    { $size: '$artistReviews' }
+                    { 
+                      $add: [
+                        { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                        { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+                      ]
+                    },
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }
                   ]
                 },
                 else: 0
@@ -785,16 +835,12 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
           createdAt: r.createdAt,
         }));
 
-      // Calculate artist average rating for artist reviews only
-      const artistStats = await artistReviewModel.aggregate([
+      // Calculate comprehensive artist rating (artist reviews + artwork reviews)
+      const comprehensiveArtistStats = await artistReviewModel.aggregate([
         { 
           $match: { 
             artist: artwork.artist._id, 
-            status: 'active',
-            $or: [
-              { artwork: { $exists: false } },
-              { artwork: null }
-            ]
+            status: 'active'
           } 
         },
         {
@@ -806,9 +852,9 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
         }
       ]);
 
-      if (artistStats.length > 0) {
-        artistRating = parseFloat(artistStats[0].avgRating.toFixed(1));
-        artistReviewsCount = artistStats[0].count;
+      if (comprehensiveArtistStats.length > 0) {
+        artistRating = parseFloat(comprehensiveArtistStats[0].avgRating.toFixed(1));
+        artistReviewsCount = comprehensiveArtistStats[0].count;
       }
 
       // Removed user artist review section - only showing all reviews
