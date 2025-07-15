@@ -367,7 +367,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             followersCount: 1,
             artworksCount: 1,
             job: 1,
-            isVerified: 1
+            isVerified: 1,
+            isFollowing: 1
           } 
         }
       ]),
