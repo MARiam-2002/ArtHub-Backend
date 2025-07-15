@@ -51,6 +51,7 @@ function formatArtists(artists) {
     isVerified: artist.isVerified || false,
     followersCount: artist.followersCount || 0,
     artworksCount: artist.artworksCount || 0,
+    isFollowing: typeof artist.isFollowing === 'boolean' ? artist.isFollowing : undefined,
   }));
 }
 
@@ -261,6 +262,26 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         { $match: { role: 'artist', isActive: true, isDeleted: false } },
         { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
         { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
+        // Check if current user is following each artist
+        {
+          $lookup: {
+            from: 'follows',
+            let: { artistId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$following', '$$artistId'] },
+                      { $eq: ['$follower', userId ? new mongoose.Types.ObjectId(userId) : null] }
+                    ]
+                  }
+                }
+              }
+            ],
+            as: 'userFollows'
+          }
+        },
         // Get artist reviews (reviews for the artist himself)
         {
           $lookup: {
@@ -329,6 +350,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             },
             followersCount: { $size: '$followers' },
             artworksCount: { $size: '$artworks' },
+            isFollowing: { $gt: [{ $size: '$userFollows' }, 0] }
           }
         },
         { $sort: { createdAt: -1 } },
