@@ -589,11 +589,73 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
           createdAt: myReview.createdAt,
         };
       }
-      
-      // Debug log to check if review exists
-      console.log('User ID:', userId);
-      console.log('Artwork ID:', id);
-      console.log('User review found:', !!myReview);
+    }
+
+    // Get artist reviews (reviews for the artist, not the artwork)
+    let artistReviews = [];
+    let artistRating = 0;
+    let artistReviewsCount = 0;
+    
+    if (artwork.artist) {
+      const artistReviewModel = (await import('../../../DB/models/review.model.js')).default;
+      const artistReviewsData = await artistReviewModel.find({ 
+        artist: artwork.artist._id, 
+        status: 'active',
+        artwork: { $exists: false } // Only artist reviews, not artwork reviews
+      })
+      .populate('user', 'displayName profileImage')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+      artistReviews = artistReviewsData.map(r => ({
+        _id: r._id,
+        user: {
+          _id: r.user?._id,
+          displayName: r.user?.displayName,
+          profileImage: getImageUrl(r.user?.profileImage),
+        },
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+      }));
+
+      // Calculate artist average rating
+      const artistStats = await artistReviewModel.aggregate([
+        { $match: { artist: artwork.artist._id, status: 'active' } },
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: '$rating' },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+
+      if (artistStats.length > 0) {
+        artistRating = parseFloat(artistStats[0].avgRating.toFixed(1));
+        artistReviewsCount = artistStats[0].count;
+      }
+
+      // Get user's review for the artist if exists
+      let userArtistReview = null;
+      if (userId) {
+        const myArtistReview = await artistReviewModel.findOne({ 
+          artist: artwork.artist._id, 
+          user: userId, 
+          status: 'active',
+          artwork: { $exists: false }
+        }).lean();
+        
+        if (myArtistReview) {
+          userArtistReview = {
+            _id: myArtistReview._id,
+            rating: myArtistReview.rating,
+            comment: myArtistReview.comment,
+            createdAt: myArtistReview.createdAt,
+          };
+        }
+      }
     }
 
     // Get related artworks
@@ -643,6 +705,12 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
         artwork: formattedArtwork,
         reviews: reviewsList,
         userReview,
+        artistReviews: {
+          rating: artistRating,
+          reviewsCount: artistReviewsCount,
+          reviews: artistReviews,
+          userReview: userArtistReview
+        },
         relatedArtworks: formatArtworks(relatedArtworks)
       },
       meta: {
