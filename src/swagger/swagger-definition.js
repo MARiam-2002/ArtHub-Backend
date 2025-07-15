@@ -2347,33 +2347,33 @@ export const swaggerDefinition = {
           timestamp: '2023-06-12T08:15:30.123Z'
         }
       },
+      ArtistReviewSimple: {
+        value: {
+          artist: '60d0fe4f5311236168a109ca',
+          rating: 5,
+          comment: 'فنان ممتاز'
+        }
+      },
       ArtistReviewMinimal: {
         value: {
           artist: '60d0fe4f5311236168a109ca',
           rating: 5
         }
       },
-      ArtistReviewSimple: {
+      ArtistReviewBasic: {
         value: {
           artist: '60d0fe4f5311236168a109ca',
           rating: 4,
           comment: 'فنان ممتاز، أنصح بالتعامل معه'
         }
       },
-      ArtistReviewBasic: {
+      ArtistReviewDetailed: {
         value: {
           artist: '60d0fe4f5311236168a109ca',
           rating: 5,
           title: 'فنان محترف',
           comment: 'تعامل ممتاز وجودة عالية في العمل',
           isRecommended: true
-        }
-      },
-      ArtistReviewDetailed: {
-        value: {
-          artist: '60d0fe4f5311236168a109ca',
-          rating: 5,
-          comment: 'فنان ممتاز'
         }
       }
     },

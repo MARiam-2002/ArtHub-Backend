@@ -2196,6 +2196,15 @@
                 }
               },
               "examples": {
+                "simple_example": {
+                  "summary": "مثال بسيط",
+                  "description": "مثال بسيط - فقط الحقول الأساسية",
+                  "value": {
+                    "artist": "60d0fe4f5311236168a109ca",
+                    "rating": 5,
+                    "comment": "فنان ممتاز"
+                  }
+                },
                 "minimal_review": {
                   "summary": "تقييم بسيط (الحد الأدنى)",
                   "description": "أبسط مثال يعمل - فقط معرف الفنان والتقييم",
@@ -2222,15 +2231,6 @@
                     "title": "فنان محترف",
                     "comment": "تعامل ممتاز وجودة عالية في العمل",
                     "isRecommended": true
-                  }
-                },
-                "detailed_review": {
-                  "summary": "تقييم بسيط",
-                  "description": "مثال بسيط - فقط الحقول الأساسية",
-                  "value": {
-                    "artist": "60d0fe4f5311236168a109ca",
-                    "rating": 5,
-                    "comment": "فنان ممتاز"
                   }
                 }
               }
