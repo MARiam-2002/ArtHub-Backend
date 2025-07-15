@@ -564,7 +564,7 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       user: {
         _id: r.user?._id,
         displayName: r.user?.displayName,
-        profileImage: r.user?.profileImage,
+        profileImage: getImageUrl(r.user?.profileImage),
       },
       rating: r.rating,
       comment: r.comment,
@@ -574,7 +574,13 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
     // Get user review if exists
     let userReview = null;
     if (userId) {
-      const myReview = reviews.find(r => r.user && r.user._id && r.user._id.toString() === userId.toString());
+      // Search specifically for user's review
+      const myReview = await reviewModel.findOne({ 
+        artwork: id, 
+        user: userId, 
+        status: 'active' 
+      }).lean();
+      
       if (myReview) {
         userReview = {
           _id: myReview._id,
@@ -583,6 +589,11 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
           createdAt: myReview.createdAt,
         };
       }
+      
+      // Debug log to check if review exists
+      console.log('User ID:', userId);
+      console.log('Artwork ID:', id);
+      console.log('User review found:', !!myReview);
     }
 
     // Get related artworks
