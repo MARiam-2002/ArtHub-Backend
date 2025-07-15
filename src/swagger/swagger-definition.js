@@ -2047,14 +2047,14 @@ export const swaggerDefinition = {
             minLength: 5,
             maxLength: 100,
             description: 'عنوان التقييم (اختياري)',
-            example: 'فنان محترف'
+            example: 'فنان ممتاز'
           },
           comment: {
             type: 'string',
             minLength: 10,
             maxLength: 2000,
             description: 'التعليق التفصيلي (اختياري)',
-            example: 'تعامل ممتاز وجودة عالية في العمل'
+            example: 'فنان محترف ومبدع'
           },
           pros: {
             type: 'array',
@@ -2065,7 +2065,7 @@ export const swaggerDefinition = {
             },
             maxItems: 10,
             description: 'النقاط الإيجابية (اختياري)',
-            example: ['سرعة في التنفيذ', 'جودة عالية']
+            example: ['احترافية عالية', 'جودة ممتازة']
           },
           cons: {
             type: 'array',
@@ -2076,7 +2076,7 @@ export const swaggerDefinition = {
             },
             maxItems: 10,
             description: 'النقاط السلبية (اختياري)',
-            example: ['الأسعار مرتفعة قليلاً']
+            example: ['بطء في التسليم']
           },
           isRecommended: {
             type: 'boolean',
@@ -2091,37 +2091,43 @@ export const swaggerDefinition = {
                 type: 'integer',
                 minimum: 1,
                 maximum: 5,
-                description: 'تقييم الاحترافية'
+                description: 'تقييم الاحترافية',
+                example: 5
               },
               communication: {
                 type: 'integer',
                 minimum: 1,
                 maximum: 5,
-                description: 'تقييم التواصل'
+                description: 'تقييم التواصل',
+                example: 5
               },
               delivery: {
                 type: 'integer',
                 minimum: 1,
                 maximum: 5,
-                description: 'تقييم التسليم'
+                description: 'تقييم التسليم',
+                example: 5
               },
               creativity: {
                 type: 'integer',
                 minimum: 1,
                 maximum: 5,
-                description: 'تقييم الإبداع'
+                description: 'تقييم الإبداع',
+                example: 5
               },
               valueForMoney: {
                 type: 'integer',
                 minimum: 1,
                 maximum: 5,
-                description: 'تقييم القيمة مقابل المال'
+                description: 'تقييم القيمة مقابل المال',
+                example: 5
               },
               responsiveness: {
                 type: 'integer',
                 minimum: 1,
                 maximum: 5,
-                description: 'تقييم سرعة الاستجابة'
+                description: 'تقييم سرعة الاستجابة',
+                example: 5
               }
             }
           },
@@ -2132,24 +2138,28 @@ export const swaggerDefinition = {
               projectType: {
                 type: 'string',
                 enum: ['commission', 'collaboration', 'purchase', 'consultation', 'other'],
-                description: 'نوع المشروع'
+                description: 'نوع المشروع',
+                example: 'commission'
               },
               duration: {
                 type: 'string',
                 enum: ['less_than_week', 'one_to_two_weeks', 'two_to_four_weeks', 'one_to_three_months', 'more_than_three_months'],
-                description: 'مدة المشروع'
+                description: 'مدة المشروع',
+                example: 'less_than_week'
               },
               budget: {
                 type: 'string',
                 enum: ['under_100', '100_500', '500_1000', '1000_5000', 'over_5000'],
-                description: 'نطاق الميزانية'
+                description: 'نطاق الميزانية',
+                example: 'under_100'
               }
             }
           },
           anonymous: {
             type: 'boolean',
             default: false,
-            description: 'نشر التقييم بشكل مجهول (اختياري)'
+            description: 'نشر التقييم بشكل مجهول (اختياري)',
+            example: false
           }
         },
         examples: {
@@ -2159,42 +2169,6 @@ export const swaggerDefinition = {
             value: {
               artist: '60d0fe4f5311236168a109ca',
               rating: 5
-            }
-          },
-          simple_example: {
-            summary: 'مثال بسيط مع تعليق',
-            description: 'مثال بسيط مع إضافة تعليق',
-            value: {
-              artist: '60d0fe4f5311236168a109ca',
-              rating: 5,
-              comment: 'فنان ممتاز'
-            }
-          },
-          detailed_example: {
-            summary: 'مثال مفصل',
-            description: 'مثال مفصل مع جميع الحقول الاختيارية',
-            value: {
-              artist: '60d0fe4f5311236168a109ca',
-              rating: 5,
-              title: 'فنان ممتاز',
-              comment: 'فنان ممتاز',
-              pros: ['جودة عالية'],
-              cons: [],
-              isRecommended: true,
-              subRatings: {
-                professionalism: 5,
-                communication: 5,
-                delivery: 5,
-                creativity: 5,
-                valueForMoney: 5,
-                responsiveness: 5
-              },
-              workingExperience: {
-                projectType: 'commission',
-                duration: 'less_than_week',
-                budget: 'under_100'
-              },
-              anonymous: false
             }
           }
         }

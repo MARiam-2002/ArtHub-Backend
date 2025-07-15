@@ -2360,45 +2360,8 @@
                     "artist": "60d0fe4f5311236168a109ca",
                     "rating": 5
                   }
-                },
-                "simple_example": {
-                  "summary": "مثال بسيط مع تعليق",
-                  "description": "مثال بسيط مع إضافة تعليق",
-                  "value": {
-                    "artist": "60d0fe4f5311236168a109ca",
-                    "rating": 5,
-                    "comment": "فنان ممتاز"
-                  }
-                },
-                "detailed_example": {
-                  "summary": "مثال مفصل",
-                  "description": "مثال مفصل مع جميع الحقول الاختيارية",
-                  "value": {
-                    "artist": "60d0fe4f5311236168a109ca",
-                    "rating": 5,
-                    "title": "فنان ممتاز",
-                    "comment": "فنان ممتاز",
-                    "pros": [
-                      "جودة عالية"
-                    ],
-                    "cons": [],
-                    "isRecommended": true,
-                    "subRatings": {
-                      "professionalism": 5,
-                      "communication": 5,
-                      "delivery": 5,
-                      "creativity": 5,
-                      "valueForMoney": 5,
-                      "responsiveness": 5
-                    },
-                    "workingExperience": {
-                      "projectType": "commission",
-                      "duration": "less_than_week",
-                      "budget": "under_100"
-                    },
-                    "anonymous": false
-                  }
                 }
+
               }
             }
           }

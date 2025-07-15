@@ -2096,7 +2096,7 @@
                     "minLength": 10,
                     "maxLength": 2000,
                     "description": "التعليق التفصيلي (اختياري)",
-                    "example": "فنان ممتاز"
+                    "example": "فنان محترف ومبدع"
                   },
                   "pros": {
                     "type": "array",
@@ -2107,7 +2107,7 @@
                     },
                     "maxItems": 10,
                     "description": "النقاط الإيجابية (اختياري)",
-                    "example": ["جودة عالية"]
+                    "example": ["احترافية عالية", "جودة ممتازة"]
                   },
                   "cons": {
                     "type": "array",
@@ -2118,7 +2118,7 @@
                     },
                     "maxItems": 10,
                     "description": "النقاط السلبية (اختياري)",
-                    "example": []
+                    "example": ["بطء في التسليم"]
                   },
                   "isRecommended": {
                     "type": "boolean",
@@ -2133,37 +2133,43 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 5,
-                        "description": "تقييم الاحترافية"
+                        "description": "تقييم الاحترافية",
+                        "example": 5
                       },
                       "communication": {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 5,
-                        "description": "تقييم التواصل"
+                        "description": "تقييم التواصل",
+                        "example": 5
                       },
                       "delivery": {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 5,
-                        "description": "تقييم التسليم"
+                        "description": "تقييم التسليم",
+                        "example": 5
                       },
                       "creativity": {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 5,
-                        "description": "تقييم الإبداع"
+                        "description": "تقييم الإبداع",
+                        "example": 5
                       },
                       "valueForMoney": {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 5,
-                        "description": "تقييم القيمة مقابل المال"
+                        "description": "تقييم القيمة مقابل المال",
+                        "example": 5
                       },
                       "responsiveness": {
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 5,
-                        "description": "تقييم سرعة الاستجابة"
+                        "description": "تقييم سرعة الاستجابة",
+                        "example": 5
                       }
                     }
                   },
@@ -2174,24 +2180,28 @@
                       "projectType": {
                         "type": "string",
                         "enum": ["commission", "collaboration", "purchase", "consultation", "other"],
-                        "description": "نوع المشروع"
+                        "description": "نوع المشروع",
+                        "example": "commission"
                       },
                       "duration": {
                         "type": "string",
                         "enum": ["less_than_week", "one_to_two_weeks", "two_to_four_weeks", "one_to_three_months", "more_than_three_months"],
-                        "description": "مدة المشروع"
+                        "description": "مدة المشروع",
+                        "example": "less_than_week"
                       },
                       "budget": {
                         "type": "string",
                         "enum": ["under_100", "100_500", "500_1000", "1000_5000", "over_5000"],
-                        "description": "نطاق الميزانية"
+                        "description": "نطاق الميزانية",
+                        "example": "under_100"
                       }
                     }
                   },
                   "anonymous": {
                     "type": "boolean",
                     "default": false,
-                    "description": "نشر التقييم بشكل مجهول (اختياري)"
+                    "description": "نشر التقييم بشكل مجهول (اختياري)",
+                    "example": false
                   }
                 }
               },
@@ -2202,44 +2212,6 @@
                   "value": {
                     "artist": "60d0fe4f5311236168a109ca",
                     "rating": 5
-                  }
-                },
-                "simple_example": {
-                  "summary": "مثال بسيط مع تعليق",
-                  "description": "مثال بسيط مع إضافة تعليق",
-                  "value": {
-                    "artist": "60d0fe4f5311236168a109ca",
-                    "rating": 5,
-                    "comment": "فنان ممتاز"
-                  }
-                },
-                "detailed_example": {
-                  "summary": "مثال مفصل",
-                  "description": "مثال مفصل مع جميع الحقول الاختيارية",
-                  "value": {
-                    "artist": "60d0fe4f5311236168a109ca",
-                    "rating": 5,
-                    "title": "فنان ممتاز",
-                    "comment": "فنان ممتاز",
-                    "pros": [
-                      "جودة عالية"
-                    ],
-                    "cons": [],
-                    "isRecommended": true,
-                    "subRatings": {
-                      "professionalism": 5,
-                      "communication": 5,
-                      "delivery": 5,
-                      "creativity": 5,
-                      "valueForMoney": 5,
-                      "responsiveness": 5
-                    },
-                    "workingExperience": {
-                      "projectType": "commission",
-                      "duration": "less_than_week",
-                      "budget": "under_100"
-                    },
-                    "anonymous": false
                   }
                 }
               }
@@ -2263,7 +2235,34 @@
                       "example": "تم إضافة تقييم الفنان بنجاح"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Review"
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "60d0fe4f5311236168a109ca"
+                        },
+                        "artist": {
+                          "type": "string",
+                          "example": "60d0fe4f5311236168a109ca"
+                        },
+                        "rating": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "title": {
+                          "type": "string",
+                          "example": "فنان ممتاز"
+                        },
+                        "comment": {
+                          "type": "string",
+                          "example": "فنان محترف ومبدع"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2023-05-15T10:30:45.123Z"
+                        }
+                      }
                     }
                   }
                 }
@@ -2292,7 +2291,23 @@
           },
           "401": {
             "description": "غير مصرح",
-            "$ref": "#/components/responses/UnauthorizedError"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح - يرجى تسجيل الدخول"
+                    }
+                  }
+                }
+              }
+            }
           },
           "404": {
             "description": "الفنان غير موجود",
@@ -2336,7 +2351,23 @@
           },
           "500": {
             "description": "خطأ في الخادم",
-            "$ref": "#/components/responses/ServerError"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "حدث خطأ في الخادم"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
