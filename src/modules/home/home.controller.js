@@ -595,9 +595,12 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
     let artistReviews = [];
     let artistRating = 0;
     let artistReviewsCount = 0;
+    let userArtistReview = null;
     
     if (artwork.artist) {
       const artistReviewModel = (await import('../../../DB/models/review.model.js')).default;
+      
+      // Get artist reviews (reviews where artwork field doesn't exist)
       const artistReviewsData = await artistReviewModel.find({ 
         artist: artwork.artist._id, 
         status: 'active',
@@ -607,6 +610,8 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(5)
       .lean();
+
+      console.log('Found artist reviews:', artistReviewsData.length);
 
       artistReviews = artistReviewsData.map(r => ({
         _id: r._id,
@@ -620,9 +625,15 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
         createdAt: r.createdAt,
       }));
 
-      // Calculate artist average rating
+      // Calculate artist average rating for artist reviews only
       const artistStats = await artistReviewModel.aggregate([
-        { $match: { artist: artwork.artist._id, status: 'active' } },
+        { 
+          $match: { 
+            artist: artwork.artist._id, 
+            status: 'active',
+            artwork: { $exists: false }
+          } 
+        },
         {
           $group: {
             _id: null,
@@ -638,7 +649,6 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       }
 
       // Get user's review for the artist if exists
-      let userArtistReview = null;
       if (userId) {
         const myArtistReview = await artistReviewModel.findOne({ 
           artist: artwork.artist._id, 
