@@ -2350,8 +2350,7 @@ export const swaggerDefinition = {
       ArtistReviewDefault: {
         value: {
           artist: '60d0fe4f5311236168a109ca',
-          rating: 5,
-          comment: 'فنان ممتاز'
+          rating: 5
         }
       },
       ArtistReviewSimple: {

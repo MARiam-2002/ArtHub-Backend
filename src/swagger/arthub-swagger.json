@@ -2201,13 +2201,12 @@
                   "description": "مثال بسيط - فقط الحقول الأساسية",
                   "value": {
                     "artist": "60d0fe4f5311236168a109ca",
-                    "rating": 5,
-                    "comment": "فنان ممتاز"
+                    "rating": 5
                   }
                 },
                 "simple_example": {
-                  "summary": "مثال بسيط",
-                  "description": "مثال بسيط - فقط الحقول الأساسية",
+                  "summary": "مثال بسيط مع تعليق",
+                  "description": "مثال بسيط مع إضافة تعليق",
                   "value": {
                     "artist": "60d0fe4f5311236168a109ca",
                     "rating": 5,
