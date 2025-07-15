@@ -149,13 +149,31 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       // 2. Featured Artists (Top Rated with follower count)
       userModel.aggregate([
         { $match: { role: 'artist', isActive: true, isDeleted: false } },
-        { $lookup: { from: 'reviews', localField: '_id', foreignField: 'artist', as: 'reviews' } },
+        { 
+          $lookup: { 
+            from: 'reviews', 
+            let: { artistId: '$_id' },
+            pipeline: [
+              { 
+                $match: { 
+                  $expr: { $eq: ['$artist', '$$artistId'] },
+                  status: 'active',
+                  $or: [
+                    { artwork: { $exists: false } },
+                    { artwork: null }
+                  ]
+                } 
+              }
+            ],
+            as: 'artistReviews' 
+          } 
+        },
         { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
         { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
         {
           $addFields: {
-            averageRating: { $ifNull: [{ $avg: '$reviews.rating' }, 0] },
-            reviewsCount: { $size: '$reviews' },
+            averageRating: { $ifNull: [{ $avg: '$artistReviews.rating' }, 0] },
+            reviewsCount: { $size: '$artistReviews' },
             followersCount: { $size: '$followers' },
             artworksCount: { $size: '$artworks' },
           }
@@ -194,11 +212,54 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         .lean(),
 
       // 4. Latest Artists (Recently Joined)
-      userModel.find({ role: 'artist', isActive: true, isDeleted: false })
-        .sort({ createdAt: -1 })
-        .limit(6)
-        .select('displayName profileImage photoURL coverImages job isVerified')
-        .lean(),
+      userModel.aggregate([
+        { $match: { role: 'artist', isActive: true, isDeleted: false } },
+        { 
+          $lookup: { 
+            from: 'reviews', 
+            let: { artistId: '$_id' },
+            pipeline: [
+              { 
+                $match: { 
+                  $expr: { $eq: ['$artist', '$$artistId'] },
+                  status: 'active',
+                  $or: [
+                    { artwork: { $exists: false } },
+                    { artwork: null }
+                  ]
+                } 
+              }
+            ],
+            as: 'artistReviews' 
+          } 
+        },
+        { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
+        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
+        {
+          $addFields: {
+            averageRating: { $ifNull: [{ $avg: '$artistReviews.rating' }, 0] },
+            reviewsCount: { $size: '$artistReviews' },
+            followersCount: { $size: '$followers' },
+            artworksCount: { $size: '$artworks' },
+          }
+        },
+        { $sort: { createdAt: -1 } },
+        { $limit: 6 },
+        { 
+          $project: { 
+            displayName: 1, 
+            profileImage: 1, 
+            photoURL: 1, 
+            coverImages: 1,
+            averageRating: 1, 
+            reviewsCount: 1, 
+            followersCount: 1,
+            artworksCount: 1,
+            job: 1,
+            isVerified: 1
+          } 
+        }
+      ]),
         
       // 5. Most Rated Artworks
       artworkModel.aggregate([
