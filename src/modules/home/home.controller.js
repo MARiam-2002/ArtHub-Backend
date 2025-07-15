@@ -695,7 +695,18 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
           reviews: artistReviews
         },
         // Related artworks
-        relatedArtworks: formatArtworks(relatedArtworks)
+        relatedArtworks: formatArtworks(relatedArtworks),
+        // Total statistics
+        totals: {
+          artworkReviews: {
+            total: reviewsCount,
+            rating: rating
+          },
+          artistReviews: {
+            total: artistReviewsCount,
+            rating: artistRating
+          }
+        }
       },
       meta: {
         timestamp: new Date().toISOString(),
