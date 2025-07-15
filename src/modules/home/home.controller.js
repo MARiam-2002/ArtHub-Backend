@@ -578,7 +578,6 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
     let artistReviews = [];
     let artistRating = 0;
     let artistReviewsCount = 0;
-    let userArtistReview = null;
     
     if (artwork.artist) {
       const artistReviewModel = (await import('../../../DB/models/review.model.js')).default;
@@ -639,27 +638,7 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
         artistReviewsCount = artistStats[0].count;
       }
 
-      // Get user's review for the artist if exists
-      if (userId) {
-        const myArtistReview = await artistReviewModel.findOne({ 
-          artist: artwork.artist._id, 
-          user: userId, 
-          status: 'active',
-          $or: [
-            { artwork: { $exists: false } },
-            { artwork: null }
-          ]
-        }).lean();
-        
-        if (myArtistReview) {
-          userArtistReview = {
-            _id: myArtistReview._id,
-            rating: myArtistReview.rating,
-            comment: myArtistReview.comment,
-            createdAt: myArtistReview.createdAt,
-          };
-        }
-      }
+      // Removed user artist review section - only showing all reviews
     }
 
     // Get related artworks
@@ -713,8 +692,7 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
         artistReviews: {
           rating: artistRating,
           reviewsCount: artistReviewsCount,
-          reviews: artistReviews,
-          userReview: userArtistReview
+          reviews: artistReviews
         },
         // Related artworks
         relatedArtworks: formatArtworks(relatedArtworks)
