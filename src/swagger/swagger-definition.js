@@ -2347,6 +2347,13 @@ export const swaggerDefinition = {
           timestamp: '2023-06-12T08:15:30.123Z'
         }
       },
+      ArtistReviewDefault: {
+        value: {
+          artist: '60d0fe4f5311236168a109ca',
+          rating: 5,
+          comment: 'فنان ممتاز'
+        }
+      },
       ArtistReviewSimple: {
         value: {
           artist: '60d0fe4f5311236168a109ca',
