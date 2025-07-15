@@ -2025,6 +2025,134 @@ export const swaggerDefinition = {
           }
         }
       },
+      CreateArtistReviewRequest: {
+        type: 'object',
+        required: ['artist', 'rating'],
+        properties: {
+          artist: {
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$',
+            description: 'معرف الفنان المراد تقييمه',
+            example: '60d0fe4f5311236168a109ca'
+          },
+          rating: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 5,
+            description: 'التقييم من 1 إلى 5 نجوم',
+            example: 5
+          },
+          title: {
+            type: 'string',
+            minLength: 5,
+            maxLength: 100,
+            description: 'عنوان التقييم (اختياري)',
+            example: 'فنان محترف'
+          },
+          comment: {
+            type: 'string',
+            minLength: 10,
+            maxLength: 2000,
+            description: 'التعليق التفصيلي (اختياري)',
+            example: 'تعامل ممتاز وجودة عالية في العمل'
+          },
+          pros: {
+            type: 'array',
+            items: {
+              type: 'string',
+              minLength: 3,
+              maxLength: 200
+            },
+            maxItems: 10,
+            description: 'النقاط الإيجابية (اختياري)',
+            example: ['سرعة في التنفيذ', 'جودة عالية']
+          },
+          cons: {
+            type: 'array',
+            items: {
+              type: 'string',
+              minLength: 3,
+              maxLength: 200
+            },
+            maxItems: 10,
+            description: 'النقاط السلبية (اختياري)',
+            example: ['الأسعار مرتفعة قليلاً']
+          },
+          isRecommended: {
+            type: 'boolean',
+            description: 'هل توصي بهذا الفنان (اختياري)',
+            example: true
+          },
+          subRatings: {
+            type: 'object',
+            description: 'التقييمات الفرعية (اختياري)',
+            properties: {
+              professionalism: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 5,
+                description: 'تقييم الاحترافية'
+              },
+              communication: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 5,
+                description: 'تقييم التواصل'
+              },
+              delivery: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 5,
+                description: 'تقييم التسليم'
+              },
+              creativity: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 5,
+                description: 'تقييم الإبداع'
+              },
+              valueForMoney: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 5,
+                description: 'تقييم القيمة مقابل المال'
+              },
+              responsiveness: {
+                type: 'integer',
+                minimum: 1,
+                maximum: 5,
+                description: 'تقييم سرعة الاستجابة'
+              }
+            }
+          },
+          workingExperience: {
+            type: 'object',
+            description: 'تجربة العمل مع الفنان (اختياري)',
+            properties: {
+              projectType: {
+                type: 'string',
+                enum: ['commission', 'collaboration', 'purchase', 'consultation', 'other'],
+                description: 'نوع المشروع'
+              },
+              duration: {
+                type: 'string',
+                enum: ['less_than_week', 'one_to_two_weeks', 'two_to_four_weeks', 'one_to_three_months', 'more_than_three_months'],
+                description: 'مدة المشروع'
+              },
+              budget: {
+                type: 'string',
+                enum: ['under_100', '100_500', '500_1000', '1000_5000', 'over_5000'],
+                description: 'نطاق الميزانية'
+              }
+            }
+          },
+          anonymous: {
+            type: 'boolean',
+            default: false,
+            description: 'نشر التقييم بشكل مجهول (اختياري)'
+          }
+        }
+      },
       // Pagination
       PaginationResponse: {
         type: 'object',
