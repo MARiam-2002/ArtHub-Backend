@@ -2373,19 +2373,7 @@ export const swaggerDefinition = {
         value: {
           artist: '60d0fe4f5311236168a109ca',
           rating: 5,
-          title: 'فنان محترف',
-          comment: 'تعامل ممتاز وجودة عالية في العمل',
-          pros: ['سرعة في التنفيذ', 'جودة عالية'],
-          cons: ['الأسعار مرتفعة قليلاً'],
-          isRecommended: true,
-          subRatings: {
-            professionalism: 5,
-            communication: 4,
-            delivery: 5,
-            creativity: 5,
-            valueForMoney: 4,
-            responsiveness: 5
-          }
+          comment: 'فنان ممتاز'
         }
       }
     },
