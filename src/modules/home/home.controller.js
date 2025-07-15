@@ -604,7 +604,10 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       const artistReviewsData = await artistReviewModel.find({ 
         artist: artwork.artist._id, 
         status: 'active',
-        artwork: { $exists: false } // Only artist reviews, not artwork reviews
+        $or: [
+          { artwork: { $exists: false } },
+          { artwork: null }
+        ]
       })
       .populate('user', 'displayName profileImage')
       .sort({ createdAt: -1 })
@@ -631,7 +634,10 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
           $match: { 
             artist: artwork.artist._id, 
             status: 'active',
-            artwork: { $exists: false }
+            $or: [
+              { artwork: { $exists: false } },
+              { artwork: null }
+            ]
           } 
         },
         {
@@ -654,7 +660,10 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
           artist: artwork.artist._id, 
           user: userId, 
           status: 'active',
-          artwork: { $exists: false }
+          $or: [
+            { artwork: { $exists: false } },
+            { artwork: null }
+          ]
         }).lean();
         
         if (myArtistReview) {
