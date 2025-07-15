@@ -46,6 +46,7 @@ function formatArtists(artists) {
     profileImage: getImageUrl(artist.profileImage, artist.photoURL),
     coverImages: getImageUrls(artist.coverImages, 3),
     rating: artist.averageRating ? parseFloat(artist.averageRating.toFixed(1)) : 0,
+    totalRating: artist.totalRating || 0,
     reviewsCount: artist.reviewsCount || 0,
     isVerified: artist.isVerified || false,
     followersCount: artist.followersCount || 0,
@@ -149,36 +150,79 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       // 2. Featured Artists (Top Rated with follower count)
       userModel.aggregate([
         { $match: { role: 'artist', isActive: true, isDeleted: false } },
-        { 
-          $lookup: { 
-            from: 'reviews', 
+        { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
+        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
+        // Get artist reviews (reviews for the artist himself)
+        {
+          $lookup: {
+            from: 'reviews',
             let: { artistId: '$_id' },
             pipeline: [
-              { 
-                $match: { 
+              {
+                $match: {
                   $expr: { $eq: ['$artist', '$$artistId'] },
                   status: 'active',
                   $or: [
                     { artwork: { $exists: false } },
                     { artwork: null }
                   ]
-                } 
+                }
               }
             ],
-            as: 'artistReviews' 
-          } 
+            as: 'artistReviews'
+          }
         },
-        { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
-        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
+        // Get all reviews for artist's artworks (not used in rating now)
+        {
+          $lookup: {
+            from: 'reviews',
+            let: { artistId: '$_id' },
+            pipeline: [
+              {
+                $lookup: {
+                  from: 'artworks',
+                  localField: 'artwork',
+                  foreignField: '_id',
+                  as: 'artworkData'
+                }
+              },
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
+                      { $ne: ['$artwork', null] }
+                    ]
+                  },
+                  status: 'active'
+                }
+              }
+            ],
+            as: 'artworkReviews'
+          }
+        },
         {
           $addFields: {
-            averageRating: { $ifNull: [{ $avg: '$artistReviews.rating' }, 0] },
-            reviewsCount: { $size: '$artistReviews' },
+            // Only artist reviews are used for rating
+            totalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+            totalReviewsCount: { $size: '$artistReviews' },
+            averageRating: {
+              $cond: {
+                if: { $gt: [{ $size: '$artistReviews' }, 0] },
+                then: { 
+                  $divide: [
+                    { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                    { $size: '$artistReviews' }
+                  ]
+                },
+                else: 0
+              }
+            },
             followersCount: { $size: '$followers' },
             artworksCount: { $size: '$artworks' },
           }
         },
-        { $sort: { averageRating: -1, followersCount: -1, reviewsCount: -1 } },
+        { $sort: { averageRating: -1, totalReviewsCount: -1, followersCount: -1 } },
         { $limit: 6 },
         { 
           $project: { 
@@ -187,7 +231,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             photoURL: 1, 
             coverImages: 1,
             averageRating: 1, 
-            reviewsCount: 1, 
+            totalRating: 1,
+            reviewsCount: '$totalReviewsCount',
             followersCount: 1,
             artworksCount: 1,
             job: 1,
@@ -214,31 +259,74 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       // 4. Latest Artists (Recently Joined)
       userModel.aggregate([
         { $match: { role: 'artist', isActive: true, isDeleted: false } },
-        { 
-          $lookup: { 
-            from: 'reviews', 
+        { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
+        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
+        // Get artist reviews (reviews for the artist himself)
+        {
+          $lookup: {
+            from: 'reviews',
             let: { artistId: '$_id' },
             pipeline: [
-              { 
-                $match: { 
+              {
+                $match: {
                   $expr: { $eq: ['$artist', '$$artistId'] },
                   status: 'active',
                   $or: [
                     { artwork: { $exists: false } },
                     { artwork: null }
                   ]
-                } 
+                }
               }
             ],
-            as: 'artistReviews' 
-          } 
+            as: 'artistReviews'
+          }
         },
-        { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
-        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
+        // Get all reviews for artist's artworks (not used in rating now)
+        {
+          $lookup: {
+            from: 'reviews',
+            let: { artistId: '$_id' },
+            pipeline: [
+              {
+                $lookup: {
+                  from: 'artworks',
+                  localField: 'artwork',
+                  foreignField: '_id',
+                  as: 'artworkData'
+                }
+              },
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
+                      { $ne: ['$artwork', null] }
+                    ]
+                  },
+                  status: 'active'
+                }
+              }
+            ],
+            as: 'artworkReviews'
+          }
+        },
         {
           $addFields: {
-            averageRating: { $ifNull: [{ $avg: '$artistReviews.rating' }, 0] },
-            reviewsCount: { $size: '$artistReviews' },
+            // Only artist reviews are used for rating
+            totalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+            totalReviewsCount: { $size: '$artistReviews' },
+            averageRating: {
+              $cond: {
+                if: { $gt: [{ $size: '$artistReviews' }, 0] },
+                then: { 
+                  $divide: [
+                    { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                    { $size: '$artistReviews' }
+                  ]
+                },
+                else: 0
+              }
+            },
             followersCount: { $size: '$followers' },
             artworksCount: { $size: '$artworks' },
           }
@@ -252,7 +340,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             photoURL: 1, 
             coverImages: 1,
             averageRating: 1, 
-            reviewsCount: 1, 
+            totalRating: 1,
+            reviewsCount: '$totalReviewsCount',
             followersCount: 1,
             artworksCount: 1,
             job: 1,
