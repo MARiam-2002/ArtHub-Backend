@@ -130,11 +130,9 @@ router.put('/change-password',
  * @swagger
  * /user/wishlist:
  *   get:
- *     summary: جلب قائمة المفضلة
+ *     summary: Get user wishlist
  *     tags: [Profile]
- *     description: |
- *       جلب قائمة الأعمال الفنية المحفوظة في المفضلة للمستخدم المسجل دخوله.
- *       يدعم التقسيم (pagination) وترتيب العناصر حسب تاريخ الإضافة.
+ *     description: Get the authenticated user's wishlist with pagination
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -144,8 +142,7 @@ router.put('/change-password',
  *           type: integer
  *           minimum: 1
  *           default: 1
- *         description: رقم الصفحة
- *         example: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
@@ -153,11 +150,10 @@ router.put('/change-password',
  *           minimum: 1
  *           maximum: 50
  *           default: 10
- *         description: عدد العناصر في الصفحة
- *         example: 10
+ *         description: Items per page
  *     responses:
  *       200:
- *         description: تم جلب قائمة المفضلة بنجاح
+ *         description: Wishlist retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -172,7 +168,7 @@ router.put('/change-password',
  *                 data:
  *                   type: object
  *                   properties:
- *                     artworks:
+ *                     wishlist:
  *                       type: array
  *                       items:
  *                         $ref: '#/components/schemas/WishlistItem'
@@ -182,7 +178,6 @@ router.put('/change-password',
  *         $ref: '#/components/responses/UnauthorizedError'
  *       500:
  *         $ref: '#/components/responses/ServerError'
- *     x-screen: WishlistScreen
  */
 router.get('/wishlist', 
   isAuthenticated,
