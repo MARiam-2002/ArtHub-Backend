@@ -3202,7 +3202,7 @@
     }
   ],
   "paths": {
-    "/artworks": {
+    "/api/artworks": {
       "get": {
         "tags": [
           "Artwork"
@@ -3412,7 +3412,7 @@
         }
       }
     },
-    "/artworks/search": {
+    "/api/artworks/search": {
       "get": {
         "tags": [
           "Artwork"
@@ -3515,7 +3515,7 @@
         }
       }
     },
-    "/artworks/{id}": {
+    "/api/artworks/{id}": {
       "get": {
         "tags": [
           "Artwork"
@@ -3656,7 +3656,7 @@
         }
       }
     },
-    "/artworks/{id}/favorite": {
+    "/api/artworks/{id}/favorite": {
       "post": {
         "tags": [
           "Artwork"
@@ -3717,7 +3717,7 @@
         }
       }
     },
-    "/artworks/{id}/reviews": {
+    "/api/artworks/{id}/reviews": {
       "post": {
         "tags": [
           "Artwork"
@@ -3833,7 +3833,7 @@
         }
       }
     },
-    "/artworks/artist/{artistId}": {
+    "/api/artworks/artist/{artistId}": {
       "get": {
         "tags": [
           "Artwork"
@@ -3889,61 +3889,6 @@
           },
           "404": {
             "description": "Artist not found"
-          }
-        }
-      }
-    },
-    "/artworks/my-artworks": {
-      "get": {
-        "tags": [
-          "Artwork"
-        ],
-        "summary": "Get my artworks",
-        "description": "Get all artworks created by the authenticated user",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 10
-            }
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "available",
-                "sold",
-                "reserved"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "User artworks retrieved successfully"
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
           }
         }
       }
@@ -5111,7 +5056,7 @@
         "x-screen": "AdminPanel"
       }
     },
-    "/chat": {
+    "/api/chat": {
       "get": {
         "summary": "Get user chats",
         "tags": [
@@ -5156,7 +5101,7 @@
         }
       }
     },
-    "/chat/create": {
+    "/api/chat/create": {
       "post": {
         "summary": "Get or create chat with user",
         "tags": [
@@ -5203,7 +5148,7 @@
         }
       }
     },
-    "/chat/{chatId}/messages": {
+    "/api/chat/{chatId}/messages": {
       "get": {
         "summary": "Get chat messages",
         "tags": [
@@ -5257,7 +5202,7 @@
         }
       }
     },
-    "/chat/{chatId}/send": {
+    "/api/chat/{chatId}/send": {
       "post": {
         "summary": "Send message",
         "tags": [
@@ -5317,7 +5262,7 @@
         }
       }
     },
-    "/chat/{chatId}": {
+    "/api/chat/{chatId}": {
       "delete": {
         "summary": "Delete chat",
         "tags": [
@@ -5353,7 +5298,7 @@
         }
       }
     },
-    "/chat/socket-token": {
+    "/api/chat/socket-token": {
       "get": {
         "tags": [
           "Chat"
@@ -5406,7 +5351,7 @@
         }
       }
     },
-    "/follow/toggle": {
+    "/api/follow/toggle": {
       "post": {
         "summary": "Toggle follow/unfollow artist",
         "tags": [
@@ -5453,7 +5398,7 @@
         }
       }
     },
-    "/follow/following/{userId}": {
+    "/api/follow/following/{userId}": {
       "get": {
         "summary": "Get user following",
         "tags": [
@@ -5499,7 +5444,7 @@
         }
       }
     },
-    "/follow/status/{artistId}": {
+    "/api/follow/status/{artistId}": {
       "get": {
         "summary": "Check follow status",
         "tags": [
@@ -5532,7 +5477,7 @@
         }
       }
     },
-    "/follow/stats/{userId}": {
+    "/api/follow/stats/{userId}": {
       "get": {
         "summary": "Get follow statistics",
         "tags": [
@@ -5560,7 +5505,7 @@
         }
       }
     },
-    "/follow/follow": {
+    "/api/follow/follow": {
       "post": {
         "summary": "متابعة فنان",
         "tags": [
@@ -5710,7 +5655,7 @@
         "x-screen": "ArtistProfileScreen"
       }
     },
-    "/follow/unfollow": {
+    "/api/follow/unfollow": {
       "post": {
         "summary": "إلغاء متابعة فنان",
         "tags": [
@@ -5812,7 +5757,7 @@
         "x-screen": "ArtistProfileScreen"
       }
     },
-    "/follow/my-followers": {
+    "/api/follow/my-followers": {
       "get": {
         "summary": "جلب متابعيّ",
         "tags": [
@@ -5908,7 +5853,7 @@
         "x-screen": "MyFollowersScreen"
       }
     },
-    "/follow/my-following": {
+    "/api/follow/my-following": {
       "get": {
         "summary": "جلب متابعاتي",
         "tags": [
@@ -6004,7 +5949,7 @@
         "x-screen": "MyFollowingScreen"
       }
     },
-    "/follow/mutual/{userId}": {
+    "/api/follow/mutual/{userId}": {
       "get": {
         "summary": "جلب المتابعات المشتركة",
         "tags": [
@@ -6148,7 +6093,7 @@
         "x-screen": "MutualFollowsScreen"
       }
     },
-    "/notifications": {
+    "/api/notifications": {
       "get": {
         "summary": "Get user notifications",
         "tags": [
@@ -6299,7 +6244,7 @@
         "x-screen": "AdminNotificationScreen"
       }
     },
-    "/notifications/firebase": {
+    "/api/notifications/firebase": {
       "get": {
         "tags": [
           "Notifications"
@@ -6330,7 +6275,7 @@
         "x-screen": "NotificationsScreen"
       }
     },
-    "/notifications/stats": {
+    "/api/notifications/stats": {
       "get": {
         "tags": [
           "Notifications"
@@ -6434,7 +6379,7 @@
         "x-screen": "NotificationStatsScreen"
       }
     },
-    "/notifications/settings": {
+    "/api/notifications/settings": {
       "get": {
         "summary": "Get notification settings",
         "tags": [
@@ -6514,7 +6459,7 @@
         }
       }
     },
-    "/notifications/{notificationId}/read": {
+    "/api/notifications/{notificationId}/read": {
       "patch": {
         "summary": "Mark notification as read",
         "tags": [
@@ -6550,7 +6495,7 @@
         }
       }
     },
-    "/notifications/read-all": {
+    "/api/notifications/read-all": {
       "patch": {
         "summary": "Mark all notifications as read",
         "tags": [
@@ -6572,7 +6517,7 @@
         }
       }
     },
-    "/notifications/{notificationId}": {
+    "/api/notifications/{notificationId}": {
       "delete": {
         "summary": "Delete notification",
         "tags": [
@@ -6608,7 +6553,7 @@
         }
       }
     },
-    "/notifications/token": {
+    "/api/notifications/token": {
       "post": {
         "tags": [
           "FCM Tokens"
@@ -6712,7 +6657,7 @@
         "x-screen": "SettingsScreen"
       }
     },
-    "/notifications/token/firebase": {
+    "/api/notifications/token/firebase": {
       "post": {
         "tags": [
           "FCM Tokens"
@@ -6785,7 +6730,7 @@
         "x-screen": "SettingsScreen"
       }
     },
-    "/reports": {
+    "/api/reports": {
       "post": {
         "tags": [
           "Reports"
@@ -6875,7 +6820,7 @@
         }
       }
     },
-    "/reports/{reportId}": {
+    "/api/reports/{reportId}": {
       "get": {
         "tags": [
           "Reports"
@@ -6966,7 +6911,7 @@
         }
       }
     },
-    "/reports/admin/stats": {
+    "/api/reports/admin/stats": {
       "get": {
         "tags": [
           "Reports",
@@ -7058,7 +7003,7 @@
         }
       }
     },
-    "/reports/admin/all": {
+    "/api/reports/admin/all": {
       "get": {
         "tags": [
           "Reports",
@@ -7127,7 +7072,7 @@
         }
       }
     },
-    "/reports/admin/{reportId}/status": {
+    "/api/reports/admin/{reportId}/status": {
       "patch": {
         "tags": [
           "Reports",
@@ -7192,7 +7137,7 @@
         }
       }
     },
-    "/reports/admin/bulk-update": {
+    "/api/reports/admin/bulk-update": {
       "patch": {
         "tags": [
           "Reports",
@@ -7226,7 +7171,7 @@
         }
       }
     },
-    "/reports/content/{contentType}/{contentId}": {
+    "/api/reports/content/{contentType}/{contentId}": {
       "get": {
         "tags": [
           "Reports",
@@ -7299,7 +7244,7 @@
         }
       }
     },
-    "/reviews/artwork": {
+    "/api/reviews/artwork": {
       "post": {
         "tags": [
           "Reviews"
@@ -7396,7 +7341,7 @@
         }
       }
     },
-    "/reviews/artwork/{reviewId}": {
+    "/api/reviews/artwork/{reviewId}": {
       "put": {
         "tags": [
           "Reviews"
@@ -7470,7 +7415,7 @@
         }
       }
     },
-    "/reviews/artist": {
+    "/api/reviews/artist": {
       "post": {
         "tags": [
           "Reviews"
@@ -7532,7 +7477,7 @@
         }
       }
     },
-    "/reviews/artist/{reviewId}": {
+    "/api/reviews/artist/{reviewId}": {
       "put": {
         "tags": [
           "Reviews"
@@ -7586,7 +7531,7 @@
         }
       }
     },
-    "/reviews/artist/{artistId}": {
+    "/api/reviews/artist/{artistId}": {
       "get": {
         "tags": [
           "Reviews"
@@ -7689,7 +7634,7 @@
         }
       }
     },
-    "/reviews/{reviewId}": {
+    "/api/reviews/{reviewId}": {
       "delete": {
         "tags": [
           "Reviews"
@@ -7747,7 +7692,7 @@
         }
       }
     },
-    "/reviews/{reviewId}/helpful": {
+    "/api/reviews/{reviewId}/helpful": {
       "post": {
         "tags": [
           "Reviews"
@@ -7842,7 +7787,7 @@
         }
       }
     },
-    "/reviews/{reviewId}/report": {
+    "/api/reviews/{reviewId}/report": {
       "post": {
         "tags": [
           "Reviews"
@@ -7933,7 +7878,7 @@
         }
       }
     },
-    "/reviews/my": {
+    "/api/reviews/my": {
       "get": {
         "tags": [
           "Reviews"
@@ -8073,7 +8018,7 @@
         }
       }
     },
-    "/reviews/admin/stats": {
+    "/api/reviews/admin/stats": {
       "get": {
         "tags": [
           "Reviews"
@@ -8211,7 +8156,7 @@
         }
       }
     },
-    "/reviews/{reviewId}/moderate": {
+    "/api/reviews/{reviewId}/moderate": {
       "patch": {
         "tags": [
           "Reviews"
@@ -8304,7 +8249,7 @@
         }
       }
     },
-    "/special-requests": {
+    "/api/special-requests": {
       "post": {
         "tags": [
           "Special Requests"
@@ -8376,7 +8321,7 @@
         }
       }
     },
-    "/special-requests/my": {
+    "/api/special-requests/my": {
       "get": {
         "tags": [
           "Special Requests"
@@ -8447,7 +8392,7 @@
         }
       }
     },
-    "/special-requests/artist": {
+    "/api/special-requests/artist": {
       "get": {
         "tags": [
           "Special Requests"
@@ -8501,7 +8446,7 @@
         }
       }
     },
-    "/special-requests/artist/stats": {
+    "/api/special-requests/artist/stats": {
       "get": {
         "tags": [
           "Special Requests"
@@ -8523,7 +8468,7 @@
         }
       }
     },
-    "/special-requests/{requestId}": {
+    "/api/special-requests/{requestId}": {
       "get": {
         "tags": [
           "Special Requests"
@@ -8556,7 +8501,7 @@
         }
       }
     },
-    "/special-requests/{requestId}/status": {
+    "/api/special-requests/{requestId}/status": {
       "patch": {
         "tags": [
           "Special Requests"
@@ -8617,7 +8562,7 @@
         }
       }
     },
-    "/special-requests/{requestId}/response": {
+    "/api/special-requests/{requestId}/response": {
       "post": {
         "tags": [
           "Special Requests"
@@ -8669,7 +8614,7 @@
         }
       }
     },
-    "/special-requests/{requestId}/complete": {
+    "/api/special-requests/{requestId}/complete": {
       "post": {
         "tags": [
           "Special Requests"
@@ -8721,7 +8666,7 @@
         }
       }
     },
-    "/transactions": {
+    "/api/transactions": {
       "post": {
         "tags": [
           "Transactions"
@@ -9058,7 +9003,7 @@
         }
       }
     },
-    "/transactions/stats": {
+    "/api/transactions/stats": {
       "get": {
         "tags": [
           "Transactions"
@@ -9193,7 +9138,7 @@
         }
       }
     },
-    "/transactions/export": {
+    "/api/transactions/export": {
       "get": {
         "tags": [
           "Transactions"
@@ -9315,7 +9260,7 @@
         }
       }
     },
-    "/transactions/bulk": {
+    "/api/transactions/bulk": {
       "patch": {
         "tags": [
           "Transactions"
@@ -9452,7 +9397,7 @@
         }
       }
     },
-    "/transactions/{transactionId}/status": {
+    "/api/transactions/{transactionId}/status": {
       "patch": {
         "tags": [
           "Transactions"
@@ -9598,7 +9543,7 @@
         }
       }
     },
-    "/transactions/{transactionId}/tracking": {
+    "/api/transactions/{transactionId}/tracking": {
       "patch": {
         "tags": [
           "Transactions"
@@ -9713,7 +9658,7 @@
         }
       }
     },
-    "/transactions/{transactionId}/refund": {
+    "/api/transactions/{transactionId}/refund": {
       "post": {
         "tags": [
           "Transactions"
@@ -9853,7 +9798,7 @@
         }
       }
     },
-    "/transactions/{transactionId}/dispute": {
+    "/api/transactions/{transactionId}/dispute": {
       "post": {
         "tags": [
           "Transactions"
@@ -9991,7 +9936,7 @@
         }
       }
     },
-    "/transactions/{transactionId}/installments/{installmentNumber}": {
+    "/api/transactions/{transactionId}/installments/{installmentNumber}": {
       "post": {
         "tags": [
           "Transactions"
@@ -10154,7 +10099,7 @@
         }
       }
     },
-    "/transactions/{transactionId}/cancel": {
+    "/api/transactions/{transactionId}/cancel": {
       "post": {
         "tags": [
           "Transactions"
@@ -10235,7 +10180,7 @@
         }
       }
     },
-    "/user/profile": {
+    "/api/user/profile": {
       "get": {
         "summary": "Get current user profile",
         "tags": [
@@ -10336,7 +10281,7 @@
         }
       }
     },
-    "/user/change-password": {
+    "/api/user/change-password": {
       "put": {
         "summary": "Change user password",
         "tags": [
@@ -10391,7 +10336,7 @@
         }
       }
     },
-    "/user/wishlist": {
+    "/api/user/wishlist": {
       "get": {
         "summary": "Get user wishlist",
         "tags": [
@@ -10470,7 +10415,7 @@
         }
       }
     },
-    "/user/wishlist/toggle": {
+    "/api/user/wishlist/toggle": {
       "post": {
         "summary": "Toggle artwork in wishlist",
         "tags": [
@@ -10559,7 +10504,7 @@
         }
       }
     },
-    "/user/artist/{artistId}": {
+    "/api/user/artist/{artistId}": {
       "get": {
         "summary": "Get artist profile",
         "tags": [
@@ -10612,13 +10557,13 @@
         }
       }
     },
-    "/user/my-artworks": {
+    "/api/user/wishlist": {
       "get": {
-        "summary": "Get user's own artworks",
+        "summary": "Get user wishlist",
         "tags": [
           "Profile"
         ],
-        "description": "Get artworks created by the authenticated artist",
+        "description": "Get the authenticated user's wishlist with pagination",
         "security": [
           {
             "BearerAuth": []
@@ -10645,23 +10590,11 @@
               "default": 10
             },
             "description": "Items per page"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "available",
-                "sold"
-              ]
-            },
-            "description": "Filter by availability status"
           }
         ],
         "responses": {
           "200": {
-            "description": "Artworks retrieved successfully",
+            "description": "Wishlist retrieved successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -10673,12 +10606,12 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "تم جلب أعمالك الفنية بنجاح"
+                      "example": "تم جلب قائمة المفضلة بنجاح"
                     },
                     "data": {
                       "type": "object",
                       "properties": {
-                        "artworks": {
+                        "wishlist": {
                           "type": "array",
                           "items": {
                             "$ref": "#/components/schemas/ArtworkSummary"
@@ -10703,7 +10636,133 @@
         }
       }
     },
-    "/user/following": {
+    "/api/user/wishlist/toggle": {
+      "post": {
+        "summary": "Toggle artwork in wishlist",
+        "tags": [
+          "Profile"
+        ],
+        "description": "Add or remove artwork from user's wishlist",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "artworkId"
+                ],
+                "properties": {
+                  "artworkId": {
+                    "type": "string",
+                    "example": "64756789abcdef0123456789"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Artwork toggled in wishlist successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تبديل العمل الفني في قائمة المفضلة بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ArtworkSummary"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/user/artist/{artistId}": {
+      "get": {
+        "summary": "Get artist profile",
+        "tags": [
+          "Profile"
+        ],
+        "description": "Get artist profile by ID",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Artist ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artist profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب ملف الفنان بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ArtistProfile"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/user/following": {
       "get": {
         "summary": "Get following artists",
         "tags": [
@@ -10782,7 +10841,7 @@
         }
       }
     },
-    "/user/notification-settings": {
+    "/api/user/notification-settings": {
       "get": {
         "summary": "Get notification settings",
         "tags": [
@@ -10883,7 +10942,7 @@
         }
       }
     },
-    "/user/delete-account": {
+    "/api/user/delete-account": {
       "delete": {
         "summary": "Delete user account",
         "tags": [
