@@ -8,302 +8,13 @@ import { createNotification } from '../notification/notification.controller.js';
 import mongoose from 'mongoose';
 
 /**
- * إنشاء تقرير جديد
- * @route POST /api/reports
- * @access Private
- */
-export const createReport = asyncHandler(async (req, res) => {
-  const { contentType, contentId, reason, description, priority = 'medium', evidence = [] } = req.body;
-  const reporter = req.user._id;
-
-  // التحقق من صحة معرف المحتوى
-  if (!mongoose.Types.ObjectId.isValid(contentId)) {
-    return res.fail(null, 'معرف المحتوى غير صالح', 400);
-  }
-
-  // التحقق من وجود المحتوى المبلغ عنه وتحديد المستخدم المستهدف
-  let targetUser;
-  let contentExists = false;
-  let contentTitle = '';
-
-  try {
-    switch (contentType) {
-      case 'artwork':
-        const artwork = await artworkModel.findById(contentId).lean();
-        if (artwork) {
-          contentExists = true;
-          targetUser = artwork.artist;
-          contentTitle = artwork.title || 'عمل فني';
-        }
-        break;
-        
-      case 'user':
-        const user = await userModel.findById(contentId).lean();
-        if (user) {
-          contentExists = true;
-          targetUser = contentId;
-          contentTitle = user.displayName || 'مستخدم';
-        }
-        break;
-        
-      case 'review':
-        // يمكن إضافة منطق للمراجعات هنا
-        contentExists = true;
-        targetUser = contentId; // مؤقتاً
-        contentTitle = 'مراجعة';
-        break;
-        
-      case 'specialRequest':
-        // يمكن إضافة منطق للطلبات الخاصة هنا
-        contentExists = true;
-        targetUser = contentId; // مؤقتاً
-        contentTitle = 'طلب خاص';
-        break;
-        
-      default:
-        return res.fail(null, 'نوع المحتوى غير مدعوم', 400);
-    }
-  } catch (error) {
-    return res.fail(null, 'حدث خطأ أثناء التحقق من المحتوى', 500);
-  }
-
-  if (!contentExists) {
-    return res.fail(null, 'المحتوى المبلغ عنه غير موجود', 404);
-  }
-
-  // منع الإبلاغ عن المحتوى الخاص بالمستخدم نفسه
-  if (targetUser && targetUser.toString() === reporter.toString()) {
-    return res.fail(null, 'لا يمكنك الإبلاغ عن محتواك الخاص', 400);
-  }
-
-  // التحقق من عدم وجود تقرير سابق نشط
-  const existingReport = await reportModel.findOne({
-    reporter,
-    contentType,
-    contentId,
-    status: { $in: ['pending', 'investigating'] }
-  }).lean();
-
-  if (existingReport) {
-    return res.fail(null, 'لديك تقرير نشط بالفعل لهذا المحتوى', 400);
-  }
-
-  // إنشاء التقرير
-  const reportData = {
-    reporter,
-    contentType,
-    contentId,
-    targetUser,
-    reason,
-    description: description?.trim(),
-    priority,
-    evidence: evidence.length > 0 ? evidence : undefined,
-    metadata: {
-      contentTitle,
-      reporterIP: req.ip,
-      userAgent: req.get('User-Agent')
-    }
-  };
-
-  const report = await reportModel.create(reportData);
-
-  // إرسال إشعار للمدراء بالتقرير الجديد
-  try {
-    const admins = await userModel.find({ role: 'admin' }).select('_id').lean();
-    const notificationPromises = admins.map(admin => 
-      createNotification({
-        userId: admin._id,
-        type: 'report_created',
-        title: 'تقرير جديد',
-        message: `تم إنشاء تقرير جديد بخصوص ${contentTitle}`,
-        data: {
-          reportId: report._id,
-          contentType,
-          reason,
-          priority
-        }
-      })
-    );
-    
-    await Promise.allSettled(notificationPromises);
-  } catch (notificationError) {
-    console.error('خطأ في إرسال الإشعارات:', notificationError);
-  }
-
-  // إرجاع التقرير مع معلومات إضافية
-  const populatedReport = await reportModel
-    .findById(report._id)
-    .populate('reporter', 'displayName email')
-    .populate('targetUser', 'displayName email')
-    .lean();
-
-  res.success(populatedReport, 'تم إرسال التقرير بنجاح، سيتم مراجعته قريباً', 201);
-});
-
-/**
- * الحصول على تقارير المستخدم
- * @route GET /api/reports/my
- * @access Private
- */
-export const getUserReports = asyncHandler(async (req, res) => {
-  const { page, limit, skip } = getPaginationParams(req.query);
-  const { status, contentType, reason, sortBy = 'createdAt', sortOrder = 'desc', search } = req.query;
-
-  // بناء استعلام البحث
-  const query = { reporter: req.user._id };
-  
-  if (status) query.status = status;
-  if (contentType) query.contentType = contentType;
-  if (reason) query.reason = reason;
-  
-  // البحث في الوصف
-  if (search) {
-    query.$or = [
-      { description: { $regex: search, $options: 'i' } },
-      { 'metadata.contentTitle': { $regex: search, $options: 'i' } }
-    ];
-  }
-
-  // تحديد ترتيب النتائج
-  const sort = {};
-  sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-  const [reports, totalCount] = await Promise.all([
-    reportModel
-      .find(query)
-      .populate('targetUser', 'displayName email profileImage')
-      .sort(sort)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    reportModel.countDocuments(query)
-  ]);
-
-  // إضافة إحصائيات سريعة
-  const stats = await reportModel.aggregate([
-    { $match: { reporter: req.user._id } },
-    {
-      $group: {
-        _id: '$status',
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-
-  const statusStats = stats.reduce((acc, stat) => {
-    acc[stat._id] = stat.count;
-    return acc;
-  }, {});
-
-  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(totalCount);
-
-  res.success({
-    reports,
-    pagination: paginationMeta,
-    stats: statusStats
-  }, 'تم جلب التقارير بنجاح');
-});
-
-/**
- * الحصول على تفاصيل تقرير
- * @route GET /api/reports/:reportId
- * @access Private
- */
-export const getReportById = asyncHandler(async (req, res) => {
-  const { reportId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(reportId)) {
-    return res.fail(null, 'معرف التقرير غير صالح', 400);
-  }
-
-  const report = await reportModel
-    .findById(reportId)
-    .populate('reporter', 'displayName email profileImage')
-    .populate('targetUser', 'displayName email profileImage')
-    .lean();
-
-  if (!report) {
-    return res.fail(null, 'التقرير غير موجود', 404);
-  }
-
-  // التحقق من الصلاحيات
-  const isOwner = report.reporter._id.toString() === req.user._id.toString();
-  const isAdmin = req.user.role === 'admin';
-
-  if (!isOwner && !isAdmin) {
-    return res.fail(null, 'غير مصرح لك بعرض هذا التقرير', 403);
-  }
-
-  // إضافة معلومات إضافية للمدراء
-  if (isAdmin) {
-    // إضافة تاريخ التقارير السابقة لنفس المحتوى
-    const relatedReports = await reportModel
-      .find({
-        contentType: report.contentType,
-        contentId: report.contentId,
-        _id: { $ne: report._id }
-      })
-      .populate('reporter', 'displayName')
-      .select('reporter reason status createdAt')
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .lean();
-
-    report.relatedReports = relatedReports;
-  }
-
-  res.success(report, 'تم جلب تفاصيل التقرير بنجاح');
-});
-
-/**
- * حذف تقرير
- * @route DELETE /api/reports/:reportId
- * @access Private
- */
-export const deleteReport = asyncHandler(async (req, res) => {
-  const { reportId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(reportId)) {
-    return res.fail(null, 'معرف التقرير غير صالح', 400);
-  }
-
-  const report = await reportModel.findOne({
-    _id: reportId,
-    reporter: req.user._id,
-    status: { $in: ['pending', 'rejected'] } // يمكن حذف التقرير إذا كان معلقاً أو مرفوضاً
-  });
-
-  if (!report) {
-    return res.fail(null, 'التقرير غير موجود أو لا يمكن حذفه', 404);
-  }
-
-  await reportModel.deleteOne({ _id: reportId });
-
-  res.success(null, 'تم حذف التقرير بنجاح');
-});
-
-/**
- * الحصول على جميع التقارير (للمدراء)
+ * الحصول على جميع التقارير (للمدير)
  * @route GET /api/reports/admin/all
- * @access Admin
+ * @access Private (Admin)
  */
 export const getAllReports = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بعرض قائمة التقارير', 403);
-  }
-
   const { page, limit, skip } = getPaginationParams(req.query);
-  const {
-    status,
-    contentType,
-    reason,
-    priority,
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
-    dateFrom,
-    dateTo,
-    search
-  } = req.query;
+  const { status, contentType, reason, priority, sortBy = 'createdAt', sortOrder = 'desc', search } = req.query;
 
   // بناء استعلام البحث
   const query = {};
@@ -312,15 +23,8 @@ export const getAllReports = asyncHandler(async (req, res) => {
   if (contentType) query.contentType = contentType;
   if (reason) query.reason = reason;
   if (priority) query.priority = priority;
-
-  // تصفية التاريخ
-  if (dateFrom || dateTo) {
-    query.createdAt = {};
-    if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-    if (dateTo) query.createdAt.$lte = new Date(dateTo);
-  }
-
-  // البحث النصي
+  
+  // البحث في الوصف أو عنوان المحتوى
   if (search) {
     query.$or = [
       { description: { $regex: search, $options: 'i' } },
@@ -353,155 +57,191 @@ export const getAllReports = asyncHandler(async (req, res) => {
 });
 
 /**
- * إحصائيات التقارير
+ * الحصول على إحصائيات التقارير (للمدير)
  * @route GET /api/reports/admin/stats
- * @access Admin
+ * @access Private (Admin)
  */
 export const getReportStats = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بعرض إحصائيات التقارير', 403);
-  }
-
   const { period = 'month', groupBy = 'status', dateFrom, dateTo } = req.query;
 
-  // تحديد فترة التاريخ
-  let dateFilter = {};
-  const now = new Date();
-  
-  if (dateFrom && dateTo) {
-    dateFilter = {
-      createdAt: {
-        $gte: new Date(dateFrom),
-        $lte: new Date(dateTo)
-      }
-    };
+  // بناء استعلام التاريخ
+  const dateQuery = {};
+  if (dateFrom || dateTo) {
+    dateQuery.createdAt = {};
+    if (dateFrom) dateQuery.createdAt.$gte = new Date(dateFrom);
+    if (dateTo) dateQuery.createdAt.$lte = new Date(dateTo);
   } else {
+    // استخدام الفترة المحددة
+    const now = new Date();
+    let startDate;
+    
     switch (period) {
       case 'day':
-        dateFilter.createdAt = { $gte: new Date(now.setHours(0, 0, 0, 0)) };
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         break;
       case 'week':
-        dateFilter.createdAt = { $gte: new Date(now.setDate(now.getDate() - 7)) };
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         break;
       case 'month':
-        dateFilter.createdAt = { $gte: new Date(now.setMonth(now.getMonth() - 1)) };
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
       case 'quarter':
-        dateFilter.createdAt = { $gte: new Date(now.setMonth(now.getMonth() - 3)) };
+        const quarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), quarter * 3, 1);
         break;
       case 'year':
-        dateFilter.createdAt = { $gte: new Date(now.setFullYear(now.getFullYear() - 1)) };
+        startDate = new Date(now.getFullYear(), 0, 1);
         break;
       default:
-        // كل التقارير
-        break;
+        startDate = null;
+    }
+    
+    if (startDate) {
+      dateQuery.createdAt = { $gte: startDate };
     }
   }
 
-  // الإحصائيات العامة
-  const [
-    totalReports,
-    pendingReports,
-    resolvedReports,
-    rejectedReports,
-    investigatingReports,
-    escalatedReports,
-    groupedStats,
-    topReasons,
-    recentActivity
-  ] = await Promise.all([
-    reportModel.countDocuments(dateFilter),
-    reportModel.countDocuments({ ...dateFilter, status: 'pending' }),
-    reportModel.countDocuments({ ...dateFilter, status: 'resolved' }),
-    reportModel.countDocuments({ ...dateFilter, status: 'rejected' }),
-    reportModel.countDocuments({ ...dateFilter, status: 'investigating' }),
-    reportModel.countDocuments({ ...dateFilter, status: 'escalated' }),
-    
-    // إحصائيات مجمعة حسب المعيار المحدد
-    reportModel.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: `$${groupBy}`,
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } }
-    ]),
-    
-    // أهم أسباب الإبلاغ
-    reportModel.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: '$reason',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
-    ]),
-    
-    // النشاط الأخير
-    reportModel.aggregate([
-      { $match: dateFilter },
-      {
-        $group: {
-          _id: {
-            $dateToString: {
-              format: '%Y-%m-%d',
-              date: '$createdAt'
-            }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: -1 } },
-      { $limit: 30 }
-    ])
+  // إحصائيات عامة
+  const generalStats = await reportModel.aggregate([
+    { $match: dateQuery },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: 1 },
+        pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+        investigating: { $sum: { $cond: [{ $eq: ['$status', 'investigating'] }, 1, 0] } },
+        resolved: { $sum: { $cond: [{ $eq: ['$status', 'resolved'] }, 1, 0] } },
+        rejected: { $sum: { $cond: [{ $eq: ['$status', 'rejected'] }, 1, 0] } },
+        highPriority: { $sum: { $cond: [{ $eq: ['$priority', 'high'] }, 1, 0] } },
+        mediumPriority: { $sum: { $cond: [{ $eq: ['$priority', 'medium'] }, 1, 0] } },
+        lowPriority: { $sum: { $cond: [{ $eq: ['$priority', 'low'] }, 1, 0] } }
+      }
+    }
   ]);
 
-  // تنسيق النتائج
-  const stats = {
-    summary: {
-      total: totalReports,
-      pending: pendingReports,
-      investigating: investigatingReports,
-      resolved: resolvedReports,
-      rejected: rejectedReports,
-      escalated: escalatedReports
+  // إحصائيات حسب معيار التجميع
+  let groupedStats = [];
+  
+  switch (groupBy) {
+    case 'status':
+      groupedStats = await reportModel.aggregate([
+        { $match: dateQuery },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      break;
+      
+    case 'contentType':
+      groupedStats = await reportModel.aggregate([
+        { $match: dateQuery },
+        {
+          $group: {
+            _id: '$contentType',
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      break;
+      
+    case 'reason':
+      groupedStats = await reportModel.aggregate([
+        { $match: dateQuery },
+        {
+          $group: {
+            _id: '$reason',
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      break;
+      
+    case 'priority':
+      groupedStats = await reportModel.aggregate([
+        { $match: dateQuery },
+        {
+          $group: {
+            _id: '$priority',
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } }
+      ]);
+      break;
+      
+    case 'date':
+      groupedStats = await reportModel.aggregate([
+        { $match: dateQuery },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$createdAt' },
+              month: { $month: '$createdAt' },
+              day: { $dayOfMonth: '$createdAt' }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { '_id.year': -1, '_id.month': -1, '_id.day': -1 } }
+      ]);
+      break;
+  }
+
+  // إحصائيات الاتجاهات (آخر 7 أيام)
+  const trendStats = await reportModel.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+      }
     },
-    groupedBy: {
-      [groupBy]: groupedStats.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {})
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          day: { $dayOfMonth: '$createdAt' }
+        },
+        count: { $sum: 1 }
+      }
     },
-    topReasons: topReasons.map(item => ({
-      reason: item._id,
-      count: item.count
-    })),
-    activity: recentActivity.map(item => ({
-      date: item._id,
-      count: item.count
-    }))
+    { $sort: { '_id.year': -1, '_id.month': -1, '_id.day': -1 } },
+    { $limit: 7 }
+  ]);
+
+  const stats = generalStats[0] || {
+    total: 0,
+    pending: 0,
+    investigating: 0,
+    resolved: 0,
+    rejected: 0,
+    highPriority: 0,
+    mediumPriority: 0,
+    lowPriority: 0
   };
 
-  res.success(stats, 'تم جلب إحصائيات التقارير بنجاح');
+  res.success({
+    general: stats,
+    grouped: groupedStats,
+    trends: trendStats,
+    period,
+    groupBy
+  }, 'تم جلب إحصائيات التقارير بنجاح');
 });
 
 /**
- * تحديث حالة التقرير
+ * تحديث حالة تقرير (للمدير)
  * @route PATCH /api/reports/admin/:reportId/status
- * @access Admin
+ * @access Private (Admin)
  */
 export const updateReportStatus = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بتحديث حالة التقارير', 403);
-  }
-
   const { reportId } = req.params;
-  const { status, adminNotes, actionTaken, notifyReporter = true } = req.body;
+  const { status, adminNotes } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(reportId)) {
     return res.fail(null, 'معرف التقرير غير صالح', 400);
@@ -512,113 +252,138 @@ export const updateReportStatus = asyncHandler(async (req, res) => {
     return res.fail(null, 'التقرير غير موجود', 404);
   }
 
-  // حفظ الحالة السابقة
-  const previousStatus = report.status;
-
-  // تحديث التقرير
-  report.status = status;
-  if (adminNotes) report.adminNotes = adminNotes.trim();
-  if (actionTaken) report.actionTaken = actionTaken;
-  report.reviewedBy = req.user._id;
-  report.reviewedAt = new Date();
-
-  // تحديث تاريخ الحل إذا تم حل التقرير
-  if (status === 'resolved' && !report.resolvedAt) {
-    report.resolvedAt = new Date();
+  // التحقق من صحة الحالة الجديدة
+  const validStatuses = ['pending', 'investigating', 'resolved', 'rejected'];
+  if (!validStatuses.includes(status)) {
+    return res.fail(null, 'الحالة غير صحيحة', 400);
   }
 
-  await report.save();
+  // تحديث التقرير
+  const updateData = { status };
+  if (adminNotes) {
+    updateData.adminNotes = adminNotes;
+  }
+  if (status === 'resolved' || status === 'rejected') {
+    updateData.resolvedAt = new Date();
+    updateData.resolvedBy = req.user._id;
+  }
 
-  // إرسال إشعار للمبلغ إذا كان مطلوباً
-  if (notifyReporter && report.reporter) {
+  const updatedReport = await reportModel.findByIdAndUpdate(
+    reportId,
+    updateData,
+    { new: true }
+  ).populate('reporter', 'displayName email')
+   .populate('targetUser', 'displayName email')
+   .lean();
+
+  // إرسال إشعار للمبلغ إذا تم حل التقرير
+  if ((status === 'resolved' || status === 'rejected') && report.reporter) {
     try {
-      const statusMessages = {
-        investigating: 'قيد المراجعة',
-        resolved: 'تم حل التقرير',
-        rejected: 'تم رفض التقرير',
-        escalated: 'تم تصعيد التقرير'
-      };
+      const notificationMessage = status === 'resolved' 
+        ? 'تم حل التقرير الذي أرسلته بنجاح'
+        : 'تم رفض التقرير الذي أرسلته';
 
       await createNotification({
         userId: report.reporter,
         type: 'report_status_updated',
         title: 'تحديث حالة التقرير',
-        message: `تم تحديث حالة تقريرك إلى: ${statusMessages[status]}`,
+        message: notificationMessage,
         data: {
           reportId: report._id,
           status,
-          adminNotes: adminNotes || undefined
+          adminNotes
         }
       });
     } catch (notificationError) {
-      console.error('خطأ في إرسال إشعار تحديث التقرير:', notificationError);
+      console.error('خطأ في إرسال الإشعار:', notificationError);
     }
   }
-
-  // إرجاع التقرير المحدث
-  const updatedReport = await reportModel
-    .findById(reportId)
-    .populate('reporter', 'displayName email')
-    .populate('targetUser', 'displayName email')
-    .populate('reviewedBy', 'displayName email')
-    .lean();
 
   res.success(updatedReport, 'تم تحديث حالة التقرير بنجاح');
 });
 
 /**
- * تحديث متعدد للتقارير
+ * تحديث متعدد للتقارير (للمدير)
  * @route PATCH /api/reports/admin/bulk-update
- * @access Admin
+ * @access Private (Admin)
  */
 export const bulkUpdateReports = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بتحديث التقارير', 403);
-  }
-
   const { reportIds, status, adminNotes } = req.body;
 
+  if (!Array.isArray(reportIds) || reportIds.length === 0) {
+    return res.fail(null, 'يجب تحديد قائمة معرفات التقارير', 400);
+  }
+
   // التحقق من صحة معرفات التقارير
-  const invalidIds = reportIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
-  if (invalidIds.length > 0) {
-    return res.fail(null, `معرفات التقارير التالية غير صالحة: ${invalidIds.join(', ')}`, 400);
+  const validIds = reportIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+  if (validIds.length === 0) {
+    return res.fail(null, 'لا توجد معرفات صحيحة للتقارير', 400);
+  }
+
+  // التحقق من صحة الحالة
+  const validStatuses = ['pending', 'investigating', 'resolved', 'rejected'];
+  if (!validStatuses.includes(status)) {
+    return res.fail(null, 'الحالة غير صحيحة', 400);
   }
 
   // تحديث التقارير
-  const updateData = {
-    status,
-    reviewedBy: req.user._id,
-    reviewedAt: new Date()
-  };
-
-  if (adminNotes) updateData.adminNotes = adminNotes.trim();
-  if (status === 'resolved') updateData.resolvedAt = new Date();
+  const updateData = { status };
+  if (adminNotes) {
+    updateData.adminNotes = adminNotes;
+  }
+  if (status === 'resolved' || status === 'rejected') {
+    updateData.resolvedAt = new Date();
+    updateData.resolvedBy = req.user._id;
+  }
 
   const result = await reportModel.updateMany(
-    { _id: { $in: reportIds } },
+    { _id: { $in: validIds } },
     updateData
   );
 
-  if (result.matchedCount === 0) {
-    return res.fail(null, 'لم يتم العثور على تقارير للتحديث', 404);
+  // إرسال إشعارات للمبلغين
+  if ((status === 'resolved' || status === 'rejected')) {
+    try {
+      const reports = await reportModel.find({ _id: { $in: validIds } }).select('reporter');
+      const uniqueReporters = [...new Set(reports.map(r => r.reporter.toString()))];
+      
+      const notificationMessage = status === 'resolved' 
+        ? 'تم حل التقارير التي أرسلتها بنجاح'
+        : 'تم رفض التقارير التي أرسلتها';
+
+      const notificationPromises = uniqueReporters.map(reporterId => 
+        createNotification({
+          userId: reporterId,
+          type: 'bulk_report_status_updated',
+          title: 'تحديث حالة التقارير',
+          message: notificationMessage,
+          data: {
+            status,
+            adminNotes,
+            count: validIds.length
+          }
+        })
+      );
+      
+      await Promise.allSettled(notificationPromises);
+    } catch (notificationError) {
+      console.error('خطأ في إرسال الإشعارات:', notificationError);
+    }
   }
 
   res.success({
-    matchedCount: result.matchedCount,
-    modifiedCount: result.modifiedCount
+    updatedCount: result.modifiedCount,
+    totalRequested: reportIds.length,
+    validIds: validIds.length
   }, `تم تحديث ${result.modifiedCount} تقرير بنجاح`);
 });
 
 /**
- * الحصول على تقارير محتوى معين
+ * الحصول على تقارير محتوى معين (للمدير)
  * @route GET /api/reports/content/:contentType/:contentId
- * @access Admin
+ * @access Private (Admin)
  */
 export const getContentReports = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بعرض تقارير المحتوى', 403);
-  }
-
   const { contentType, contentId } = req.params;
   const { page, limit, skip } = getPaginationParams(req.query);
 
@@ -632,7 +397,7 @@ export const getContentReports = asyncHandler(async (req, res) => {
     reportModel
       .find(query)
       .populate('reporter', 'displayName email profileImage')
-      .populate('reviewedBy', 'displayName email')
+      .populate('targetUser', 'displayName email profileImage')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -645,95 +410,7 @@ export const getContentReports = asyncHandler(async (req, res) => {
   res.success({
     reports,
     pagination: paginationMeta,
-    contentInfo: {
-      contentType,
-      contentId,
-      totalReports: totalCount
-    }
+    contentType,
+    contentId
   }, 'تم جلب تقارير المحتوى بنجاح');
-});
-
-/**
- * تصدير التقارير
- * @route GET /api/reports/admin/export
- * @access Admin
- */
-export const exportReports = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.fail(null, 'غير مصرح لك بتصدير التقارير', 403);
-  }
-
-  const { format = 'csv', status, contentType, dateFrom, dateTo } = req.query;
-
-  // بناء استعلام التصدير
-  const query = {};
-  if (status) query.status = status;
-  if (contentType) query.contentType = contentType;
-  
-  if (dateFrom || dateTo) {
-    query.createdAt = {};
-    if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-    if (dateTo) query.createdAt.$lte = new Date(dateTo);
-  }
-
-  const reports = await reportModel
-    .find(query)
-    .populate('reporter', 'displayName email')
-    .populate('targetUser', 'displayName email')
-    .populate('reviewedBy', 'displayName email')
-    .sort({ createdAt: -1 })
-    .lean();
-
-  // تحضير البيانات للتصدير
-  const exportData = reports.map(report => ({
-    id: report._id,
-    contentType: report.contentType,
-    contentId: report.contentId,
-    reporter: report.reporter?.displayName || 'غير معروف',
-    reporterEmail: report.reporter?.email || '',
-    targetUser: report.targetUser?.displayName || 'غير معروف',
-    reason: report.reason,
-    description: report.description || '',
-    status: report.status,
-    priority: report.priority || 'medium',
-    adminNotes: report.adminNotes || '',
-    actionTaken: report.actionTaken || '',
-    reviewedBy: report.reviewedBy?.displayName || '',
-    createdAt: report.createdAt,
-    updatedAt: report.updatedAt,
-    resolvedAt: report.resolvedAt || ''
-  }));
-
-  // تحديد نوع المحتوى ونوع الملف
-  let contentType_response, filename;
-  
-  switch (format) {
-    case 'json':
-      contentType_response = 'application/json';
-      filename = `reports_${Date.now()}.json`;
-      break;
-    case 'xlsx':
-      contentType_response = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      filename = `reports_${Date.now()}.xlsx`;
-      break;
-    default: // csv
-      contentType_response = 'text/csv';
-      filename = `reports_${Date.now()}.csv`;
-  }
-
-  res.setHeader('Content-Type', contentType_response);
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
-  if (format === 'json') {
-    res.json(exportData);
-  } else if (format === 'csv') {
-    // تحويل إلى CSV
-    const csvHeaders = Object.keys(exportData[0] || {}).join(',');
-    const csvRows = exportData.map(row => Object.values(row).join(','));
-    const csvContent = [csvHeaders, ...csvRows].join('\n');
-    res.send(csvContent);
-  } else {
-    // للـ XLSX يمكن استخدام مكتبة مثل xlsx
-    res.fail(null, 'تنسيق التصدير غير مدعوم حالياً', 400);
-  }
 });

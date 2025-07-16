@@ -1,0 +1,195 @@
+{
+  "info": {
+    "name": "Reports Admin - Clean API",
+    "description": "مجموعة اختبار نقاط النهاية الأساسية للتقارير بعد التنظيف",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "report_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "content_type",
+      "value": "artwork",
+      "type": "string"
+    },
+    {
+      "key": "content_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. إحصائيات التقارير",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/reports/admin/stats?period=month&groupBy=status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "reports", "admin", "stats"],
+          "query": [
+            {
+              "key": "period",
+              "value": "month",
+              "description": "فترة الإحصائيات"
+            },
+            {
+              "key": "groupBy",
+              "value": "status",
+              "description": "معيار التجميع"
+            }
+          ]
+        },
+        "description": "جلب إحصائيات شاملة للتقارير مع إمكانية التصفية"
+      },
+      "response": []
+    },
+    {
+      "name": "2. قائمة جميع التقارير",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/reports/admin/all?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "reports", "admin", "all"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "رقم الصفحة"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "عدد العناصر في الصفحة"
+            }
+          ]
+        },
+        "description": "عرض قائمة جميع التقارير مع التصفية والبحث"
+      },
+      "response": []
+    },
+    {
+      "name": "3. تحديث حالة تقرير",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"resolved\",\n  \"adminNotes\": \"تم مراجعة التقرير واتخاذ الإجراء المناسب\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/reports/admin/{{report_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "reports", "admin", "{{report_id}}", "status"]
+        },
+        "description": "تحديث حالة تقرير محدد"
+      },
+      "response": []
+    },
+    {
+      "name": "4. تحديث متعدد للتقارير",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reportIds\": [\"{{report_id}}\"],\n  \"status\": \"resolved\",\n  \"adminNotes\": \"تم مراجعة جميع التقارير واتخاذ الإجراء المناسب\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/reports/admin/bulk-update",
+          "host": ["{{base_url}}"],
+          "path": ["api", "reports", "admin", "bulk-update"]
+        },
+        "description": "تحديث حالة عدة تقارير في مرة واحدة"
+      },
+      "response": []
+    },
+    {
+      "name": "5. تقارير محتوى معين",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/reports/content/{{content_type}}/{{content_id}}?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "reports", "content", "{{content_type}}", "{{content_id}}"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "رقم الصفحة"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "عدد العناصر في الصفحة"
+            }
+          ]
+        },
+        "description": "عرض جميع التقارير المتعلقة بمحتوى معين"
+      },
+      "response": []
+    }
+  ]
+} 
