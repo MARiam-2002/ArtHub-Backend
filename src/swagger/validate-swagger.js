@@ -19,23 +19,17 @@ try {
     process.exit(1);
   }
 
-  // التحقق من وجود Special Requests و Reports
+  // التحقق من وجود Special Requests
   const hasSpecialRequests =
     swaggerObject.paths &&
     Object.keys(swaggerObject.paths).some(path => path.includes('special-requests'));
 
-  const hasReports =
-    swaggerObject.paths && Object.keys(swaggerObject.paths).some(path => path.includes('reports'));
-
   console.log(`Special Requests موجودة: ${hasSpecialRequests ? 'نعم' : 'لا'}`);
-  console.log(`Reports موجودة: ${hasReports ? 'نعم' : 'لا'}`);
 
-  // التحقق من وجود نماذج Special Requests و Reports
+  // التحقق من وجود نماذج Special Requests
   const hasSpecialRequestSchema = swaggerObject.components?.schemas?.SpecialRequest != null;
-  const hasReportSchema = swaggerObject.components?.schemas?.Report != null;
 
   console.log(`نموذج Special Request موجود: ${hasSpecialRequestSchema ? 'نعم' : 'لا'}`);
-  console.log(`نموذج Report موجود: ${hasReportSchema ? 'نعم' : 'لا'}`);
 
   // إحصائيات
   const pathCount = Object.keys(swaggerObject.paths || {}).length;

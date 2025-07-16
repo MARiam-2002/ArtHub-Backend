@@ -2492,11 +2492,7 @@ export const swaggerDefinition = {
       description: 'واجهات API لإدارة الطلبات الخاصة',
       'x-displayName': 'الطلبات الخاصة'
     },
-    {
-      name: 'Reports',
-      description: 'واجهات API لنظام الإبلاغ عن المحتوى',
-      'x-displayName': 'البلاغات'
-    },
+
     {
       name: 'Transactions',
       description: 'واجهات API للمعاملات المالية والدفع',
@@ -2543,7 +2539,7 @@ export const swaggerDefinition = {
     },
     {
       name: 'المحتوى',
-      tags: ['Categories', 'Reviews', 'Reports']
+      tags: ['Categories', 'Reviews']
     },
     {
       name: 'الإدارة',
