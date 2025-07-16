@@ -1,0 +1,240 @@
+{
+  "info": {
+    "name": "Admin Dashboard - Clean API",
+    "description": "مجموعة اختبار نقاط النهاية الأساسية للادمن بعد التنظيف",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. تسجيل دخول الأدمن",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Password123!\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "login"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    const response = pm.response.json();",
+              "    if (response.data && response.data.tokens) {",
+              "        pm.collectionVariables.set('admin_token', response.data.tokens.accessToken);",
+              "        console.log('Admin token saved:', response.data.tokens.accessToken);",
+              "    }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. جلب قائمة الأدمن (للسوبر أدمن)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/admin/admins?page=1&limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "admins"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. إنشاء أدمن جديد (للسوبر أدمن)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"newadmin@example.com\",\n  \"password\": \"Password123!\",\n  \"displayName\": \"أدمن جديد\",\n  \"role\": \"admin\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/admins",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "admins"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const response = pm.response.json();",
+              "    if (response.data && response.data._id) {",
+              "        pm.collectionVariables.set('admin_id', response.data._id);",
+              "        console.log('New admin ID saved:', response.data._id);",
+              "    }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. تحديث بيانات الأدمن (للسوبر أدمن)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"displayName\": \"أدمن محدث\",\n  \"status\": \"active\",\n  \"isActive\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/admins/{{admin_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "admins", "{{admin_id}}"]
+        }
+      }
+    },
+    {
+      "name": "5. تغيير كلمة مرور الأدمن (للسوبر أدمن)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"newPassword\": \"NewPassword123!\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/admins/{{admin_id}}/change-password",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "admins", "{{admin_id}}", "change-password"]
+        }
+      }
+    },
+    {
+      "name": "6. جلب الملف الشخصي",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/admin/profile",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "profile"]
+        }
+      }
+    },
+    {
+      "name": "7. تحديث الملف الشخصي",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"displayName\": \"أدمن محدث\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/profile",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "profile"]
+        }
+      }
+    },
+    {
+      "name": "8. تغيير كلمة المرور الشخصية",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPersonalPassword123!\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/change-password",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "change-password"]
+        }
+      }
+    },
+    {
+      "name": "9. حذف الأدمن (للسوبر أدمن)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/admin/admins/{{admin_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "admins", "{{admin_id}}"]
+        }
+      }
+    }
+  ]
+} 

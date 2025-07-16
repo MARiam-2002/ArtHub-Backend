@@ -470,48 +470,4 @@ export const changePassword = asyncHandler(async (req, res, next) => {
     message: 'تم تغيير كلمة المرور بنجاح',
     data: null
   });
-});
-
-/**
- * @desc    Get all users (for admins)
- * @route   GET /api/v1/admin/users
- * @access  Private (Admin, SuperAdmin)
- */
-export const getUsers = asyncHandler(async (req, res, next) => {
-  await ensureDatabaseConnection();
-  
-  const apiFeatures = new ApiFeatures(userModel.find({ isDeleted: false }), req.query)
-    .paginate()
-    .filter()
-    .sort()
-    .select()
-    .search();
-
-  const users = await apiFeatures.mongooseQuery;
-  const total = await userModel.countDocuments({
-    isDeleted: false,
-    ...apiFeatures.mongooseQuery.getFilter()
-  });
-
-  res.success({
-    message: 'تم جلب قائمة المستخدمين بنجاح',
-    data: {
-      users: users.map(user => ({
-        _id: user._id,
-        email: user.email,
-        displayName: user.displayName,
-        role: user.role,
-        status: user.status,
-        isActive: user.isActive,
-        isVerified: user.isVerified,
-        lastActive: user.lastActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      })),
-      total,
-      page: apiFeatures.page,
-      limit: apiFeatures.limit,
-      totalPages: Math.ceil(total / apiFeatures.limit),
-    },
-  });
 }); 
