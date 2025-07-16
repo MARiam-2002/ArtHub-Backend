@@ -3134,11 +3134,7 @@
       "description": "واجهات API لإدارة الطلبات الخاصة",
       "x-displayName": "الطلبات الخاصة"
     },
-    {
-      "name": "Reports",
-      "description": "واجهات API لنظام الإبلاغ عن المحتوى",
-      "x-displayName": "البلاغات"
-    },
+
     {
       "name": "Transactions",
       "description": "واجهات API للمعاملات المالية والدفع",
@@ -3190,8 +3186,7 @@
       "name": "المحتوى",
       "tags": [
         "Categories",
-        "Reviews",
-        "Reports"
+        "Reviews"
       ]
     },
     {
@@ -7492,187 +7487,8 @@
         "x-screen": "SettingsScreen"
       }
     },
-    "/reports": {
-      "post": {
-        "tags": [
-          "Reports"
-        ],
-        "summary": "إنشاء تقرير جديد",
-        "description": "الإبلاغ عن محتوى غير مناسب أو مخالف لسياسات المنصة",
-        "x-screen": "ReportContentScreen",
-        "security": [
-          {
-            "BearerAuth": []
-          },
-          {
-            "FirebaseAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateReportRequest"
-              },
-              "examples": {
-                "artwork_report": {
-                  "summary": "الإبلاغ عن عمل فني",
-                  "value": {
-                    "contentType": "artwork",
-                    "contentId": "507f1f77bcf86cd799439011",
-                    "reason": "inappropriate",
-                    "description": "هذا العمل الفني يحتوي على محتوى غير مناسب",
-                    "priority": "medium"
-                  }
-                },
-                "user_report": {
-                  "summary": "الإبلاغ عن مستخدم",
-                  "value": {
-                    "contentType": "user",
-                    "contentId": "507f1f77bcf86cd799439012",
-                    "reason": "harassment",
-                    "description": "هذا المستخدم يقوم بالتحرش والإزعاج",
-                    "priority": "high",
-                    "evidence": [
-                      "https://example.com/screenshot1.jpg"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إنشاء التقرير بنجاح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "تم إرسال التقرير بنجاح، سيتم مراجعته قريباً"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Report"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "description": "المحتوى المبلغ عنه غير موجود"
-          },
-          "429": {
-            "$ref": "#/components/responses/TooManyRequests"
-          }
-        }
-      }
-    },
-    "/reports/{reportId}": {
-      "get": {
-        "tags": [
-          "Reports"
-        ],
-        "summary": "عرض تفاصيل تقرير",
-        "description": "عرض تفاصيل تقرير محدد مع التقارير المرتبطة للمدراء",
-        "x-screen": "ReportDetailsScreen",
-        "security": [
-          {
-            "BearerAuth": []
-          },
-          {
-            "FirebaseAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "reportId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[0-9a-fA-F]{24}$"
-            },
-            "description": "معرف التقرير (MongoDB ObjectId)",
-            "example": "507f1f77bcf86cd799439011"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "تم جلب تفاصيل التقرير بنجاح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/Report"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "description": "التقرير غير موجود"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Reports"
-        ],
-        "summary": "حذف تقرير",
-        "description": "حذف تقرير قام المستخدم بإنشائه (يمكن فقط إذا كان التقرير قيد الانتظار)",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "reportId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "معرف التقرير"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "تم حذف التقرير بنجاح"
-          },
-          "404": {
-            "description": "التقرير غير موجود أو لا يمكن حذفه"
-          }
-        }
-      }
-    },
+
+
     "/reports/admin/stats": {
       "get": {
         "tags": [
