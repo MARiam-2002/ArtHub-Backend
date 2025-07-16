@@ -2521,6 +2521,11 @@ export const swaggerDefinition = {
       name: 'Dashboard',
       description: 'واجهات API للوحة التحكم الإدارية',
       'x-displayName': 'لوحة التحكم'
+    },
+    {
+      name: 'Admin',
+      description: 'واجهات API لإدارة المشرفين',
+      'x-displayName': 'إدارة المشرفين'
     }
   ],
   'x-tagGroups': [
@@ -2542,7 +2547,7 @@ export const swaggerDefinition = {
     },
     {
       name: 'الإدارة',
-      tags: ['Profile', 'Dashboard']
+      tags: ['Profile', 'Dashboard', 'Admin']
     }
   ]
 };

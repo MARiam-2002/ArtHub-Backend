@@ -1,0 +1,626 @@
+{
+  "info": {
+    "name": "ArtHub Admin & Dashboard API",
+    "description": "Complete Postman collection for ArtHub Admin and Dashboard APIs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "arthub-admin-dashboard-collection",
+    "updatedAt": "2024-01-15T10:00:00.000Z"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "superadmin_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Admin Management",
+      "description": "Admin authentication and management endpoints",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@arthub.com\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Admin Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Admin Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"المشرف المحدث\",\n  \"email\": \"updated@arthub.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Admin Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Admin123!\",\n  \"newPassword\": \"NewAdmin123!\",\n  \"confirmPassword\": \"NewAdmin123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "change-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Admins",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create New Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newadmin@arthub.com\",\n  \"password\": \"NewAdmin123!\",\n  \"displayName\": \"مشرف جديد\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Admin Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins/{{admin_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins", "{{admin_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"مشرف محدث\",\n  \"role\": \"admin\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins/{{admin_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins", "{{admin_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins/{{admin_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins", "{{admin_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Admin Password (Superadmin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"NewPassword123!\",\n  \"confirmPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins/{{admin_id}}/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins", "{{admin_id}}", "change-password"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Overview",
+      "description": "Dashboard overview and statistics endpoints",
+      "item": [
+        {
+          "name": "Get System Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/overview",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "overview"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "statistics"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Revenue Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/revenue?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "revenue"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/orders/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "orders", "statistics"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Dashboard Charts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/charts?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "charts"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Users",
+      "description": "User management endpoints",
+      "item": [
+        {
+          "name": "Get Users List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/users?page=1&limit=10&role=user",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "role",
+                  "value": "user"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "users", "{{user_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/users/{{user_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "users", "{{user_id}}", "status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Orders",
+      "description": "Order management endpoints",
+      "item": [
+        {
+          "name": "Get Orders List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/orders?page=1&limit=10&status=completed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "completed"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "orders", "{{order_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Reviews",
+      "description": "Review management endpoints",
+      "item": [
+        {
+          "name": "Get Reviews List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/reviews?page=1&limit=10&status=approved",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "reviews"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "approved"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Review Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/reviews/{{review_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "reviews", "{{review_id}}", "status"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Artists",
+      "description": "Artist performance and management endpoints",
+      "item": [
+        {
+          "name": "Get Artists Performance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/artists/performance?limit=10&period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "artists", "performance"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Top Artists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/artists/top?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "artists", "top"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Notifications",
+      "description": "Notification management endpoints",
+      "item": [
+        {
+          "name": "Send Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"إشعار مهم\",\n  \"message\": \"هذا إشعار تجريبي لجميع المستخدمين\",\n  \"type\": \"system\",\n  \"sendToAll\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "notifications"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Activities",
+      "description": "Recent activities endpoints",
+      "item": [
+        {
+          "name": "Get Recent Activities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/activities?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "activities"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Set default headers",
+          "pm.request.headers.add({",
+          "    key: 'Accept',",
+          "    value: 'application/json'",
+          "});"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Common test script",
+          "pm.test('Status code is 200 or 201', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "});",
+          "",
+          "pm.test('Response has success property', function () {",
+          "    const response = pm.response.json();",
+          "    pm.expect(response).to.have.property('success');",
+          "});",
+          "",
+          "// Log response for debugging",
+          "console.log('Response:', pm.response.json());"
+        ]
+      }
+    }
+  ]
+} 

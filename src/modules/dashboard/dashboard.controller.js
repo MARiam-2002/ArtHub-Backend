@@ -677,3 +677,469 @@ export const getRecentActivities = asyncHandler(async (req, res, next) => {
     }
   });
 }); 
+
+/**
+ * @desc    Get revenue statistics with comparison
+ * @route   GET /api/v1/dashboard/revenue
+ * @access  Private (Admin)
+ */
+export const getRevenueStatistics = asyncHandler(async (req, res, next) => {
+  const { period = 'monthly' } = req.query;
+  
+  // الحصول على الإيرادات الحالية
+  const currentPeriodRevenue = await transactionModel.aggregate([
+    { $match: { status: 'completed' } },
+    { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } }
+  ]);
+  
+  const currentRevenue = currentPeriodRevenue.length > 0 ? 
+    currentPeriodRevenue[0].totalRevenue : 0;
+
+  // الحصول على الإيرادات من الفترة السابقة للمقارنة
+  const previousPeriodStart = new Date();
+  const previousPeriodEnd = new Date();
+  
+  switch (period) {
+    case 'daily':
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 1);
+      previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 1);
+      break;
+    case 'weekly':
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 7);
+      previousPeriodEnd.setDate(previousPeriodEnd.getDate() - 7);
+      break;
+    case 'monthly':
+      previousPeriodStart.setMonth(previousPeriodStart.getMonth() - 1);
+      previousPeriodEnd.setMonth(previousPeriodEnd.getMonth() - 1);
+      break;
+    case 'yearly':
+      previousPeriodStart.setFullYear(previousPeriodStart.getFullYear() - 1);
+      previousPeriodEnd.setFullYear(previousPeriodEnd.getFullYear() - 1);
+      break;
+  }
+
+  const previousPeriodRevenue = await transactionModel.aggregate([
+    { 
+      $match: { 
+        status: 'completed',
+        createdAt: { $gte: previousPeriodStart, $lte: previousPeriodEnd }
+      } 
+    },
+    { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } }
+  ]);
+  
+  const previousRevenue = previousPeriodRevenue.length > 0 ? 
+    previousPeriodRevenue[0].totalRevenue : 0;
+
+  // حساب نسبة التغيير
+  const percentageChange = previousRevenue > 0 ? 
+    ((currentRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+
+  // إحصائيات مفصلة
+  const revenueBreakdown = await transactionModel.aggregate([
+    { $match: { status: 'completed' } },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$pricing.totalAmount' },
+        averageOrderValue: { $avg: '$pricing.totalAmount' },
+        totalOrders: { $sum: 1 },
+        monthlyRevenue: {
+          $sum: {
+            $cond: [
+              { 
+                $gte: [
+                  '$createdAt', 
+                  new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+                ] 
+              },
+              '$pricing.totalAmount',
+              0
+            ]
+          }
+        },
+        weeklyRevenue: {
+          $sum: {
+            $cond: [
+              { 
+                $gte: [
+                  '$createdAt', 
+                  new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                ] 
+              },
+              '$pricing.totalAmount',
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  const breakdown = revenueBreakdown.length > 0 ? revenueBreakdown[0] : {
+    totalRevenue: 0,
+    averageOrderValue: 0,
+    totalOrders: 0,
+    monthlyRevenue: 0,
+    weeklyRevenue: 0
+  };
+
+  res.status(200).json({
+    success: true,
+    message: 'Revenue statistics fetched successfully.',
+    data: {
+      currentRevenue,
+      previousRevenue,
+      percentageChange: Math.round(percentageChange * 100) / 100,
+      breakdown: {
+        total: breakdown.totalRevenue,
+        monthly: breakdown.monthlyRevenue,
+        weekly: breakdown.weeklyRevenue,
+        averageOrderValue: Math.round(breakdown.averageOrderValue * 100) / 100,
+        totalOrders: breakdown.totalOrders
+      },
+      currency: 'SAR'
+    }
+  });
+});
+
+/**
+ * @desc    Get order statistics with detailed breakdown
+ * @route   GET /api/v1/dashboard/orders/statistics
+ * @access  Private (Admin)
+ */
+export const getOrderStatistics = asyncHandler(async (req, res, next) => {
+  // إحصائيات الطلبات حسب الحالة
+  const orderStatusStats = await transactionModel.aggregate([
+    {
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const statusBreakdown = {
+    pending: 0,
+    completed: 0,
+    cancelled: 0,
+    rejected: 0
+  };
+
+  orderStatusStats.forEach(stat => {
+    statusBreakdown[stat._id] = stat.count;
+  });
+
+  // إحصائيات الطلبات الشهرية
+  const monthlyOrders = await transactionModel.aggregate([
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' }
+        },
+        totalOrders: { $sum: 1 },
+        completedOrders: {
+          $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+        },
+        pendingOrders: {
+          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+        },
+        cancelledOrders: {
+          $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] }
+        }
+      }
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1 } },
+    { $limit: 12 }
+  ]);
+
+  // إحصائيات الطلبات اليومية
+  const dailyOrders = await transactionModel.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          day: { $dayOfMonth: '$createdAt' }
+        },
+        totalOrders: { $sum: 1 },
+        completedOrders: {
+          $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+        }
+      }
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
+    { $limit: 30 }
+  ]);
+
+  res.status(200).json({
+    success: true,
+    message: 'Order statistics fetched successfully.',
+    data: {
+      statusBreakdown,
+      monthlyOrders,
+      dailyOrders,
+      totalOrders: Object.values(statusBreakdown).reduce((a, b) => a + b, 0)
+    }
+  });
+});
+
+/**
+ * @desc    Get top performing artists with detailed metrics
+ * @route   GET /api/v1/dashboard/artists/performance
+ * @access  Private (Admin)
+ */
+export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
+  const { limit = 10, period = 'monthly' } = req.query;
+
+  let startDate = new Date();
+  switch (period) {
+    case 'weekly':
+      startDate.setDate(startDate.getDate() - 7);
+      break;
+    case 'monthly':
+      startDate.setMonth(startDate.getMonth() - 1);
+      break;
+    case 'yearly':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+  }
+
+  const topArtists = await transactionModel.aggregate([
+    { 
+      $match: { 
+        status: 'completed',
+        createdAt: { $gte: startDate }
+      } 
+    },
+    {
+      $group: {
+        _id: '$seller',
+        totalSales: { $sum: 1 },
+        totalRevenue: { $sum: '$pricing.totalAmount' },
+        averageOrderValue: { $avg: '$pricing.totalAmount' }
+      }
+    },
+    { $sort: { totalRevenue: -1 } },
+    { $limit: parseInt(limit) },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'artist'
+      }
+    },
+    { $unwind: '$artist' },
+    {
+      $lookup: {
+        from: 'artworks',
+        localField: '_id',
+        foreignField: 'artist',
+        as: 'artworks'
+      }
+    },
+    {
+      $lookup: {
+        from: 'reviews',
+        localField: '_id',
+        foreignField: 'artist',
+        as: 'reviews'
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        totalSales: 1,
+        totalRevenue: 1,
+        averageOrderValue: 1,
+        artworksCount: { $size: '$artworks' },
+        averageRating: { $avg: '$reviews.rating' },
+        reviewsCount: { $size: '$reviews' },
+        'artist.displayName': 1,
+        'artist.email': 1,
+        'artist.profileImage': 1,
+        'artist.job': 1,
+        'artist.isVerified': 1
+      }
+    }
+  ]);
+
+  // تنسيق البيانات للواجهة
+  const formattedArtists = topArtists.map(artist => ({
+    _id: artist._id,
+    displayName: artist.artist.displayName,
+    email: artist.artist.email,
+    profileImage: artist.artist.profileImage,
+    job: artist.artist.job,
+    isVerified: artist.artist.isVerified,
+    metrics: {
+      totalSales: artist.totalSales,
+      totalRevenue: Math.round(artist.totalRevenue * 100) / 100,
+      averageOrderValue: Math.round(artist.averageOrderValue * 100) / 100,
+      artworksCount: artist.artworksCount,
+      averageRating: artist.averageRating ? Math.round(artist.averageRating * 10) / 10 : 0,
+      reviewsCount: artist.reviewsCount
+    }
+  }));
+
+  res.status(200).json({
+    success: true,
+    message: 'Artists performance data fetched successfully.',
+    data: {
+      artists: formattedArtists,
+      period,
+      totalArtists: formattedArtists.length
+    }
+  });
+});
+
+/**
+ * @desc    Get system overview with all key metrics
+ * @route   GET /api/v1/dashboard/overview
+ * @access  Private (Admin)
+ */
+export const getSystemOverview = asyncHandler(async (req, res, next) => {
+  // إحصائيات المستخدمين
+  const userStats = await userModel.aggregate([
+    { $match: { isDeleted: false } },
+    {
+      $group: {
+        _id: null,
+        totalUsers: { $sum: 1 },
+        activeUsers: { 
+          $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+        },
+        totalArtists: { 
+          $sum: { $cond: [{ $eq: ['$role', 'artist'] }, 1, 0] }
+        },
+        activeArtists: { 
+          $sum: { 
+            $cond: [
+              { $and: [{ $eq: ['$role', 'artist'] }, { $eq: ['$status', 'active'] }] }, 
+              1, 
+              0
+            ]
+          }
+        }
+      }
+    }
+  ]);
+
+  // إحصائيات الإيرادات
+  const revenueStats = await transactionModel.aggregate([
+    { $match: { status: 'completed' } },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: '$pricing.totalAmount' },
+        totalOrders: { $sum: 1 },
+        averageOrderValue: { $avg: '$pricing.totalAmount' }
+      }
+    }
+  ]);
+
+  // إحصائيات الأعمال الفنية
+  const artworkStats = await artworkModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalArtworks: { $sum: 1 },
+        availableArtworks: { 
+          $sum: { $cond: [{ $eq: ['$status', 'available'] }, 1, 0] }
+        },
+        soldArtworks: { 
+          $sum: { $cond: [{ $eq: ['$status', 'sold'] }, 1, 0] }
+        }
+      }
+    }
+  ]);
+
+  // إحصائيات التقييمات
+  const reviewStats = await reviewModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalReviews: { $sum: 1 },
+        averageRating: { $avg: '$rating' },
+        pendingReviews: { 
+          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+        }
+      }
+    }
+  ]);
+
+  // إحصائيات التقارير
+  const reportStats = await reportModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalReports: { $sum: 1 },
+        pendingReports: { 
+          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+        }
+      }
+    }
+  ]);
+
+  // إحصائيات الطلبات الخاصة
+  const specialRequestStats = await specialRequestModel.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalRequests: { $sum: 1 },
+        pendingRequests: { 
+          $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
+        }
+      }
+    }
+  ]);
+
+  const stats = {
+    users: userStats.length > 0 ? userStats[0] : {
+      totalUsers: 0,
+      activeUsers: 0,
+      totalArtists: 0,
+      activeArtists: 0
+    },
+    revenue: revenueStats.length > 0 ? revenueStats[0] : {
+      totalRevenue: 0,
+      totalOrders: 0,
+      averageOrderValue: 0
+    },
+    artworks: artworkStats.length > 0 ? artworkStats[0] : {
+      totalArtworks: 0,
+      availableArtworks: 0,
+      soldArtworks: 0
+    },
+    reviews: reviewStats.length > 0 ? reviewStats[0] : {
+      totalReviews: 0,
+      averageRating: 0,
+      pendingReviews: 0
+    },
+    reports: reportStats.length > 0 ? reportStats[0] : {
+      totalReports: 0,
+      pendingReports: 0
+    },
+    specialRequests: specialRequestStats.length > 0 ? specialRequestStats[0] : {
+      totalRequests: 0,
+      pendingRequests: 0
+    }
+  };
+
+  res.status(200).json({
+    success: true,
+    message: 'System overview fetched successfully.',
+    data: {
+      overview: stats,
+      currency: 'SAR',
+      lastUpdated: new Date().toISOString()
+    }
+  });
+}); 
