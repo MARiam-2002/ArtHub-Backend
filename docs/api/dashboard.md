@@ -106,30 +106,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 }
 ```
 
-### 3. إدارة المستخدمين
 
-#### `GET /api/dashboard/users`
-جلب قائمة المستخدمين مع التصفية والبحث
-
-**المعاملات:**
-- `page`: رقم الصفحة (افتراضي: 1)
-- `limit`: عدد العناصر في الصفحة (افتراضي: 10)
-- `role`: تصفية حسب الدور (user, artist, admin, superadmin)
-- `status`: تصفية حسب الحالة (active, inactive, banned)
-- `search`: البحث في الأسماء والإيميلات
-
-#### `GET /api/dashboard/users/{id}`
-جلب تفاصيل مستخدم محدد مع إحصائياته
-
-#### `PATCH /api/dashboard/users/{id}/status`
-تحديث حالة المستخدم
-
-**البيانات المطلوبة:**
-```json
-{
-  "status": "active" // أو "inactive" أو "banned"
-}
-```
 
 ### 4. إدارة الطلبات
 

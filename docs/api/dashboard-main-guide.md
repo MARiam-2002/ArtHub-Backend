@@ -148,34 +148,7 @@ GET /api/v1/dashboard/artists/performance?limit=10&period=monthly
 
 ## إدارة المستخدمين
 
-### قائمة المستخدمين
-```
-GET /api/v1/dashboard/users?page=1&limit=10&role=artist&status=active
-```
 
-**المعاملات:**
-- `page`: رقم الصفحة (افتراضي: 1)
-- `limit`: عدد العناصر في الصفحة (افتراضي: 10)
-- `role`: نوع المستخدم (user, artist, admin, superadmin)
-- `status`: حالة المستخدم (active, inactive, banned)
-- `search`: البحث في الاسم أو البريد الإلكتروني
-
-### تفاصيل المستخدم
-```
-GET /api/v1/dashboard/users/:id
-```
-
-### تحديث حالة المستخدم
-```
-PATCH /api/v1/dashboard/users/:id/status
-```
-
-**Body:**
-```json
-{
-  "status": "active"
-}
-```
 
 ## إدارة الطلبات
 
