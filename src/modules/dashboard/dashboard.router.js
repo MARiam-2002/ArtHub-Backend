@@ -11,49 +11,75 @@ const router = Router();
  * @swagger
  * tags:
  *   name: Dashboard
- *   description: Admin dashboard endpoints
+ *   description: لوحة التحكم الرئيسية - إحصائيات وبيانات أساسية
  */
-
-/**
- * @swagger
- * /api/dashboard/overview:
- *   get:
- *     summary: Get system overview with all key metrics
- *     tags: [Dashboard]
- *     description: Get comprehensive system overview including users, revenue, artworks, and other metrics
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: System overview retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin/SuperAdmin only
- */
-router.get(
-  '/overview',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  dashboardController.getSystemOverview
-);
 
 /**
  * @swagger
  * /api/dashboard/statistics:
  *   get:
- *     summary: Get dashboard main statistics
+ *     summary: الإحصائيات الرئيسية للوحة التحكم
  *     tags: [Dashboard]
- *     description: Get main dashboard statistics including users, revenue, artworks, orders, reviews, and reports
+ *     description: جلب الإحصائيات الرئيسية للمنصة (المستخدمين، الإيرادات، الأعمال الفنية، الطلبات)
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Dashboard statistics retrieved successfully
+ *         description: تم جلب الإحصائيات بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب الإحصائيات بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: number
+ *                           example: 12847
+ *                         active:
+ *                           type: number
+ *                           example: 11000
+ *                         artists:
+ *                           type: number
+ *                           example: 3429
+ *                     revenue:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: number
+ *                           example: 1545118
+ *                         currency:
+ *                           type: string
+ *                           example: "SAR"
+ *                     orders:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: number
+ *                           example: 1355
+ *                         pending:
+ *                           type: number
+ *                           example: 89
+ *                         completed:
+ *                           type: number
+ *                           example: 1243
+ *                         rejected:
+ *                           type: number
+ *                           example: 23
  *       401:
- *         description: Unauthorized
+ *         description: غير مصرح
  *       403:
- *         description: Forbidden - Admin/SuperAdmin only
+ *         description: ممنوع - للمديرين فقط
  */
 router.get(
   '/statistics',
@@ -64,67 +90,11 @@ router.get(
 
 /**
  * @swagger
- * /api/dashboard/revenue:
- *   get:
- *     summary: Get revenue statistics with comparison
- *     tags: [Dashboard]
- *     description: Get detailed revenue statistics with period comparison
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: period
- *         schema:
- *           type: string
- *           enum: [daily, weekly, monthly, yearly]
- *           default: monthly
- *         description: Period for revenue comparison
- *     responses:
- *       200:
- *         description: Revenue statistics retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin/SuperAdmin only
- */
-router.get(
-  '/revenue',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  dashboardController.getRevenueStatistics
-);
-
-/**
- * @swagger
- * /api/dashboard/orders/statistics:
- *   get:
- *     summary: Get order statistics with detailed breakdown
- *     tags: [Dashboard]
- *     description: Get detailed order statistics including status breakdown and trends
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Order statistics retrieved successfully
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden - Admin/SuperAdmin only
- */
-router.get(
-  '/orders/statistics',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  dashboardController.getOrderStatistics
-);
-
-/**
- * @swagger
  * /api/dashboard/charts:
  *   get:
- *     summary: Get dashboard charts data
+ *     summary: بيانات الرسوم البيانية
  *     tags: [Dashboard]
- *     description: Get charts data for orders and revenue statistics
+ *     description: جلب بيانات الرسوم البيانية للإيرادات والطلبات
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -134,14 +104,79 @@ router.get(
  *           type: string
  *           enum: [daily, weekly, monthly, yearly]
  *           default: monthly
- *         description: Period for charts data
+ *         description: الفترة الزمنية للبيانات
+ *         example: "monthly"
  *     responses:
  *       200:
- *         description: Charts data retrieved successfully
+ *         description: تم جلب بيانات الرسوم البيانية بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب بيانات الرسوم البيانية بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     revenue:
+ *                       type: object
+ *                       properties:
+ *                         labels:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             type: number
+ *                           example: [120000, 135000, 142000, 138000, 156000, 168000, 175000, 182000, 195000, 210000, 225000, 240000]
+ *                         summary:
+ *                           type: object
+ *                           properties:
+ *                             yearly:
+ *                               type: number
+ *                               example: 447392
+ *                             monthly:
+ *                               type: number
+ *                               example: 124500
+ *                             weekly:
+ *                               type: number
+ *                               example: 28900
+ *                     orders:
+ *                       type: object
+ *                       properties:
+ *                         labels:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             type: number
+ *                           example: [85, 92, 98, 105, 112, 118, 125, 132, 140, 148, 156, 165]
+ *                         summary:
+ *                           type: object
+ *                           properties:
+ *                             pending:
+ *                               type: number
+ *                               example: 89
+ *                             completed:
+ *                               type: number
+ *                               example: 1243
+ *                             rejected:
+ *                               type: number
+ *                               example: 23
  *       401:
- *         description: Unauthorized
+ *         description: غير مصرح
  *       403:
- *         description: Forbidden - Admin/SuperAdmin only
+ *         description: ممنوع - للمديرين فقط
  */
 router.get(
   '/charts',
@@ -155,9 +190,9 @@ router.get(
  * @swagger
  * /api/dashboard/artists/performance:
  *   get:
- *     summary: Get top performing artists with detailed metrics
+ *     summary: أفضل الفنانين أداءً
  *     tags: [Dashboard]
- *     description: Get detailed performance metrics for top artists
+ *     description: جلب قائمة أفضل الفنانين أداءً مع مقاييسهم
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -165,112 +200,72 @@ router.get(
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 10
- *         description: Number of artists to return
+ *           minimum: 1
+ *           maximum: 20
+ *           default: 3
+ *         description: عدد الفنانين المطلوب عرضهم
+ *         example: 3
  *       - in: query
  *         name: period
  *         schema:
  *           type: string
  *           enum: [weekly, monthly, yearly]
  *           default: monthly
- *         description: Period for performance calculation
+ *         description: الفترة الزمنية لحساب الأداء
+ *         example: "monthly"
  *     responses:
  *       200:
- *         description: Artists performance data retrieved successfully
+ *         description: تم جلب بيانات الفنانين بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب بيانات الفنانين بنجاح"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "507f1f77bcf86cd799439011"
+ *                       displayName:
+ *                         type: string
+ *                         example: "مريم خالد"
+ *                       profileImage:
+ *                         type: string
+ *                         example: "https://example.com/profile.jpg"
+ *                       job:
+ *                         type: string
+ *                         example: "فن رقمي"
+ *                       performance:
+ *                         type: object
+ *                         properties:
+ *                           sales:
+ *                             type: number
+ *                             example: 1175
+ *                           rating:
+ *                             type: number
+ *                             example: 4.7
+ *                           artworks:
+ *                             type: number
+ *                             example: 28
  *       401:
- *         description: Unauthorized
+ *         description: غير مصرح
  *       403:
- *         description: Forbidden - Admin/SuperAdmin only
+ *         description: ممنوع - للمديرين فقط
  */
 router.get(
   '/artists/performance',
   authenticate,
   isAuthorized('admin', 'superadmin'),
   dashboardController.getArtistsPerformance
-);
-
-// User Management Routes
-router.get(
-  '/users',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getUsersValidation),
-  dashboardController.getUsers
-);
-
-router.get(
-  '/users/:id',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  dashboardController.getUserById
-);
-
-router.patch(
-  '/users/:id/status',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.updateUserStatusValidation),
-  dashboardController.updateUserStatus
-);
-
-// Order Management Routes
-router.get(
-  '/orders',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getOrdersValidation),
-  dashboardController.getOrders
-);
-
-router.get(
-  '/orders/:id',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  dashboardController.getOrderById
-);
-
-// Review Management Routes
-router.get(
-  '/reviews',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getReviewsValidation),
-  dashboardController.getReviews
-);
-
-router.patch(
-  '/reviews/:id/status',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.updateReviewStatusValidation),
-  dashboardController.updateReviewStatus
-);
-
-// Notification Management Routes
-router.post(
-  '/notifications',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.createNotificationValidation),
-  dashboardController.createNotification
-);
-
-// Artist Management Routes
-router.get(
-  '/artists/top',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getTopArtistsValidation),
-  dashboardController.getTopArtists
-);
-
-// Activity Log Routes
-router.get(
-  '/activities',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getActivitiesValidation),
-  dashboardController.getActivities
 );
 
 export default router; 
