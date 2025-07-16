@@ -89,7 +89,7 @@ export const getWishlist = asyncHandler(async (req, res, next) => {
       .find({ _id: { $in: wishlistIds } })
       .populate('artist', 'displayName profileImage job')
       .populate('category', 'name')
-      .select('title images price currency artist category isAvailable createdAt')
+      .select('title images price currency artist category isAvailable createdAt viewCount likeCount')
       .lean();
 
     // Maintain the order of wishlist
@@ -1234,10 +1234,21 @@ function formatArtworks(artworks) {
   return artworks.map(artwork => ({
     _id: artwork._id,
     title: artwork.title?.ar || artwork.title,
-    images: artwork.images?.map(img => ({
-      url: img.url,
-      optimizedUrl: img.optimizedUrl || img.url
-    })) || [],
+    images: artwork.images?.map(img => {
+      // Handle both string URLs and object URLs
+      if (typeof img === 'string') {
+        return {
+          url: img,
+          optimizedUrl: img
+        };
+      } else if (img && typeof img === 'object') {
+        return {
+          url: img.url || img,
+          optimizedUrl: img.optimizedUrl || img.url || img
+        };
+      }
+      return null;
+    }).filter(Boolean) || [],
     price: artwork.price,
     currency: artwork.currency || 'SAR',
     category: {
