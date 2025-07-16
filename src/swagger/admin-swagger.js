@@ -4,11 +4,11 @@
  */
 
 export const adminPaths = {
-  '/api/v1/admin/login': {
+  '/api/admin/login': {
     post: {
       tags: ['Admin'],
-      summary: 'تسجيل دخول المشرف',
-      description: 'تسجيل دخول المشرف أو المشرف الأعلى',
+      summary: 'تسجيل دخول الأدمن',
+      description: 'تسجيل دخول للأدمن والسوبر أدمن',
       requestBody: {
         required: true,
         content: {
@@ -20,14 +20,14 @@ export const adminPaths = {
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: 'البريد الإلكتروني للمشرف',
-                  example: 'admin@arthub.com'
+                  description: 'البريد الإلكتروني',
+                  example: 'admin@example.com'
                 },
                 password: {
                   type: 'string',
                   format: 'password',
                   description: 'كلمة المرور',
-                  example: 'Admin123!'
+                  example: 'Password123!'
                 }
               }
             }
@@ -42,67 +42,44 @@ export const adminPaths = {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin logged in successfully.' },
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تسجيل الدخول بنجاح'
+                  },
                   data: {
                     type: 'object',
                     properties: {
-                      admin: {
-                        type: 'object',
-                        properties: {
-                          _id: { type: 'string' },
-                          email: { type: 'string', example: 'admin@arthub.com' },
-                          displayName: { type: 'string', example: 'المشرف الرئيسي' },
-                          role: { type: 'string', enum: ['admin', 'superadmin'], example: 'superadmin' },
-                          isActive: { type: 'boolean', example: true },
-                          lastLogin: { type: 'string', format: 'date-time' }
-                        }
+                      token: {
+                        type: 'string',
+                        description: 'رمز الوصول'
                       },
-                      token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
-                      refreshToken: { type: 'string', example: 'refresh_token_here' }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        400: { description: 'بيانات غير صالحة' },
-        401: { description: 'بيانات تسجيل الدخول غير صحيحة' },
-        403: { description: 'الحساب غير نشط أو محظور' }
-      }
-    }
-  },
-
-  '/api/v1/admin/profile': {
-    get: {
-      tags: ['Admin'],
-      summary: 'الملف الشخصي للمشرف',
-      description: 'جلب الملف الشخصي للمشرف الحالي',
-      security: [{ BearerAuth: [] }],
-      responses: {
-        200: {
-          description: 'تم جلب الملف الشخصي بنجاح',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin profile fetched successfully.' },
-                  data: {
-                    type: 'object',
-                    properties: {
+                      refreshToken: {
+                        type: 'string',
+                        description: 'رمز التحديث'
+                      },
                       admin: {
                         type: 'object',
                         properties: {
-                          _id: { type: 'string' },
-                          email: { type: 'string', example: 'admin@arthub.com' },
-                          displayName: { type: 'string', example: 'المشرف الرئيسي' },
-                          role: { type: 'string', enum: ['admin', 'superadmin'], example: 'superadmin' },
-                          isActive: { type: 'boolean', example: true },
-                          createdAt: { type: 'string', format: 'date-time' },
-                          lastLogin: { type: 'string', format: 'date-time' }
+                          _id: {
+                            type: 'string'
+                          },
+                          email: {
+                            type: 'string'
+                          },
+                          displayName: {
+                            type: 'string'
+                          },
+                          role: {
+                            type: 'string',
+                            enum: ['admin', 'superadmin']
+                          },
+                          isActive: {
+                            type: 'boolean'
+                          }
                         }
                       }
                     }
@@ -112,17 +89,108 @@ export const adminPaths = {
             }
           }
         },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف مطلوبة' }
+        401: {
+          description: 'بيانات غير صحيحة',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
 
-  '/api/v1/admin/profile': {
-    patch: {
+  '/api/admin/profile': {
+    get: {
       tags: ['Admin'],
-      summary: 'تحديث الملف الشخصي',
-      description: 'تحديث الملف الشخصي للمشرف الحالي',
+      summary: 'جلب ملف الأدمن',
+      description: 'جلب معلومات ملف الأدمن الحالي',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'تم جلب الملف بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب الملف بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      _id: {
+                        type: 'string'
+                      },
+                      email: {
+                        type: 'string'
+                      },
+                      displayName: {
+                        type: 'string'
+                      },
+                      role: {
+                        type: 'string',
+                        enum: ['admin', 'superadmin']
+                      },
+                      isActive: {
+                        type: 'boolean'
+                      },
+                      createdAt: {
+                        type: 'string',
+                        format: 'date-time'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    put: {
+      tags: ['Admin'],
+      summary: 'تحديث ملف الأدمن',
+      description: 'تحديث معلومات ملف الأدمن الحالي',
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -133,14 +201,14 @@ export const adminPaths = {
               properties: {
                 displayName: {
                   type: 'string',
-                  minLength: 2,
-                  maxLength: 50,
-                  description: 'اسم العرض الجديد'
+                  description: 'اسم العرض',
+                  example: 'أحمد محمد'
                 },
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: 'البريد الإلكتروني الجديد'
+                  description: 'البريد الإلكتروني',
+                  example: 'admin@example.com'
                 }
               }
             }
@@ -149,27 +217,37 @@ export const adminPaths = {
       },
       responses: {
         200: {
-          description: 'تم تحديث الملف الشخصي بنجاح',
+          description: 'تم تحديث الملف بنجاح',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin profile updated successfully.' },
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تحديث الملف بنجاح'
+                  },
                   data: {
                     type: 'object',
                     properties: {
-                      admin: {
-                        type: 'object',
-                        properties: {
-                          _id: { type: 'string' },
-                          email: { type: 'string', example: 'admin@arthub.com' },
-                          displayName: { type: 'string', example: 'المشرف الرئيسي' },
-                          role: { type: 'string', enum: ['admin', 'superadmin'], example: 'superadmin' },
-                          isActive: { type: 'boolean', example: true },
-                          updatedAt: { type: 'string', format: 'date-time' }
-                        }
+                      _id: {
+                        type: 'string'
+                      },
+                      email: {
+                        type: 'string'
+                      },
+                      displayName: {
+                        type: 'string'
+                      },
+                      role: {
+                        type: 'string'
+                      },
+                      isActive: {
+                        type: 'boolean'
                       }
                     }
                   }
@@ -178,19 +256,55 @@ export const adminPaths = {
             }
           }
         },
-        400: { description: 'بيانات غير صالحة' },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف مطلوبة' },
-        409: { description: 'البريد الإلكتروني مستخدم بالفعل' }
+        400: {
+          description: 'بيانات غير صحيحة',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'بيانات غير صحيحة'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
 
-  '/api/v1/admin/change-password': {
-    patch: {
+  '/api/admin/change-password': {
+    put: {
       tags: ['Admin'],
       summary: 'تغيير كلمة المرور',
-      description: 'تغيير كلمة مرور المشرف الحالي',
+      description: 'تغيير كلمة مرور الأدمن الحالي',
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -198,23 +312,20 @@ export const adminPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['currentPassword', 'newPassword', 'confirmPassword'],
+              required: ['currentPassword', 'newPassword'],
               properties: {
                 currentPassword: {
                   type: 'string',
                   format: 'password',
-                  description: 'كلمة المرور الحالية'
+                  description: 'كلمة المرور الحالية',
+                  example: 'OldPassword123!'
                 },
                 newPassword: {
                   type: 'string',
                   format: 'password',
                   minLength: 8,
-                  description: 'كلمة المرور الجديدة (8 أحرف على الأقل)'
-                },
-                confirmPassword: {
-                  type: 'string',
-                  format: 'password',
-                  description: 'تأكيد كلمة المرور الجديدة'
+                  description: 'كلمة المرور الجديدة',
+                  example: 'NewPassword123!'
                 }
               }
             }
@@ -229,81 +340,122 @@ export const adminPaths = {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Password changed successfully.' }
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تغيير كلمة المرور بنجاح'
+                  }
                 }
               }
             }
           }
         },
-        400: { description: 'بيانات غير صالحة أو كلمة المرور الحالية غير صحيحة' },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف مطلوبة' }
-      }
-    }
-  },
-
-  '/api/v1/admin/admins': {
-    get: {
-      tags: ['Admin'],
-      summary: 'قائمة المشرفين',
-      description: 'جلب قائمة جميع المشرفين (للمشرف الأعلى فقط)',
-      security: [{ BearerAuth: [] }],
-      parameters: [
-        {
-          name: 'page',
-          in: 'query',
-          description: 'رقم الصفحة',
-          required: false,
-          schema: {
-            type: 'integer',
-            default: 1,
-            minimum: 1
-          }
-        },
-        {
-          name: 'limit',
-          in: 'query',
-          description: 'عدد العناصر في الصفحة',
-          required: false,
-          schema: {
-            type: 'integer',
-            default: 10,
-            minimum: 1,
-            maximum: 100
-          }
-        },
-        {
-          name: 'role',
-          in: 'query',
-          description: 'تصفية حسب الدور',
-          required: false,
-          schema: {
-            type: 'string',
-            enum: ['admin', 'superadmin']
-          }
-        },
-        {
-          name: 'status',
-          in: 'query',
-          description: 'تصفية حسب الحالة',
-          required: false,
-          schema: {
-            type: 'string',
-            enum: ['active', 'inactive']
-          }
-        }
-      ],
-      responses: {
-        200: {
-          description: 'تم جلب قائمة المشرفين بنجاح',
+        400: {
+          description: 'بيانات غير صحيحة',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admins fetched successfully.' },
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'كلمة المرور الحالية غير صحيحة'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/admins': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب جميع الأدمن',
+      description: 'جلب قائمة جميع المستخدمين الأدمن (السوبر أدمن فقط)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 10
+          },
+          description: 'عدد العناصر في الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'search',
+          schema: {
+            type: 'string'
+          },
+          description: 'بحث في الاسم أو البريد الإلكتروني'
+        },
+        {
+          in: 'query',
+          name: 'role',
+          schema: {
+            type: 'string',
+            enum: ['admin', 'superadmin']
+          },
+          description: 'نوع الأدمن'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب الأدمن بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب الأدمن بنجاح'
+                  },
                   data: {
                     type: 'object',
                     properties: {
@@ -312,24 +464,47 @@ export const adminPaths = {
                         items: {
                           type: 'object',
                           properties: {
-                            _id: { type: 'string' },
-                            email: { type: 'string', example: 'admin@arthub.com' },
-                            displayName: { type: 'string', example: 'المشرف الرئيسي' },
-                            role: { type: 'string', enum: ['admin', 'superadmin'], example: 'superadmin' },
-                            isActive: { type: 'boolean', example: true },
-                            createdAt: { type: 'string', format: 'date-time' },
-                            lastLogin: { type: 'string', format: 'date-time' }
+                            _id: {
+                              type: 'string'
+                            },
+                            email: {
+                              type: 'string'
+                            },
+                            displayName: {
+                              type: 'string'
+                            },
+                            role: {
+                              type: 'string',
+                              enum: ['admin', 'superadmin']
+                            },
+                            isActive: {
+                              type: 'boolean'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
                           }
                         }
                       },
                       pagination: {
                         type: 'object',
                         properties: {
-                          currentPage: { type: 'integer', example: 1 },
-                          totalPages: { type: 'integer', example: 1 },
-                          totalAdmins: { type: 'integer', example: 3 },
-                          hasNextPage: { type: 'boolean', example: false },
-                          hasPrevPage: { type: 'boolean', example: false }
+                          currentPage: {
+                            type: 'integer'
+                          },
+                          totalPages: {
+                            type: 'integer'
+                          },
+                          totalItems: {
+                            type: 'integer'
+                          },
+                          hasNextPage: {
+                            type: 'boolean'
+                          },
+                          hasPrevPage: {
+                            type: 'boolean'
+                          }
                         }
                       }
                     }
@@ -339,17 +514,52 @@ export const adminPaths = {
             }
           }
         },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف أعلى مطلوبة' }
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - السوبر أدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
       }
-    }
-  },
-
-  '/api/v1/admin/admins': {
+    },
     post: {
       tags: ['Admin'],
-      summary: 'إضافة مشرف جديد',
-      description: 'إضافة مشرف جديد (للمشرف الأعلى فقط)',
+      summary: 'إنشاء أدمن جديد',
+      description: 'إنشاء مستخدم أدمن جديد (السوبر أدمن فقط)',
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -357,33 +567,31 @@ export const adminPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['email', 'password', 'displayName', 'role'],
+              required: ['email', 'password'],
               properties: {
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: 'البريد الإلكتروني للمشرف الجديد',
-                  example: 'newadmin@arthub.com'
+                  description: 'البريد الإلكتروني',
+                  example: 'newadmin@example.com'
                 },
                 password: {
                   type: 'string',
                   format: 'password',
                   minLength: 8,
-                  description: 'كلمة المرور (8 أحرف على الأقل)',
-                  example: 'Admin123!'
+                  description: 'كلمة المرور',
+                  example: 'Password123!'
                 },
                 displayName: {
                   type: 'string',
-                  minLength: 2,
-                  maxLength: 50,
-                  description: 'اسم العرض للمشرف',
-                  example: 'مشرف جديد'
+                  description: 'اسم العرض',
+                  example: 'أحمد محمد'
                 },
                 role: {
                   type: 'string',
                   enum: ['admin', 'superadmin'],
-                  description: 'دور المشرف',
-                  example: 'admin'
+                  default: 'admin',
+                  description: 'نوع الأدمن'
                 }
               }
             }
@@ -392,27 +600,41 @@ export const adminPaths = {
       },
       responses: {
         201: {
-          description: 'تم إضافة المشرف بنجاح',
+          description: 'تم إنشاء الأدمن بنجاح',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin created successfully.' },
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم إنشاء الأدمن بنجاح'
+                  },
                   data: {
                     type: 'object',
                     properties: {
-                      admin: {
-                        type: 'object',
-                        properties: {
-                          _id: { type: 'string' },
-                          email: { type: 'string', example: 'newadmin@arthub.com' },
-                          displayName: { type: 'string', example: 'مشرف جديد' },
-                          role: { type: 'string', enum: ['admin', 'superadmin'], example: 'admin' },
-                          isActive: { type: 'boolean', example: true },
-                          createdAt: { type: 'string', format: 'date-time' }
-                        }
+                      _id: {
+                        type: 'string'
+                      },
+                      email: {
+                        type: 'string'
+                      },
+                      displayName: {
+                        type: 'string'
+                      },
+                      role: {
+                        type: 'string'
+                      },
+                      isActive: {
+                        type: 'boolean'
+                      },
+                      createdAt: {
+                        type: 'string',
+                        format: 'date-time'
                       }
                     }
                   }
@@ -421,88 +643,85 @@ export const adminPaths = {
             }
           }
         },
-        400: { description: 'بيانات غير صالحة' },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف أعلى مطلوبة' },
-        409: { description: 'البريد الإلكتروني مستخدم بالفعل' }
-      }
-    }
-  },
-
-  '/api/v1/admin/admins/{id}': {
-    get: {
-      tags: ['Admin'],
-      summary: 'تفاصيل المشرف',
-      description: 'جلب تفاصيل مشرف محدد (للمشرف الأعلى فقط)',
-      security: [{ BearerAuth: [] }],
-      parameters: [
-        {
-          name: 'id',
-          in: 'path',
-          required: true,
-          description: 'معرف المشرف',
-          schema: {
-            type: 'string',
-            pattern: '^[0-9a-fA-F]{24}$'
+        400: {
+          description: 'بيانات غير صحيحة',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'البريد الإلكتروني مستخدم بالفعل'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - السوبر أدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
           }
         }
-      ],
-      responses: {
-        200: {
-          description: 'تم جلب تفاصيل المشرف بنجاح',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin details fetched successfully.' },
-                  data: {
-                    type: 'object',
-                    properties: {
-                      admin: {
-                        type: 'object',
-                        properties: {
-                          _id: { type: 'string' },
-                          email: { type: 'string', example: 'admin@arthub.com' },
-                          displayName: { type: 'string', example: 'المشرف الرئيسي' },
-                          role: { type: 'string', enum: ['admin', 'superadmin'], example: 'superadmin' },
-                          isActive: { type: 'boolean', example: true },
-                          createdAt: { type: 'string', format: 'date-time' },
-                          lastLogin: { type: 'string', format: 'date-time' },
-                          updatedAt: { type: 'string', format: 'date-time' }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف أعلى مطلوبة' },
-        404: { description: 'المشرف غير موجود' }
       }
     }
   },
 
-  '/api/v1/admin/admins/{id}': {
-    patch: {
+  '/api/admin/admins/{id}': {
+    put: {
       tags: ['Admin'],
-      summary: 'تحديث المشرف',
-      description: 'تحديث بيانات مشرف محدد (للمشرف الأعلى فقط)',
+      summary: 'تحديث الأدمن',
+      description: 'تحديث معلومات الأدمن (السوبر أدمن فقط)',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
-          name: 'id',
           in: 'path',
+          name: 'id',
           required: true,
-          description: 'معرف المشرف',
           schema: {
-            type: 'string',
-            pattern: '^[0-9a-fA-F]{24}$'
-          }
+            type: 'string'
+          },
+          description: 'معرف الأدمن'
         }
       ],
       requestBody: {
@@ -512,25 +731,23 @@ export const adminPaths = {
             schema: {
               type: 'object',
               properties: {
-                email: {
-                  type: 'string',
-                  format: 'email',
-                  description: 'البريد الإلكتروني الجديد'
-                },
                 displayName: {
                   type: 'string',
-                  minLength: 2,
-                  maxLength: 50,
-                  description: 'اسم العرض الجديد'
+                  description: 'اسم العرض'
+                },
+                status: {
+                  type: 'string',
+                  enum: ['active', 'inactive', 'banned'],
+                  description: 'حالة الحساب'
+                },
+                isActive: {
+                  type: 'boolean',
+                  description: 'هل الحساب نشط'
                 },
                 role: {
                   type: 'string',
                   enum: ['admin', 'superadmin'],
-                  description: 'الدور الجديد'
-                },
-                isActive: {
-                  type: 'boolean',
-                  description: 'حالة النشاط'
+                  description: 'نوع الأدمن'
                 }
               }
             }
@@ -539,27 +756,37 @@ export const adminPaths = {
       },
       responses: {
         200: {
-          description: 'تم تحديث المشرف بنجاح',
+          description: 'تم تحديث الأدمن بنجاح',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin updated successfully.' },
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تحديث الأدمن بنجاح'
+                  },
                   data: {
                     type: 'object',
                     properties: {
-                      admin: {
-                        type: 'object',
-                        properties: {
-                          _id: { type: 'string' },
-                          email: { type: 'string', example: 'admin@arthub.com' },
-                          displayName: { type: 'string', example: 'المشرف الرئيسي' },
-                          role: { type: 'string', enum: ['admin', 'superadmin'], example: 'superadmin' },
-                          isActive: { type: 'boolean', example: true },
-                          updatedAt: { type: 'string', format: 'date-time' }
-                        }
+                      _id: {
+                        type: 'string'
+                      },
+                      email: {
+                        type: 'string'
+                      },
+                      displayName: {
+                        type: 'string'
+                      },
+                      role: {
+                        type: 'string'
+                      },
+                      isActive: {
+                        type: 'boolean'
                       }
                     }
                   }
@@ -568,72 +795,224 @@ export const adminPaths = {
             }
           }
         },
-        400: { description: 'بيانات غير صالحة' },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف أعلى مطلوبة' },
-        404: { description: 'المشرف غير موجود' },
-        409: { description: 'البريد الإلكتروني مستخدم بالفعل' }
-      }
-    }
-  },
-
-  '/api/v1/admin/admins/{id}': {
-    delete: {
-      tags: ['Admin'],
-      summary: 'حذف المشرف',
-      description: 'حذف مشرف محدد (للمشرف الأعلى فقط)',
-      security: [{ BearerAuth: [] }],
-      parameters: [
-        {
-          name: 'id',
-          in: 'path',
-          required: true,
-          description: 'معرف المشرف',
-          schema: {
-            type: 'string',
-            pattern: '^[0-9a-fA-F]{24}$'
-          }
-        }
-      ],
-      responses: {
-        200: {
-          description: 'تم حذف المشرف بنجاح',
+        400: {
+          description: 'بيانات غير صحيحة',
           content: {
             'application/json': {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin deleted successfully.' }
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'بيانات غير صحيحة'
+                  }
                 }
               }
             }
           }
         },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف أعلى مطلوبة' },
-        404: { description: 'المشرف غير موجود' },
-        409: { description: 'لا يمكن حذف المشرف الأعلى الوحيد' }
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - السوبر أدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'الأدمن غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الأدمن غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    delete: {
+      tags: ['Admin'],
+      summary: 'حذف الأدمن',
+      description: 'حذف الأدمن (السوبر أدمن فقط)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف الأدمن'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم حذف الأدمن بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم حذف الأدمن بنجاح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'بيانات غير صحيحة',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'لا يمكن حذف السوبر أدمن'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - السوبر أدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'الأدمن غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الأدمن غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
 
-  '/api/v1/admin/admins/{id}/change-password': {
-    patch: {
+  '/api/admin/admins/{id}/change-password': {
+    put: {
       tags: ['Admin'],
-      summary: 'تغيير كلمة مرور المشرف',
-      description: 'تغيير كلمة مرور مشرف محدد (للمشرف الأعلى فقط)',
+      summary: 'تغيير كلمة مرور الأدمن',
+      description: 'تغيير كلمة مرور الأدمن (السوبر أدمن فقط)',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
-          name: 'id',
           in: 'path',
+          name: 'id',
           required: true,
-          description: 'معرف المشرف',
           schema: {
-            type: 'string',
-            pattern: '^[0-9a-fA-F]{24}$'
-          }
+            type: 'string'
+          },
+          description: 'معرف الأدمن'
         }
       ],
       requestBody: {
@@ -642,20 +1021,14 @@ export const adminPaths = {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['newPassword', 'confirmPassword'],
+              required: ['newPassword'],
               properties: {
                 newPassword: {
                   type: 'string',
                   format: 'password',
                   minLength: 8,
-                  description: 'كلمة المرور الجديدة (8 أحرف على الأقل)',
-                  example: 'NewAdmin123!'
-                },
-                confirmPassword: {
-                  type: 'string',
-                  format: 'password',
-                  description: 'تأكيد كلمة المرور الجديدة',
-                  example: 'NewAdmin123!'
+                  description: 'كلمة المرور الجديدة',
+                  example: 'NewPassword123!'
                 }
               }
             }
@@ -670,17 +1043,99 @@ export const adminPaths = {
               schema: {
                 type: 'object',
                 properties: {
-                  success: { type: 'boolean', example: true },
-                  message: { type: 'string', example: 'Admin password changed successfully.' }
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تغيير كلمة المرور بنجاح'
+                  }
                 }
               }
             }
           }
         },
-        400: { description: 'بيانات غير صالحة' },
-        401: { $ref: '#/components/responses/UnauthorizedError' },
-        403: { description: 'غير مصرح - صلاحيات مشرف أعلى مطلوبة' },
-        404: { description: 'المشرف غير موجود' }
+        400: {
+          description: 'بيانات غير صحيحة',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'كلمة المرور يجب أن تكون 8 أحرف على الأقل'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - السوبر أدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'الأدمن غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الأدمن غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

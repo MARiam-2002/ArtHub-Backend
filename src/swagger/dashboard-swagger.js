@@ -4,7 +4,7 @@
  */
 
 export const dashboardPaths = {
-  '/api/v1/dashboard/overview': {
+  '/api/dashboard/overview': {
     get: {
       tags: ['Dashboard'],
       summary: 'نظرة عامة على النظام',
@@ -90,7 +90,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/statistics': {
+  '/api/dashboard/statistics': {
     get: {
       tags: ['Dashboard'],
       summary: 'الإحصائيات الرئيسية',
@@ -176,7 +176,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/revenue': {
+  '/api/dashboard/revenue': {
     get: {
       tags: ['Dashboard'],
       summary: 'إحصائيات الإيرادات',
@@ -235,7 +235,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/orders/statistics': {
+  '/api/dashboard/orders/statistics': {
     get: {
       tags: ['Dashboard'],
       summary: 'إحصائيات الطلبات',
@@ -301,7 +301,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/charts': {
+  '/api/dashboard/charts': {
     get: {
       tags: ['Dashboard'],
       summary: 'بيانات الرسوم البيانية',
@@ -381,7 +381,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/artists/performance': {
+  '/api/dashboard/artists/performance': {
     get: {
       tags: ['Dashboard'],
       summary: 'أداء الفنانين',
@@ -465,7 +465,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/users': {
+  '/api/dashboard/users': {
     get: {
       tags: ['Dashboard'],
       summary: 'قائمة المستخدمين',
@@ -567,7 +567,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/users/{id}': {
+  '/api/dashboard/users/{id}': {
     get: {
       tags: ['Dashboard'],
       summary: 'تفاصيل المستخدم',
@@ -625,7 +625,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/users/{id}/status': {
+  '/api/dashboard/users/{id}/status': {
     patch: {
       tags: ['Dashboard'],
       summary: 'تحديث حالة المستخدم',
@@ -690,7 +690,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/orders': {
+  '/api/dashboard/orders': {
     get: {
       tags: ['Dashboard'],
       summary: 'قائمة الطلبات',
@@ -819,7 +819,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/orders/{id}': {
+  '/api/dashboard/orders/{id}': {
     get: {
       tags: ['Dashboard'],
       summary: 'تفاصيل الطلب',
@@ -905,7 +905,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/reviews': {
+  '/api/dashboard/reviews': {
     get: {
       tags: ['Dashboard'],
       summary: 'قائمة التقييمات',
@@ -1016,7 +1016,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/reviews/{id}/status': {
+  '/api/dashboard/reviews/{id}/status': {
     patch: {
       tags: ['Dashboard'],
       summary: 'تحديث حالة التقييم',
@@ -1097,7 +1097,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/notifications': {
+  '/api/dashboard/notifications': {
     post: {
       tags: ['Dashboard'],
       summary: 'إرسال إشعار',
@@ -1184,7 +1184,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/artists/top': {
+  '/api/dashboard/artists/top': {
     get: {
       tags: ['Dashboard'],
       summary: 'الفنانين الأفضل',
@@ -1250,7 +1250,7 @@ export const dashboardPaths = {
     }
   },
 
-  '/api/v1/dashboard/activities': {
+  '/api/dashboard/activities': {
     get: {
       tags: ['Dashboard'],
       summary: 'النشاطات الأخيرة',

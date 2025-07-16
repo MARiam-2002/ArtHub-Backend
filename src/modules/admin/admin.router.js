@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/v1/admin/login:
+ * /api/admin/login:
  *   post:
  *     summary: Admin login
  *     tags: [Admin Dashboard]
@@ -48,7 +48,7 @@ router.post('/login', isValidation(Validators.adminLoginSchema), adminController
 
 /**
  * @swagger
- * /api/v1/admin/admins:
+ * /api/admin/admins:
  *   get:
  *     summary: Get all admins
  *     tags: [Admin Dashboard]
@@ -92,7 +92,7 @@ router.get('/admins',
 
 /**
  * @swagger
- * /api/v1/admin/admins:
+ * /api/admin/admins:
  *   post:
  *     summary: Create new admin
  *     tags: [Admin Dashboard]
@@ -140,7 +140,7 @@ router.post('/admins',
 
 /**
  * @swagger
- * /api/v1/admin/admins/{id}:
+ * /api/admin/admins/{id}:
  *   put:
  *     summary: Update admin
  *     tags: [Admin Dashboard]
@@ -191,7 +191,7 @@ router.put('/admins/:id',
 
 /**
  * @swagger
- * /api/v1/admin/admins/{id}:
+ * /api/admin/admins/{id}:
  *   delete:
  *     summary: Delete admin
  *     tags: [Admin Dashboard]
@@ -224,7 +224,7 @@ router.delete('/admins/:id',
 
 /**
  * @swagger
- * /api/v1/admin/admins/{id}/change-password:
+ * /api/admin/admins/{id}/change-password:
  *   put:
  *     summary: Change admin password
  *     tags: [Admin Dashboard]
@@ -270,11 +270,11 @@ router.put('/admins/:id/change-password',
 
 /**
  * @swagger
- * /api/v1/admin/profile:
+ * /api/admin/profile:
  *   get:
  *     summary: Get admin profile
  *     tags: [Admin Dashboard]
- *     description: Get current admin profile
+ *     description: Get current admin profile information
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -282,8 +282,6 @@ router.put('/admins/:id/change-password',
  *         description: Profile retrieved successfully
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Admin not found
  */
 router.get('/profile', 
   authenticate, 
@@ -293,11 +291,11 @@ router.get('/profile',
 
 /**
  * @swagger
- * /api/v1/admin/profile:
+ * /api/admin/profile:
  *   put:
  *     summary: Update admin profile
  *     tags: [Admin Dashboard]
- *     description: Update current admin profile
+ *     description: Update current admin profile information
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -309,24 +307,27 @@ router.get('/profile',
  *             properties:
  *               displayName:
  *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
  *     responses:
  *       200:
  *         description: Profile updated successfully
+ *       400:
+ *         description: Bad request
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Admin not found
  */
 router.put('/profile', 
   authenticate, 
   isAuthorized('admin', 'superadmin'), 
-  isValidation(Validators.updateAdminProfileSchema), 
+  isValidation(Validators.updateProfileSchema), 
   adminController.updateAdminProfile
 );
 
 /**
  * @swagger
- * /api/v1/admin/change-password:
+ * /api/admin/change-password:
  *   put:
  *     summary: Change own password
  *     tags: [Admin Dashboard]
@@ -352,26 +353,24 @@ router.put('/profile',
  *       200:
  *         description: Password changed successfully
  *       400:
- *         description: Current password incorrect
+ *         description: Bad request
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: Admin not found
  */
 router.put('/change-password', 
   authenticate, 
   isAuthorized('admin', 'superadmin'), 
-  isValidation(Validators.changeOwnPasswordSchema), 
-  adminController.changeOwnPassword
+  isValidation(Validators.changePasswordSchema), 
+  adminController.changePassword
 );
 
 /**
  * @swagger
- * /api/v1/admin/users:
+ * /api/admin/users:
  *   get:
  *     summary: Get all users
  *     tags: [Admin Dashboard]
- *     description: Get list of all users (Admin and SuperAdmin)
+ *     description: Get list of all users with pagination and filtering
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -407,10 +406,10 @@ router.put('/change-password',
  *       403:
  *         description: Forbidden - Admin/SuperAdmin only
  */
-router.get('/users',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  isValidation(Validators.getUsersSchema),
+router.get('/users', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getUsersSchema), 
   adminController.getUsers
 );
 

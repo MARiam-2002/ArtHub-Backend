@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * @swagger
- * /api/v1/dashboard/overview:
+ * /api/dashboard/overview:
  *   get:
  *     summary: Get system overview with all key metrics
  *     tags: [Dashboard]
@@ -40,7 +40,7 @@ router.get(
 
 /**
  * @swagger
- * /api/v1/dashboard/statistics:
+ * /api/dashboard/statistics:
  *   get:
  *     summary: Get dashboard main statistics
  *     tags: [Dashboard]
@@ -64,7 +64,7 @@ router.get(
 
 /**
  * @swagger
- * /api/v1/dashboard/revenue:
+ * /api/dashboard/revenue:
  *   get:
  *     summary: Get revenue statistics with comparison
  *     tags: [Dashboard]
@@ -96,7 +96,7 @@ router.get(
 
 /**
  * @swagger
- * /api/v1/dashboard/orders/statistics:
+ * /api/dashboard/orders/statistics:
  *   get:
  *     summary: Get order statistics with detailed breakdown
  *     tags: [Dashboard]
@@ -120,7 +120,7 @@ router.get(
 
 /**
  * @swagger
- * /api/v1/dashboard/charts:
+ * /api/dashboard/charts:
  *   get:
  *     summary: Get dashboard charts data
  *     tags: [Dashboard]
@@ -153,7 +153,7 @@ router.get(
 
 /**
  * @swagger
- * /api/v1/dashboard/artists/performance:
+ * /api/dashboard/artists/performance:
  *   get:
  *     summary: Get top performing artists with detailed metrics
  *     tags: [Dashboard]
@@ -202,7 +202,6 @@ router.get(
   '/users/:id',
   authenticate,
   isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getUserByIdValidation),
   dashboardController.getUserById
 );
 
@@ -214,7 +213,7 @@ router.patch(
   dashboardController.updateUserStatus
 );
 
-// Orders Management Routes
+// Order Management Routes
 router.get(
   '/orders',
   authenticate,
@@ -227,11 +226,10 @@ router.get(
   '/orders/:id',
   authenticate,
   isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getOrderByIdValidation),
   dashboardController.getOrderById
 );
 
-// Reviews Management Routes
+// Review Management Routes
 router.get(
   '/reviews',
   authenticate,
@@ -248,16 +246,16 @@ router.patch(
   dashboardController.updateReviewStatus
 );
 
-// Notifications Management Routes
+// Notification Management Routes
 router.post(
   '/notifications',
   authenticate,
   isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.sendNotificationValidation),
-  dashboardController.sendNotification
+  isValidation(dashboardValidation.createNotificationValidation),
+  dashboardController.createNotification
 );
 
-// Artists Management Routes
+// Artist Management Routes
 router.get(
   '/artists/top',
   authenticate,
@@ -266,21 +264,13 @@ router.get(
   dashboardController.getTopArtists
 );
 
-// Activities Routes
+// Activity Log Routes
 router.get(
   '/activities',
   authenticate,
   isAuthorized('admin', 'superadmin'),
-  isValidation(dashboardValidation.getRecentActivitiesValidation),
-  dashboardController.getRecentActivities
-);
-
-// Legacy route for backward compatibility
-router.get(
-  '/',
-  authenticate,
-  isAuthorized('admin', 'superadmin'),
-  dashboardController.getDashboardStatistics
+  isValidation(dashboardValidation.getActivitiesValidation),
+  dashboardController.getActivities
 );
 
 export default router; 
