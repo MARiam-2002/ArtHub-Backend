@@ -110,7 +110,7 @@ export const changeAdminPasswordSchema = {
 };
 
 // Update admin profile validation
-export const updateAdminProfileSchema = {
+export const updateProfileSchema = {
   body: joi.object({
     displayName: joi.string()
       .min(2)
@@ -125,7 +125,7 @@ export const updateAdminProfileSchema = {
 };
 
 // Change own password validation
-export const changeOwnPasswordSchema = {
+export const changePasswordSchema = {
   body: joi.object({
     currentPassword: joi.string()
       .required()

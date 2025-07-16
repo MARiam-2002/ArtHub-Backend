@@ -44,8 +44,8 @@ export const updateReviewStatusValidation = {
   }).required()
 };
 
-// Validation for sending notifications
-export const sendNotificationValidation = {
+// Validation for creating notifications
+export const createNotificationValidation = {
   body: joi.object({
     title: joi.string().min(3).max(100).required(),
     message: joi.string().min(10).max(500).required(),
@@ -104,8 +104,8 @@ export const getTopArtistsValidation = {
   }).optional()
 };
 
-// Validation for recent activities query parameters
-export const getRecentActivitiesValidation = {
+// Validation for activities query parameters
+export const getActivitiesValidation = {
   query: joi.object({
     limit: joi.number().integer().min(1).max(50).default(20)
   }).optional()

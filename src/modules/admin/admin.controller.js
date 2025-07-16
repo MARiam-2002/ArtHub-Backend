@@ -436,7 +436,7 @@ export const updateAdminProfile = asyncHandler(async (req, res, next) => {
  * @route   PUT /api/v1/admin/change-password
  * @access  Private (Admin, SuperAdmin)
  */
-export const changeOwnPassword = asyncHandler(async (req, res, next) => {
+export const changePassword = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { currentPassword, newPassword } = req.body;

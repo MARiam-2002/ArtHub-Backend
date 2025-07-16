@@ -514,7 +514,7 @@ export const updateReviewStatus = asyncHandler(async (req, res, next) => {
  * @route   POST /api/v1/dashboard/notifications
  * @access  Private (Admin)
  */
-export const sendNotification = asyncHandler(async (req, res, next) => {
+export const createNotification = asyncHandler(async (req, res, next) => {
   const { 
     title, 
     message, 
@@ -630,7 +630,7 @@ export const getTopArtists = asyncHandler(async (req, res, next) => {
  * @route   GET /api/v1/dashboard/activities
  * @access  Private (Admin)
  */
-export const getRecentActivities = asyncHandler(async (req, res, next) => {
+export const getActivities = asyncHandler(async (req, res, next) => {
   const { limit = 20 } = req.query;
 
   // أحدث الطلبات
