@@ -290,6 +290,199 @@ router.get('/category/:id', homeController.getArtworksByCategory);
 
 /**
  * @swagger
+ * /home/featured-artworks:
+ *   get:
+ *     summary: جلب الأعمال المميزة
+ *     tags: [Home]
+ *     description: |
+ *       جلب الأعمال الفنية المميزة (Featured) مع التقسيم.
+ *       مخصص لشاشة "مشاهدة الجميع" للأعمال المميزة.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد الأعمال في الصفحة
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: تم جلب الأعمال المميزة بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب الأعمال المميزة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artworks:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Artwork'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: FeaturedArtworksScreen
+ */
+router.get('/featured-artworks', homeController.getFeaturedArtworks);
+
+/**
+ * @swagger
+ * /home/most-rated-artworks:
+ *   get:
+ *     summary: جلب أكثر الأعمال تقييماً
+ *     tags: [Home]
+ *     description: |
+ *       جلب الأعمال الفنية الأكثر تقييماً مع التقسيم.
+ *       مخصص لشاشة "مشاهدة الجميع" لأكثر الأعمال تقييماً.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد الأعمال في الصفحة
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: تم جلب أكثر الأعمال تقييماً بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب أكثر الأعمال تقييماً بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artworks:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Artwork'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: MostRatedArtworksScreen
+ */
+router.get('/most-rated-artworks', homeController.getMostRatedArtworks);
+
+/**
+ * @swagger
+ * /home/personalized-artworks:
+ *   get:
+ *     summary: جلب الأعمال المخصصة لك
+ *     tags: [Home]
+ *     description: |
+ *       جلب الأعمال الفنية المخصصة للمستخدم بناءً على تفضيلاته.
+ *       مخصص لشاشة "مشاهدة الجميع" للأعمال المخصصة.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد الأعمال في الصفحة
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: تم جلب الأعمال المخصصة بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب الأعمال المخصصة لك بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artworks:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Artwork'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     isPersonalized:
+ *                       type: boolean
+ *                       description: هل المحتوى مخصص للمستخدم
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: PersonalizedArtworksScreen
+ */
+router.get('/personalized-artworks', optionalAuth, homeController.getPersonalizedArtworks);
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     HomeData:

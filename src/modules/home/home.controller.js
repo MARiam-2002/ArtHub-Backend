@@ -1206,3 +1206,238 @@ export const getTrendingArtworks = asyncHandler(async (req, res, next) => {
     next(new Error('حدث خطأ أثناء جلب الأعمال الرائجة', { cause: 500 }));
   }
 });
+
+/**
+ * Get featured artworks for "مشاهدة الجميع" screen
+ */
+export const getFeaturedArtworks = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const [artworks, total] = await Promise.all([
+      artworkModel
+        .find({ 
+          isAvailable: true,
+          isFeatured: true 
+        })
+        .populate({ 
+          path: 'artist', 
+          select: 'displayName profileImage photoURL job isVerified' 
+        })
+        .populate({ 
+          path: 'category', 
+          select: 'name image' 
+        })
+        .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
+        .sort({ isFeatured: -1, likeCount: -1, viewCount: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      artworkModel.countDocuments({ 
+        isAvailable: true,
+        isFeatured: true 
+      })
+    ]);
+
+    const response = {
+      success: true,
+      message: 'تم جلب الأعمال المميزة بنجاح',
+      data: {
+        artworks: formatArtworks(artworks),
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          hasNextPage: skip + artworks.length < total,
+          hasPrevPage: Number(page) > 1
+        }
+      },
+      meta: {
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Featured artworks error:', error);
+    next(new Error('حدث خطأ أثناء جلب الأعمال المميزة', { cause: 500 }));
+  }
+});
+
+/**
+ * Get most rated artworks for "مشاهدة الجميع" screen
+ */
+export const getMostRatedArtworks = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const [artworks, total] = await Promise.all([
+      artworkModel
+        .find({ 
+          isAvailable: true,
+          reviewsCount: { $gt: 0 } // Only artworks with reviews
+        })
+        .populate({ 
+          path: 'artist', 
+          select: 'displayName profileImage photoURL job isVerified' 
+        })
+        .populate({ 
+          path: 'category', 
+          select: 'name image' 
+        })
+        .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
+        .sort({ averageRating: -1, reviewsCount: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      artworkModel.countDocuments({ 
+        isAvailable: true,
+        reviewsCount: { $gt: 0 }
+      })
+    ]);
+
+    const response = {
+      success: true,
+      message: 'تم جلب أكثر الأعمال تقييماً بنجاح',
+      data: {
+        artworks: formatArtworks(artworks),
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          hasNextPage: skip + artworks.length < total,
+          hasPrevPage: Number(page) > 1
+        }
+      },
+      meta: {
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Most rated artworks error:', error);
+    next(new Error('حدث خطأ أثناء جلب أكثر الأعمال تقييماً', { cause: 500 }));
+  }
+});
+
+/**
+ * Get personalized artworks for "مشاهدة الجميع" screen
+ */
+export const getPersonalizedArtworks = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+    const userId = req.user?._id;
+
+    let personalizedArtworks = [];
+    let total = 0;
+
+    if (userId) {
+      // Get user's favorite categories and artists
+      const user = await userModel.findById(userId).select('wishlist following').lean();
+      
+      if (user) {
+        // Get artworks from user's wishlist artists
+        const wishlistArtworks = await artworkModel.find({
+          _id: { $in: user.wishlist || [] }
+        }).select('category artist').lean();
+
+        const favoriteCategories = [...new Set(wishlistArtworks.map(a => a.category?.toString()).filter(Boolean))];
+        const favoriteArtists = [...new Set(wishlistArtworks.map(a => a.artist?.toString()).filter(Boolean))];
+
+        // Get personalized artworks based on user preferences
+        const [artworks, artworksTotal] = await Promise.all([
+          artworkModel
+            .find({
+              isAvailable: true,
+              $or: [
+                { category: { $in: favoriteCategories } },
+                { artist: { $in: favoriteArtists } }
+              ]
+            })
+            .populate({ 
+              path: 'artist', 
+              select: 'displayName profileImage photoURL job isVerified' 
+            })
+            .populate({ 
+              path: 'category', 
+              select: 'name image' 
+            })
+            .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
+            .sort({ averageRating: -1, likeCount: -1, createdAt: -1 })
+            .skip(skip)
+            .limit(Number(limit))
+            .lean(),
+          artworkModel.countDocuments({
+            isAvailable: true,
+            $or: [
+              { category: { $in: favoriteCategories } },
+              { artist: { $in: favoriteArtists } }
+            ]
+          })
+        ]);
+
+        personalizedArtworks = artworks;
+        total = artworksTotal;
+      }
+    }
+
+    // Fallback: if no personalized content or user not authenticated
+    if (personalizedArtworks.length === 0) {
+      const [fallbackArtworks, fallbackTotal] = await Promise.all([
+        artworkModel
+          .find({ isAvailable: true })
+          .populate({ 
+            path: 'artist', 
+            select: 'displayName profileImage photoURL job isVerified' 
+          })
+          .populate({ 
+            path: 'category', 
+            select: 'name image' 
+          })
+          .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
+          .sort({ averageRating: -1, likeCount: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit))
+          .lean(),
+        artworkModel.countDocuments({ isAvailable: true })
+      ]);
+
+      personalizedArtworks = fallbackArtworks;
+      total = fallbackTotal;
+    }
+
+    const response = {
+      success: true,
+      message: 'تم جلب الأعمال المخصصة لك بنجاح',
+      data: {
+        artworks: formatArtworks(personalizedArtworks),
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          hasNextPage: skip + personalizedArtworks.length < total,
+          hasPrevPage: Number(page) > 1
+        }
+      },
+      meta: {
+        isPersonalized: userId ? true : false,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    console.error('Personalized artworks error:', error);
+    next(new Error('حدث خطأ أثناء جلب الأعمال المخصصة', { cause: 500 }));
+  }
+});
