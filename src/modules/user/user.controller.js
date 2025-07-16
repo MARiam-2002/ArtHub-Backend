@@ -89,7 +89,7 @@ export const getWishlist = asyncHandler(async (req, res, next) => {
       .find({ _id: { $in: wishlistIds } })
       .populate('artist', 'displayName profileImage job')
       .populate('category', 'name')
-      .select('title images price currency artist category isAvailable createdAt viewCount likeCount')
+      .select('title image images price currency artist category isAvailable createdAt viewCount likeCount')
       .lean();
 
     // Maintain the order of wishlist
@@ -1231,33 +1231,49 @@ export const getTopArtists = asyncHandler(async (req, res, next) => {
  * Format artworks for consistent response
  */
 function formatArtworks(artworks) {
-  return artworks.map(artwork => ({
-    _id: artwork._id,
-    title: artwork.title?.ar || artwork.title,
-    images: artwork.images?.map(img => {
-      // Handle both string URLs and object URLs
-      if (typeof img === 'string') {
-        return {
-          url: img,
-          optimizedUrl: img
-        };
-      } else if (img && typeof img === 'object') {
-        return {
-          url: img.url || img,
-          optimizedUrl: img.optimizedUrl || img.url || img
-        };
+  return artworks.map(artwork => {
+    // Get the main image (prioritize image field, then first image from images array)
+    let mainImage = null;
+    if (artwork.image) {
+      mainImage = artwork.image;
+    } else if (artwork.images && artwork.images.length > 0) {
+      const firstImage = artwork.images[0];
+      if (typeof firstImage === 'string') {
+        mainImage = firstImage;
+      } else if (firstImage && typeof firstImage === 'object') {
+        mainImage = firstImage.url || firstImage;
       }
-      return null;
-    }).filter(Boolean) || [],
-    price: artwork.price,
-    currency: artwork.currency || 'SAR',
-    category: {
-      _id: artwork.category?._id,
-      name: artwork.category?.name?.ar || artwork.category?.name
-    },
-    viewCount: artwork.viewCount || 0,
-    likeCount: artwork.likeCount || 0,
-    isAvailable: artwork.isAvailable,
-    createdAt: artwork.createdAt
-  }));
+    }
+    
+    return {
+      _id: artwork._id,
+      title: artwork.title?.ar || artwork.title,
+      image: mainImage, // Single image key
+      images: artwork.images?.map(img => {
+        // Handle both string URLs and object URLs
+        if (typeof img === 'string') {
+          return {
+            url: img,
+            optimizedUrl: img
+          };
+        } else if (img && typeof img === 'object') {
+          return {
+            url: img.url || img,
+            optimizedUrl: img.optimizedUrl || img.url || img
+          };
+        }
+        return null;
+      }).filter(Boolean) || [],
+      price: artwork.price,
+      currency: artwork.currency || 'SAR',
+      category: {
+        _id: artwork.category?._id,
+        name: artwork.category?.name?.ar || artwork.category?.name
+      },
+      viewCount: artwork.viewCount || 0,
+      likeCount: artwork.likeCount || 0,
+      isAvailable: artwork.isAvailable,
+      createdAt: artwork.createdAt
+    };
+  });
 }
