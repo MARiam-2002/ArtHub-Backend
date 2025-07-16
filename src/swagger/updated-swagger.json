@@ -2368,10 +2368,10 @@
       "get": {
         "tags": ["Home"],
         "summary": "Get home page data",
-        "description": "Retrieve data for the home page including featured artworks, artists, and categories",
+        "description": "Get data for home page including featured artworks and categories",
         "responses": {
           "200": {
-            "description": "Home page data retrieved successfully",
+            "description": "Home page data",
             "content": {
               "application/json": {
                 "schema": {
