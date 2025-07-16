@@ -207,6 +207,62 @@ const router = Router();
  *                     pagination:
  *                       $ref: '#/components/schemas/PaginationMeta'
  */
+/**
+ * @swagger
+ * /api/artworks/featured:
+ *   get:
+ *     summary: جلب الأعمال المميزة
+ *     tags: [Artwork]
+ *     description: |
+ *       جلب الأعمال الفنية المميزة (isFeatured: true).
+ *       مخصص لشاشة "مشاهدة الجميع" للأعمال المميزة.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 12
+ *         description: عدد الأعمال في الصفحة
+ *         example: 12
+ *     responses:
+ *       200:
+ *         description: تم جلب الأعمال المميزة بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب الأعمال المميزة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artworks:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Artwork'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: FeaturedArtworksScreen
+ */
+router.get('/featured', artworkController.getFeaturedArtworks);
+
 router.get('/', isValidation(getArtworksQuerySchema), artworkController.getAllArtworks);
 
 /**

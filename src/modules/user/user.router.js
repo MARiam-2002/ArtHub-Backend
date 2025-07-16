@@ -496,6 +496,160 @@ router.put('/notification-settings',
 
 /**
  * @swagger
+ * /api/user/top-artists:
+ *   get:
+ *     summary: جلب أفضل الفنانين
+ *     tags: [Artists]
+ *     description: |
+ *       جلب أفضل الفنانين مرتبين حسب التقييم والمتابعين.
+ *       مخصص لشاشة "مشاهدة الجميع" لأفضل الفنانين.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد الفنانين في الصفحة
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: تم جلب أفضل الفنانين بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب أفضل الفنانين بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artists:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           displayName:
+ *                             type: string
+ *                           profileImage:
+ *                             type: string
+ *                           job:
+ *                             type: string
+ *                           bio:
+ *                             type: string
+ *                           rating:
+ *                             type: number
+ *                           reviewsCount:
+ *                             type: number
+ *                           artworksCount:
+ *                             type: number
+ *                           followersCount:
+ *                             type: number
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: ArtistsScreen
+ */
+router.get('/top-artists',
+  isValidation(Validators.paginationSchema, 'query'),
+  userController.getTopArtists
+);
+
+/**
+ * @swagger
+ * /api/user/latest-artists:
+ *   get:
+ *     summary: جلب أحدث الفنانين
+ *     tags: [Artists]
+ *     description: |
+ *       جلب أحدث الفنانين المسجلين في النظام.
+ *       مخصص لشاشة "مشاهدة الجميع" لأحدث الفنانين.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 20
+ *         description: عدد الفنانين في الصفحة
+ *         example: 20
+ *     responses:
+ *       200:
+ *         description: تم جلب أحدث الفنانين بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب أحدث الفنانين بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artists:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           displayName:
+ *                             type: string
+ *                           profileImage:
+ *                             type: string
+ *                           job:
+ *                             type: string
+ *                           bio:
+ *                             type: string
+ *                           joinDate:
+ *                             type: string
+ *                           artworksCount:
+ *                             type: number
+ *                           followersCount:
+ *                             type: number
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationResponse'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ *     x-screen: ArtistsScreen
+ */
+router.get('/latest-artists',
+  isValidation(Validators.paginationSchema, 'query'),
+  userController.getLatestArtists
+);
+
+/**
+ * @swagger
  * /user/delete-account:
  *   delete:
  *     summary: Delete user account

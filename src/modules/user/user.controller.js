@@ -1228,6 +1228,86 @@ export const getTopArtists = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * Get latest artists
+ */
+export const getLatestArtists = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const artists = await userModel.aggregate([
+      { $match: { role: 'artist', isActive: true } },
+      {
+        $lookup: {
+          from: 'artworks',
+          localField: '_id',
+          foreignField: 'artist',
+          as: 'artworks'
+        }
+      },
+      {
+        $lookup: {
+          from: 'follows',
+          localField: '_id',
+          foreignField: 'following',
+          as: 'followers'
+        }
+      },
+      {
+        $addFields: {
+          artworksCount: { $size: '$artworks' },
+          followersCount: { $size: '$followers' }
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      },
+      { $skip: skip },
+      { $limit: Number(limit) },
+      {
+        $project: {
+          displayName: 1,
+          profileImage: 1,
+          job: 1,
+          bio: 1,
+          createdAt: 1,
+          artworksCount: 1,
+          followersCount: 1
+        }
+      }
+    ]);
+
+    const total = await userModel.countDocuments({ role: 'artist', isActive: true });
+
+    const response = {
+      artists: artists.map(artist => ({
+        _id: artist._id,
+        displayName: artist.displayName,
+        profileImage: artist.profileImage?.url,
+        job: artist.job,
+        bio: artist.bio,
+        joinDate: artist.createdAt,
+        artworksCount: artist.artworksCount || 0,
+        followersCount: artist.followersCount || 0
+      })),
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        hasNextPage: skip + artists.length < total
+      }
+    };
+
+    res.success(response, 'تم جلب أحدث الفنانين بنجاح');
+  } catch (error) {
+    console.error('Get latest artists error:', error);
+    next(new Error('حدث خطأ أثناء جلب أحدث الفنانين', { cause: 500 }));
+  }
+});
+
+/**
  * Format artworks for consistent response
  */
 function formatArtworks(artworks) {

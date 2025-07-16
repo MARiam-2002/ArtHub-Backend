@@ -6,6 +6,41 @@ import { getPaginationParams } from '../../../utils/pagination.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 
 /**
+ * جلب الأعمال المميزة
+ * @route GET /api/artworks/featured
+ * @access Public
+ */
+export const getFeaturedArtworks = asyncHandler(async (req, res) => {
+  const { page, limit, skip } = getPaginationParams(req.query, 12);
+
+  const [artworks, totalCount] = await Promise.all([
+    artworkModel
+      .find({ isAvailable: true, isFeatured: true })
+      .populate({ 
+        path: 'artist', 
+        select: 'displayName profileImage job isActive',
+        match: { isActive: true }
+      })
+      .populate({ path: 'category', select: 'name' })
+      .sort({ likeCount: -1, viewCount: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    artworkModel.countDocuments({ isAvailable: true, isFeatured: true })
+  ]);
+
+  // تصفية الأعمال التي لديها فنانين نشطين فقط
+  const activeArtworks = artworks.filter(artwork => artwork.artist);
+
+  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(totalCount);
+
+  res.success({ 
+    artworks: activeArtworks, 
+    pagination: paginationMeta
+  }, 'تم جلب الأعمال المميزة بنجاح');
+});
+
+/**
  * جلب كل الأعمال الفنية مع بيانات الفنان والتصفية المتقدمة
  * @route GET /api/artworks
  * @access Public
