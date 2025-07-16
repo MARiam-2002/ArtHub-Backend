@@ -1277,12 +1277,42 @@ export const getMostRatedArtworks = asyncHandler(async (req, res, next) => {
     const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
 
-    const [artworks, total] = await Promise.all([
-      artworkModel
-        .find({ 
-          isAvailable: true,
-          reviewsCount: { $gt: 0 } // Only artworks with reviews
-        })
+    // First try to get artworks with reviews
+    let artworks = [];
+    let total = 0;
+
+    // Try to get artworks with reviews first
+    const artworksWithReviews = await artworkModel
+      .find({ 
+        isAvailable: true,
+        reviewsCount: { $gt: 0 }
+      })
+      .populate({ 
+        path: 'artist', 
+        select: 'displayName profileImage photoURL job isVerified' 
+      })
+      .populate({ 
+        path: 'category', 
+        select: 'name image' 
+      })
+      .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
+      .sort({ averageRating: -1, reviewsCount: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean();
+
+    const totalWithReviews = await artworkModel.countDocuments({ 
+      isAvailable: true,
+      reviewsCount: { $gt: 0 }
+    });
+
+    if (artworksWithReviews.length > 0) {
+      artworks = artworksWithReviews;
+      total = totalWithReviews;
+    } else {
+      // Fallback: get all available artworks sorted by likeCount and viewCount
+      const fallbackArtworks = await artworkModel
+        .find({ isAvailable: true })
         .populate({ 
           path: 'artist', 
           select: 'displayName profileImage photoURL job isVerified' 
@@ -1292,19 +1322,20 @@ export const getMostRatedArtworks = asyncHandler(async (req, res, next) => {
           select: 'name image' 
         })
         .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
-        .sort({ averageRating: -1, reviewsCount: -1, createdAt: -1 })
+        .sort({ likeCount: -1, viewCount: -1, createdAt: -1 })
         .skip(skip)
         .limit(Number(limit))
-        .lean(),
-      artworkModel.countDocuments({ 
-        isAvailable: true,
-        reviewsCount: { $gt: 0 }
-      })
-    ]);
+        .lean();
+
+      const totalFallback = await artworkModel.countDocuments({ isAvailable: true });
+
+      artworks = fallbackArtworks;
+      total = totalFallback;
+    }
 
     const response = {
       success: true,
-      message: 'تم جلب أكثر الأعمال تقييماً بنجاح',
+      message: artworks.length > 0 ? 'تم جلب أكثر الأعمال تقييماً بنجاح' : 'لا توجد أعمال فنية متاحة حالياً',
       data: {
         artworks: formatArtworks(artworks),
         pagination: {
@@ -1316,7 +1347,8 @@ export const getMostRatedArtworks = asyncHandler(async (req, res, next) => {
         }
       },
       meta: {
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        note: artworks.length === 0 ? 'لا توجد أعمال فنية متاحة في قاعدة البيانات حالياً' : null
       }
     };
 
