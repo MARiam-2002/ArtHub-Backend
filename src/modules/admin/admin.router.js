@@ -5,6 +5,16 @@ import { isAuthorized } from '../../middleware/authorization.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './admin.validation.js';
 
+// لوجات تشخيصية
+console.log('adminController.updateAdminProfile:', typeof adminController.updateAdminProfile);
+console.log('adminController.getAdminProfile:', typeof adminController.getAdminProfile);
+console.log('adminController.changePassword:', typeof adminController.changePassword);
+console.log('adminController.getUsers:', typeof adminController.getUsers);
+console.log('Validators.changeAdminPasswordSchema:', typeof Validators.changeAdminPasswordSchema);
+console.log('Validators.updateProfileSchema:', typeof Validators.updateProfileSchema);
+console.log('Validators.changePasswordSchema:', typeof Validators.changePasswordSchema);
+console.log('Validators.getUsersSchema:', typeof Validators.getUsersSchema);
+
 const router = Router();
 
 /**

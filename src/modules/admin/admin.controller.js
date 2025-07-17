@@ -1,34 +1,24 @@
 import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { ApiFeatures } from '../../utils/apiFeatures.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 
 /**
  * @desc    Get all admins
  * @route   GET /api/v1/admin/admins
- * @access  Private (SuperAdmin)
+ * @access  Private (SuperAdmin only)
  */
 export const getAdmins = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const apiFeatures = new ApiFeatures(
-    userModel.find({ role: { $in: ['admin', 'superadmin'] }, isDeleted: false }), 
-    req.query
-  )
-    .paginate()
-    .filter()
-    .sort()
-    .select()
-    .search();
-
-  const admins = await apiFeatures.mongooseQuery;
-  const total = await userModel.countDocuments({
-    role: { $in: ['admin', 'superadmin'] },
-    isDeleted: false,
-    ...apiFeatures.mongooseQuery.getFilter()
-  });
+  const admins = await userModel.find({ 
+    role: { $in: ['admin', 'superadmin'] }, 
+    isDeleted: false 
+  })
+  .select('-password')
+  .lean();
 
   res.json({
     success: true,
@@ -36,36 +26,29 @@ export const getAdmins = asyncHandler(async (req, res, next) => {
     data: {
       admins: admins.map(admin => ({
         _id: admin._id,
-        email: admin.email,
         displayName: admin.displayName,
+        email: admin.email,
         role: admin.role,
-        status: admin.status,
         isActive: admin.isActive,
-        isVerified: admin.isVerified,
-        lastActive: admin.lastActive,
         createdAt: admin.createdAt,
-        updatedAt: admin.updatedAt
-      })),
-      total,
-      page: apiFeatures.page,
-      limit: apiFeatures.limit,
-      totalPages: Math.ceil(total / apiFeatures.limit),
-    },
+        lastActive: admin.lastActive
+      }))
+    }
   });
 });
 
 /**
  * @desc    Create new admin
  * @route   POST /api/v1/admin/admins
- * @access  Private (SuperAdmin)
+ * @access  Private (SuperAdmin only)
  */
 export const createAdmin = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const { email, password, displayName, role = 'admin' } = req.body;
+  const { displayName, email, password, role = 'admin' } = req.body;
 
-  // Check if user already exists
-  const existingUser = await userModel.findOne({ email: email.toLowerCase() });
+  // Check if email already exists
+  const existingUser = await userModel.findOne({ email });
   if (existingUser) {
     return res.status(400).json({
       success: false,
@@ -74,40 +57,27 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Validate role
-  if (role !== 'admin' && role !== 'superadmin') {
-    return res.status(400).json({
-      success: false,
-      message: 'نوع المستخدم يجب أن يكون admin أو superadmin',
-      data: null
-    });
-  }
-
-  // Create new admin
-  const newAdmin = new userModel({
-    email: email.toLowerCase(),
-    password,
-    displayName: displayName || email.split('@')[0],
-    status: 'active',
+  // Hash password
+  const hashedPassword = await bcrypt.hash(password, 12);
+  // Create admin
+  const admin = await userModel.create({
+    displayName,
+    email,
+    password: hashedPassword,
+    role,
     isActive: true,
-    isVerified: true,
-    job: role === 'admin' ? 'مدير' : 'مدير عام'
+    isVerified: true
   });
-
-  await newAdmin.save();
 
   res.status(201).json({
     success: true,
     message: 'تم إنشاء الأدمن بنجاح',
     data: {
-      _id: newAdmin._id,
-      email: newAdmin.email,
-      displayName: newAdmin.displayName,
-      role: newAdmin.role,
-      status: newAdmin.status,
-      isActive: newAdmin.isActive,
-      isVerified: newAdmin.isVerified,
-      createdAt: newAdmin.createdAt
+      _id: admin._id,
+      displayName: admin.displayName,
+      email: admin.email,
+      role: admin.role,
+      createdAt: admin.createdAt
     }
   });
 });
@@ -115,13 +85,13 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
 /**
  * @desc    Update admin
  * @route   PUT /api/v1/admin/admins/:id
- * @access  Private (SuperAdmin)
+ * @access  Private (SuperAdmin only)
  */
 export const updateAdmin = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { displayName, status, isActive, role } = req.body;
+  const { displayName, email, role, isActive } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -131,13 +101,8 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const admin = await userModel.findOne({ 
-    _id: id, 
-    role: { $in: ['admin', 'superadmin'] },
-    isDeleted: false 
-  });
-
-  if (!admin) {
+  const admin = await userModel.findById(id);
+  if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
     return res.status(404).json({
       success: false,
       message: 'الأدمن غير موجود',
@@ -145,45 +110,44 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Prevent superadmin from being demoted to admin
-  if (admin.role === 'superadmin' && role === 'admin') {
-    return res.status(400).json({
-      success: false,
-      message: 'لا يمكن تغيير دور المدير العام',
-      data: null
-    });
+  // Check if email is already taken by another user
+  if (email && email !== admin.email) {
+    const existingUser = await userModel.findOne({ email, _id: { $ne: id } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'البريد الإلكتروني مستخدم بالفعل',
+        data: null
+      });
+    }
   }
 
   // Update fields
   if (displayName) admin.displayName = displayName;
-  if (status) admin.status = status;
+  if (email) admin.email = email;
+  if (role && ['admin', 'superadmin'].includes(role)) admin.role = role;
   if (typeof isActive === 'boolean') admin.isActive = isActive;
-  if (role && role !== admin.role) admin.role = role;
-  if (role === 'admin') admin.job = 'مدير';
-  else if (role === 'superadmin') admin.job = 'مدير عام';
 
   await admin.save();
 
   res.json({
     success: true,
-    message: 'تم تحديث بيانات الأدمن بنجاح',
+    message: 'تم تحديث الأدمن بنجاح',
     data: {
       _id: admin._id,
-      email: admin.email,
       displayName: admin.displayName,
+      email: admin.email,
       role: admin.role,
-      status: admin.status,
       isActive: admin.isActive,
-      isVerified: admin.isVerified,
       updatedAt: admin.updatedAt
     }
   });
 });
 
 /**
- * @desc    Delete admin (soft delete)
+ * @desc    Delete admin
  * @route   DELETE /api/v1/admin/admins/:id
- * @access  Private (SuperAdmin)
+ * @access  Private (SuperAdmin only)
  */
 export const deleteAdmin = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
@@ -198,13 +162,8 @@ export const deleteAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const admin = await userModel.findOne({ 
-    _id: id, 
-    role: { $in: ['admin', 'superadmin'] },
-    isDeleted: false 
-  });
-
-  if (!admin) {
+  const admin = await userModel.findById(id);
+  if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
     return res.status(404).json({
       success: false,
       message: 'الأدمن غير موجود',
@@ -212,33 +171,15 @@ export const deleteAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Prevent deleting superadmin
-  if (admin.role === 'superadmin') {
-    return res.status(400).json({
-      success: false,
-      message: 'لا يمكن حذف المدير العام',
-      data: null
-    });
-  }
-
   // Soft delete
   admin.isDeleted = true;
   admin.isActive = false;
-  admin.status = 'inactive';
   await admin.save();
 
   res.json({
     success: true,
     message: 'تم حذف الأدمن بنجاح',
-    data: {
-      _id: admin._id,
-      email: admin.email,
-      displayName: admin.displayName,
-      role: admin.role,
-      status: admin.status,
-      isActive: admin.isActive,
-      deletedAt: admin.updatedAt
-    }
+    data: null
   });
 });
 
@@ -252,26 +193,17 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
   
   const { email, password } = req.body;
 
-  // Check if user exists and is admin
+  // Find admin by email
   const admin = await userModel.findOne({ 
-    email: email.toLowerCase(),
+    email, 
     role: { $in: ['admin', 'superadmin'] },
-    isDeleted: false
+    isDeleted: false 
   });
 
-  if (!admin) {
+  if (!admin || !admin.isActive) {
     return res.status(401).json({
       success: false,
       message: 'بيانات الدخول غير صحيحة',
-      data: null
-    });
-  }
-
-  // Check if admin is active
-  if (!admin.isActive) {
-    return res.status(401).json({
-      success: false,
-      message: 'الحساب غير نشط',
       data: null
     });
   }
@@ -286,13 +218,26 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Update last active
+  // Generate tokens
+  const accessToken = jwt.sign(
+    { 
+      userId: admin._id, 
+      email: admin.email, 
+      role: admin.role 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  const refreshToken = jwt.sign(
+    { userId: admin._id },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  // Update last login
   admin.lastActive = new Date();
   await admin.save();
-
-  // Generate tokens
-  const accessToken = admin.generateAccessToken();
-  const refreshToken = admin.generateRefreshToken();
 
   res.json({
     success: true,
@@ -300,23 +245,110 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
     data: {
       admin: {
         _id: admin._id,
-        email: admin.email,
         displayName: admin.displayName,
+        email: admin.email,
         role: admin.role,
-        status: admin.status,
-        isActive: admin.isActive,
-        isVerified: admin.isVerified,
-        lastActive: admin.lastActive
+        profileImage: admin.profileImage
       },
-      accessToken,
-      refreshToken
+      tokens: {
+        accessToken,
+        refreshToken
+      }
+    }
+  });
+});
+
+/**
+ * @desc    Get admin profile
+ * @route   GET /api/v1/admin/profile
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getAdminProfile = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const adminId = req.user._id;
+
+  const admin = await userModel.findById(adminId)
+    .select('-password')    .lean();
+
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      message: 'الأدمن غير موجود',
+      data: null
+    });
+  }
+
+  res.json({
+    success: true,
+    message: 'تم جلب الملف الشخصي بنجاح',
+    data: {
+      _id: admin._id,
+      displayName: admin.displayName,
+      email: admin.email,
+      role: admin.role,
+      profileImage: admin.profileImage,
+      isActive: admin.isActive,
+      lastActive: admin.lastActive,
+      createdAt: admin.createdAt
+    }
+  });
+});
+
+/**
+ * @desc    Update admin profile
+ * @route   PUT /api/v1/admin/profile
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const updateAdminProfile = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { displayName, email } = req.body;
+  const adminId = req.user._id;
+
+  const admin = await userModel.findById(adminId);
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      message: 'الأدمن غير موجود',
+      data: null
+    });
+  }
+
+  // Check if email is already taken by another user
+  if (email && email !== admin.email) {
+    const existingUser = await userModel.findOne({ email, _id: { $ne: adminId } });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'البريد الإلكتروني مستخدم بالفعل',
+        data: null
+      });
+    }
+  }
+
+  // Update fields
+  if (displayName) admin.displayName = displayName;
+  if (email) admin.email = email;
+
+  await admin.save();
+
+  res.json({
+    success: true,
+    message: 'تم تحديث الملف الشخصي بنجاح',
+    data: {
+      _id: admin._id,
+      email: admin.email,
+      displayName: admin.displayName,
+      role: admin.role,
+      updatedAt: admin.updatedAt
     }
   });
 });
 
 /**
  * @desc    Change admin password
- * @route   PATCH /api/v1/admin/change-password
+ * @route   PUT /api/v1/admin/change-password
  * @access  Private (Admin, SuperAdmin)
  */
 export const changePassword = asyncHandler(async (req, res, next) => {
@@ -369,8 +401,8 @@ export const getUsers = asyncHandler(async (req, res, next) => {
 
   // Get basic statistics
   const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.status === 'active').length;
-  const bannedUsers = users.filter(user => user.status === 'banned').length;
+  const activeUsers = users.filter(user => user.isActive).length;
+  const bannedUsers = users.filter(user => !user.isActive).length;
   const clients = users.filter(user => user.role === 'user').length;
   const artists = users.filter(user => user.role === 'artist').length;
 
@@ -381,7 +413,6 @@ export const getUsers = asyncHandler(async (req, res, next) => {
     email: user.email,
     phoneNumber: user.phoneNumber,
     role: user.role,
-    status: user.status,
     isActive: user.isActive,
     isVerified: user.isVerified,
     profileImage: user.profileImage,
@@ -430,7 +461,7 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
   const user = await userModel.findById(id)
     .select('-password')    .lean();
 
-  if (!user || user.role === 'admin' || user.role === 'superadmin') {
+  if (!user || ['admin', 'superadmin'].includes(user.role)) {
     return res.status(404).json({
       success: false,
       message: 'المستخدم غير موجود',
@@ -461,7 +492,6 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
     email: user.email,
     phoneNumber: user.phoneNumber,
     role: user.role,
-    status: user.status,
     isActive: user.isActive,
     isVerified: user.isVerified,
     profileImage: user.profileImage,
@@ -508,7 +538,7 @@ export const blockUser = asyncHandler(async (req, res, next) => {
   }
 
   const user = await userModel.findById(id);
-  if (!user || user.role === 'admin' || user.role === 'superadmin') {
+  if (!user || ['admin', 'superadmin'].includes(user.role)) {
     return res.status(404).json({
       success: false,
       message: 'المستخدم غير موجود',
@@ -518,17 +548,13 @@ export const blockUser = asyncHandler(async (req, res, next) => {
 
   // Update user status
   if (action === 'block') {
-    user.status = 'banned';
     user.isActive = false;
     user.blockReason = reason;
     user.blockedAt = new Date();
-    user.blockedBy = req.user._id;
   } else if (action === 'unblock') {
-    user.status = 'active';
     user.isActive = true;
-    user.blockReason = undefined;
-    user.blockedAt = undefined;
-    user.blockedBy = undefined;
+    user.blockReason = null;
+    user.blockedAt = null;
   }
 
   await user.save();
@@ -538,7 +564,7 @@ export const blockUser = asyncHandler(async (req, res, next) => {
     message: action === 'block' ? 'تم حظر المستخدم بنجاح' : 'تم إلغاء حظر المستخدم بنجاح',
     data: {
       _id: user._id,
-      status: user.status,
+      displayName: user.displayName,
       isActive: user.isActive,
       blockReason: user.blockReason,
       blockedAt: user.blockedAt
@@ -548,14 +574,14 @@ export const blockUser = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Send message to user
- * @route   POST /api/v1/admin/users/:id/send-message
+ * @route   POST /api/v1/admin/users/:id/message
  * @access  Private (Admin, SuperAdmin)
  */
 export const sendMessageToUser = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { subject, message, deliveryMethod, attachments } = req.body;
+  const { message, type = 'email' } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -566,7 +592,7 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
   }
 
   const user = await userModel.findById(id);
-  if (!user || user.role === 'admin' || user.role === 'superadmin') {
+  if (!user || ['admin', 'superadmin'].includes(user.role)) {
     return res.status(404).json({
       success: false,
       message: 'المستخدم غير موجود',
@@ -574,75 +600,38 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Create message record
-  const messageData = {
-    from: req.user._id,
-    to: user._id,
-    subject,
-    message,
-    deliveryMethod,
-    attachments: attachments || [],
-    sentAt: new Date(),
-    status: 'sent'
-  };
+  if (type === 'email') {
+    // Send email message
+    const { sendEmail } = await import('../../utils/sendEmails.js');
+    await sendEmail({
+      to: user.email,
+      subject: 'رسالة من إدارة المنصة',
+      message: message
+    });
+  } else if (type === 'chat') {
+    // Send chat message (implement chat functionality)
+    const chatModel = (await import('../../../DB/models/chat.model.js')).default;
+    const messageModel = (await import('../../../DB/models/message.model.js')).default;
+    
+    // Create or find chat between admin and user
+    let chat = await chatModel.findOne({
+      participants: [req.user._id, user._id]
+    });
 
-  // Send via email if requested
-  if (deliveryMethod === 'email' || deliveryMethod === 'both') {
-    try {
-      const { sendEmail } = await import('../../utils/sendEmails.js');
-      await sendEmail({
-        to: user.email,
-        subject: `رسالة من إدارة المنصة: ${subject}`,
-        html: `
-          <h2>مرحباً ${user.displayName}</h2>
-          <p>${message}</p>
-          <hr>
-          <p><small>هذه رسالة من إدارة منصة ArtHub</small></p>
-        `
+    if (!chat) {
+      chat = await chatModel.create({
+        participants: [req.user._id, user._id],
+        type: 'admin'
       });
-      messageData.emailSent = true;
-    } catch (error) {
-      console.error('Email sending failed:', error);
-      messageData.emailSent = false;
     }
-  }
 
-  // Send via chat if requested
-  if (deliveryMethod === 'chat' || deliveryMethod === 'both') {
-    try {
-      const messageModel = (await import('../../../DB/models/message.model.js')).default;
-      const chatModel = (await import('../../../DB/models/chat.model.js')).default;
-
-      // Find or create admin-user chat
-      let chat = await chatModel.findOne({
-        participants: [req.user._id, user._id]
-      });
-
-      if (!chat) {
-        chat = new chatModel({
-          participants: [req.user._id, user._id],
-          type: 'admin',
-          createdBy: req.user._id
-        });
-        await chat.save();
-      }
-
-      // Create message
-      const chatMessage = new messageModel({
-        chat: chat._id,
-        sender: req.user._id,
-        content: message,
-        messageType: 'text',
-        isAdminMessage: true
-      });
-      await chatMessage.save();
-
-      messageData.chatSent = true;
-      messageData.chatId = chat._id;
-    } catch (error) {
-      console.error('Chat message sending failed:', error);
-      messageData.chatSent = false;
-    }
+    // Send message
+    await messageModel.create({
+      chat: chat._id,
+      sender: req.user._id,
+      content: message,
+      type: 'text'
+    });
   }
 
   res.json({
@@ -650,10 +639,8 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     message: 'تم إرسال الرسالة بنجاح',
     data: {
       userId: user._id,
-      deliveryMethod,
-      emailSent: messageData.emailSent,
-      chatSent: messageData.chatSent,
-      sentAt: messageData.sentAt
+      messageType: type,
+      sentAt: new Date()
     }
   });
 });
@@ -676,18 +663,8 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const user = await userModel.findById(id);
-  if (!user || user.role === 'admin' || user.role === 'superadmin') {
-    return res.status(404).json({
-      success: false,
-      message: 'المستخدم غير موجود',
-      data: null
-    });
-  }
-
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
-
-  // Get all orders for this user
+  
   const orders = await specialRequestModel.find({ user: id })
     .populate('artist', 'displayName profileImage')
     .sort({ createdAt: -1 })
@@ -703,11 +680,7 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
         description: order.description,
         price: order.price,
         status: order.status,
-        artist: order.artist ? {
-          _id: order.artist._id,
-          displayName: order.artist.displayName,
-          profileImage: order.artist.profileImage
-        } : null,
+        artist: order.artist,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt
       }))
@@ -733,21 +706,11 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const user = await userModel.findById(id);
-  if (!user || user.role === 'admin' || user.role === 'superadmin') {
-    return res.status(404).json({
-      success: false,
-      message: 'المستخدم غير موجود',
-      data: null
-    });
-  }
-
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
-
-  // Get all reviews by this user
+  
   const reviews = await reviewModel.find({ user: id })
-    .populate('artwork', 'title image')
     .populate('artist', 'displayName profileImage')
+    .populate('artwork', 'title image')
     .sort({ createdAt: -1 })
     .lean();
 
@@ -759,16 +722,8 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
         _id: review._id,
         rating: review.rating,
         comment: review.comment,
-        artwork: review.artwork ? {
-          _id: review.artwork._id,
-          title: review.artwork.title,
-          image: review.artwork.image
-        } : null,
-        artist: review.artist ? {
-          _id: review.artist._id,
-          displayName: review.artist.displayName,
-          profileImage: review.artist.profileImage
-        } : null,
+        artist: review.artist,
+        artwork: review.artwork,
         createdAt: review.createdAt
       }))
     }
@@ -776,7 +731,7 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    Get user activity log
+ * @desc    Get user activity
  * @route   GET /api/v1/users/:id/activity
  * @access  Private (Admin, SuperAdmin)
  */
@@ -793,44 +748,47 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
     });
   }
 
-  const user = await userModel.findById(id);
-  if (!user || user.role === 'admin' || user.role === 'superadmin') {
-    return res.status(404).json({
-      success: false,
-      message: 'المستخدم غير موجود',
-      data: null
-    });
-  }
+  // Get users recent activity from various collections
+  const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
+  const reviewModel = (await import('../../../DB/models/review.model.js')).default;
+  const artworkModel = (await import('../../../DB/models/artwork.model.js')).default;
 
-  // Create sample activity log (in real implementation, you'd have an activity log model)
-  const activities = [
-    {
-      _id: new mongoose.Types.ObjectId(),
-      type: 'login',
-      description: 'تم تسجيل الدخول',
-      timestamp: new Date(),
-      metadata: {
-        ip: '192.168.1.1',
-        location: 'القاهرة'
-      }
-    },
-    {
-      _id: new mongoose.Types.ObjectId(),
-      type: 'order',
-      description: 'تم إنشاء طلب جديد',
-      timestamp: new Date(Date.now() - 86400000),
-      metadata: {
-        orderId: '1234',
-        amount: 250
-      }
-    }
-  ];
+  const [recentOrders, recentReviews, recentArtworks] = await Promise.all([
+    specialRequestModel.find({ user: id })
+      .sort({ createdAt: -1 })
+      .limit(5)      .lean(),
+    reviewModel.find({ user: id })
+      .sort({ createdAt: -1 })
+      .limit(5)      .lean(),
+    artworkModel.find({ artist: id })
+      .sort({ createdAt: -1 })
+      .limit(5)   .lean()
+  ]);
+
+  const activity = [
+    ...recentOrders.map(order => ({
+      type: 'order',  action: 'created',
+      item: order,
+      date: order.createdAt
+    })),
+    ...recentReviews.map(review => ({
+      type: 'review',  action: 'created',
+      item: review,
+      date: review.createdAt
+    })),
+    ...recentArtworks.map(artwork => ({
+      type: 'artwork',  action: 'created',
+      item: artwork,
+      date: artwork.createdAt
+    }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date))
+   .slice(0, 10);
 
   res.json({
     success: true,
-    message: 'تم جلب سجل نشاط المستخدم بنجاح',
+    message: 'تم جلب نشاط المستخدم بنجاح',
     data: {
-      activities: activities
+      activity
     }
   });
 });
@@ -843,53 +801,30 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
 export const exportUsers = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const { format = 'csv', role = 'all', status = 'all', dateFrom, dateTo } = req.query;
-
-  // Build query
-  let query = { 
+  const users = await userModel.find({ 
     role: { $in: ['user', 'artist'] }, 
     isDeleted: false 
-  };
+  })
+  .select('-password')
+  .lean();
 
-  if (role !== 'all') query.role = role;
-  if (status !== 'all') query.status = status;
+  const csvData = users.map(user => ({
+    ID: user._id,
+    Name: user.displayName,
+    Email: user.email,
+    Phone: user.phoneNumber || '',   Role: user.role,
+    Status: user.isActive ? 'Active' : 'Inactive',
+    Verified: user.isVerified ? 'Yes' : 'No',
+    Created: user.createdAt,
+    LastActive: user.lastActive || ''
+  }));
 
-  if (dateFrom || dateTo) {
-    query.createdAt = {};
-    if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-    if (dateTo) query.createdAt.$lte = new Date(dateTo);
-  }
-
-  const users = await userModel.find(query)
-    .select('-password')    .lean();
-
-  // Format data for export
-  const exportData = users.map(user => ([
-    user._id.toString(),
-    user.displayName,
-    user.email,
-    user.phoneNumber || '',
-    user.role === 'user' ? 'عميل' : 'فنان',
-    user.status === 'active' ? 'نشط' : user.status === 'banned' ? 'محظور' : 'غير نشط',
-    user.createdAt.toISOString().split('T')[0],
-    user.lastActive ? user.lastActive.toISOString().split('T')[0] : 'N/A'
-  ]));
-
-  if (format === 'csv') {
-    const csv = [
-      Object.keys(exportData[0]).join(','),
-      ...exportData.map(row => Object.values(row).join(','))
-    ].join('\n');
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=users-${new Date().toISOString().split('T')[0]}.csv`);
-    res.send(csv);
-  } else {
-    // For Excel, you'd use a library like xlsx
-    res.json({
-      success: true,
-      message: 'تم تصدير بيانات المستخدمين بنجاح',
-      data: exportData
-    });
-  }
+  res.json({
+    success: true,
+    message: 'تم تصدير بيانات المستخدمين بنجاح',
+    data: {
+      totalUsers: users.length,
+      csvData
+    }
+  });
 }); 
