@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { dashboardPaths } from './dashboard-swagger.js';
 import { adminPaths } from './admin-swagger.js';
+import { orderManagementPaths } from './order-management-swagger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,11 +13,12 @@ const __dirname = path.dirname(__filename);
 const swaggerJsonPath = path.join(__dirname, 'arthub-swagger.json');
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerJsonPath, 'utf8'));
 
-// إضافة dashboard و admin paths إلى swagger document
+// إضافة dashboard و admin و order management paths إلى swagger document
 swaggerDocument.paths = {
   ...swaggerDocument.paths,
   ...dashboardPaths,
-  ...adminPaths
+  ...adminPaths,
+  ...orderManagementPaths
 };
 
 // قراءة ملف اللوجو وتحويله إلى Base64 لتضمينه مباشرة في HTML
