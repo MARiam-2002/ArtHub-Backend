@@ -2406,7 +2406,7 @@ export const adminPaths = {
     get: {
       tags: ['Reviews Management'],
       summary: 'جلب جميع التقييمات',
-      description: 'جلب قائمة جميع التقييمات مع التفاصيل للعرض في الجدول',
+      description: 'جلب قائمة جميع التقييمات مع التفاصيل الأساسية للعرض في الجدول. يتم الترتيب والتصفية من الفرونت.',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -2472,26 +2472,42 @@ export const adminPaths = {
                               example: 'منى سالم',
                               description: 'اسم العميل'
                             },
+                            clientEmail: {
+                              type: 'string',
+                              example: 'mona.salem@example.com',
+                              description: 'بريد العميل'
+                            },
                             artistName: {
                               type: 'string',
                               example: 'أحمد محمد',
                               description: 'اسم الفنان'
+                            },
+                            artistEmail: {
+                              type: 'string',
+                              example: 'ahmed.mohamed@example.com',
+                              description: 'بريد الفنان'
                             },
                             rating: {
                               type: 'number',
                               example: 4,
                               description: 'التقييم (1-5)'
                             },
-                            date: {
+                            comment: {
+                              type: 'string',
+                              example: 'عمل رائع ومميز',
+                              description: 'التعليق'
+                            },
+                            createdAt: {
                               type: 'string',
                               format: 'date-time',
                               example: '2025-01-18T10:30:00.000Z',
                               description: 'تاريخ التقييم'
                             },
-                            comment: {
+                            updatedAt: {
                               type: 'string',
-                              example: 'عمل رائع ومميز',
-                              description: 'التعليق'
+                              format: 'date-time',
+                              example: '2025-01-18T10:30:00.000Z',
+                              description: 'تاريخ آخر تحديث'
                             },
                             artworkImage: {
                               type: 'string',
@@ -2896,314 +2912,6 @@ export const adminPaths = {
                   message: {
                     type: 'string',
                     example: 'التقييم غير موجود'
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-
-  '/api/admin/reviews/export': {
-    get: {
-      tags: ['Reviews Management'],
-      summary: 'تصدير بيانات التقييمات',
-      description: 'تصدير جميع بيانات التقييمات بصيغة JSON أو CSV',
-      security: [{ BearerAuth: [] }],
-      parameters: [
-        {
-          in: 'query',
-          name: 'format',
-          schema: {
-            type: 'string',
-            enum: ['json', 'csv'],
-            default: 'json'
-          },
-          description: 'صيغة التصدير'
-        }
-      ],
-      responses: {
-        200: {
-          description: 'تم تصدير بيانات التقييمات بنجاح',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: {
-                    type: 'boolean',
-                    example: true
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'تم تصدير بيانات التقييمات بنجاح'
-                  },
-                  data: {
-                    type: 'object',
-                    properties: {
-                      totalReviews: {
-                        type: 'number',
-                        example: 150
-                      },
-                      exportedAt: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-01-18T10:30:00.000Z'
-                      },
-                      reviews: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            id: {
-                              type: 'number',
-                              example: 1
-                            },
-                            _id: {
-                              type: 'string',
-                              example: '507f1f77bcf86cd799439011'
-                            },
-                            artworkTitle: {
-                              type: 'string',
-                              example: 'لوحة زيتية مخصصة'
-                            },
-                            clientName: {
-                              type: 'string',
-                              example: 'منى سالم'
-                            },
-                            clientEmail: {
-                              type: 'string',
-                              example: 'mona.salem@example.com'
-                            },
-                            artistName: {
-                              type: 'string',
-                              example: 'أحمد محمد'
-                            },
-                            artistEmail: {
-                              type: 'string',
-                              example: 'ahmed.mohamed@example.com'
-                            },
-                            rating: {
-                              type: 'number',
-                              example: 4
-                            },
-                            comment: {
-                              type: 'string',
-                              example: 'عمل رائع ومميز'
-                            },
-                            createdAt: {
-                              type: 'string',
-                              format: 'date-time',
-                              example: '2025-01-18T10:30:00.000Z'
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        401: {
-          description: 'غير مصرح',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: {
-                    type: 'boolean',
-                    example: false
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'غير مصرح'
-                  }
-                }
-              }
-            }
-          }
-        },
-        403: {
-          description: 'ممنوع - للمديرين فقط',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: {
-                    type: 'boolean',
-                    example: false
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'غير مصرح لك بالوصول لهذا المورد'
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-
-  '/api/admin/reviews/statistics': {
-    get: {
-      tags: ['Reviews Management'],
-      summary: 'إحصائيات التقييمات',
-      description: 'جلب إحصائيات عامة للتقييمات وأفضل الفنانين تقييماً',
-      security: [{ BearerAuth: [] }],
-      responses: {
-        200: {
-          description: 'تم جلب إحصائيات التقييمات بنجاح',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: {
-                    type: 'boolean',
-                    example: true
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'تم جلب إحصائيات التقييمات بنجاح'
-                  },
-                  data: {
-                    type: 'object',
-                    properties: {
-                      overview: {
-                        type: 'object',
-                        properties: {
-                          totalReviews: {
-                            type: 'number',
-                            example: 150
-                          },
-                          averageRating: {
-                            type: 'number',
-                            example: 4.2
-                          },
-                          ratingDistribution: {
-                            type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                _id: {
-                                  type: 'number',
-                                  example: 5
-                                },
-                                count: {
-                                  type: 'number',
-                                  example: 45
-                                }
-                              }
-                            }
-                          }
-                        }
-                      },
-                      topRatedArtists: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            name: {
-                              type: 'string',
-                              example: 'أحمد محمد'
-                            },
-                            image: {
-                              type: 'string',
-                              example: 'https://example.com/artist.jpg'
-                            },
-                            averageRating: {
-                              type: 'number',
-                              example: 4.8
-                            },
-                            totalReviews: {
-                              type: 'number',
-                              example: 25
-                            }
-                          }
-                        }
-                      },
-                      latestReviews: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            _id: {
-                              type: 'string',
-                              example: '507f1f77bcf86cd799439011'
-                            },
-                            rating: {
-                              type: 'number',
-                              example: 4
-                            },
-                            comment: {
-                              type: 'string',
-                              example: 'عمل رائع ومميز'
-                            },
-                            clientName: {
-                              type: 'string',
-                              example: 'منى سالم'
-                            },
-                            artistName: {
-                              type: 'string',
-                              example: 'أحمد محمد'
-                            },
-                            createdAt: {
-                              type: 'string',
-                              format: 'date-time',
-                              example: '2025-01-18T10:30:00.000Z'
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        401: {
-          description: 'غير مصرح',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: {
-                    type: 'boolean',
-                    example: false
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'غير مصرح'
-                  }
-                }
-              }
-            }
-          }
-        },
-        403: {
-          description: 'ممنوع - للمديرين فقط',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: {
-                    type: 'boolean',
-                    example: false
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'غير مصرح لك بالوصول لهذا المورد'
                   }
                 }
               }
