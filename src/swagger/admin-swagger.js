@@ -2852,5 +2852,766 @@ export const adminPaths = {
         }
       }
     }
+  },
+
+  // Reports Management Paths
+  '/api/admin/reports': {
+    get: {
+      tags: ['Reports Management'],
+      summary: 'جلب جميع البلاغات',
+      description: 'جلب قائمة جميع البلاغات مع التفاصيل الأساسية للعرض في الجدول. يتم الترتيب والتصفية من الفرونت.',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          },
+          description: 'عدد العناصر في الصفحة'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب البلاغات بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب البلاغات بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      reports: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: {
+                              type: 'number',
+                              example: 1,
+                              description: 'الرقم التسلسلي'
+                            },
+                            _id: {
+                              type: 'string',
+                              example: '507f1f77bcf86cd799439011',
+                              description: 'معرف البلاغ'
+                            },
+                            complainant: {
+                              type: 'string',
+                              example: 'منى سالم',
+                              description: 'اسم المشتكي'
+                            },
+                            complainantEmail: {
+                              type: 'string',
+                              example: 'mona.salem@example.com',
+                              description: 'بريد المشتكي'
+                            },
+                            artist: {
+                              type: 'string',
+                              example: 'أحمد محمد',
+                              description: 'اسم الفنان'
+                            },
+                            artistEmail: {
+                              type: 'string',
+                              example: 'ahmed.mohamed@example.com',
+                              description: 'بريد الفنان'
+                            },
+                            reportType: {
+                              type: 'string',
+                              example: 'تأخير في التسليم',
+                              description: 'نوع البلاغ'
+                            },
+                            date: {
+                              type: 'string',
+                              format: 'date-time',
+                              example: '2025-01-18T10:30:00.000Z',
+                              description: 'تاريخ البلاغ'
+                            },
+                            description: {
+                              type: 'string',
+                              example: 'تأخر الفنان في تسليم العمل',
+                              description: 'وصف البلاغ'
+                            },
+                            status: {
+                              type: 'string',
+                              example: 'pending',
+                              description: 'حالة البلاغ'
+                            },
+                            statusText: {
+                              type: 'string',
+                              example: 'تحت المراجعة',
+                              description: 'نص حالة البلاغ'
+                            }
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'number',
+                            example: 1
+                          },
+                          limit: {
+                            type: 'number',
+                            example: 20
+                          },
+                          total: {
+                            type: 'number',
+                            example: 150
+                          },
+                          pages: {
+                            type: 'number',
+                            example: 8
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح - يرجى تسجيل الدخول'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'ممنوع - تحتاج صلاحيات إدارية'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/reports/{id}': {
+    get: {
+      tags: ['Reports Management'],
+      summary: 'جلب تفاصيل بلاغ محدد',
+      description: 'جلب تفاصيل كاملة لبلاغ محدد لعرضه في النافذة المنبثقة',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف البلاغ'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب تفاصيل البلاغ بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب تفاصيل البلاغ بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      _id: {
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439011'
+                      },
+                      reportType: {
+                        type: 'string',
+                        example: 'تأخير في التسليم'
+                      },
+                      description: {
+                        type: 'string',
+                        example: 'تأخر الفنان في تسليم العمل لمدة أسبوع'
+                      },
+                      status: {
+                        type: 'string',
+                        example: 'pending'
+                      },
+                      statusText: {
+                        type: 'string',
+                        example: 'تحت المراجعة'
+                      },
+                      adminNotes: {
+                        type: 'string',
+                        example: 'ملاحظات المدير على البلاغ'
+                      },
+                      createdAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:00.000Z'
+                      },
+                      resolvedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-20T10:30:00.000Z'
+                      },
+                      complainant: {
+                        type: 'object',
+                        properties: {
+                          name: {
+                            type: 'string',
+                            example: 'منى سالم'
+                          },
+                          email: {
+                            type: 'string',
+                            example: 'mona.salem@example.com'
+                          },
+                          image: {
+                            type: 'string',
+                            example: 'https://example.com/profile.jpg'
+                          }
+                        }
+                      },
+                      artist: {
+                        type: 'object',
+                        properties: {
+                          name: {
+                            type: 'string',
+                            example: 'أحمد محمد'
+                          },
+                          email: {
+                            type: 'string',
+                            example: 'ahmed.mohamed@example.com'
+                          },
+                          image: {
+                            type: 'string',
+                            example: 'https://example.com/artist.jpg'
+                          }
+                        }
+                      },
+                      artwork: {
+                        type: 'object',
+                        properties: {
+                          title: {
+                            type: 'string',
+                            example: 'لوحة زيتية مخصصة'
+                          },
+                          image: {
+                            type: 'string',
+                            example: 'https://example.com/artwork.jpg'
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'البلاغ غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'البلاغ غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    delete: {
+      tags: ['Reports Management'],
+      summary: 'حذف بلاغ',
+      description: 'حذف بلاغ محدد من النظام',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف البلاغ'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم حذف البلاغ بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم حذف البلاغ بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      _id: {
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439011'
+                      },
+                      deletedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:00.000Z'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'معرف البلاغ غير صالح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'معرف البلاغ غير صالح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'البلاغ غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'البلاغ غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/reports/export': {
+    get: {
+      tags: ['Reports Management'],
+      summary: 'تصدير بيانات البلاغات',
+      description: 'تصدير بيانات البلاغات بصيغة JSON أو CSV',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'format',
+          schema: {
+            type: 'string',
+            enum: ['json', 'csv'],
+            default: 'json'
+          },
+          description: 'صيغة التصدير'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم تصدير بيانات البلاغات بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تصدير بيانات البلاغات بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      totalReports: {
+                        type: 'number',
+                        example: 150
+                      },
+                      reports: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: {
+                              type: 'number',
+                              example: 1
+                            },
+                            complainant: {
+                              type: 'string',
+                              example: 'منى سالم'
+                            },
+                            artist: {
+                              type: 'string',
+                              example: 'أحمد محمد'
+                            },
+                            reportType: {
+                              type: 'string',
+                              example: 'تأخير في التسليم'
+                            },
+                            description: {
+                              type: 'string',
+                              example: 'تأخر الفنان في تسليم العمل'
+                            },
+                            status: {
+                              type: 'string',
+                              example: 'تحت المراجعة'
+                            },
+                            date: {
+                              type: 'string',
+                              format: 'date-time',
+                              example: '2025-01-18T10:30:00.000Z'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/reports/statistics': {
+    get: {
+      tags: ['Reports Management'],
+      summary: 'إحصائيات البلاغات',
+      description: 'جلب إحصائيات البلاغات حسب النوع والحالة',
+      security: [{ BearerAuth: [] }],
+      responses: {
+        200: {
+          description: 'تم جلب إحصائيات البلاغات بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب إحصائيات البلاغات بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      summary: {
+                        type: 'object',
+                        properties: {
+                          total: {
+                            type: 'number',
+                            example: 150
+                          },
+                          pending: {
+                            type: 'number',
+                            example: 45
+                          },
+                          resolved: {
+                            type: 'number',
+                            example: 95
+                          },
+                          rejected: {
+                            type: 'number',
+                            example: 10
+                          }
+                        }
+                      },
+                      byType: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            type: {
+                              type: 'string',
+                              example: 'تأخير في التسليم'
+                            },
+                            count: {
+                              type: 'number',
+                              example: 25
+                            }
+                          }
+                        }
+                      },
+                      byStatus: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            status: {
+                              type: 'string',
+                              example: 'تحت المراجعة'
+                            },
+                            count: {
+                              type: 'number',
+                              example: 45
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }; 

@@ -6,6 +6,7 @@ import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './admin.validation.js';
 import orderManagementRouter from './order-management.router.js';
 import reviewsManagementRouter from './reviews-management.router.js';
+import reportsManagementRouter from './reports-management.router.js';
 
 // لوجات تشخيصية
 console.log('adminController.updateAdminProfile:', typeof adminController.updateAdminProfile);
@@ -946,5 +947,8 @@ router.use('/', orderManagementRouter);
 
 // إضافة مسارات إدارة التقييمات
 router.use('/reviews', reviewsManagementRouter);
+
+// إضافة مسارات إدارة البلاغات
+router.use('/reports', reportsManagementRouter);
 
 export default router; 
