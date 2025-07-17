@@ -161,7 +161,7 @@ router.get(
  *                                 type: number
  *                                 example: 70
  *                                 description: عدد الطلبات المكتملة
- *                               pending:
+ *                               inProgress:
  *                                 type: number
  *                                 example: 10
  *                                 description: عدد الطلبات قيد التنفيذ
@@ -259,7 +259,7 @@ router.get(
  *                           type: object
  *                           description: ملخص إحصائيات الطلبات
  *                           properties:
- *                             pending:
+ *                             inProgress:
  *                               type: number
  *                               example: 89
  *                               description: الطلبات قيد التنفيذ
@@ -375,18 +375,14 @@ router.get(
  *                           type: object
  *                           description: ملخص إحصائيات الإيرادات
  *                           properties:
- *                             yearly:
- *                               type: number
- *                               example: 47392
- *                               description: الإيرادات السنوية
- *                             monthly:
- *                               type: number
- *                               example: 124500
- *                               description: الإيرادات الشهرية
  *                             weekly:
  *                               type: number
  *                               example: 28900
  *                               description: الإيرادات الأسبوعية
+ *                             monthly:
+ *                               type: number
+ *                               example: 124500
+ *                               description: الإيرادات الشهرية
  *       401:
  *         description: غير مصرح
  *       403:

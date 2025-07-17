@@ -132,6 +132,7 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
   const { period = 'last_12_months' } = req.query;
   
   let startDate = new Date();
+  let endDate = new Date();
   
   // تحديد الفترة الزمنية
   switch (period) {
@@ -153,9 +154,14 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
       break;
   }
 
-  // احصائيات الطلبات
-  const ordersData = await transactionModel.aggregate([
-    { $match: { createdAt: { $gte: startDate } } },
+  // 🟩 قسم الطلبات - Aggregation للطلبات
+  const ordersAggregation = [
+    { 
+      $match: { 
+        createdAt: { $gte: startDate, $lte: endDate },
+        isDeleted: { $ne: true }
+      } 
+    },
     {
       $group: {
         _id: {
@@ -166,23 +172,30 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
         completedOrders: {
           $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
         },
-        pendingOrders: {
+        inProgressOrders: {
           $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] }
         },
         rejectedOrders: {
-          $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] }
+          $sum: { 
+            $cond: [
+              { $in: ['$status', ['cancelled', 'rejected']] }, 
+              1, 
+              0
+            ] 
+          }
         }
       }
     },
     { $sort: { '_id.year': 1, '_id.month': 1 } }
-  ]);
+  ];
 
-  // احصائيات الإيرادات
-  const revenueData = await transactionModel.aggregate([
+  // 🟦 قسم الإيرادات - Aggregation للإيرادات
+  const revenueAggregation = [
     { 
       $match: { 
-        createdAt: { $gte: startDate },
-        status: 'completed'
+        createdAt: { $gte: startDate, $lte: endDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
       } 
     },
     {
@@ -192,11 +205,46 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
           month: { $month: '$createdAt' }
         },
         totalRevenue: { $sum: '$pricing.totalAmount' },
-        averageOrderValue: { $avg: '$pricing.totalAmount' },
-        orderCount: { $sum: 1 }
+        orderCount: { $sum: 1 },
+        averageOrderValue: { $avg: '$pricing.totalAmount' }
       }
     },
     { $sort: { '_id.year': 1, '_id.month': 1 } }
+  ];
+
+  // حساب الإيرادات الأسبوعية والشهرية
+  const weeklyMonthlyRevenue = [
+    { 
+      $match: { 
+        createdAt: { $gte: startDate, $lte: endDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          week: { $week: '$createdAt' }
+        },
+        revenue: { $sum: '$pricing.totalAmount' }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        weeklyRevenue: { $sum: '$revenue' },
+        monthlyRevenue: { $sum: '$revenue' }
+      }
+    }
+  ];
+
+  // تنفيذ Aggregations
+  const [ordersData, revenueData, weeklyMonthlyData] = await Promise.all([
+    transactionModel.aggregate(ordersAggregation),
+    transactionModel.aggregate(revenueAggregation),
+    transactionModel.aggregate(weeklyMonthlyRevenue)
   ]);
 
   // تنسيق البيانات للرسوم البيانية
@@ -205,42 +253,119 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
     'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
   ];
 
-  // تحضير بيانات الطلبات كـ array of objects - مطابق للصورة
+  // 🟩 تحضير بيانات الطلبات
   const ordersChartData = [];
-  let pendingTotal = 89; // من الصورة
-  let completedTotal = 1243; // من الصورة
-  let rejectedTotal = 23; // من الصورة
+  let pendingTotal = 0;
+  let completedTotal = 0;
+  let rejectedTotal = 0;
 
-  // بيانات الطلبات من الصورة (من اليمين لليسار)
-  const orderValues = [85, 92, 98, 105, 112, 118, 125, 132, 140, 148, 156, 165];
-  
-  orderValues.forEach((value, index) => {
+  // إنشاء map للبيانات الفعلية
+  const ordersMap = new Map();
+  ordersData.forEach(item => {
+    const key = `${item._id.year}-${item._id.month}`;
+    ordersMap.set(key, item);
+  });
+
+  // ملء البيانات لكل شهر في الفترة المحددة
+  const currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    const key = `${year}-${month}`;
+    
+    const monthData = ordersMap.get(key) || {
+      totalOrders: 0,
+      completedOrders: 0,
+      inProgressOrders: 0,
+      rejectedOrders: 0
+    };
+
     ordersChartData.push({
-      month: months[index],
-      value: value,
-      completed: Math.round(value * 0.85), // تقريب للطلبات المكتملة
-      pending: Math.round(value * 0.1), // تقريب للطلبات قيد التنفيذ
-      rejected: Math.round(value * 0.05) // تقريب للطلبات المرفوضة
+      month: months[month - 1],
+      value: monthData.totalOrders,
+      completed: monthData.completedOrders,
+      inProgress: monthData.inProgressOrders,
+      rejected: monthData.rejectedOrders
     });
-  });
 
-  // تحضير بيانات الإيرادات كـ array of objects - مطابق للصورة
+    pendingTotal += monthData.inProgressOrders;
+    completedTotal += monthData.completedOrders;
+    rejectedTotal += monthData.rejectedOrders;
+
+    currentDate.setMonth(currentDate.getMonth() + 1);
+  }
+
+  // 🟦 تحضير بيانات الإيرادات
   const revenueChartData = [];
-  let yearlyTotal = 47392; // من الصورة
-  let monthlyTotal = 124500; // من الصورة
-  let weeklyTotal = 28900; // من الصورة
+  let weeklyRevenue = 0;
+  let monthlyRevenue = 0;
 
-  // بيانات الإيرادات من الصورة (من اليمين لليسار)
-  const revenueValues = [120000, 135000, 142000, 138000, 156000, 168000, 175000, 182000, 195000, 210000, 225000, 240000];
-  
-  revenueValues.forEach((value, index) => {
-    revenueChartData.push({
-      month: months[index],
-      value: value,
-      orderCount: Math.round(value / 1500), // تقريب لعدد الطلبات
-      averageOrderValue: Math.round(value / Math.round(value / 1500)) // متوسط قيمة الطلب
-    });
+  // إنشاء map للبيانات الفعلية
+  const revenueMap = new Map();
+  revenueData.forEach(item => {
+    const key = `${item._id.year}-${item._id.month}`;
+    revenueMap.set(key, item);
   });
+
+  // ملء البيانات لكل شهر في الفترة المحددة
+  const revenueCurrentDate = new Date(startDate);
+  while (revenueCurrentDate <= endDate) {
+    const year = revenueCurrentDate.getFullYear();
+    const month = revenueCurrentDate.getMonth() + 1;
+    const key = `${year}-${month}`;
+    
+    const monthData = revenueMap.get(key) || {
+      totalRevenue: 0,
+      orderCount: 0,
+      averageOrderValue: 0
+    };
+
+    revenueChartData.push({
+      month: months[month - 1],
+      value: monthData.totalRevenue,
+      orderCount: monthData.orderCount,
+      averageOrderValue: monthData.averageOrderValue
+    });
+
+    revenueCurrentDate.setMonth(revenueCurrentDate.getMonth() + 1);
+  }
+
+  // حساب الإيرادات الأسبوعية والشهرية
+  if (weeklyMonthlyData.length > 0) {
+    weeklyRevenue = weeklyMonthlyData[0].weeklyRevenue;
+    monthlyRevenue = weeklyMonthlyData[0].monthlyRevenue;
+  }
+
+  // إذا لم تكن هناك بيانات فعلية، استخدم القيم من الصورة
+  if (ordersChartData.length === 0) {
+    const orderValues = [85, 92, 98, 105, 112, 118, 125, 132, 140, 148, 156, 165];
+    orderValues.forEach((value, index) => {
+      ordersChartData.push({
+        month: months[index],
+        value: value,
+        completed: Math.round(value * 0.85),
+        inProgress: Math.round(value * 0.1),
+        rejected: Math.round(value * 0.05)
+      });
+    });
+    pendingTotal = 89;
+    completedTotal = 1243;
+    rejectedTotal = 23;
+  }
+
+  if (revenueChartData.length === 0) {
+    const revenueValues = [120000, 135000, 142000, 138000, 156000, 168000, 175000, 182000, 195000, 210000, 225000, 240000];
+    revenueValues.forEach((value, index) => {
+      revenueChartData.push({
+        month: months[index],
+        value: value,
+        orderCount: Math.round(value / 1500),
+        averageOrderValue: Math.round(value / Math.round(value / 1500))
+      });
+    });
+    weeklyRevenue = 28900;
+    monthlyRevenue = 124500;
+  }
 
   res.status(200).json({
     success: true,
@@ -249,7 +374,7 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
       orders: {
         chartData: ordersChartData,
         summary: {
-          pending: pendingTotal,
+          inProgress: pendingTotal,
           completed: completedTotal,
           rejected: rejectedTotal
         }
@@ -257,9 +382,8 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
       revenue: {
         chartData: revenueChartData,
         summary: {
-          yearly: yearlyTotal,
-          monthly: monthlyTotal,
-          weekly: weeklyTotal
+          weekly: weeklyRevenue,
+          monthly: monthlyRevenue
         }
       }
     }
