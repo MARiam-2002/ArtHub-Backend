@@ -4,6 +4,7 @@ import { authenticate } from '../../middleware/auth.middleware.js';
 import { isAuthorized } from '../../middleware/authorization.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './admin.validation.js';
+import orderManagementRouter from './order-management.router.js';
 
 // لوجات تشخيصية
 console.log('adminController.updateAdminProfile:', typeof adminController.updateAdminProfile);
@@ -938,5 +939,8 @@ router.get('/users/export',
   isValidation(Validators.exportUsersSchema), 
   adminController.exportUsers
 );
+
+// إضافة مسارات إدارة الطلبات
+router.use('/', orderManagementRouter);
 
 export default router; 
