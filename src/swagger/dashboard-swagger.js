@@ -164,11 +164,11 @@ export const dashboardPaths = {
           name: 'period',
           schema: {
             type: 'string',
-            enum: ['daily', 'weekly', 'monthly', 'yearly'],
-            default: 'monthly'
+            enum: ['1month', '3months', '6months', '9months', '12months'],
+            default: '12months'
           },
           description: 'الفترة الزمنية للبيانات',
-          example: 'monthly'
+          example: '12months'
         }
       ],
       responses: {

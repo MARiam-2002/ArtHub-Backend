@@ -13,8 +13,8 @@ const generalFields = {
 // Validation for charts query parameters
 export const getChartsValidation = {
   query: joi.object({
-    period: joi.string().valid('daily', 'weekly', 'monthly', 'yearly').default('monthly').messages({
-      'any.only': 'الفترة الزمنية يجب أن تكون daily, weekly, monthly, أو yearly'
+    period: joi.string().valid('1month', '3months', '6months', '9months', '12months').default('12months').messages({
+      'any.only': 'الفترة الزمنية يجب أن تكون 1month, 3months, 6months, 9months, أو 12months'
     })
   }).optional()
 };
@@ -26,8 +26,8 @@ export const getArtistsPerformanceValidation = {
       'number.min': 'عدد الفنانين يجب أن يكون 1 على الأقل',
       'number.max': 'عدد الفنانين يجب أن يكون 20 كحد أقصى'
     }),
-    period: joi.string().valid('weekly', 'monthly', 'yearly').default('monthly').messages({
-      'any.only': 'الفترة الزمنية يجب أن تكون weekly, monthly, أو yearly'
+    period: joi.string().valid('1week', '1month', '3months', '6months', '1year').default('1month').messages({
+      'any.only': 'الفترة الزمنية يجب أن تكون 1week, 1month, 3months, 6months, أو 1year'
     })
   }).optional()
 }; 

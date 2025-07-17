@@ -118,10 +118,10 @@ router.get(
  *         name: period
  *         schema:
  *           type: string
- *           enum: [last_month, last_3_months, last_6_months, last_9_months, last_12_months]
- *           default: last_12_months
+ *           enum: [1month, 3months, 6months, 9months, 12months]
+ *           default: 12months
  *         description: الفترة الزمنية للبيانات
- *         example: "last_12_months"
+ *         example: "12months"
  *     responses:
  *       200:
  *         description: تم جلب بيانات الرسوم البيانية بنجاح
@@ -419,10 +419,10 @@ router.get(
  *         name: period
  *         schema:
  *           type: string
- *           enum: [last_week, last_month, last_3_months, last_6_months, last_year]
- *           default: last_month
+ *           enum: [1week, 1month, 3months, 6months, 1year]
+ *           default: 1month
  *         description: الفترة الزمنية لحساب الأداء
- *         example: "last_month"
+ *         example: "1month"
  *     responses:
  *       200:
  *         description: تم جلب بيانات الفنانين بنجاح

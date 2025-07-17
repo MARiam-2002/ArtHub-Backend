@@ -129,26 +129,26 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 export const getDashboardCharts = asyncHandler(async (req, res, next) => {
-  const { period = 'last_12_months' } = req.query;
+  const { period = '12months' } = req.query;
   
   let startDate = new Date();
   let endDate = new Date();
   
   // تحديد الفترة الزمنية
   switch (period) {
-    case 'last_month':
+    case '1month':
       startDate.setMonth(startDate.getMonth() - 1);
       break;
-    case 'last_3_months':
+    case '3months':
       startDate.setMonth(startDate.getMonth() - 3);
       break;
-    case 'last_6_months':
+    case '6months':
       startDate.setMonth(startDate.getMonth() - 6);
       break;
-    case 'last_9_months':
+    case '9months':
       startDate.setMonth(startDate.getMonth() - 9);
       break;
-    case 'last_12_months':
+    case '12months':
     default:
       startDate.setMonth(startDate.getMonth() - 12);
       break;
@@ -320,24 +320,24 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
-  const { limit = 3, period = 'last_month' } = req.query;
+  const { limit = 3, period = '1month' } = req.query;
   
   let startDate = new Date();
   
   switch (period) {
-    case 'last_week':
+    case '1week':
       startDate.setDate(startDate.getDate() - 7);
       break;
-    case 'last_month':
+    case '1month':
       startDate.setMonth(startDate.getMonth() - 1);
       break;
-    case 'last_3_months':
+    case '3months':
       startDate.setMonth(startDate.getMonth() - 3);
       break;
-    case 'last_6_months':
+    case '6months':
       startDate.setMonth(startDate.getMonth() - 6);
       break;
-    case 'last_year':
+    case '1year':
       startDate.setFullYear(startDate.getFullYear() - 1);
       break;
     default:
