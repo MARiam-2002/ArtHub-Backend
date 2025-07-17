@@ -384,6 +384,51 @@ export const changePassword = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * @desc    Change admin password (SuperAdmin only)
+ * @route   PUT /api/v1/admin/admins/:id/change-password
+ * @access  Private (SuperAdmin only)
+ */
+export const changeAdminPassword = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { id } = req.params;
+  const { newPassword } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الأدمن غير صالح',
+      data: null
+    });
+  }
+
+  const admin = await userModel.findById(id);
+  if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
+    return res.status(404).json({
+      success: false,
+      message: 'الأدمن غير موجود',
+      data: null
+    });
+  }
+
+  // Hash new password
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+  admin.password = hashedPassword;
+  await admin.save();
+
+  res.json({
+    success: true,
+    message: 'تم تغيير كلمة مرور الأدمن بنجاح',
+    data: {
+      _id: admin._id,
+      email: admin.email,
+      displayName: admin.displayName,
+      updatedAt: admin.updatedAt
+    }
+  });
+});
+
+/**
  * @desc    Get all users (clients and artists) - Simple version for frontend filtering
  * @route   GET /api/v1/users
  * @access  Private (Admin, SuperAdmin)
