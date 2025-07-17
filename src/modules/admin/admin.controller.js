@@ -567,7 +567,8 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
   }
 
   const user = await userModel.findById(id)
-    .select('-password')    .lean();
+    .select('-password')
+    .lean();
 
   if (!user || ['admin', 'superadmin'].includes(user.role)) {
     return res.status(404).json({
@@ -577,11 +578,11 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Get user statistics
+  // Get user statistics and latest orders
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
 
-  const [totalOrders, totalSpent, totalReviews, averageRating] = await Promise.all([
+  const [totalOrders, totalSpent, totalReviews, averageRating, latestOrders] = await Promise.all([
     specialRequestModel.countDocuments({ user: id }),
     specialRequestModel.aggregate([
       { $match: { user: new mongoose.Types.ObjectId(id), status: 'completed' } },
@@ -591,7 +592,13 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
     reviewModel.aggregate([
       { $match: { user: new mongoose.Types.ObjectId(id) } },
       { $group: { _id: null, avg: { $avg: '$rating' } } }
-    ])
+    ]),
+    // Get latest 5 orders for overview
+    specialRequestModel.find({ user: id })
+      .populate('artist', 'displayName profileImage')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean()
   ]);
 
   const userDetails = {
@@ -616,7 +623,18 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
       totalSpent: totalSpent[0]?.total || 0,
       totalReviews: totalReviews,
       averageRating: averageRating[0]?.avg || 0
-    }
+    },
+    // Latest orders for overview
+    latestOrders: latestOrders.map(order => ({
+      _id: order._id,
+      title: order.title,
+      description: order.description,
+      price: order.price,
+      status: order.status,
+      artist: order.artist,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
+    }))
   };
 
   res.json({

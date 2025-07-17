@@ -470,9 +470,9 @@ router.get('/users',
  * @swagger
  * /api/admin/users/{id}:
  *   get:
- *     summary: Get user details
+ *     summary: Get user details with overview
  *     tags: [Admin Dashboard]
- *     description: Get detailed information about a specific user
+ *     description: Get detailed information about a specific user including latest orders, statistics, and overview
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -483,7 +483,8 @@ router.get('/users',
  *           type: string
  *         description: User ID
  *     responses:
- *    200       description: User details retrieved successfully
+ *       200:
+ *         description: User details retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -491,13 +492,124 @@ router.get('/users',
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "تم جلب تفاصيل المستخدم بنجاح"
  *                 data:
- *                   $ref: #/components/schemas/UserDetailsForAdmin
- *401       description: Unauthorized
- *    403       description: Forbidden - Admin only
- *    404       description: User not found
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     displayName:
+ *                       type: string
+ *                       example: "عمر خالد محمد"
+ *                     email:
+ *                       type: string
+ *                       example: "omar.2004@gmail.com"
+ *                     phoneNumber:
+ *                       type: string
+ *                       example: "+201140067845"
+ *                     role:
+ *                       type: string
+ *                       example: "user"
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     isVerified:
+ *                       type: boolean
+ *                       example: true
+ *                     profileImage:
+ *                       type: string
+ *                       example: "https://example.com/profile.jpg"
+ *                     coverImages:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     bio:
+ *                       type: string
+ *                       example: "نبذة عن المستخدم"
+ *                     job:
+ *                       type: string
+ *                       example: "مهندس"
+ *                     location:
+ *                       type: string
+ *                       example: "القاهرة, مصر"
+ *                     lastActive:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-15T10:30:00.000Z"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2023-01-15T10:30:00.000Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-15T10:30:00.000Z"
+ *                     statistics:
+ *                       type: object
+ *                       properties:
+ *                         totalOrders:
+ *                           type: number
+ *                           example: 12
+ *                         totalSpent:
+ *                           type: number
+ *                           example: 2450
+ *                         totalReviews:
+ *                           type: number
+ *                           example: 8
+ *                         averageRating:
+ *                           type: number
+ *                           example: 4.8
+ *                     latestOrders:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "507f1f77bcf86cd799439012"
+ *                           title:
+ *                             type: string
+ *                             example: "لوحة زيتية مخصصة"
+ *                           description:
+ *                             type: string
+ *                             example: "وصف الطلب"
+ *                           price:
+ *                             type: number
+ *                             example: 850
+ *                           status:
+ *                             type: string
+ *                             enum: [pending, accepted, rejected, completed, cancelled]
+ *                             example: "completed"
+ *                           artist:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "507f1f77bcf86cd799439013"
+ *                               displayName:
+ *                                 type: string
+ *                                 example: "أحمد محمد"
+ *                               profileImage:
+ *                                 type: string
+ *                                 example: "https://example.com/artist.jpg"
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-01-18T10:30:00.000Z"
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-01-18T10:30:00.000Z"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ *       404:
+ *         description: User not found
  */
 router.get('/users/:id', 
   authenticate, 
