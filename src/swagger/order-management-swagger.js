@@ -7,99 +7,21 @@ export const orderManagementPaths = {
   '/api/admin/orders': {
     get: {
       tags: ['Order Management'],
-      summary: 'جلب جميع الطلبات مع الفلترة والبحث',
-      description: 'جلب قائمة الطلبات مع إمكانية الفلترة حسب الفنان، الحالة، التاريخ والبحث النصي',
+      summary: 'جلب جميع الطلبات (بدون فلترة، فقط pagination)',
+      description: 'جلب جميع الطلبات (طلبات خاصة + معاملات شراء) مع دعم pagination فقط. كل الفلترة والبحث تتم من الفرونت فقط.',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
           in: 'query',
           name: 'page',
-          schema: {
-            type: 'integer',
-            default: 1
-          },
+          schema: { type: 'integer', default: 1 },
           description: 'رقم الصفحة'
         },
         {
           in: 'query',
           name: 'limit',
-          schema: {
-            type: 'integer',
-            default: 20
-          },
+          schema: { type: 'integer', default: 20 },
           description: 'عدد العناصر في الصفحة'
-        },
-        {
-          in: 'query',
-          name: 'search',
-          schema: {
-            type: 'string'
-          },
-          description: 'البحث في عنوان الطلب، الوصف، اسم الفنان أو العميل'
-        },
-        {
-          in: 'query',
-          name: 'artistId',
-          schema: {
-            type: 'string'
-          },
-          description: 'فلترة حسب الفنان'
-        },
-        {
-          in: 'query',
-          name: 'status',
-          schema: {
-            type: 'string',
-            enum: ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled']
-          },
-          description: 'فلترة حسب حالة الطلب'
-        },
-        {
-          in: 'query',
-          name: 'dateFrom',
-          schema: {
-            type: 'string',
-            format: 'date'
-          },
-          description: 'تاريخ البداية للفلترة'
-        },
-        {
-          in: 'query',
-          name: 'dateTo',
-          schema: {
-            type: 'string',
-            format: 'date'
-          },
-          description: 'تاريخ النهاية للفلترة'
-        },
-        {
-          in: 'query',
-          name: 'sortBy',
-          schema: {
-            type: 'string',
-            enum: ['createdAt', 'title', 'price', 'status'],
-            default: 'createdAt'
-          },
-          description: 'ترتيب النتائج'
-        },
-        {
-          in: 'query',
-          name: 'sortOrder',
-          schema: {
-            type: 'string',
-            enum: ['asc', 'desc'],
-            default: 'desc'
-          },
-          description: 'اتجاه الترتيب'
-        },
-        {
-          in: 'query',
-          name: 'export',
-          schema: {
-            type: 'boolean',
-            default: false
-          },
-          description: 'تصدير البيانات'
         }
       ],
       responses: {
@@ -110,202 +32,18 @@ export const orderManagementPaths = {
               schema: {
                 type: 'object',
                 properties: {
-                  success: {
-                    type: 'boolean',
-                    example: true
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'تم جلب الطلبات بنجاح'
-                  },
+                  success: { type: 'boolean', example: true },
                   data: {
                     type: 'object',
                     properties: {
-                      orders: {
-                        type: 'array',
-                        items: {
-                          type: 'object',
-                          properties: {
-                            _id: {
-                              type: 'string',
-                              example: '507f1f77bcf86cd799439011'
-                            },
-                            title: {
-                              type: 'string',
-                              example: 'لوحة زيتية مخصصة'
-                            },
-                            description: {
-                              type: 'string',
-                              example: 'وصف الطلب'
-                            },
-                            price: {
-                              type: 'number',
-                              example: 850
-                            },
-                            currency: {
-                              type: 'string',
-                              example: 'SAR'
-                            },
-                            orderDate: {
-                              type: 'string',
-                              format: 'date-time',
-                              example: '2025-01-18T10:30:00.000Z'
-                            },
-                            artist: {
-                              type: 'object',
-                              properties: {
-                                _id: {
-                                  type: 'string'
-                                },
-                                name: {
-                                  type: 'string',
-                                  example: 'أحمد محمد'
-                                },
-                                profileImage: {
-                                  type: 'string'
-                                }
-                              }
-                            },
-                            customer: {
-                              type: 'object',
-                              properties: {
-                                _id: {
-                                  type: 'string'
-                                },
-                                name: {
-                                  type: 'string',
-                                  example: 'منى سالم'
-                                },
-                                profileImage: {
-                                  type: 'string'
-                                }
-                              }
-                            },
-                            status: {
-                              type: 'object',
-                              properties: {
-                                value: {
-                                  type: 'string',
-                                  example: 'completed'
-                                },
-                                label: {
-                                  type: 'string',
-                                  example: 'مكتمل'
-                                },
-                                color: {
-                                  type: 'string',
-                                  example: '#4CAF50'
-                                }
-                              }
-                            },
-                            requestType: {
-                              type: 'object',
-                              properties: {
-                                value: {
-                                  type: 'string',
-                                  example: 'custom_artwork'
-                                },
-                                label: {
-                                  type: 'string',
-                                  example: 'عمل فني مخصص'
-                                }
-                              }
-                            },
-                            priority: {
-                              type: 'object',
-                              properties: {
-                                value: {
-                                  type: 'string',
-                                  example: 'medium'
-                                },
-                                label: {
-                                  type: 'string',
-                                  example: 'متوسطة'
-                                }
-                              }
-                            },
-                            deadline: {
-                              type: 'string',
-                              format: 'date-time'
-                            },
-                            estimatedDelivery: {
-                              type: 'string',
-                              format: 'date-time'
-                            },
-                            currentProgress: {
-                              type: 'number',
-                              example: 100
-                            },
-                            attachments: {
-                              type: 'array'
-                            },
-                            deliverables: {
-                              type: 'array'
-                            }
-                          }
-                        }
-                      },
+                      orders: { type: 'array', items: { type: 'object' } },
                       pagination: {
                         type: 'object',
                         properties: {
-                          page: {
-                            type: 'integer',
-                            example: 1
-                          },
-                          limit: {
-                            type: 'integer',
-                            example: 20
-                          },
-                          total: {
-                            type: 'integer',
-                            example: 150
-                          },
-                          pages: {
-                            type: 'integer',
-                            example: 8
-                          }
-                        }
-                      },
-                      filters: {
-                        type: 'object',
-                        properties: {
-                          availableArtists: {
-                            type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                _id: {
-                                  type: 'string'
-                                },
-                                name: {
-                                  type: 'string'
-                                },
-                                profileImage: {
-                                  type: 'string'
-                                },
-                                orderCount: {
-                                  type: 'integer'
-                                }
-                              }
-                            }
-                          },
-                          availableStatuses: {
-                            type: 'array',
-                            items: {
-                              type: 'object',
-                              properties: {
-                                value: {
-                                  type: 'string'
-                                },
-                                label: {
-                                  type: 'string'
-                                },
-                                color: {
-                                  type: 'string'
-                                }
-                              }
-                            }
-                          }
+                          page: { type: 'integer', example: 1 },
+                          limit: { type: 'integer', example: 20 },
+                          total: { type: 'integer', example: 150 },
+                          pages: { type: 'integer', example: 8 }
                         }
                       }
                     }
