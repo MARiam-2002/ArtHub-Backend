@@ -777,6 +777,44 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
     });
   }
 
+  // جلب أفضل فنان مبيعاً للفترة المحددة
+  const topSellingArtist = await transactionModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'artist',
+        foreignField: '_id',
+        as: 'artistData'
+      }
+    },
+    {
+      $group: {
+        _id: '$artist',
+        totalSales: { $sum: '$pricing.totalAmount' },
+        orderCount: { $sum: 1 },
+        artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage', 0] } }
+      }
+    },
+    {
+      $sort: { totalSales: -1 }
+    },
+    {
+      $limit: 1
+    }
+  ]);
+
+  const totalSales = chartData.reduce((sum, item) => sum + item.sales, 0);
+  const totalOrders = chartData.reduce((sum, item) => sum + item.orders, 0);
+  const averageMonthlySales = Math.round(totalSales / chartData.length);
+
   res.status(200).json({
     success: true,
     message: 'تم جلب بيانات تتبع المبيعات بنجاح',
@@ -784,9 +822,15 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
       period,
       chartData,
       summary: {
-        totalSales: chartData.reduce((sum, item) => sum + item.sales, 0),
-        totalOrders: chartData.reduce((sum, item) => sum + item.orders, 0),
-        averageMonthlySales: Math.round(chartData.reduce((sum, item) => sum + item.sales, 0) / chartData.length)
+        totalSales,
+        totalOrders,
+        averageMonthlySales,
+        topSellingArtist: topSellingArtist[0] ? {
+          name: topSellingArtist[0].artistName,
+          image: topSellingArtist[0].artistImage,
+          sales: topSellingArtist[0].totalSales,
+          orders: topSellingArtist[0].orderCount
+        } : null
       }
     }
   });

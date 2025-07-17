@@ -667,15 +667,44 @@ export const dashboardPaths = {
                         properties: {
                           totalSales: {
                             type: 'number',
-                            example: 847392
+                            example: 847392,
+                            description: 'إجمالي المبيعات للفترة المحددة'
                           },
                           totalOrders: {
                             type: 'number',
-                            example: 1243
+                            example: 1243,
+                            description: 'عدد الطلبات للفترة المحددة'
                           },
                           averageMonthlySales: {
                             type: 'number',
-                            example: 70616
+                            example: 70616,
+                            description: 'متوسط المبيعات الشهرية'
+                          },
+                          topSellingArtist: {
+                            type: 'object',
+                            description: 'الفنان الأكثر مبيعاً للفترة المحددة',
+                            properties: {
+                              name: {
+                                type: 'string',
+                                example: 'أحمد محمد',
+                                description: 'اسم الفنان'
+                              },
+                              image: {
+                                type: 'string',
+                                example: 'https://example.com/profile.jpg',
+                                description: 'صورة الفنان'
+                              },
+                              sales: {
+                                type: 'number',
+                                example: 125000,
+                                description: 'إجمالي مبيعات الفنان'
+                              },
+                              orders: {
+                                type: 'number',
+                                example: 25,
+                                description: 'عدد طلبات الفنان'
+                              }
+                            }
                           }
                         }
                       }

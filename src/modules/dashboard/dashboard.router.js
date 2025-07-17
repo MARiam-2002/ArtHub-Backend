@@ -637,6 +637,26 @@ router.get(
  *                         averageMonthlySales:
  *                           type: number
  *                           example: 70616
+ *                         topSellingArtist:
+ *                           type: object
+ *                           description: الفنان الأكثر مبيعاً للفترة المحددة
+ *                           properties:
+ *                             name:
+ *                               type: string
+ *                               example: "أحمد محمد"
+ *                               description: اسم الفنان
+ *                             image:
+ *                               type: string
+ *                               example: "https://example.com/profile.jpg"
+ *                               description: صورة الفنان
+ *                             sales:
+ *                               type: number
+ *                               example: 125000
+ *                               description: إجمالي مبيعات الفنان
+ *                             orders:
+ *                               type: number
+ *                               example: 25
+ *                               description: عدد طلبات الفنان
  *       401:
  *         description: غير مصرح
  *       403:
