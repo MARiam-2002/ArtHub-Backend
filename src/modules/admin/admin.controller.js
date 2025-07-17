@@ -14,13 +14,46 @@ import mongoose from 'mongoose';
 export const getAdmins = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const admins = await userModel.find({ 
-    role: { $in: ['admin', 'superadmin'] }, 
-    isDeleted: false 
-  })
-  .select('-password')
-  .lean();
-
+  const { page = 1, limit = 10, search, role, status } = req.query;
+  
+  // Build query filter
+  const filter = { isDeleted: false };
+  
+  // Filter by role if specified
+  if (role && ['admin', 'superadmin'].includes(role)) {
+    filter.role = role;
+  } else {
+    // Default: show both admin and superadmin
+    filter.role = { $in: ['admin', 'superadmin'] };
+  }
+  
+  // Filter by status if specified
+  if (status && ['active', 'inactive', 'banned'].includes(status)) {
+    filter.isActive = status === 'active';
+  }
+  
+  // Search filter
+  if (search) {
+    filter.$or = [
+      { displayName: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } }
+    ];
+  }
+  
+  // Calculate pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  
+  // Get admins with pagination
+  const admins = await userModel.find(filter)
+    .select('-password')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .lean();
+  
+  // Get total count for pagination
+  const totalAdmins = await userModel.countDocuments(filter);
+  
   res.json({
     success: true,
     message: 'تم جلب قائمة الأدمن بنجاح',
@@ -33,7 +66,13 @@ export const getAdmins = asyncHandler(async (req, res, next) => {
         isActive: admin.isActive,
         createdAt: admin.createdAt,
         lastActive: admin.lastActive
-      }))
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalAdmins,
+        pages: Math.ceil(totalAdmins / parseInt(limit))
+      }
     }
   });
 });
