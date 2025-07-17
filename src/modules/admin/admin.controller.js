@@ -1,4 +1,5 @@
 import userModel from '../../../DB/models/user.model.js';
+import tokenModel from '../../../DB/models/token.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import bcrypt from 'bcrypt';
@@ -239,6 +240,14 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
     { id: admin._id, tokenType: 'refresh' },
     process.env.REFRESH_TOKEN_KEY || process.env.TOKEN_KEY,
     { expiresIn: '7d' }
+  );
+
+  // Save tokens to database
+  await tokenModel.createTokenPair(
+    admin._id, 
+    accessToken, 
+    refreshToken, 
+    req.headers['user-agent'] || 'admin-dashboard'
   );
 
   // Update last login
