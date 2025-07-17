@@ -3072,86 +3072,10 @@ export const adminPaths = {
                   data: {
                     type: 'object',
                     properties: {
-                      _id: {
-                        type: 'string',
-                        example: '507f1f77bcf86cd799439011'
-                      },
-                      reportType: {
-                        type: 'string',
-                        example: 'تأخير في التسليم'
-                      },
                       description: {
                         type: 'string',
-                        example: 'تأخر الفنان في تسليم العمل لمدة أسبوع'
-                      },
-                      status: {
-                        type: 'string',
-                        example: 'pending'
-                      },
-                      statusText: {
-                        type: 'string',
-                        example: 'تحت المراجعة'
-                      },
-                      adminNotes: {
-                        type: 'string',
-                        example: 'ملاحظات المدير على البلاغ'
-                      },
-                      createdAt: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-01-18T10:30:00.000Z'
-                      },
-                      resolvedAt: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-01-20T10:30:00.000Z'
-                      },
-                      complainant: {
-                        type: 'object',
-                        properties: {
-                          name: {
-                            type: 'string',
-                            example: 'منى سالم'
-                          },
-                          email: {
-                            type: 'string',
-                            example: 'mona.salem@example.com'
-                          },
-                          image: {
-                            type: 'string',
-                            example: 'https://example.com/profile.jpg'
-                          }
-                        }
-                      },
-                      artist: {
-                        type: 'object',
-                        properties: {
-                          name: {
-                            type: 'string',
-                            example: 'أحمد محمد'
-                          },
-                          email: {
-                            type: 'string',
-                            example: 'ahmed.mohamed@example.com'
-                          },
-                          image: {
-                            type: 'string',
-                            example: 'https://example.com/artist.jpg'
-                          }
-                        }
-                      },
-                      artwork: {
-                        type: 'object',
-                        properties: {
-                          title: {
-                            type: 'string',
-                            example: 'لوحة زيتية مخصصة'
-                          },
-                          image: {
-                            type: 'string',
-                            example: 'https://example.com/artwork.jpg'
-                          }
-                        }
+                        example: 'تأخر الفنان في تسليم العمل لمدة أسبوع كامل',
+                        description: 'تفاصيل البلاغ'
                       }
                     }
                   }

@@ -208,28 +208,7 @@ export const getReportDetails = asyncHandler(async (req, res, next) => {
     success: true,
     message: 'تم جلب تفاصيل البلاغ بنجاح',
     data: {
-      _id: reportData._id,
-      reportType: getReportTypeText(reportData.reason),
-      description: reportData.description,
-      status: reportData.status,
-      statusText: getStatusText(reportData.status),
-      adminNotes: reportData.adminNotes,
-      createdAt: reportData.createdAt,
-      resolvedAt: reportData.resolvedAt,
-      complainant: {
-        name: reportData.reporterName,
-        email: reportData.reporterEmail,
-        image: reportData.reporterImage
-      },
-      artist: {
-        name: reportData.targetUserName,
-        email: reportData.targetUserEmail,
-        image: reportData.targetUserImage
-      },
-      artwork: {
-        title: reportData.artworkTitle,
-        image: reportData.artworkImage
-      }
+      description: reportData.description
     }
   });
 });
