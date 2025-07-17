@@ -18,8 +18,13 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
   // حساب التخطي للصفحة
   const skip = (parseInt(page) - 1) * parseInt(limit);
   
-  // جلب التقييمات مع تفاصيل المستخدم والفنان والعمل الفني
+  // جلب تقييمات الأعمال الفنية فقط (تقييمات اللوحات)
   const reviews = await reviewModel.aggregate([
+    {
+      $match: {
+        artwork: { $exists: true, $ne: null } // تقييمات الأعمال الفنية فقط
+      }
+    },
     {
       $lookup: {
         from: 'users',
@@ -75,8 +80,10 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
     }
   ]);
 
-  // جلب إجمالي عدد التقييمات
-  const totalReviews = await reviewModel.countDocuments({});
+  // جلب إجمالي عدد تقييمات الأعمال الفنية فقط
+  const totalReviews = await reviewModel.countDocuments({
+    artwork: { $exists: true, $ne: null }
+  });
 
   // تنسيق البيانات للعرض
   const formattedReviews = reviews.map((review, index) => ({

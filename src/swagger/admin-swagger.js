@@ -2405,8 +2405,8 @@ export const adminPaths = {
   '/api/admin/reviews': {
     get: {
       tags: ['Reviews Management'],
-      summary: 'جلب جميع التقييمات',
-      description: 'جلب قائمة جميع التقييمات مع التفاصيل الأساسية للعرض في الجدول. يتم الترتيب والتصفية من الفرونت.',
+      summary: 'جلب تقييمات الأعمال الفنية',
+      description: 'جلب قائمة تقييمات الأعمال الفنية (اللوحات) فقط مع التفاصيل الأساسية للعرض في الجدول. يتم الترتيب والتصفية من الفرونت.',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
