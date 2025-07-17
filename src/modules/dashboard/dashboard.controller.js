@@ -104,19 +104,19 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
     message: 'تم جلب الإحصائيات بنجاح',
     data: {
       totalUsers: {
-        value: 12847, // من الصورة الأولى
-        percentageChange: 12, // من الصورة الأولى
-        isPositive: true
+        value: totalUsers,
+        percentageChange: usersPercentageChange,
+        isPositive: usersPercentageChange >= 0
       },
       activeArtists: {
-        value: 3429, // من الصورة الأولى
-        percentageChange: 8, // من الصورة الأولى
-        isPositive: true
+        value: activeArtists,
+        percentageChange: artistsPercentageChange,
+        isPositive: artistsPercentageChange >= 0
       },
       totalRevenue: {
-        value: 1545118, // من الصورة الأولى
-        percentageChange: -2.5, // من الصورة الأولى
-        isPositive: false,
+        value: totalRevenue,
+        percentageChange: revenuePercentageChange,
+        isPositive: revenuePercentageChange >= 0,
         currency: 'SAR'
       }
     }
@@ -253,43 +253,117 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
     'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
   ];
 
-  // 🟩 تحضير بيانات الطلبات - مطابق للصورة بالضبط
+  // 🟩 تحضير بيانات الطلبات من البيانات الفعلية
   const ordersChartData = [];
-  let pendingTotal = 89; // من الصورة
-  let completedTotal = 1243; // من الصورة
-  let rejectedTotal = 23; // من الصورة
-
-  // بيانات الطلبات من الصورة (من اليمين لليسار - آخر 12 شهر)
-  // القيم من الصورة: 140, 120, 80, 100, 60, 80, 60, 100, 80, 60, 80, 100
-  const orderValues = [140, 120, 80, 100, 60, 80, 60, 100, 80, 60, 80, 100];
   
-  orderValues.forEach((value, index) => {
+  // حساب الإحصائيات الإجمالية من البيانات الفعلية
+  let pendingTotal = 0;
+  let completedTotal = 0;
+  let rejectedTotal = 0;
+  
+  // تجميع البيانات الفعلية حسب الشهر
+  const ordersByMonth = {};
+  
+  ordersData.forEach(order => {
+    const monthKey = `${order._id.year}-${order._id.month}`;
+    if (!ordersByMonth[monthKey]) {
+      ordersByMonth[monthKey] = {
+        total: 0,
+        completed: 0,
+        inProgress: 0,
+        rejected: 0
+      };
+    }
+    
+    ordersByMonth[monthKey].total += order.totalOrders;
+    ordersByMonth[monthKey].completed += order.completedOrders;
+    ordersByMonth[monthKey].inProgress += order.inProgressOrders;
+    ordersByMonth[monthKey].rejected += order.rejectedOrders;
+  });
+  
+  // حساب الإجماليات
+  Object.values(ordersByMonth).forEach(monthData => {
+    pendingTotal += monthData.inProgress;
+    completedTotal += monthData.completed;
+    rejectedTotal += monthData.rejected;
+  });
+  
+  // تحضير بيانات الرسوم البيانية من البيانات الفعلية
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  
+  for (let i = 11; i >= 0; i--) {
+    const targetMonth = currentMonth - i;
+    const targetYear = currentYear;
+    
+    const monthKey = `${targetYear}-${targetMonth}`;
+    const monthData = ordersByMonth[monthKey] || {
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      rejected: 0
+    };
+    
     ordersChartData.push({
-      month: months[index],
-      value: value,
-      completed: Math.round(value * 0.85), // تقريب للطلبات المكتملة
-      inProgress: Math.round(value * 0.1), // تقريب للطلبات قيد التنفيذ
-      rejected: Math.round(value * 0.05) // تقريب للطلبات المرفوضة
+      month: months[11 - i], // ترتيب عكسي للشهور
+      value: monthData.total,
+      completed: monthData.completed,
+      inProgress: monthData.inProgress,
+      rejected: monthData.rejected
     });
-  });
+  }
 
-  // 🟦 تحضير بيانات الإيرادات - مطابق للصورة بالضبط
+  // 🟦 تحضير بيانات الإيرادات من البيانات الفعلية
   const revenueChartData = [];
-  let weeklyRevenue = 28900; // من الصورة
-  let monthlyRevenue = 124500; // من الصورة
-
-  // بيانات الإيرادات من الصورة (من اليمين لليسار - آخر 12 شهر)
-  // القيم من الصورة: 250, 280, 70, 180, 220, 150, 200, 250, 180, 120, 150, 200
-  const revenueValues = [250, 280, 70, 180, 220, 150, 200, 250, 180, 120, 150, 200];
   
-  revenueValues.forEach((value, index) => {
-    revenueChartData.push({
-      month: months[index],
-      value: value * 1000, // تحويل إلى آلاف (مثل 250 = 250,000)
-      orderCount: Math.round((value * 1000) / 1500), // تقريب لعدد الطلبات
-      averageOrderValue: Math.round((value * 1000) / Math.round((value * 1000) / 1500)) // متوسط قيمة الطلب
-    });
+  // تجميع البيانات الفعلية حسب الشهر
+  const revenueByMonth = {};
+  
+  revenueData.forEach(revenue => {
+    const monthKey = `${revenue._id.year}-${revenue._id.month}`;
+    if (!revenueByMonth[monthKey]) {
+      revenueByMonth[monthKey] = {
+        totalRevenue: 0,
+        orderCount: 0,
+        averageOrderValue: 0
+      };
+    }
+    
+    revenueByMonth[monthKey].totalRevenue += revenue.totalRevenue;
+    revenueByMonth[monthKey].orderCount += revenue.orderCount;
   });
+  
+  // حساب متوسط قيمة الطلب لكل شهر
+  Object.values(revenueByMonth).forEach(monthData => {
+    monthData.averageOrderValue = monthData.orderCount > 0 
+      ? monthData.totalRevenue / monthData.orderCount 
+      : 0;
+  });
+  
+  // تحضير بيانات الرسوم البيانية من البيانات الفعلية
+  for (let i = 11; i >= 0; i--) {
+    const targetMonth = currentMonth - i;
+    const targetYear = currentYear;
+    
+    const monthKey = `${targetYear}-${targetMonth}`;
+    const monthData = revenueByMonth[monthKey] || {
+      totalRevenue: 0,
+      orderCount: 0,
+      averageOrderValue: 0
+    };
+    
+    revenueChartData.push({
+      month: months[11 - i], // ترتيب عكسي للشهور
+      value: monthData.totalRevenue,
+      orderCount: monthData.orderCount,
+      averageOrderValue: Math.round(monthData.averageOrderValue)
+    });
+  }
+  
+  // حساب الإيرادات الأسبوعية والشهرية والسنوية من البيانات الفعلية
+  const weeklyRevenue = weeklyMonthlyData.length > 0 ? weeklyMonthlyData[0].weeklyRevenue : 0;
+  const monthlyRevenue = weeklyMonthlyData.length > 0 ? weeklyMonthlyData[0].monthlyRevenue : 0;
+  const yearlyRevenue = revenueData.reduce((total, month) => total + month.totalRevenue, 0);
 
   res.status(200).json({
     success: true,
@@ -307,7 +381,8 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
         chartData: revenueChartData,
         summary: {
           weekly: weeklyRevenue,
-          monthly: monthlyRevenue
+          monthly: monthlyRevenue,
+          yearly: yearlyRevenue
         }
       }
     }

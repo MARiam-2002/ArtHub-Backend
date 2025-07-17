@@ -383,6 +383,10 @@ router.get(
  *                               type: number
  *                               example: 124500
  *                               description: الإيرادات الشهرية
+ *                             yearly:
+ *                               type: number
+ *                               example: 847392
+ *                               description: الإيرادات السنوية
  *       401:
  *         description: غير مصرح
  *       403:

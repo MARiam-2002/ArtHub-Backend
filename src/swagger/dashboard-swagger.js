@@ -212,7 +212,7 @@ export const dashboardPaths = {
                             properties: {
                               yearly: {
                                 type: 'number',
-                                example: 447392
+                                example: 847392
                               },
                               monthly: {
                                 type: 'number',
