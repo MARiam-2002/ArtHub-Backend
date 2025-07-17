@@ -20,7 +20,7 @@ const router = Router();
  *   get:
  *     summary: الإحصائيات الرئيسية للوحة التحكم
  *     tags: [Dashboard]
- *     description: جلب الإحصائيات الرئيسية للمنصة (المستخدمين، الإيرادات، الأعمال الفنية، الطلبات)
+ *     description: جلب الإحصائيات الرئيسية للمنصة مع النسب المئوية مقارنة بالشهر الماضي
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -40,42 +40,58 @@ const router = Router();
  *                 data:
  *                   type: object
  *                   properties:
- *                     users:
+ *                     totalUsers:
  *                       type: object
+ *                       description: إجمالي المستخدمين
  *                       properties:
- *                         total:
+ *                         value:
  *                           type: number
  *                           example: 12847
- *                         active:
+ *                           description: إجمالي عدد المستخدمين
+ *                         percentageChange:
  *                           type: number
- *                           example: 11000
- *                         artists:
+ *                           example: 12
+ *                           description: النسبة المئوية مقارنة بالشهر الماضي
+ *                         isPositive:
+ *                           type: boolean
+ *                           example: true
+ *                           description: هل التغيير إيجابي أم سلبي
+ *                     activeArtists:
+ *                       type: object
+ *                       description: الفنانين النشطين
+ *                       properties:
+ *                         value:
  *                           type: number
  *                           example: 3429
- *                     revenue:
+ *                           description: عدد الفنانين النشطين
+ *                         percentageChange:
+ *                           type: number
+ *                           example: 8
+ *                           description: النسبة المئوية مقارنة بالشهر الماضي
+ *                         isPositive:
+ *                           type: boolean
+ *                           example: true
+ *                           description: هل التغيير إيجابي أم سلبي
+ *                     totalRevenue:
  *                       type: object
+ *                       description: إجمالي الإيرادات
  *                       properties:
- *                         total:
+ *                         value:
  *                           type: number
  *                           example: 1545118
+ *                           description: إجمالي الإيرادات
+ *                         percentageChange:
+ *                           type: number
+ *                           example: -2.5
+ *                           description: النسبة المئوية مقارنة بالشهر الماضي
+ *                         isPositive:
+ *                           type: boolean
+ *                           example: false
+ *                           description: هل التغيير إيجابي أم سلبي
  *                         currency:
  *                           type: string
  *                           example: "SAR"
- *                     orders:
- *                       type: object
- *                       properties:
- *                         total:
- *                           type: number
- *                           example: 1355
- *                         pending:
- *                           type: number
- *                           example: 89
- *                         completed:
- *                           type: number
- *                           example: 1243
- *                         rejected:
- *                           type: number
- *                           example: 23
+ *                           description: عملة الإيرادات
  *       401:
  *         description: غير مصرح
  *       403:
@@ -94,7 +110,7 @@ router.get(
  *   get:
  *     summary: بيانات الرسوم البيانية
  *     tags: [Dashboard]
- *     description: جلب بيانات الرسوم البيانية للإيرادات والطلبات
+ *     description: جلب بيانات الرسوم البيانية للإيرادات والطلبات مع الإحصائيات التفصيلية
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -123,56 +139,70 @@ router.get(
  *                 data:
  *                   type: object
  *                   properties:
- *                     revenue:
- *                       type: object
- *                       properties:
- *                         labels:
- *                           type: array
- *                           items:
- *                             type: string
- *                           example: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
- *                         data:
- *                           type: array
- *                           items:
- *                             type: number
- *                           example: [120000, 135000, 142000, 138000, 156000, 168000, 175000, 182000, 195000, 210000, 225000, 240000]
- *                         summary:
- *                           type: object
- *                           properties:
- *                             yearly:
- *                               type: number
- *                               example: 447392
- *                             monthly:
- *                               type: number
- *                               example: 124500
- *                             weekly:
- *                               type: number
- *                               example: 28900
  *                     orders:
  *                       type: object
+ *                       description: إحصائيات الطلبات
  *                       properties:
  *                         labels:
  *                           type: array
  *                           items:
  *                             type: string
  *                           example: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+ *                           description: أسماء الأشهر باللغة العربية
  *                         data:
  *                           type: array
  *                           items:
  *                             type: number
  *                           example: [85, 92, 98, 105, 112, 118, 125, 132, 140, 148, 156, 165]
+ *                           description: عدد الطلبات لكل شهر
  *                         summary:
  *                           type: object
+ *                           description: ملخص إحصائيات الطلبات
  *                           properties:
  *                             pending:
  *                               type: number
  *                               example: 89
+ *                               description: الطلبات قيد التنفيذ
  *                             completed:
  *                               type: number
  *                               example: 1243
+ *                               description: الطلبات المكتملة
  *                             rejected:
  *                               type: number
  *                               example: 23
+ *                               description: الطلبات المرفوضة
+ *                     revenue:
+ *                       type: object
+ *                       description: إحصائيات الإيرادات
+ *                       properties:
+ *                         labels:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+ *                           description: أسماء الأشهر باللغة العربية
+ *                         data:
+ *                           type: array
+ *                           items:
+ *                             type: number
+ *                           example: [120000, 135000, 142000, 138000, 156000, 168000, 175000, 182000, 195000, 210000, 225000, 240000]
+ *                           description: الإيرادات لكل شهر
+ *                         summary:
+ *                           type: object
+ *                           description: ملخص إحصائيات الإيرادات
+ *                           properties:
+ *                             yearly:
+ *                               type: number
+ *                               example: 47392
+ *                               description: الإيرادات السنوية
+ *                             monthly:
+ *                               type: number
+ *                               example: 124500
+ *                               description: الإيرادات الشهرية
+ *                             weekly:
+ *                               type: number
+ *                               example: 28900
+ *                               description: الإيرادات الأسبوعية
  *       401:
  *         description: غير مصرح
  *       403:
