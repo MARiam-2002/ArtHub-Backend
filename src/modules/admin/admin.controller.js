@@ -227,17 +227,17 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
   // Generate tokens
   const accessToken = jwt.sign(
     { 
-      userId: admin._id, 
+      id: admin._id, 
       email: admin.email, 
       role: admin.role 
     },
-    process.env.JWT_SECRET,
+    process.env.TOKEN_KEY,
     { expiresIn: '24h' }
   );
 
   const refreshToken = jwt.sign(
-    { userId: admin._id },
-    process.env.JWT_REFRESH_SECRET,
+    { id: admin._id, tokenType: 'refresh' },
+    process.env.REFRESH_TOKEN_KEY || process.env.TOKEN_KEY,
     { expiresIn: '7d' }
   );
 
