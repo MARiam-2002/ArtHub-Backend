@@ -122,7 +122,7 @@ export const registerSchema = {
         'string.max': 'المهنة يجب أن تكون أقل من 100 حرف'
       }),
     role: Joi.string()
-      .valid('user', 'artist')
+      .valid('user', 'artist','superadmin')
       .optional()
       .messages({
         'any.only': 'نوع المستخدم يجب أن يكون مستخدم أو فنان'

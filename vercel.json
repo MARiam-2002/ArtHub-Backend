@@ -48,6 +48,14 @@
       "dest": "/index.js"
     },
     {
+      "src": "/api/categories/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/user/(.*)",
+      "dest": "/index.js"
+    },
+    {
       "src": "/api/reviews/(.*)",
       "dest": "/index.js"
     },
@@ -57,6 +65,14 @@
     },
     {
       "src": "/api/notifications/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/admin/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/dashboard/(.*)",
       "dest": "/index.js"
     },
     {
@@ -87,13 +103,4 @@
       "src": "/(.*)",
       "dest": "/index.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "MONGODB_CONNECTION_TIMEOUT": "30000",
-    "MONGODB_SOCKET_TIMEOUT": "60000",
-    "MONGODB_SERVER_SELECTION_TIMEOUT": "30000",
-    "MONGODB_MAX_RETRY_ATTEMPTS": "5",
-    "MONGODB_BASE_RETRY_DELAY": "1000"
-  }
-}
+  ]}
