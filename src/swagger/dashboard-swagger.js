@@ -448,5 +448,614 @@ export const dashboardPaths = {
         }
       }
     }
+  },
+
+  '/api/dashboard/sales/analytics': {
+    get: {
+      tags: ['Dashboard'],
+      summary: 'تحليل المبيعات - إحصائيات عامة',
+      description: 'جلب إحصائيات المبيعات العامة مع أفضل فنان مبيعاً والنسب المئوية',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'period',
+          schema: {
+            type: 'string',
+            enum: ['7days', '30days', '90days', '1year'],
+            default: '30days'
+          },
+          description: 'الفترة الزمنية للإحصائيات'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب تحليل المبيعات بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب تحليل المبيعات بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      period: {
+                        type: 'string',
+                        example: '30days'
+                      },
+                      topSellingArtist: {
+                        type: 'object',
+                        properties: {
+                          name: {
+                            type: 'string',
+                            example: 'أحمد محمد'
+                          },
+                          image: {
+                            type: 'string',
+                            example: 'https://example.com/profile.jpg'
+                          },
+                          sales: {
+                            type: 'number',
+                            example: 125000
+                          },
+                          orders: {
+                            type: 'number',
+                            example: 25
+                          }
+                        }
+                      },
+                      totalOrders: {
+                        type: 'object',
+                        properties: {
+                          value: {
+                            type: 'number',
+                            example: 168
+                          },
+                          percentageChange: {
+                            type: 'number',
+                            example: -5
+                          },
+                          isPositive: {
+                            type: 'boolean',
+                            example: false
+                          }
+                        }
+                      },
+                      totalSales: {
+                        type: 'object',
+                        properties: {
+                          value: {
+                            type: 'number',
+                            example: 12847
+                          },
+                          percentageChange: {
+                            type: 'number',
+                            example: 20
+                          },
+                          isPositive: {
+                            type: 'boolean',
+                            example: true
+                          }
+                        }
+                      },
+                      averageOrderValue: {
+                        type: 'number',
+                        example: 765.89
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/dashboard/sales/trends': {
+    get: {
+      tags: ['Dashboard'],
+      summary: 'تتبع المبيعات - بيانات الرسم البياني',
+      description: 'جلب بيانات الرسم البياني لتتبع المبيعات الشهرية',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'period',
+          schema: {
+            type: 'string',
+            enum: ['1month', '3months', '6months', '9months', '12months'],
+            default: '12months'
+          },
+          description: 'الفترة الزمنية للرسم البياني'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب بيانات تتبع المبيعات بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب بيانات تتبع المبيعات بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      period: {
+                        type: 'string',
+                        example: '12months'
+                      },
+                      chartData: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            month: {
+                              type: 'string',
+                              example: 'يناير'
+                            },
+                            sales: {
+                              type: 'number',
+                              example: 250000
+                            },
+                            orders: {
+                              type: 'number',
+                              example: 167
+                            }
+                          }
+                        }
+                      },
+                      summary: {
+                        type: 'object',
+                        properties: {
+                          totalSales: {
+                            type: 'number',
+                            example: 847392
+                          },
+                          totalOrders: {
+                            type: 'number',
+                            example: 1243
+                          },
+                          averageMonthlySales: {
+                            type: 'number',
+                            example: 70616
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/dashboard/sales/top-artists': {
+    get: {
+      tags: ['Dashboard'],
+      summary: 'أفضل الفنانين مبيعاً',
+      description: 'جلب قائمة أفضل الفنانين مبيعاً مع إحصائيات النمو',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'period',
+          schema: {
+            type: 'string',
+            enum: ['7days', '30days', '90days', '1year'],
+            default: '30days'
+          },
+          description: 'الفترة الزمنية'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 50,
+            default: 10
+          },
+          description: 'عدد الفنانين المطلوب عرضهم'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب أفضل الفنانين مبيعاً بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب أفضل الفنانين مبيعاً بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      period: {
+                        type: 'string',
+                        example: '30days'
+                      },
+                      artists: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string',
+                              example: '507f1f77bcf86cd799439011'
+                            },
+                            name: {
+                              type: 'string',
+                              example: 'أحمد محمد'
+                            },
+                            image: {
+                              type: 'string',
+                              example: 'https://example.com/profile.jpg'
+                            },
+                            job: {
+                              type: 'string',
+                              example: 'فنان تشكيلي'
+                            },
+                            orderCount: {
+                              type: 'number',
+                              example: 25
+                            },
+                            sales: {
+                              type: 'number',
+                              example: 125000
+                            },
+                            growth: {
+                              type: 'object',
+                              properties: {
+                                percentage: {
+                                  type: 'number',
+                                  example: 12
+                                },
+                                isPositive: {
+                                  type: 'boolean',
+                                  example: true
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      summary: {
+                        type: 'object',
+                        properties: {
+                          totalArtists: {
+                            type: 'number',
+                            example: 10
+                          },
+                          totalSales: {
+                            type: 'number',
+                            example: 847392
+                          },
+                          averageGrowth: {
+                            type: 'number',
+                            example: 8
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/dashboard/sales/report': {
+    get: {
+      tags: ['Dashboard'],
+      summary: 'تحميل تقرير المبيعات',
+      description: 'تحميل تقرير مفصل للمبيعات بصيغة JSON أو CSV',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'period',
+          schema: {
+            type: 'string',
+            enum: ['7days', '30days', '90days', '1year'],
+            default: '30days'
+          },
+          description: 'الفترة الزمنية للتقرير'
+        },
+        {
+          in: 'query',
+          name: 'format',
+          schema: {
+            type: 'string',
+            enum: ['json', 'csv'],
+            default: 'json'
+          },
+          description: 'صيغة التقرير'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم إنشاء تقرير المبيعات بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم إنشاء تقرير المبيعات بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      period: {
+                        type: 'string',
+                        example: '30days'
+                      },
+                      generatedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:00.000Z'
+                      },
+                      summary: {
+                        type: 'object',
+                        properties: {
+                          totalSales: {
+                            type: 'number',
+                            example: 847392
+                          },
+                          totalOrders: {
+                            type: 'number',
+                            example: 1243
+                          },
+                          averageOrderValue: {
+                            type: 'number',
+                            example: 681.57
+                          }
+                        }
+                      },
+                      topArtists: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            name: {
+                              type: 'string',
+                              example: 'أحمد محمد'
+                            },
+                            sales: {
+                              type: 'number',
+                              example: 125000
+                            },
+                            orders: {
+                              type: 'number',
+                              example: 25
+                            }
+                          }
+                        }
+                      },
+                      monthlyTrends: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            month: {
+                              type: 'string',
+                              example: '2025-01'
+                            },
+                            sales: {
+                              type: 'number',
+                              example: 250000
+                            },
+                            orders: {
+                              type: 'number',
+                              example: 167
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }; 

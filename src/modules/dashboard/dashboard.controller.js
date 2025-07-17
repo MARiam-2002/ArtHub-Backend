@@ -531,3 +531,530 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
     data: topArtists
   });
 }); 
+
+/**
+ * @desc    تحليل المبيعات - إحصائيات عامة
+ * @route   GET /api/dashboard/sales/analytics
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getSalesAnalytics = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { period = '30days' } = req.query;
+  
+  let startDate = new Date();
+  let previousPeriodStart = new Date();
+  
+  // تحديد الفترة الزمنية
+  switch (period) {
+    case '7days':
+      startDate.setDate(startDate.getDate() - 7);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 14);
+      break;
+    case '30days':
+      startDate.setDate(startDate.getDate() - 30);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 60);
+      break;
+    case '90days':
+      startDate.setDate(startDate.getDate() - 90);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 180);
+      break;
+    case '1year':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      previousPeriodStart.setFullYear(previousPeriodStart.getFullYear() - 2);
+      break;
+  }
+
+  // إحصائيات الفترة الحالية
+  const currentPeriodStats = await transactionModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: null,
+        totalSales: { $sum: '$pricing.totalAmount' },
+        totalOrders: { $sum: 1 },
+        averageOrderValue: { $avg: '$pricing.totalAmount' }
+      }
+    }
+  ]);
+
+  // إحصائيات الفترة السابقة للمقارنة
+  const previousPeriodStats = await transactionModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: previousPeriodStart, $lt: startDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: null,
+        totalSales: { $sum: '$pricing.totalAmount' },
+        totalOrders: { $sum: 1 },
+        averageOrderValue: { $avg: '$pricing.totalAmount' }
+      }
+    }
+  ]);
+
+  // أفضل فنان مبيعاً
+  const topSellingArtist = await transactionModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'artist',
+        foreignField: '_id',
+        as: 'artistData'
+      }
+    },
+    {
+      $group: {
+        _id: '$artist',
+        totalSales: { $sum: '$pricing.totalAmount' },
+        orderCount: { $sum: 1 },
+        artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage', 0] } }
+      }
+    },
+    {
+      $sort: { totalSales: -1 }
+    },
+    {
+      $limit: 1
+    }
+  ]);
+
+  const currentStats = currentPeriodStats[0] || { totalSales: 0, totalOrders: 0, averageOrderValue: 0 };
+  const previousStats = previousPeriodStats[0] || { totalSales: 0, totalOrders: 0, averageOrderValue: 0 };
+
+  // حساب النسب المئوية
+  const salesPercentageChange = previousStats.totalSales > 0 
+    ? Math.round(((currentStats.totalSales - previousStats.totalSales) / previousStats.totalSales) * 100)
+    : 0;
+
+  const ordersPercentageChange = previousStats.totalOrders > 0
+    ? Math.round(((currentStats.totalOrders - previousStats.totalOrders) / previousStats.totalOrders) * 100)
+    : 0;
+
+  res.status(200).json({
+    success: true,
+    message: 'تم جلب تحليل المبيعات بنجاح',
+    data: {
+      period,
+      topSellingArtist: topSellingArtist[0] ? {
+        name: topSellingArtist[0].artistName,
+        image: topSellingArtist[0].artistImage,
+        sales: topSellingArtist[0].totalSales,
+        orders: topSellingArtist[0].orderCount
+      } : null,
+      totalOrders: {
+        value: currentStats.totalOrders,
+        percentageChange: ordersPercentageChange,
+        isPositive: ordersPercentageChange >= 0
+      },
+      totalSales: {
+        value: currentStats.totalSales,
+        percentageChange: salesPercentageChange,
+        isPositive: salesPercentageChange >= 0
+      },
+      averageOrderValue: currentStats.averageOrderValue
+    }
+  });
+});
+
+/**
+ * @desc    تتبع المبيعات - بيانات الرسم البياني
+ * @route   GET /api/dashboard/sales/trends
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getSalesTrends = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { period = '12months' } = req.query;
+  
+  let startDate = new Date();
+  
+  // تحديد الفترة الزمنية حسب الصورة
+  switch (period) {
+    case '1month':
+      startDate.setMonth(startDate.getMonth() - 1);
+      break;
+    case '3months':
+      startDate.setMonth(startDate.getMonth() - 3);
+      break;
+    case '6months':
+      startDate.setMonth(startDate.getMonth() - 6);
+      break;
+    case '9months':
+      startDate.setMonth(startDate.getMonth() - 9);
+      break;
+    case '12months':
+    default:
+      startDate.setMonth(startDate.getMonth() - 12);
+      break;
+  }
+
+  // تجميع البيانات الشهرية
+  const monthlySales = await transactionModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' }
+        },
+        totalSales: { $sum: '$pricing.totalAmount' },
+        orderCount: { $sum: 1 }
+      }
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1 } }
+  ]);
+
+  // تنسيق البيانات للرسم البياني
+  const months = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  
+  // تحديد عدد الشهور المطلوبة حسب الفترة
+  let monthsToShow = 12;
+  switch (period) {
+    case '1month':
+      monthsToShow = 1;
+      break;
+    case '3months':
+      monthsToShow = 3;
+      break;
+    case '6months':
+      monthsToShow = 6;
+      break;
+    case '9months':
+      monthsToShow = 9;
+      break;
+    case '12months':
+    default:
+      monthsToShow = 12;
+      break;
+  }
+  
+  const chartData = [];
+  
+  for (let i = monthsToShow - 1; i >= 0; i--) {
+    const targetMonth = currentMonth - i;
+    const targetYear = currentYear;
+    
+    const monthData = monthlySales.find(item => 
+      item._id.year === targetYear && item._id.month === targetMonth
+    ) || { totalSales: 0, orderCount: 0 };
+    
+    chartData.push({
+      month: months[11 - i], // ترتيب عكسي للشهور
+      sales: monthData.totalSales,
+      orders: monthData.orderCount
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'تم جلب بيانات تتبع المبيعات بنجاح',
+    data: {
+      period,
+      chartData,
+      summary: {
+        totalSales: chartData.reduce((sum, item) => sum + item.sales, 0),
+        totalOrders: chartData.reduce((sum, item) => sum + item.orders, 0),
+        averageMonthlySales: Math.round(chartData.reduce((sum, item) => sum + item.sales, 0) / chartData.length)
+      }
+    }
+  });
+});
+
+/**
+ * @desc    أفضل الفنانين مبيعاً
+ * @route   GET /api/dashboard/sales/top-artists
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { period = '30days', limit = 10 } = req.query;
+  
+  let startDate = new Date();
+  let previousPeriodStart = new Date();
+  
+  // تحديد الفترة الزمنية
+  switch (period) {
+    case '7days':
+      startDate.setDate(startDate.getDate() - 7);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 14);
+      break;
+    case '30days':
+      startDate.setDate(startDate.getDate() - 30);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 60);
+      break;
+    case '90days':
+      startDate.setDate(startDate.getDate() - 90);
+      previousPeriodStart.setDate(previousPeriodStart.getDate() - 180);
+      break;
+    case '1year':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      previousPeriodStart.setFullYear(previousPeriodStart.getFullYear() - 2);
+      break;
+  }
+
+  // جلب أفضل الفنانين مبيعاً
+  const topArtists = await transactionModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'artist',
+        foreignField: '_id',
+        as: 'artistData'
+      }
+    },
+    {
+      $group: {
+        _id: '$artist',
+        totalSales: { $sum: '$pricing.totalAmount' },
+        orderCount: { $sum: 1 },
+        artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage', 0] } },
+        job: { $first: { $arrayElemAt: ['$artistData.job', 0] } }
+      }
+    },
+    {
+      $sort: { totalSales: -1 }
+    },
+    {
+      $limit: parseInt(limit)
+    }
+  ]);
+
+  // جلب بيانات الفترة السابقة لحساب النمو
+  const previousPeriodData = await transactionModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: previousPeriodStart, $lt: startDate },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: '$artist',
+        totalSales: { $sum: '$pricing.totalAmount' }
+      }
+    }
+  ]);
+
+  // حساب النمو لكل فنان
+  const artistsWithGrowth = topArtists.map(artist => {
+    const previousSales = previousPeriodData.find(item => 
+      item._id.toString() === artist._id.toString()
+    )?.totalSales || 0;
+    
+    const growthPercentage = previousSales > 0 
+      ? Math.round(((artist.totalSales - previousSales) / previousSales) * 100)
+      : 0;
+
+    return {
+      _id: artist._id,
+      name: artist.artistName,
+      image: artist.artistImage,
+      job: artist.job || 'فنان',
+      orderCount: artist.orderCount,
+      sales: artist.totalSales,
+      growth: {
+        percentage: growthPercentage,
+        isPositive: growthPercentage >= 0
+      }
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'تم جلب أفضل الفنانين مبيعاً بنجاح',
+    data: {
+      period,
+      artists: artistsWithGrowth,
+      summary: {
+        totalArtists: artistsWithGrowth.length,
+        totalSales: artistsWithGrowth.reduce((sum, artist) => sum + artist.sales, 0),
+        averageGrowth: Math.round(artistsWithGrowth.reduce((sum, artist) => sum + artist.growth.percentage, 0) / artistsWithGrowth.length)
+      }
+    }
+  });
+});
+
+/**
+ * @desc    تحميل تقرير المبيعات
+ * @route   GET /api/dashboard/sales/report
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const downloadSalesReport = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { period = '30days', format = 'json' } = req.query;
+  
+  let startDate = new Date();
+  
+  // تحديد الفترة الزمنية
+  switch (period) {
+    case '7days':
+      startDate.setDate(startDate.getDate() - 7);
+      break;
+    case '30days':
+      startDate.setDate(startDate.getDate() - 30);
+      break;
+    case '90days':
+      startDate.setDate(startDate.getDate() - 90);
+      break;
+    case '1year':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+  }
+
+  // جلب جميع البيانات المطلوبة للتقرير
+  const [salesData, topArtists, monthlyTrends] = await Promise.all([
+    // إحصائيات المبيعات العامة
+    transactionModel.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: startDate },
+          status: 'completed',
+          isDeleted: { $ne: true }
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: '$pricing.totalAmount' },
+          totalOrders: { $sum: 1 },
+          averageOrderValue: { $avg: '$pricing.totalAmount' }
+        }
+      }
+    ]),
+    
+    // أفضل الفنانين
+    transactionModel.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: startDate },
+          status: 'completed',
+          isDeleted: { $ne: true }
+        } 
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'artist',
+          foreignField: '_id',
+          as: 'artistData'
+        }
+      },
+      {
+        $group: {
+          _id: '$artist',
+          totalSales: { $sum: '$pricing.totalAmount' },
+          orderCount: { $sum: 1 },
+          artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } }
+        }
+      },
+      {
+        $sort: { totalSales: -1 }
+      },
+      {
+        $limit: 10
+      }
+    ]),
+    
+    // الاتجاهات الشهرية
+    transactionModel.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: startDate },
+          status: 'completed',
+          isDeleted: { $ne: true }
+        } 
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          totalSales: { $sum: '$pricing.totalAmount' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } }
+    ])
+  ]);
+
+  const reportData = {
+    period,
+    generatedAt: new Date(),
+    summary: salesData[0] || { totalSales: 0, totalOrders: 0, averageOrderValue: 0 },
+    topArtists: topArtists.map(artist => ({
+      name: artist.artistName,
+      sales: artist.totalSales,
+      orders: artist.orderCount
+    })),
+    monthlyTrends: monthlyTrends.map(trend => ({
+      month: `${trend._id.year}-${trend._id.month}`,
+      sales: trend.totalSales,
+      orders: trend.orderCount
+    }))
+  };
+
+  if (format === 'csv') {
+    // تحويل البيانات إلى CSV
+    const csvData = [
+      ['الفنان', 'المبيعات', 'عدد الطلبات'],
+      ...topArtists.map(artist => [
+        artist.artistName,
+        artist.totalSales,
+        artist.orderCount
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="sales-report-${period}.csv"`);
+    res.send(csvData);
+  } else {
+    res.status(200).json({
+      success: true,
+      message: 'تم إنشاء تقرير المبيعات بنجاح',
+      data: reportData
+    });
+  }
+}); 

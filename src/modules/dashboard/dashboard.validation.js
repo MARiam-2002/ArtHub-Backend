@@ -30,4 +30,47 @@ export const getArtistsPerformanceValidation = {
       'any.only': 'الفترة الزمنية يجب أن تكون 1week, 1month, 3months, 6months, أو 1year'
     })
   }).optional()
+};
+
+// Validation for sales analytics query parameters
+export const getSalesAnalyticsValidation = {
+  query: joi.object({
+    period: joi.string().valid('7days', '30days', '90days', '1year').default('30days').messages({
+      'any.only': 'الفترة الزمنية يجب أن تكون 7days, 30days, 90days, أو 1year'
+    })
+  }).optional()
+};
+
+// Validation for sales trends query parameters
+export const getSalesTrendsValidation = {
+  query: joi.object({
+    period: joi.string().valid('1month', '3months', '6months', '9months', '12months').default('12months').messages({
+      'any.only': 'الفترة الزمنية يجب أن تكون 1month, 3months, 6months, 9months, أو 12months'
+    })
+  }).optional()
+};
+
+// Validation for top selling artists query parameters
+export const getTopSellingArtistsValidation = {
+  query: joi.object({
+    period: joi.string().valid('7days', '30days', '90days', '1year').default('30days').messages({
+      'any.only': 'الفترة الزمنية يجب أن تكون 7days, 30days, 90days, أو 1year'
+    }),
+    limit: joi.number().integer().min(1).max(50).default(10).messages({
+      'number.min': 'عدد الفنانين يجب أن يكون 1 على الأقل',
+      'number.max': 'عدد الفنانين يجب أن يكون 50 كحد أقصى'
+    })
+  }).optional()
+};
+
+// Validation for sales report query parameters
+export const downloadSalesReportValidation = {
+  query: joi.object({
+    period: joi.string().valid('7days', '30days', '90days', '1year').default('30days').messages({
+      'any.only': 'الفترة الزمنية يجب أن تكون 7days, 30days, 90days, أو 1year'
+    }),
+    format: joi.string().valid('json', 'csv').default('json').messages({
+      'any.only': 'صيغة التقرير يجب أن تكون json أو csv'
+    })
+  }).optional()
 }; 
