@@ -24,13 +24,14 @@ export const getAdmins = asyncHandler(async (req, res, next) => {
     .search();
 
   const admins = await apiFeatures.mongooseQuery;
-  const total = await userModel.countDocuments({ 
+  const total = await userModel.countDocuments({
     role: { $in: ['admin', 'superadmin'] },
     isDeleted: false,
     ...apiFeatures.mongooseQuery.getFilter()
   });
 
-  res.success({
+  res.json({
+    success: true,
     message: 'تم جلب قائمة الأدمن بنجاح',
     data: {
       admins: admins.map(admin => ({
@@ -160,7 +161,6 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
   if (role && role !== admin.role) admin.role = role;
   if (role === 'admin') admin.job = 'مدير';
   else if (role === 'superadmin') admin.job = 'مدير عام';
-  
 
   await admin.save();
 
@@ -864,16 +864,16 @@ export const exportUsers = asyncHandler(async (req, res, next) => {
     .select('-password')    .lean();
 
   // Format data for export
-  const exportData = users.map(user => ({
-    ID: user._id.toString(),
-    Name: user.displayName,
-    Email: user.email,
-    Phone: user.phoneNumber || '',
-    Role: user.role === 'user' ? 'عميل' : 'فنان',
-    Status: user.status === 'active' ? 'نشط' : user.status === 'banned' ? 'محظور' : 'غير نشط',
-    'Join Date': user.createdAt.toISOString().split('T')[0],
-    'Last Active': user.lastActive ? user.lastActive.toISOString().split('T')[0] : ''
-  }));
+  const exportData = users.map(user => ([
+    user._id.toString(),
+    user.displayName,
+    user.email,
+    user.phoneNumber || '',
+    user.role === 'user' ? 'عميل' : 'فنان',
+    user.status === 'active' ? 'نشط' : user.status === 'banned' ? 'محظور' : 'غير نشط',
+    user.createdAt.toISOString().split('T')[0],
+    user.lastActive ? user.lastActive.toISOString().split('T')[0] : 'N/A'
+  ]));
 
   if (format === 'csv') {
     const csv = [
