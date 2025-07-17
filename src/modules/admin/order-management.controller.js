@@ -7,289 +7,70 @@ import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
 
 /**
- * @desc    جلب جميع الطلبات مع الفلترة والبحث (يشمل كلا النوعين)
+ * @desc    جلب جميع الطلبات (بدون فلترة أو بحث، فقط pagination)
  * @route   GET /api/admin/orders
  * @access  Private (Admin, SuperAdmin)
  */
 export const getAllOrders = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
-  
-  const {
-    page = 1,
-    limit = 20,
-    search,
-    artistId,
-    status,
-    dateFrom,
-    dateTo,
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
-    exportData = false,
-    orderType = 'all'
-  } = req.query;
 
-  // بناء معايير البحث للطلبات الخاصة
-  const specialRequestMatch = { isDeleted: { $ne: true } };
-  const transactionMatch = { isDeleted: { $ne: true } };
-  
-  // فلترة حسب الفنان
-  if (artistId && mongoose.Types.ObjectId.isValid(artistId)) {
-    specialRequestMatch.artist = new mongoose.Types.ObjectId(artistId);
-    transactionMatch.seller = new mongoose.Types.ObjectId(artistId);
-  }
-  
-  // فلترة حسب الحالة
-  if (status) {
-    if (['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-      specialRequestMatch.status = status;
-    }
-    if (['pending', 'processing', 'confirmed', 'shipped', 'delivered', 'completed', 'cancelled', 'refunded', 'disputed'].includes(status)) {
-      transactionMatch.status = status;
-    }
-  }
-  
-  // فلترة حسب التاريخ
-  if (dateFrom || dateTo) {
-    const dateFilter = {};
-    if (dateFrom) dateFilter.$gte = new Date(dateFrom);
-    if (dateTo) dateFilter.$lte = new Date(dateTo);
-    
-    specialRequestMatch.createdAt = dateFilter;
-    transactionMatch.createdAt = dateFilter;
-  }
-  
-  // البحث النصي
-  if (search) {
-    const searchFilter = [
-      { title: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } },
-      { 'sender.displayName': { $regex: search, $options: 'i' } },
-      { 'artist.displayName': { $regex: search, $options: 'i' } }
-    ];
-    specialRequestMatch.$or = searchFilter;
-    
-    const transactionSearchFilter = [
-      { 'items.artwork.title': { $regex: search, $options: 'i' } },
-      { 'buyer.displayName': { $regex: search, $options: 'i' } },
-      { 'seller.displayName': { $regex: search, $options: 'i' } }
-    ];
-    transactionMatch.$or = transactionSearchFilter;
-  }
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
 
-  // حساب التخطيط
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const sortDirection = sortOrder === 'asc' ? 1 : -1;
+  // جلب الطلبات الخاصة
+  const specialRequests = await specialRequestModel.find({ isDeleted: { $ne: true } })
+    .populate('sender', 'displayName profileImage')
+    .populate('artist', 'displayName profileImage')
+    .lean();
 
-  // تجميع البيانات للطلبات الخاصة
-  const specialRequestPipeline = [
-    { $match: specialRequestMatch },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'sender',
-        foreignField: '_id',
-        as: 'senderData'
-      }
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'artist',
-        foreignField: '_id',
-        as: 'artistData'
-      }
-    },
-    {
-      $lookup: {
-        from: 'categories',
-        localField: 'category',
-        foreignField: '_id',
-        as: 'categoryData'
-      }
-    },
-    {
-      $addFields: {
-        sender: { $arrayElemAt: ['$senderData', 0] },
-        artist: { $arrayElemAt: ['$artistData', 0] },
-        category: { $arrayElemAt: ['$categoryData', 0] },
-        orderType: 'special',
-        price: { $coalesce: ['$finalPrice', '$quotedPrice', '$budget'] }
-      }
-    },
-    {
-      $project: {
-        senderData: 0,
-        artistData: 0,
-        categoryData: 0
-      }
-    }
+  // جلب المعاملات (الطلبات العادية)
+  const transactions = await transactionModel.find({ isDeleted: { $ne: true } })
+    .populate('buyer', 'displayName profileImage')
+    .populate('seller', 'displayName profileImage')
+    .lean();
+
+  // دمج النتائج في مصفوفة واحدة
+  const allOrders = [
+    ...specialRequests.map(order => ({
+      _id: order._id,
+      title: order.title || 'طلب خاص',
+      description: order.description || '',
+      price: order.finalPrice || order.quotedPrice || order.budget || 0,
+      artist: order.artist,
+      customer: order.sender,
+      status: order.status,
+      orderType: 'special',
+      createdAt: order.createdAt
+    })),
+    ...transactions.map(order => ({
+      _id: order._id,
+      title: order.description || 'طلب شراء عمل فني',
+      description: order.description || '',
+      price: order.pricing?.totalAmount || 0,
+      artist: order.seller,
+      customer: order.buyer,
+      status: order.status,
+      orderType: 'transaction',
+      createdAt: order.createdAt
+    }))
   ];
 
-  // تجميع البيانات للمعاملات
-  const transactionPipeline = [
-    { $match: transactionMatch },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'buyer',
-        foreignField: '_id',
-        as: 'buyerData'
-      }
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'seller',
-        foreignField: '_id',
-        as: 'sellerData'
-      }
-    },
-    {
-      $lookup: {
-        from: 'artworks',
-        localField: 'items.artwork',
-        foreignField: '_id',
-        as: 'artworkData'
-      }
-    },
-    {
-      $addFields: {
-        buyer: { $arrayElemAt: ['$buyerData', 0] },
-        seller: { $arrayElemAt: ['$sellerData', 0] },
-        artwork: { $arrayElemAt: ['$artworkData', 0] },
-        orderType: 'transaction',
-        title: { $arrayElemAt: ['$artworkData.title', 0] },
-        description: { $arrayElemAt: ['$artworkData.description', 0] },
-        price: '$pricing.totalAmount',
-        sender: { $arrayElemAt: ['$buyerData', 0] },
-        artist: { $arrayElemAt: ['$sellerData', 0] }
-      }
-    },
-    {
-      $project: {
-        buyerData: 0,
-        sellerData: 0,
-        artworkData: 0
-      }
-    }
-  ];
+  // ترتيب النتائج حسب الأحدث
+  allOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  let allOrders = [];
-
-  // جلب البيانات حسب النوع المطلوب
-  if (orderType === 'all' || orderType === 'special') {
-    const specialRequests = await specialRequestModel.aggregate(specialRequestPipeline);
-    allOrders.push(...specialRequests);
-  }
-
-  if (orderType === 'all' || orderType === 'transaction') {
-    const transactions = await transactionModel.aggregate(transactionPipeline);
-    allOrders.push(...transactions);
-  }
-
-  // ترتيب وفلترة النتائج
-  allOrders.sort((a, b) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
-    return sortDirection === 1 ? 
-      (aValue > bValue ? 1 : -1) : 
-      (aValue < bValue ? 1 : -1);
-  });
-
-  const totalCount = allOrders.length;
-  const paginatedOrders = allOrders.slice(skip, skip + parseInt(limit));
-
-  // تنسيق البيانات للعرض
-  const formattedOrders = paginatedOrders.map(order => ({
-    _id: order._id,
-    orderType: order.orderType,
-    title: order.title,
-    description: order.description,
-    price: order.price,
-    currency: order.currency || 'SAR',
-    orderDate: order.createdAt,
-    artist: {
-      _id: order.artist?._id,
-      name: order.artist?.displayName || 'غير محدد',
-      profileImage: order.artist?.profileImage || order.artist?.photoURL
-    },
-    customer: {
-      _id: order.sender?._id,
-      name: order.sender?.displayName || 'غير محدد',
-      profileImage: order.sender?.profileImage || order.sender?.photoURL
-    },
-    status: {
-      value: order.status,
-      label: getStatusLabel(order.status, order.orderType),
-      color: getStatusColor(order.status, order.orderType)
-    },
-    requestType: order.orderType === 'special' ? {
-      value: order.requestType,
-      label: getRequestTypeLabel(order.requestType)
-    } : {
-      value: 'artwork_purchase',
-      label: 'شراء عمل فني'
-    },
-    priority: order.orderType === 'special' ? {
-      value: order.priority,
-      label: getPriorityLabel(order.priority)
-    } : null,
-    deadline: order.deadline,
-    estimatedDelivery: order.estimatedDelivery,
-    currentProgress: order.currentProgress || 0,
-    attachments: order.attachments || [],
-    deliverables: order.deliverables || []
-  }));
-
-  // إذا كان التصدير مطلوب
-  if (exportData === 'true') {
-    const exportData = formattedOrders.map(order => ({
-      'رقم الطلب': order._id,
-      'نوع الطلب': order.orderType === 'special' ? 'طلب خاص' : 'شراء عمل فني',
-      'اسم الطلب': order.title,
-      'الوصف': order.description,
-      'السعر': order.price,
-      'العملة': order.currency,
-      'تاريخ الطلب': order.orderDate,
-      'الفنان': order.artist?.name || 'غير محدد',
-      'العميل': order.customer?.name || 'غير محدد',
-      'الحالة': order.status.label,
-      'الأولوية': order.priority?.label || 'غير محدد',
-      'نوع الطلب': order.requestType.label,
-      'تاريخ التسليم المتوقع': order.estimatedDelivery,
-      'تاريخ الإكمال': order.completedAt
-    }));
-
-    return res.json({
-      success: true,
-      message: 'تم تصدير بيانات الطلبات بنجاح',
-      data: {
-        orders: exportData,
-        totalCount: totalCount,
-        exportFormat: 'CSV'
-      }
-    });
-  }
+  // pagination
+  const paginatedOrders = allOrders.slice(skip, skip + limit);
 
   res.json({
     success: true,
-    message: 'تم جلب الطلبات بنجاح',
     data: {
-      orders: formattedOrders,
+      orders: paginatedOrders,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: totalCount,
-        pages: Math.ceil(totalCount / parseInt(limit))
-      },
-      filters: {
-        availableArtists: await getAvailableArtists(),
-        availableStatuses: getAvailableStatuses(),
-        orderTypes: [
-          { value: 'all', label: 'جميع الطلبات' },
-          { value: 'special', label: 'الطلبات الخاصة' },
-          { value: 'transaction', label: 'شراء الأعمال الفنية' }
-        ]
+        page,
+        limit,
+        total: allOrders.length,
+        pages: Math.ceil(allOrders.length / limit)
       }
     }
   });
