@@ -364,4 +364,457 @@ router.put('/change-password',
   adminController.changePassword
 );
 
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: Get all users (clients and artists)
+ *     tags: [Admin Dashboard]
+ *     description: Get paginated list of all users with filtering and search
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in name, email, or phone
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [user, artist]
+ *         description: Filter by user role
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, banned]
+ *         description: Filter by user status
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, displayName, email, lastLogin]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *     responses:
+ *    200       description: Users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         $ref: #/components/schemas/UserForAdmin'
+ *                     pagination:
+ *                       $ref: #/components/schemas/PaginationResponse'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     totalUsers:
+ *                       type: number
+ *                     activeUsers:
+ *                       type: number
+ *                     bannedUsers:
+ *                       type: number
+ *    401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ */
+router.get('/users', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getUsersSchema), 
+  adminController.getUsers
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   get:
+ *     summary: Get user details
+ *     tags: [Admin Dashboard]
+ *     description: Get detailed information about a specific user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *    200       description: User details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: #/components/schemas/UserDetailsForAdmin
+ *401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ *    404       description: User not found
+ */
+router.get('/users/:id', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getUserDetailsSchema), 
+  adminController.getUserDetails
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/block:
+ *   patch:
+ *     summary: Block/Unblock user
+ *     tags: [Admin Dashboard]
+ *     description: Block or unblock a user account
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum:block, unblock]
+ *                 description: Action to perform
+ *               reason:
+ *                 type: string
+ *                 description: Reason for blocking (optional)
+ *     responses:
+ *    200       description: User status updated successfully
+ *    401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ *    404       description: User not found
+ */
+router.patch('/users/:id/block', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.blockUserSchema), 
+  adminController.blockUser
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/send-message:
+ *   post:
+ *     summary: Send message to user
+ *     tags: [Admin Dashboard]
+ *     description: Send a message to a specific user (via email or chat)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - subject
+ *               - message
+ *               - deliveryMethod
+ *             properties:
+ *               subject:
+ *                 type: string
+ *                 description: Message subject
+ *               message:
+ *                 type: string
+ *                 description: Message content
+ *               deliveryMethod:
+ *                 type: string
+ *                 enum: [email, chat, both]
+ *                 description: How to deliver the message
+ *               attachments:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: File URLs to attach
+ *     responses:
+ *    200       description: Message sent successfully
+ *    401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ *    404       description: User not found
+ */
+router.post('/users/:id/send-message', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.sendMessageSchema), 
+  adminController.sendMessageToUser
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/orders:
+ *   get:
+ *     summary: Get user orders
+ *     tags: [Admin Dashboard]
+ *     description: Get all orders for a specific user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default:20       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: pending, accepted, rejected, completed, cancelled]
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, updatedAt, price]
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *    200       description: User orders retrieved successfully
+ *    401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ *    404       description: User not found
+ */
+router.get('/users/:id/orders', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getUserOrdersSchema), 
+  adminController.getUserOrders
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/reviews:
+ *   get:
+ *     summary: Get user reviews
+ *     tags: [Admin Dashboard]
+ *     description: Get all reviews by a specific user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default:20       - in: query
+ *         name: rating
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 5
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, rating]
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *    200       description: User reviews retrieved successfully
+ *    401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ *    404       description: User not found
+ */
+router.get('/users/:id/reviews', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getUserReviewsSchema), 
+  adminController.getUserReviews
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/activity:
+ *   get:
+ *     summary: Get user activity log
+ *     tags: [Admin Dashboard]
+ *     description: Get activity log for a specific user
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default:20       - in: query
+ *         name: activityType
+ *         schema:
+ *           type: string
+ *           enum: [login, order, review, profile_update, artwork_view]
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *    200       description: User activity log retrieved successfully
+ *    401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ *    404       description: User not found
+ */
+router.get('/users/:id/activity', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getUserActivitySchema), 
+  adminController.getUserActivity
+);
+
+/**
+ * @swagger
+ * /api/admin/users/export:
+ *   get:
+ *     summary: Export users data
+ *     tags: [Admin Dashboard]
+ *     description: Export users data to CSV/Excel format
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [csv, excel]
+ *           default: csv
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [user, artist, all]
+ *           default: all
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, banned, all]
+ *           default: all
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *    200       description: Users data exported successfully
+ *         content:
+ *           application/csv:
+ *             schema:
+ *               type: string
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *    401       description: Unauthorized
+ *    403       description: Forbidden - Admin only
+ */
+router.get('/users/export', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.exportUsersSchema), 
+  adminController.exportUsers
+);
+
 export default router; 

@@ -1,0 +1,261 @@
+[object Object]info: {name": "Admin User Management",
+  description": "Postman collection for admin user management endpoints,schema: https://schema.getpostman.com/json/collection/v2.10/collection.json"
+  },
+item: [
+   [object Object]    name":Get All Users",
+ request":[object Object]
+       method": "GET,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          }
+        ],
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin, "users"]
+        },
+      description": Getall users (clients and artists) for admin dashboard},
+      response": []
+    },
+   [object Object]     nameGet User Details",
+ request":[object Object]
+       method": "GET,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          }
+        ],
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}},
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "ser_id}}"]
+        },
+      description": "Get detailed information about a specific user},
+      response": []
+    },
+   [object Object]name": "Block User",
+ request":[object Object]
+      method": PATCH,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          },
+          [object Object]         key": "Content-Type",
+    value":application/json",
+         type: "text"
+          }
+        ],
+body":[object Object]
+       mode: raw",
+       raw":{\n  \action\": \"block\",\n  \"reason\": \"Violation of platform rules\"\n}"
+        },
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/block,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "{{user_id}}", "block"]
+        },
+      description": "Block a user account},
+      response": []
+    },
+   [object Object]
+    name": "Unblock User",
+ request":[object Object]
+      method": PATCH,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          },
+          [object Object]         key": "Content-Type",
+    value":application/json",
+         type: "text"
+          }
+        ],
+body":[object Object]
+       mode: raw",
+       raw":{\n  \"action\": \"unblock\"\n}"
+        },
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/block,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "{{user_id}}", "block"]
+        },
+        description: ock a user account},
+      response": []
+    },
+   [object Object]name": "Send Message to User - Email",
+ request":[object Object]
+        method:POST,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          },
+          [object Object]         key": "Content-Type",
+    value":application/json",
+         type: "text"
+          }
+        ],
+body":[object Object]
+       mode: raw",
+       raw:{undefinedn  \"subject\": \"رسالة من إدارة المنصة\,undefinedn  \message\": \مرحباً، هذه رسالة من إدارة منصة ArtHub\",\n  \deliveryMethod\": \email",\n  \attachments\":         },
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/send-message,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "{{user_id}}", "send-message"]
+        },
+      description": "Send message to user via email},
+      response": []
+    },
+   [object Object]name": "Send Message to User - Chat",
+ request":[object Object]
+        method:POST,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          },
+          [object Object]         key": "Content-Type",
+    value":application/json",
+         type: "text"
+          }
+        ],
+body":[object Object]
+       mode: raw",
+       raw:{undefinedn  \"subject\": \"رسالة من إدارة المنصة\,undefinedn  \message\": \مرحباً، هذه رسالة من إدارة منصة ArtHub\",\n  \deliveryMethod\:\"chat\",\n  \attachments\":         },
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/send-message,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "{{user_id}}", "send-message"]
+        },
+      description": "Send message to user via chat},
+      response": []
+    },
+   [object Object]name": "Send Message to User - Both",
+ request":[object Object]
+        method:POST,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          },
+          [object Object]         key": "Content-Type",
+    value":application/json",
+         type: "text"
+          }
+        ],
+body":[object Object]
+       mode: raw",
+       raw:{undefinedn  \"subject\": \"رسالة من إدارة المنصة\,undefinedn  \message\": \مرحباً، هذه رسالة من إدارة منصة ArtHub\",\n  \deliveryMethod\:\"both\",\n  \attachments\":         },
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/send-message,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "{{user_id}}", "send-message"]
+        },
+      description": "Send message to user via both email and chat},
+      response": []
+    },
+   [object Object]     name: "Get User Orders",
+ request":[object Object]
+       method": "GET,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          }
+        ],
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/orders,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "{{user_id}}",orders"]
+        },
+      description: Get all orders for a specific user},
+      response": []
+    },
+   [object Object]     nameGet User Reviews",
+ request":[object Object]
+       method": "GET,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          }
+        ],
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/reviews,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", {{user_id}}", reviews"]
+        },
+      description": "Get all reviews by a specific user},
+      response": []
+    },
+   [object Object]     nameGet User Activity",
+ request":[object Object]
+       method": "GET,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          }
+        ],
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/{{user_id}}/activity,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "{{user_id}}", "activity"]
+        },
+      description":Get activity log for a specific user},
+      response": []
+    },
+   [object Object]name: Export Users - CSV",
+ request":[object Object]
+       method": "GET,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          }
+        ],
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/export?format=csv&role=all&status=all,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "export"],
+   query": [
+           [object Object]             keyat,         valuecsv"
+            },
+           [object Object]           keyle,         valueall"
+            },
+           [object Object]             keyus,         valueall"
+            }
+          ]
+        },
+      description": Export users data to CSV format},
+      response": []
+    },
+   [object Object]name: port Users - Excel",
+ request":[object Object]
+       method": "GET,
+  header": [
+          [object Object]  key":Authorization",
+          value: arer {{admin_token}}",
+         type: "text"
+          }
+        ],
+        url": [object Object]          raw":[object Object]{base_url}}/api/v1/admin/users/export?format=excel&role=user&status=active,
+        host": ["{{base_url}}"],
+          path: [api", "v1,admin", "users", "export"],
+   query": [
+           [object Object]             keyat,           valueexcel"
+            },
+           [object Object]           keyle,          valueuser"
+            },
+           [object Object]             keyus,            valuective"
+            }
+          ]
+        },
+      description": "Export active clients data to Excel format},
+      response:}
+  ],
+ variable:  [object Object]    key":base_url",
+     value http://localhost:300,  type": "string"
+    },
+  [object Object]key: dmin_token",
+  value": your_admin_token_here,  type": "string"
+    },
+  [object Object]      key: user_id",
+      value": "user_id_here,  type: "string"
+    }
+  ]
+} 
