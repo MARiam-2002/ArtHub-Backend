@@ -4,6 +4,7 @@ import transactionModel from '../../../DB/models/transaction.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
 import reviewModel from '../../../DB/models/review.model.js';
 import mongoose from 'mongoose';
+import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 
 /**
  * @desc    الإحصائيات الرئيسية للوحة التحكم
