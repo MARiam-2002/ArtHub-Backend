@@ -172,87 +172,87 @@ router.get(
  *                           example: [
  *                             {
  *                               "month": "يناير",
- *                               "value": 85,
- *                               "completed": 72,
- *                               "pending": 9,
- *                               "rejected": 4
+ *                               "value": 140,
+ *                               "completed": 119,
+ *                               "inProgress": 14,
+ *                               "rejected": 7
  *                             },
  *                             {
  *                               "month": "فبراير",
- *                               "value": 92,
- *                               "completed": 78,
- *                               "pending": 9,
- *                               "rejected": 5
+ *                               "value": 120,
+ *                               "completed": 102,
+ *                               "inProgress": 12,
+ *                               "rejected": 6
  *                             },
  *                             {
  *                               "month": "مارس",
- *                               "value": 98,
- *                               "completed": 83,
- *                               "pending": 10,
- *                               "rejected": 5
+ *                               "value": 80,
+ *                               "completed": 68,
+ *                               "inProgress": 8,
+ *                               "rejected": 4
  *                             },
  *                             {
  *                               "month": "أبريل",
- *                               "value": 105,
- *                               "completed": 89,
- *                               "pending": 11,
+ *                               "value": 100,
+ *                               "completed": 85,
+ *                               "inProgress": 10,
  *                               "rejected": 5
  *                             },
  *                             {
  *                               "month": "مايو",
- *                               "value": 112,
- *                               "completed": 95,
- *                               "pending": 11,
- *                               "rejected": 6
+ *                               "value": 60,
+ *                               "completed": 51,
+ *                               "inProgress": 6,
+ *                               "rejected": 3
  *                             },
  *                             {
  *                               "month": "يونيو",
- *                               "value": 118,
- *                               "completed": 100,
- *                               "pending": 12,
- *                               "rejected": 6
+ *                               "value": 80,
+ *                               "completed": 68,
+ *                               "inProgress": 8,
+ *                               "rejected": 4
  *                             },
  *                             {
  *                               "month": "يوليو",
- *                               "value": 125,
- *                               "completed": 106,
- *                               "pending": 13,
- *                               "rejected": 6
+ *                               "value": 60,
+ *                               "completed": 51,
+ *                               "inProgress": 6,
+ *                               "rejected": 3
  *                             },
  *                             {
  *                               "month": "أغسطس",
- *                               "value": 132,
- *                               "completed": 112,
- *                               "pending": 13,
- *                               "rejected": 7
+ *                               "value": 100,
+ *                               "completed": 85,
+ *                               "inProgress": 10,
+ *                               "rejected": 5
  *                             },
  *                             {
  *                               "month": "سبتمبر",
- *                               "value": 140,
- *                               "completed": 119,
- *                               "pending": 14,
- *                               "rejected": 7
+ *                               "value": 80,
+ *                               "completed": 68,
+ *                               "inProgress": 8,
+ *                               "rejected": 4
  *                             },
  *                             {
  *                               "month": "أكتوبر",
- *                               "value": 148,
- *                               "completed": 126,
- *                               "pending": 15,
- *                               "rejected": 7
+ *                               "value": 60,
+ *                               "completed": 51,
+ *                               "inProgress": 6,
+ *                               "rejected": 3
  *                             },
  *                             {
  *                               "month": "نوفمبر",
- *                               "value": 156,
- *                               "completed": 133,
- *                               "pending": 16,
- *                               "rejected": 7
+ *                               "value": 80,
+ *                               "completed": 68,
+ *                               "inProgress": 8,
+ *                               "rejected": 4
  *                             },
  *                             {
  *                               "month": "ديسمبر",
- *                               "value": 165,
- *                               "completed": 140,
- *                               "pending": 17,
- *                               "rejected": 8
+ *                               "value": 100,
+ *                               "completed": 85,
+ *                               "inProgress": 10,
+ *                               "rejected": 5
  *                             }
  *                           ]
  *                         summary:
@@ -300,75 +300,75 @@ router.get(
  *                           example: [
  *                             {
  *                               "month": "يناير",
+ *                               "value": 250000,
+ *                               "orderCount": 167,
+ *                               "averageOrderValue": 1497
+ *                             },
+ *                             {
+ *                               "month": "فبراير",
+ *                               "value": 280000,
+ *                               "orderCount": 187,
+ *                               "averageOrderValue": 1497
+ *                             },
+ *                             {
+ *                               "month": "مارس",
+ *                               "value": 70000,
+ *                               "orderCount": 47,
+ *                               "averageOrderValue": 1489
+ *                             },
+ *                             {
+ *                               "month": "أبريل",
+ *                               "value": 180000,
+ *                               "orderCount": 120,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "مايو",
+ *                               "value": 220000,
+ *                               "orderCount": 147,
+ *                               "averageOrderValue": 1497
+ *                             },
+ *                             {
+ *                               "month": "يونيو",
+ *                               "value": 150000,
+ *                               "orderCount": 100,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "يوليو",
+ *                               "value": 200000,
+ *                               "orderCount": 133,
+ *                               "averageOrderValue": 1504
+ *                             },
+ *                             {
+ *                               "month": "أغسطس",
+ *                               "value": 250000,
+ *                               "orderCount": 167,
+ *                               "averageOrderValue": 1497
+ *                             },
+ *                             {
+ *                               "month": "سبتمبر",
+ *                               "value": 180000,
+ *                               "orderCount": 120,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "أكتوبر",
  *                               "value": 120000,
  *                               "orderCount": 80,
  *                               "averageOrderValue": 1500
  *                             },
  *                             {
- *                               "month": "فبراير",
- *                               "value": 135000,
- *                               "orderCount": 90,
- *                               "averageOrderValue": 1500
- *                             },
- *                             {
- *                               "month": "مارس",
- *                               "value": 142000,
- *                               "orderCount": 95,
- *                               "averageOrderValue": 1495
- *                             },
- *                             {
- *                               "month": "أبريل",
- *                               "value": 138000,
- *                               "orderCount": 92,
- *                               "averageOrderValue": 1500
- *                             },
- *                             {
- *                               "month": "مايو",
- *                               "value": 156000,
- *                               "orderCount": 104,
- *                               "averageOrderValue": 1500
- *                             },
- *                             {
- *                               "month": "يونيو",
- *                               "value": 168000,
- *                               "orderCount": 112,
- *                               "averageOrderValue": 1500
- *                             },
- *                             {
- *                               "month": "يوليو",
- *                               "value": 175000,
- *                               "orderCount": 117,
- *                               "averageOrderValue": 1496
- *                             },
- *                             {
- *                               "month": "أغسطس",
- *                               "value": 182000,
- *                               "orderCount": 121,
- *                               "averageOrderValue": 1504
- *                             },
- *                             {
- *                               "month": "سبتمبر",
- *                               "value": 195000,
- *                               "orderCount": 130,
- *                               "averageOrderValue": 1500
- *                             },
- *                             {
- *                               "month": "أكتوبر",
- *                               "value": 210000,
- *                               "orderCount": 140,
- *                               "averageOrderValue": 1500
- *                             },
- *                             {
  *                               "month": "نوفمبر",
- *                               "value": 225000,
- *                               "orderCount": 150,
+ *                               "value": 150000,
+ *                               "orderCount": 100,
  *                               "averageOrderValue": 1500
  *                             },
  *                             {
  *                               "month": "ديسمبر",
- *                               "value": 240000,
- *                               "orderCount": 160,
- *                               "averageOrderValue": 1500
+ *                               "value": 200000,
+ *                               "orderCount": 133,
+ *                               "averageOrderValue": 1504
  *                             }
  *                           ]
  *                         summary:
