@@ -57,13 +57,11 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Hash password
-  const hashedPassword = await bcrypt.hash(password, 12);
-  // Create admin
+  // Create admin (password will be hashed by pre-save hook)
   const admin = await userModel.create({
     displayName,
     email,
-    password: hashedPassword,
+    password,
     role,
     isActive: true,
     isVerified: true
@@ -198,7 +196,7 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
     email, 
     role: { $in: ['admin', 'superadmin'] },
     isDeleted: false 
-  });
+  }).select('+password');
 
   if (!admin || !admin.isActive) {
     return res.status(401).json({
@@ -209,6 +207,14 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
   }
 
   // Check password
+  if (!admin.password) {
+    return res.status(401).json({
+      success: false,
+      message: 'بيانات الدخول غير صحيحة - كلمة المرور غير موجودة',
+      data: null
+    });
+  }
+
   const isPasswordValid = await bcrypt.compare(password, admin.password);
   if (!isPasswordValid) {
     return res.status(401).json({
@@ -354,14 +360,24 @@ export const updateAdminProfile = asyncHandler(async (req, res, next) => {
 export const changePassword = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const { newPassword } = req.body;
+  const { currentPassword, newPassword } = req.body;
   const adminId = req.user._id;
 
-  const admin = await userModel.findById(adminId);
+  const admin = await userModel.findById(adminId).select('+password');
   if (!admin) {
     return res.status(404).json({
       success: false,
       message: 'الأدمن غير موجود',
+      data: null
+    });
+  }
+
+  // Verify current password
+  const isCurrentPasswordValid = await bcrypt.compare(currentPassword, admin.password);
+  if (!isCurrentPasswordValid) {
+    return res.status(400).json({
+      success: false,
+      message: 'كلمة المرور الحالية غير صحيحة',
       data: null
     });
   }
@@ -411,9 +427,8 @@ export const changeAdminPassword = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Hash new password
-  const hashedPassword = await bcrypt.hash(newPassword, 12);
-  admin.password = hashedPassword;
+  // Set new password (will be hashed by pre-save hook)
+  admin.password = newPassword;
   await admin.save();
 
   res.json({
