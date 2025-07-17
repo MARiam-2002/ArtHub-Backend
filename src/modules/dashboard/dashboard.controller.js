@@ -129,23 +129,28 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 export const getDashboardCharts = asyncHandler(async (req, res, next) => {
-  const { period = 'monthly' } = req.query;
+  const { period = 'last_12_months' } = req.query;
   
   let startDate = new Date();
   
   // تحديد الفترة الزمنية
   switch (period) {
-    case 'daily':
-      startDate.setDate(startDate.getDate() - 30);
+    case 'last_month':
+      startDate.setMonth(startDate.getMonth() - 1);
       break;
-    case 'weekly':
-      startDate.setDate(startDate.getDate() - 84);
+    case 'last_3_months':
+      startDate.setMonth(startDate.getMonth() - 3);
       break;
-    case 'yearly':
-      startDate.setFullYear(startDate.getFullYear() - 3);
+    case 'last_6_months':
+      startDate.setMonth(startDate.getMonth() - 6);
       break;
-    default: // monthly
+    case 'last_9_months':
+      startDate.setMonth(startDate.getMonth() - 9);
+      break;
+    case 'last_12_months':
+    default:
       startDate.setMonth(startDate.getMonth() - 12);
+      break;
   }
 
   // احصائيات الطلبات
@@ -281,19 +286,29 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
-  const { limit = 3, period = 'monthly' } = req.query;
+  const { limit = 3, period = 'last_month' } = req.query;
   
   let startDate = new Date();
   
   switch (period) {
-    case 'weekly':
+    case 'last_week':
       startDate.setDate(startDate.getDate() - 7);
       break;
-    case 'yearly':
+    case 'last_month':
+      startDate.setMonth(startDate.getMonth() - 1);
+      break;
+    case 'last_3_months':
+      startDate.setMonth(startDate.getMonth() - 3);
+      break;
+    case 'last_6_months':
+      startDate.setMonth(startDate.getMonth() - 6);
+      break;
+    case 'last_year':
       startDate.setFullYear(startDate.getFullYear() - 1);
       break;
-    default: // monthly
+    default:
       startDate.setMonth(startDate.getMonth() - 1);
+      break;
   }
 
   // جلب أفضل الفنانين أداءً
