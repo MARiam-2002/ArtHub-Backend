@@ -1138,5 +1138,1266 @@ export const adminPaths = {
         }
       }
     }
+  },
+
+  '/api/admin/users': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب جميع المستخدمين',
+      description: 'جلب قائمة جميع المستخدمين مع التصفية والبحث',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          },
+          description: 'عدد العناصر في الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'search',
+          schema: {
+            type: 'string'
+          },
+          description: 'البحث في الاسم أو البريد الإلكتروني'
+        },
+        {
+          in: 'query',
+          name: 'role',
+          schema: {
+            type: 'string',
+            enum: ['user', 'artist']
+          },
+          description: 'تصفية حسب نوع المستخدم'
+        },
+        {
+          in: 'query',
+          name: 'status',
+          schema: {
+            type: 'string',
+            enum: ['active', 'inactive', 'banned']
+          },
+          description: 'تصفية حسب الحالة'
+        },
+        {
+          in: 'query',
+          name: 'sortBy',
+          schema: {
+            type: 'string',
+            enum: ['createdAt', 'displayName', 'email', 'lastLogin'],
+            default: 'createdAt'
+          },
+          description: 'حقل الترتيب'
+        },
+        {
+          in: 'query',
+          name: 'sortOrder',
+          schema: {
+            type: 'string',
+            enum: ['asc', 'desc'],
+            default: 'desc'
+          },
+          description: 'ترتيب النتائج'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب المستخدمين بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب المستخدمين بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      users: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            displayName: {
+                              type: 'string'
+                            },
+                            email: {
+                              type: 'string'
+                            },
+                            role: {
+                              type: 'string',
+                              enum: ['user', 'artist']
+                            },
+                            isActive: {
+                              type: 'boolean'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'integer'
+                          },
+                          limit: {
+                            type: 'integer'
+                          },
+                          total: {
+                            type: 'integer'
+                          },
+                          pages: {
+                            type: 'integer'
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/users/{id}': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب تفاصيل المستخدم',
+      description: 'جلب معلومات مفصلة عن مستخدم محدد',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف المستخدم'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب تفاصيل المستخدم بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب تفاصيل المستخدم بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      _id: {
+                        type: 'string'
+                      },
+                      displayName: {
+                        type: 'string'
+                      },
+                      email: {
+                        type: 'string'
+                      },
+                      role: {
+                        type: 'string',
+                        enum: ['user', 'artist']
+                      },
+                      isActive: {
+                        type: 'boolean'
+                      },
+                      createdAt: {
+                        type: 'string',
+                        format: 'date-time'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'المستخدم غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'المستخدم غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/users/{id}/block': {
+    patch: {
+      tags: ['Admin'],
+      summary: 'حظر/إلغاء حظر المستخدم',
+      description: 'حظر أو إلغاء حظر حساب المستخدم',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف المستخدم'
+        }
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['action'],
+              properties: {
+                action: {
+                  type: 'string',
+                  enum: ['block', 'unblock'],
+                  description: 'الإجراء المطلوب'
+                },
+                reason: {
+                  type: 'string',
+                  description: 'سبب الحظر (اختياري)'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'تم تحديث حالة المستخدم بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تحديث حالة المستخدم بنجاح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'المستخدم غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'المستخدم غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/users/{id}/send-message': {
+    post: {
+      tags: ['Admin'],
+      summary: 'إرسال رسالة للمستخدم',
+      description: 'إرسال رسالة إلى مستخدم محدد (بالبريد الإلكتروني أو المحادثة)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف المستخدم'
+        }
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['subject', 'message', 'deliveryMethod'],
+              properties: {
+                subject: {
+                  type: 'string',
+                  description: 'موضوع الرسالة'
+                },
+                message: {
+                  type: 'string',
+                  description: 'محتوى الرسالة'
+                },
+                deliveryMethod: {
+                  type: 'string',
+                  enum: ['email', 'chat', 'both'],
+                  description: 'طريقة التوصيل'
+                },
+                attachments: {
+                  type: 'array',
+                  items: {
+                    type: 'string'
+                  },
+                  description: 'روابط الملفات المرفقة'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'تم إرسال الرسالة بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم إرسال الرسالة بنجاح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'المستخدم غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'المستخدم غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/users/{id}/orders': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب طلبات المستخدم',
+      description: 'جلب جميع طلبات مستخدم محدد',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف المستخدم'
+        },
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          },
+          description: 'عدد العناصر في الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'status',
+          schema: {
+            type: 'string',
+            enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled']
+          },
+          description: 'تصفية حسب حالة الطلب'
+        },
+        {
+          in: 'query',
+          name: 'sortBy',
+          schema: {
+            type: 'string',
+            enum: ['createdAt', 'updatedAt', 'price'],
+            default: 'createdAt'
+          },
+          description: 'حقل الترتيب'
+        },
+        {
+          in: 'query',
+          name: 'sortOrder',
+          schema: {
+            type: 'string',
+            enum: ['asc', 'desc'],
+            default: 'desc'
+          },
+          description: 'ترتيب النتائج'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب طلبات المستخدم بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب طلبات المستخدم بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      orders: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            status: {
+                              type: 'string'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'integer'
+                          },
+                          limit: {
+                            type: 'integer'
+                          },
+                          total: {
+                            type: 'integer'
+                          },
+                          pages: {
+                            type: 'integer'
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'المستخدم غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'المستخدم غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/users/{id}/reviews': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب تقييمات المستخدم',
+      description: 'جلب جميع تقييمات مستخدم محدد',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف المستخدم'
+        },
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          },
+          description: 'عدد العناصر في الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'rating',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 5
+          },
+          description: 'تصفية حسب التقييم'
+        },
+        {
+          in: 'query',
+          name: 'sortBy',
+          schema: {
+            type: 'string',
+            enum: ['createdAt', 'rating'],
+            default: 'createdAt'
+          },
+          description: 'حقل الترتيب'
+        },
+        {
+          in: 'query',
+          name: 'sortOrder',
+          schema: {
+            type: 'string',
+            enum: ['asc', 'desc'],
+            default: 'desc'
+          },
+          description: 'ترتيب النتائج'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب تقييمات المستخدم بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب تقييمات المستخدم بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      reviews: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            rating: {
+                              type: 'integer'
+                            },
+                            comment: {
+                              type: 'string'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'integer'
+                          },
+                          limit: {
+                            type: 'integer'
+                          },
+                          total: {
+                            type: 'integer'
+                          },
+                          pages: {
+                            type: 'integer'
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'المستخدم غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'المستخدم غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/users/{id}/activity': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب نشاط المستخدم',
+      description: 'جلب سجل النشاط لمستخدم محدد',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف المستخدم'
+        },
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          },
+          description: 'عدد العناصر في الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'activityType',
+          schema: {
+            type: 'string',
+            enum: ['login', 'order', 'review', 'profile_update', 'artwork_view']
+          },
+          description: 'تصفية حسب نوع النشاط'
+        },
+        {
+          in: 'query',
+          name: 'dateFrom',
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'تاريخ البداية'
+        },
+        {
+          in: 'query',
+          name: 'dateTo',
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'تاريخ النهاية'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب نشاط المستخدم بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب نشاط المستخدم بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      activities: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            type: {
+                              type: 'string'
+                            },
+                            description: {
+                              type: 'string'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'integer'
+                          },
+                          limit: {
+                            type: 'integer'
+                          },
+                          total: {
+                            type: 'integer'
+                          },
+                          pages: {
+                            type: 'integer'
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'المستخدم غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'المستخدم غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/users/export': {
+    get: {
+      tags: ['Admin'],
+      summary: 'تصدير بيانات المستخدمين',
+      description: 'تصدير بيانات المستخدمين بصيغة CSV/Excel',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'format',
+          schema: {
+            type: 'string',
+            enum: ['csv', 'excel'],
+            default: 'csv'
+          },
+          description: 'صيغة التصدير'
+        },
+        {
+          in: 'query',
+          name: 'role',
+          schema: {
+            type: 'string',
+            enum: ['user', 'artist', 'all'],
+            default: 'all'
+          },
+          description: 'تصفية حسب نوع المستخدم'
+        },
+        {
+          in: 'query',
+          name: 'status',
+          schema: {
+            type: 'string',
+            enum: ['active', 'inactive', 'banned', 'all'],
+            default: 'all'
+          },
+          description: 'تصفية حسب الحالة'
+        },
+        {
+          in: 'query',
+          name: 'dateFrom',
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'تاريخ البداية'
+        },
+        {
+          in: 'query',
+          name: 'dateTo',
+          schema: {
+            type: 'string',
+            format: 'date'
+          },
+          description: 'تاريخ النهاية'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم تصدير البيانات بنجاح',
+          content: {
+            'application/csv': {
+              schema: {
+                type: 'string'
+              }
+            },
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+              schema: {
+                type: 'string'
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - الأدمن فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }; 
