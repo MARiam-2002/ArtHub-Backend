@@ -143,18 +143,118 @@ router.get(
  *                       type: object
  *                       description: إحصائيات الطلبات
  *                       properties:
- *                         labels:
+ *                         chartData:
  *                           type: array
+ *                           description: بيانات الرسوم البيانية للطلبات
  *                           items:
- *                             type: string
- *                           example: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
- *                           description: أسماء الأشهر باللغة العربية
- *                         data:
- *                           type: array
- *                           items:
- *                             type: number
- *                           example: [85, 92, 98, 105, 112, 118, 125, 132, 140, 148, 156, 165]
- *                           description: عدد الطلبات لكل شهر
+ *                             type: object
+ *                             properties:
+ *                               month:
+ *                                 type: string
+ *                                 example: "يناير"
+ *                                 description: اسم الشهر باللغة العربية
+ *                               value:
+ *                                 type: number
+ *                                 example: 85
+ *                                 description: إجمالي عدد الطلبات للشهر
+ *                               completed:
+ *                                 type: number
+ *                                 example: 70
+ *                                 description: عدد الطلبات المكتملة
+ *                               pending:
+ *                                 type: number
+ *                                 example: 10
+ *                                 description: عدد الطلبات قيد التنفيذ
+ *                               rejected:
+ *                                 type: number
+ *                                 example: 5
+ *                                 description: عدد الطلبات المرفوضة
+ *                           example: [
+ *                             {
+ *                               "month": "يناير",
+ *                               "value": 85,
+ *                               "completed": 72,
+ *                               "pending": 9,
+ *                               "rejected": 4
+ *                             },
+ *                             {
+ *                               "month": "فبراير",
+ *                               "value": 92,
+ *                               "completed": 78,
+ *                               "pending": 9,
+ *                               "rejected": 5
+ *                             },
+ *                             {
+ *                               "month": "مارس",
+ *                               "value": 98,
+ *                               "completed": 83,
+ *                               "pending": 10,
+ *                               "rejected": 5
+ *                             },
+ *                             {
+ *                               "month": "أبريل",
+ *                               "value": 105,
+ *                               "completed": 89,
+ *                               "pending": 11,
+ *                               "rejected": 5
+ *                             },
+ *                             {
+ *                               "month": "مايو",
+ *                               "value": 112,
+ *                               "completed": 95,
+ *                               "pending": 11,
+ *                               "rejected": 6
+ *                             },
+ *                             {
+ *                               "month": "يونيو",
+ *                               "value": 118,
+ *                               "completed": 100,
+ *                               "pending": 12,
+ *                               "rejected": 6
+ *                             },
+ *                             {
+ *                               "month": "يوليو",
+ *                               "value": 125,
+ *                               "completed": 106,
+ *                               "pending": 13,
+ *                               "rejected": 6
+ *                             },
+ *                             {
+ *                               "month": "أغسطس",
+ *                               "value": 132,
+ *                               "completed": 112,
+ *                               "pending": 13,
+ *                               "rejected": 7
+ *                             },
+ *                             {
+ *                               "month": "سبتمبر",
+ *                               "value": 140,
+ *                               "completed": 119,
+ *                               "pending": 14,
+ *                               "rejected": 7
+ *                             },
+ *                             {
+ *                               "month": "أكتوبر",
+ *                               "value": 148,
+ *                               "completed": 126,
+ *                               "pending": 15,
+ *                               "rejected": 7
+ *                             },
+ *                             {
+ *                               "month": "نوفمبر",
+ *                               "value": 156,
+ *                               "completed": 133,
+ *                               "pending": 16,
+ *                               "rejected": 7
+ *                             },
+ *                             {
+ *                               "month": "ديسمبر",
+ *                               "value": 165,
+ *                               "completed": 140,
+ *                               "pending": 17,
+ *                               "rejected": 8
+ *                             }
+ *                           ]
  *                         summary:
  *                           type: object
  *                           description: ملخص إحصائيات الطلبات
@@ -175,18 +275,102 @@ router.get(
  *                       type: object
  *                       description: إحصائيات الإيرادات
  *                       properties:
- *                         labels:
+ *                         chartData:
  *                           type: array
+ *                           description: بيانات الرسوم البيانية للإيرادات
  *                           items:
- *                             type: string
- *                           example: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
- *                           description: أسماء الأشهر باللغة العربية
- *                         data:
- *                           type: array
- *                           items:
- *                             type: number
- *                           example: [120000, 135000, 142000, 138000, 156000, 168000, 175000, 182000, 195000, 210000, 225000, 240000]
- *                           description: الإيرادات لكل شهر
+ *                             type: object
+ *                             properties:
+ *                               month:
+ *                                 type: string
+ *                                 example: "يناير"
+ *                                 description: اسم الشهر باللغة العربية
+ *                               value:
+ *                                 type: number
+ *                                 example: 120000
+ *                                 description: إجمالي الإيرادات للشهر
+ *                               orderCount:
+ *                                 type: number
+ *                                 example: 85
+ *                                 description: عدد الطلبات المكتملة للشهر
+ *                               averageOrderValue:
+ *                                 type: number
+ *                                 example: 1411.76
+ *                                 description: متوسط قيمة الطلب للشهر
+ *                           example: [
+ *                             {
+ *                               "month": "يناير",
+ *                               "value": 120000,
+ *                               "orderCount": 80,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "فبراير",
+ *                               "value": 135000,
+ *                               "orderCount": 90,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "مارس",
+ *                               "value": 142000,
+ *                               "orderCount": 95,
+ *                               "averageOrderValue": 1495
+ *                             },
+ *                             {
+ *                               "month": "أبريل",
+ *                               "value": 138000,
+ *                               "orderCount": 92,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "مايو",
+ *                               "value": 156000,
+ *                               "orderCount": 104,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "يونيو",
+ *                               "value": 168000,
+ *                               "orderCount": 112,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "يوليو",
+ *                               "value": 175000,
+ *                               "orderCount": 117,
+ *                               "averageOrderValue": 1496
+ *                             },
+ *                             {
+ *                               "month": "أغسطس",
+ *                               "value": 182000,
+ *                               "orderCount": 121,
+ *                               "averageOrderValue": 1504
+ *                             },
+ *                             {
+ *                               "month": "سبتمبر",
+ *                               "value": 195000,
+ *                               "orderCount": 130,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "أكتوبر",
+ *                               "value": 210000,
+ *                               "orderCount": 140,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "نوفمبر",
+ *                               "value": 225000,
+ *                               "orderCount": 150,
+ *                               "averageOrderValue": 1500
+ *                             },
+ *                             {
+ *                               "month": "ديسمبر",
+ *                               "value": 240000,
+ *                               "orderCount": 160,
+ *                               "averageOrderValue": 1500
+ *                             }
+ *                           ]
  *                         summary:
  *                           type: object
  *                           description: ملخص إحصائيات الإيرادات
