@@ -199,26 +199,7 @@ export const getReviewDetails = asyncHandler(async (req, res, next) => {
     success: true,
     message: 'تم جلب تفاصيل التقييم بنجاح',
     data: {
-      _id: reviewData._id,
-      rating: reviewData.rating,
-      comment: reviewData.comment,
-      createdAt: reviewData.createdAt,
-      updatedAt: reviewData.updatedAt,
-      client: {
-        name: reviewData.userName,
-        email: reviewData.userEmail,
-        image: reviewData.userImage
-      },
-      artist: {
-        name: reviewData.artistName,
-        email: reviewData.artistEmail,
-        image: reviewData.artistImage
-      },
-      artwork: {
-        title: reviewData.artworkTitle,
-        image: reviewData.artworkImage,
-        description: reviewData.artworkDescription
-      }
+      comment: reviewData.comment
     }
   });
 });

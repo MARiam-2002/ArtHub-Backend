@@ -2625,78 +2625,10 @@ export const adminPaths = {
                   data: {
                     type: 'object',
                     properties: {
-                      _id: {
-                        type: 'string',
-                        example: '507f1f77bcf86cd799439011'
-                      },
-                      rating: {
-                        type: 'number',
-                        example: 4
-                      },
                       comment: {
                         type: 'string',
-                        example: 'عمل رائع ومميز، الفنان متعاون جداً'
-                      },
-                      createdAt: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-01-18T10:30:00.000Z'
-                      },
-                      updatedAt: {
-                        type: 'string',
-                        format: 'date-time',
-                        example: '2025-01-18T10:30:00.000Z'
-                      },
-                      client: {
-                        type: 'object',
-                        properties: {
-                          name: {
-                            type: 'string',
-                            example: 'منى سالم'
-                          },
-                          email: {
-                            type: 'string',
-                            example: 'mona.salem@example.com'
-                          },
-                          image: {
-                            type: 'string',
-                            example: 'https://example.com/client.jpg'
-                          }
-                        }
-                      },
-                      artist: {
-                        type: 'object',
-                        properties: {
-                          name: {
-                            type: 'string',
-                            example: 'أحمد محمد'
-                          },
-                          email: {
-                            type: 'string',
-                            example: 'ahmed.mohamed@example.com'
-                          },
-                          image: {
-                            type: 'string',
-                            example: 'https://example.com/artist.jpg'
-                          }
-                        }
-                      },
-                      artwork: {
-                        type: 'object',
-                        properties: {
-                          title: {
-                            type: 'string',
-                            example: 'لوحة زيتية مخصصة'
-                          },
-                          image: {
-                            type: 'string',
-                            example: 'https://example.com/artwork.jpg'
-                          },
-                          description: {
-                            type: 'string',
-                            example: 'لوحة زيتية مخصصة بحجم 50x70 سم'
-                          }
-                        }
+                        example: 'عمل رائع ومميز، الفنان متعاون جداً',
+                        description: 'نص التعليق الكامل'
                       }
                     }
                   }
