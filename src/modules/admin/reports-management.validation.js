@@ -34,13 +34,4 @@ export const deleteReportValidation = {
       'any.required': 'معرف البلاغ مطلوب'
     })
   })
-};
-
-// Validation for exporting reports
-export const exportReportsValidation = {
-  query: joi.object({
-    format: joi.string().valid('json', 'csv').default('json').messages({
-      'any.only': 'صيغة التصدير يجب أن تكون json أو csv'
-    })
-  }).optional()
 }; 
