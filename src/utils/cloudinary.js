@@ -98,6 +98,13 @@ export const uploadOptimizedImage = async (imageData, options = {}) => {
   // إذا كان imageData buffer، استخدم stream
   if (Buffer.isBuffer(imageData)) {
     console.log('🔄 Using buffer upload with size:', imageData.length);
+    
+    // التحقق من إعدادات Cloudinary أولاً
+    if (!process.env.CLOUD_NAME || !process.env.API_KEY || !process.env.API_SECRET) {
+      console.error('❌ Cloudinary environment variables are missing');
+      throw new Error('Cloudinary configuration is incomplete');
+    }
+    
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(mergedOptions, (error, result) => {
         if (error) {

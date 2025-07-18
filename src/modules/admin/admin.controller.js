@@ -116,6 +116,9 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       
       // رفع الصورة على Cloudinary باستخدام buffer
       console.log('🔄 Starting Cloudinary upload...');
+      console.log('📸 Buffer size:', req.file.buffer.length);
+      console.log('📸 Buffer type:', typeof req.file.buffer);
+      
       const uploadResult = await uploadOptimizedImage(req.file.buffer, {
         folder: 'arthub/admin-profiles',
         public_id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -125,11 +128,16 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
 
       console.log('📊 Upload result:', uploadResult);
 
-      profileImageData = {
-        url: uploadResult.secure_url,
-        id: uploadResult.public_id
-      };
-      console.log('✅ Profile image uploaded to Cloudinary:', profileImageData.url);
+      if (uploadResult && uploadResult.secure_url) {
+        profileImageData = {
+          url: uploadResult.secure_url,
+          id: uploadResult.public_id
+        };
+        console.log('✅ Profile image uploaded to Cloudinary:', profileImageData.url);
+      } else {
+        console.log('⚠️ Upload result is invalid, using fallback');
+        throw new Error('Invalid upload result');
+      }
     } catch (error) {
       console.error('❌ Error uploading profile image:', error);
       console.error('❌ Error details:', {
