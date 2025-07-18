@@ -137,11 +137,16 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
         stack: error.stack,
         code: error.code
       });
-      return res.status(400).json({
-        success: false,
-        message: 'فشل في رفع الصورة',
-        data: null
-      });
+      
+      // Fallback: استخدام صورة افتراضية بدلاً من إرجاع خطأ
+      console.log('🔄 Using fallback: default image');
+      profileImageData = {
+        url: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png',
+        id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
+      };
+      
+      // لا نرجع خطأ، نستمر مع الصورة الافتراضية
+      console.log('✅ Using default profile image as fallback');
     }
   } else {
     console.log('📸 No file uploaded');

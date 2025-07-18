@@ -23,6 +23,13 @@ console.log('🔧 Cloudinary config check:', {
   api_secret: process.env.API_SECRET ? 'Set' : 'Missing'
 });
 
+// التحقق من القيم الفعلية (بدون كشف السر)
+console.log('🔧 Cloudinary config values:', {
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY ? `${process.env.API_KEY.substring(0, 4)}...` : 'Missing',
+  api_secret: process.env.API_SECRET ? `${process.env.API_SECRET.substring(0, 4)}...` : 'Missing'
+});
+
 /**
  * إنشاء URL للصورة مع إعدادات CDN للتخزين المؤقت وتحسينات الأداء
  * @param {string} publicId - معرف الصورة في Cloudinary
@@ -106,10 +113,15 @@ export const uploadOptimizedImage = async (imageData, options = {}) => {
       uploadStream.end(imageData);
     }).catch(async (error) => {
       console.log('🔄 Stream upload failed, trying direct upload...');
-      // Fallback: تحويل buffer إلى base64
-      const base64Data = imageData.toString('base64');
-      const dataURI = `data:image/jpeg;base64,${base64Data}`;
-      return await cloudinary.uploader.upload(dataURI, mergedOptions);
+      try {
+        // Fallback: تحويل buffer إلى base64
+        const base64Data = imageData.toString('base64');
+        const dataURI = `data:image/jpeg;base64,${base64Data}`;
+        return await cloudinary.uploader.upload(dataURI, mergedOptions);
+      } catch (fallbackError) {
+        console.error('❌ Direct upload also failed:', fallbackError);
+        throw fallbackError;
+      }
     });
   }
 
