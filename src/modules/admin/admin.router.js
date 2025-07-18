@@ -110,13 +110,13 @@ router.get('/admins',
  *   post:
  *     summary: Create new admin
  *     tags: [Admin Dashboard]
- *     description: Create a new admin user (SuperAdmin only)
+ *     description: Create a new admin user with optional profile image upload (SuperAdmin only)
  *     security:
  *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -126,20 +126,71 @@ router.get('/admins',
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: Admin email address
+ *                 example: "newadmin@example.com"
  *               password:
  *                 type: string
  *                 minLength: 8
+ *                 description: Admin password
+ *                 example: "Password123!"
  *               displayName:
  *                 type: string
+ *                 description: Admin display name
+ *                 example: "أحمد محمد"
  *               role:
  *                 type: string
  *                 enum: [admin, superadmin]
  *                 default: admin
+ *                 description: Admin role
+ *                 example: "admin"
+ *               profileImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Profile image file (JPEG, PNG) - optional
  *     responses:
  *       201:
  *         description: Admin created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إنشاء الأدمن بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     displayName:
+ *                       type: string
+ *                       example: "أحمد محمد"
+ *                     email:
+ *                       type: string
+ *                       example: "newadmin@example.com"
+ *                     role:
+ *                       type: string
+ *                       example: "admin"
+ *                     profileImage:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ *                           example: "https://res.cloudinary.com/example/image/upload/v1234567890/admin-profile.jpg"
+ *                         id:
+ *                           type: string
+ *                           example: "arthub/admin-profiles/admin_1234567890_abc123"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
  *       400:
- *         description: Bad request
+ *         description: Bad request - Invalid data, email already exists, or image upload failed
  *       401:
  *         description: Unauthorized
  *       403:
@@ -148,6 +199,7 @@ router.get('/admins',
 router.post('/admins', 
   authenticate, 
   isAuthorized('superadmin'), 
+  fileUpload(filterObject.image).single('profileImage'),
   isValidation(Validators.createAdminSchema), 
   adminController.createAdmin
 );

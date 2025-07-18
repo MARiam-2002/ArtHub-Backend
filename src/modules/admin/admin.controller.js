@@ -97,15 +97,51 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
+  // Handle profile image upload to Cloudinary
+  let profileImageData = null;
+  if (req.file) {
+    try {
+      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
+      
+      // رفع الصورة على Cloudinary
+      const uploadResult = await uploadOptimizedImage(req.file.path, {
+        folder: 'arthub/admin-profiles',
+        public_id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        overwrite: true,
+        resource_type: 'image'
+      });
+
+      profileImageData = {
+        url: uploadResult.secure_url,
+        id: uploadResult.public_id
+      };
+      console.log('✅ Profile image uploaded to Cloudinary:', profileImageData.url);
+    } catch (error) {
+      console.error('❌ Error uploading profile image:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'فشل في رفع الصورة',
+        data: null
+      });
+    }
+  }
+
   // Create admin (password will be hashed by pre-save hook)
-  const admin = await userModel.create({
+  const adminData = {
     displayName,
     email,
     password,
     role,
     isActive: true,
     isVerified: true
-  });
+  };
+
+  // Add profile image if uploaded
+  if (profileImageData) {
+    adminData.profileImage = profileImageData;
+  }
+
+  const admin = await userModel.create(adminData);
 
   res.status(201).json({
     success: true,
@@ -115,6 +151,7 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       displayName: admin.displayName,
       email: admin.email,
       role: admin.role,
+      profileImage: admin.profileImage,
       createdAt: admin.createdAt
     }
   });

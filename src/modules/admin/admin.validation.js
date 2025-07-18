@@ -67,6 +67,18 @@ export const createAdminSchema = {
       .messages({
         'any.only': 'نوع المستخدم يجب أن يكون admin أو superadmin'
       })
+  }),
+  files: joi.object({
+    profileImage: joi.object({
+      fieldname: joi.string().valid('profileImage'),
+      originalname: joi.string(),
+      encoding: joi.string(),
+      mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg'),
+      size: joi.number().max(5 * 1024 * 1024), // 5MB max
+      destination: joi.string(),
+      filename: joi.string(),
+      path: joi.string()
+    }).optional()
   })
 };
 
