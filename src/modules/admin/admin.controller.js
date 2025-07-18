@@ -1,3 +1,5 @@
+// NEW VERSION 2025-07-18 - Admin Controller with Base64 Image Upload
+// FORCE DEPLOYMENT TRIGGER - This comment forces Vercel to redeploy
 import userModel from '../../../DB/models/user.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -97,11 +99,12 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Handle profile image upload to Cloudinary
+  // Handle profile image upload - NEW VERSION 2025-07-18
   let profileImageData = null;
   console.log('🔍 Request body:', req.body);
   console.log('🔍 Request files:', req.files);
   console.log('🔍 Request file:', req.file);
+  console.log('🆕 NEW VERSION: Using base64 encoding instead of Cloudinary');
   
   if (req.file) {
     console.log('📸 File received:', {

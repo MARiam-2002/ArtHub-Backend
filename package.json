@@ -1,7 +1,7 @@
 {
   "name": "arthub-backend",
-  "version": "1.0.0",
-  "description": "API backend for ArtHub platform",
+  "version": "1.0.1",
+  "description": "API backend for ArtHub platform - Updated with Base64 Image Upload",
   "main": "index.js",
   "type": "module",
   "scripts": {
