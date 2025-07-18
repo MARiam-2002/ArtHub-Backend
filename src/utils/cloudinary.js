@@ -83,10 +83,17 @@ export const uploadOptimizedImage = async (imageData, options = {}) => {
 
   // إذا كان imageData buffer، استخدم stream
   if (Buffer.isBuffer(imageData)) {
-    return await cloudinary.uploader.upload_stream(mergedOptions, (error, result) => {
-      if (error) throw error;
-      return result;
-    }).end(imageData);
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(mergedOptions, (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      });
+      
+      uploadStream.end(imageData);
+    });
   }
 
   // إذا كان string، استخدم upload العادي

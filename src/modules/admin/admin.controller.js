@@ -100,6 +100,13 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
   // Handle profile image upload to Cloudinary
   let profileImageData = null;
   if (req.file) {
+    console.log('📸 File received:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
+    });
+    
     try {
       const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
       
@@ -124,6 +131,8 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
         data: null
       });
     }
+  } else {
+    console.log('📸 No file uploaded');
   }
 
   // Create admin (password will be hashed by pre-save hook)
@@ -142,6 +151,12 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
   }
 
   const admin = await userModel.create(adminData);
+
+  // إذا تم رفع صورة، تأكد من حفظها بشكل صحيح
+  if (profileImageData) {
+    admin.profileImage = profileImageData;
+    await admin.save();
+  }
 
   res.status(201).json({
     success: true,
