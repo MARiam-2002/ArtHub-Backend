@@ -559,12 +559,12 @@ export const adminPaths = {
     post: {
       tags: ['Admin'],
       summary: 'إنشاء أدمن جديد',
-      description: 'إنشاء مستخدم أدمن جديد (السوبر أدمن فقط)',
+      description: 'إنشاء مستخدم أدمن جديد مع رفع صورة اختيارية (السوبر أدمن فقط)',
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
         content: {
-          'application/json': {
+          'multipart/form-data': {
             schema: {
               type: 'object',
               required: ['email', 'password'],
@@ -592,6 +592,11 @@ export const adminPaths = {
                   enum: ['admin', 'superadmin'],
                   default: 'admin',
                   description: 'نوع الأدمن'
+                },
+                profileImage: {
+                  type: 'string',
+                  format: 'binary',
+                  description: 'صورة الملف الشخصي (JPEG, PNG) - اختياري'
                 }
               }
             }
@@ -618,23 +623,38 @@ export const adminPaths = {
                     type: 'object',
                     properties: {
                       _id: {
-                        type: 'string'
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439011'
                       },
                       email: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'newadmin@example.com'
                       },
                       displayName: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'أحمد محمد'
                       },
                       role: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'admin'
                       },
-                      isActive: {
-                        type: 'boolean'
+                      profileImage: {
+                        type: 'object',
+                        properties: {
+                          url: {
+                            type: 'string',
+                            example: 'https://res.cloudinary.com/example/image/upload/v1234567890/admin-profile.jpg'
+                          },
+                          id: {
+                            type: 'string',
+                            example: 'arthub/admin-profiles/admin_1234567890_abc123'
+                          }
+                        }
                       },
                       createdAt: {
                         type: 'string',
-                        format: 'date-time'
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:00.000Z'
                       }
                     }
                   }
@@ -644,7 +664,7 @@ export const adminPaths = {
           }
         },
         400: {
-          description: 'بيانات غير صحيحة',
+          description: 'بيانات غير صحيحة أو فشل في رفع الصورة',
           content: {
             'application/json': {
               schema: {
@@ -656,7 +676,7 @@ export const adminPaths = {
                   },
                   message: {
                     type: 'string',
-                    example: 'البريد الإلكتروني مستخدم بالفعل'
+                    example: 'البريد الإلكتروني مستخدم بالفعل أو فشل في رفع الصورة'
                   }
                 }
               }
