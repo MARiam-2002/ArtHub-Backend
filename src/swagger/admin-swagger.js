@@ -711,7 +711,7 @@ export const adminPaths = {
     put: {
       tags: ['Admin'],
       summary: 'تحديث الأدمن',
-      description: 'تحديث معلومات الأدمن (السوبر أدمن فقط)',
+      description: 'تحديث معلومات الأدمن مع دعم رفع ملف الصورة وتغيير كلمة المرور (السوبر أدمن فقط)',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -727,27 +727,45 @@ export const adminPaths = {
       requestBody: {
         required: true,
         content: {
-          'application/json': {
+          'multipart/form-data': {
             schema: {
               type: 'object',
               properties: {
                 displayName: {
                   type: 'string',
-                  description: 'اسم العرض'
+                  minLength: 2,
+                  maxLength: 50,
+                  description: 'اسم العرض',
+                  example: 'أحمد محمد'
                 },
-                status: {
+                email: {
                   type: 'string',
-                  enum: ['active', 'inactive', 'banned'],
-                  description: 'حالة الحساب'
-                },
-                isActive: {
-                  type: 'boolean',
-                  description: 'هل الحساب نشط'
+                  format: 'email',
+                  description: 'البريد الإلكتروني',
+                  example: 'ahmed@example.com'
                 },
                 role: {
                   type: 'string',
                   enum: ['admin', 'superadmin'],
-                  description: 'نوع الأدمن'
+                  description: 'نوع الأدمن',
+                  example: 'admin'
+                },
+                isActive: {
+                  type: 'boolean',
+                  description: 'هل الحساب نشط',
+                  example: true
+                },
+                profileImage: {
+                  type: 'string',
+                  format: 'binary',
+                  description: 'صورة الملف الشخصي (JPEG, PNG)',
+                  example: 'image file'
+                },
+                password: {
+                  type: 'string',
+                  minLength: 8,
+                  description: 'كلمة المرور الجديدة (سيتم تشفيرها تلقائياً)',
+                  example: 'NewPassword123!'
                 }
               }
             }
@@ -774,19 +792,34 @@ export const adminPaths = {
                     type: 'object',
                     properties: {
                       _id: {
-                        type: 'string'
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439011'
                       },
                       email: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'ahmed@example.com'
                       },
                       displayName: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'أحمد محمد'
                       },
                       role: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'admin'
                       },
                       isActive: {
-                        type: 'boolean'
+                        type: 'boolean',
+                        example: true
+                      },
+                      profileImage: {
+                        type: 'string',
+                        example: 'https://res.cloudinary.com/example/image/upload/arthub/admin-profiles/admin_507f1f77bcf86cd799439011_1234567890.jpg',
+                        description: 'رابط صورة الملف الشخصي على Cloudinary'
+                      },
+                      updatedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:00.000Z'
                       }
                     }
                   }
@@ -3280,6 +3313,508 @@ export const adminPaths = {
       }
     }
   },
+
+  '/api/admin/orders': {
+    get: {
+      tags: ['Order Management'],
+      summary: 'جلب جميع الطلبات',
+      description: 'جلب قائمة جميع الطلبات مع التصفية والترتيب والتصفح',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          },
+          description: 'عدد العناصر في الصفحة'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب الطلبات بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب الطلبات بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      orders: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string',
+                              example: '507f1f77bcf86cd799439011'
+                            },
+                            title: {
+                              type: 'string',
+                              example: 'لوحة زيتية مخصصة'
+                            },
+                            description: {
+                              type: 'string',
+                              example: 'وصف الطلب'
+                            },
+                            price: {
+                              type: 'number',
+                              example: 850
+                            },
+                            status: {
+                              type: 'object',
+                              properties: {
+                                value: {
+                                  type: 'string',
+                                  example: 'completed'
+                                },
+                                label: {
+                                  type: 'string',
+                                  example: 'مكتمل'
+                                },
+                                color: {
+                                  type: 'string',
+                                  example: '#4CAF50'
+                                }
+                              }
+                            },
+                            user: {
+                              type: 'object',
+                              properties: {
+                                _id: {
+                                  type: 'string'
+                                },
+                                displayName: {
+                                  type: 'string',
+                                  example: 'عمر خالد'
+                                },
+                                email: {
+                                  type: 'string',
+                                  example: 'omar@example.com'
+                                },
+                                profileImage: {
+                                  type: 'string'
+                                }
+                              }
+                            },
+                            artist: {
+                              type: 'object',
+                              properties: {
+                                _id: {
+                                  type: 'string'
+                                },
+                                displayName: {
+                                  type: 'string',
+                                  example: 'أحمد محمد'
+                                },
+                                email: {
+                                  type: 'string',
+                                  example: 'ahmed@example.com'
+                                },
+                                profileImage: {
+                                  type: 'string'
+                                }
+                              }
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time',
+                              example: '2025-01-18T10:30:00.000Z'
+                            },
+                            updatedAt: {
+                              type: 'string',
+                              format: 'date-time',
+                              example: '2025-01-18T10:30:00.000Z'
+                            }
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'integer',
+                            example: 1
+                          },
+                          limit: {
+                            type: 'integer',
+                            example: 20
+                          },
+                          total: {
+                            type: 'integer',
+                            example: 150
+                          },
+                          pages: {
+                            type: 'integer',
+                            example: 8
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/orders/{id}/status': {
+    patch: {
+      tags: ['Order Management'],
+      summary: 'تحديث حالة الطلب',
+      description: 'تحديث حالة الطلب مع إرسال إشعارات للمستخدمين',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف الطلب'
+        }
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['status'],
+              properties: {
+                status: {
+                  type: 'string',
+                  enum: ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'],
+                  description: 'الحالة الجديدة للطلب'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'تم تحديث حالة الطلب بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تحديث حالة الطلب بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      _id: {
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439011'
+                      },
+                      status: {
+                        type: 'object',
+                        properties: {
+                          value: {
+                            type: 'string',
+                            example: 'completed'
+                          },
+                          label: {
+                            type: 'string',
+                            example: 'مكتمل'
+                          },
+                          color: {
+                            type: 'string',
+                            example: '#4CAF50'
+                          }
+                        }
+                      },
+                      updatedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:00.000Z'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'بيانات غير صحيحة',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'بيانات غير صحيحة'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'الطلب غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الطلب غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/orders/{id}': {
+    delete: {
+      tags: ['Order Management'],
+      summary: 'حذف طلب',
+      description: 'حذف طلب (حذف ناعم)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'id',
+          required: true,
+          schema: {
+            type: 'string'
+          },
+          description: 'معرف الطلب'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم حذف الطلب بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم حذف الطلب بنجاح'
+                  },
+                  data: {
+                    type: 'null'
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'معرف الطلب غير صالح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'معرف الطلب غير صالح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          description: 'غير مصرح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        403: {
+          description: 'ممنوع - للمديرين فقط',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'الطلب غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الطلب غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
 
 }; 

@@ -82,6 +82,12 @@ export const updateAdminSchema = {
         'string.min': 'الاسم يجب أن يكون حرفين على الأقل',
         'string.max': 'الاسم يجب أن يكون أقل من 50 حرف'
       }),
+    email: joi.string()
+      .email({ tlds: { allow: false } })
+      .optional()
+      .messages({
+        'string.email': 'يرجى إدخال بريد إلكتروني صحيح'
+      }),
     status: joi.string()
       .valid('active', 'inactive', 'banned')
       .optional()
@@ -98,6 +104,14 @@ export const updateAdminSchema = {
       .optional()
       .messages({
         'any.only': 'نوع المستخدم يجب أن يكون admin أو superadmin'
+      }),
+    password: joi.string()
+      .min(8)
+      .pattern(passwordPattern)
+      .optional()
+      .messages({
+        'string.min': 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
+        'string.pattern.base': 'كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم أو رمز خاص'
       })
   })
 };

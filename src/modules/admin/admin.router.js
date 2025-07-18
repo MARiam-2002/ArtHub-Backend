@@ -4,6 +4,7 @@ import { authenticate } from '../../middleware/auth.middleware.js';
 import { isAuthorized } from '../../middleware/authorization.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './admin.validation.js';
+import { fileUpload, filterObject } from '../../utils/multer.js';
 import orderManagementRouter from './order-management.router.js';
 import reviewsManagementRouter from './reviews-management.router.js';
 import reportsManagementRouter from './reports-management.router.js';
@@ -157,7 +158,7 @@ router.post('/admins',
  *   put:
  *     summary: Update admin
  *     tags: [Admin Dashboard]
- *     description: Update admin information (SuperAdmin only)
+ *     description: Update admin information including profile image file upload and password (SuperAdmin only)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -166,6 +167,7 @@ router.post('/admins',
  *         required: true
  *         schema:
  *           type: string
+ *         description: Admin ID
  *     requestBody:
  *       required: true
  *       content:
@@ -175,19 +177,75 @@ router.post('/admins',
  *             properties:
  *               displayName:
  *                 type: string
- *               status:
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 description: Admin display name
+ *                 example: "أحمد محمد"
+ *               email:
  *                 type: string
- *                 enum: [active, inactive, banned]
- *               isActive:
- *                 type: boolean
+ *                 format: email
+ *                 description: Admin email address
+ *                 example: "ahmed@example.com"
  *               role:
  *                 type: string
  *                 enum: [admin, superadmin]
+ *                 description: Admin role
+ *                 example: "admin"
+ *               isActive:
+ *                 type: boolean
+ *                 description: Admin active status
+ *                 example: true
+ *               profileImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Profile image file (JPEG, PNG)
+ *                 example: "image file"
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: New password (will be hashed automatically)
+ *                 example: "NewPassword123!"
  *     responses:
  *       200:
  *         description: Admin updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث الأدمن بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     displayName:
+ *                       type: string
+ *                       example: "أحمد محمد"
+ *                     email:
+ *                       type: string
+ *                       example: "ahmed@example.com"
+ *                     role:
+ *                       type: string
+ *                       example: "admin"
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     profileImage:
+ *                       type: string
+ *                       example: "https://example.com/profile.jpg"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
  *       400:
- *         description: Bad request
+ *         description: Bad request - Invalid data or email already exists
  *       401:
  *         description: Unauthorized
  *       403:
@@ -198,6 +256,7 @@ router.post('/admins',
 router.put('/admins/:id', 
   authenticate, 
   isAuthorized('superadmin'), 
+  fileUpload(filterObject.image).single('profileImage'),
   isValidation(Validators.updateAdminSchema), 
   adminController.updateAdmin
 );

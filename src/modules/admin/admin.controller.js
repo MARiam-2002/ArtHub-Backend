@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 
 /**
  * @desc    Get all admins
- * @route   GET /api/v1/admin/admins
+ * @route   GET /api/admin/admins
  * @access  Private (SuperAdmin only)
  */
 export const getAdmins = asyncHandler(async (req, res, next) => {
@@ -79,7 +79,7 @@ export const getAdmins = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Create new admin
- * @route   POST /api/v1/admin/admins
+ * @route   POST /api/admin/admins
  * @access  Private (SuperAdmin only)
  */
 export const createAdmin = asyncHandler(async (req, res, next) => {
@@ -122,14 +122,14 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Update admin
- * @route   PUT /api/v1/admin/admins/:id
+ * @route   PUT /api/admin/admins/:id
  * @access  Private (SuperAdmin only)
  */
 export const updateAdmin = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { displayName, email, role, isActive } = req.body;
+  const { displayName, email, role, isActive, password } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -160,11 +160,45 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     }
   }
 
+  // Handle profile image upload to Cloudinary
+  let uploadedImageUrl = null;
+  if (req.file) {
+    try {
+      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
+      
+      // رفع الصورة على Cloudinary
+      const uploadResult = await uploadOptimizedImage(req.file.path, {
+        folder: 'arthub/admin-profiles',
+        public_id: `admin_${admin._id}_${Date.now()}`,
+        overwrite: true,
+        resource_type: 'image'
+      });
+
+      uploadedImageUrl = uploadResult.secure_url;
+      console.log('✅ Profile image uploaded to Cloudinary:', uploadedImageUrl);
+    } catch (error) {
+      console.error('❌ Error uploading profile image:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'فشل في رفع الصورة',
+        data: null
+      });
+    }
+  }
+
   // Update fields
   if (displayName) admin.displayName = displayName;
   if (email) admin.email = email;
   if (role && ['admin', 'superadmin'].includes(role)) admin.role = role;
   if (typeof isActive === 'boolean') admin.isActive = isActive;
+  if (uploadedImageUrl) {
+    admin.profileImage = uploadedImageUrl;
+  }
+  
+  // Update password if provided
+  if (password) {
+    admin.password = password; // سيتم تشفيرها تلقائياً بواسطة pre-save hook
+  }
 
   await admin.save();
 
@@ -177,6 +211,7 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
       email: admin.email,
       role: admin.role,
       isActive: admin.isActive,
+      profileImage: admin.profileImage,
       updatedAt: admin.updatedAt
     }
   });
@@ -184,7 +219,7 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Delete admin
- * @route   DELETE /api/v1/admin/admins/:id
+ * @route   DELETE /api/admin/admins/:id
  * @access  Private (SuperAdmin only)
  */
 export const deleteAdmin = asyncHandler(async (req, res, next) => {
@@ -314,7 +349,7 @@ export const adminLogin = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Get admin profile
- * @route   GET /api/v1/admin/profile
+ * @route   GET /api/admin/profile
  * @access  Private (Admin, SuperAdmin)
  */
 export const getAdminProfile = asyncHandler(async (req, res, next) => {
@@ -351,7 +386,7 @@ export const getAdminProfile = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Update admin profile
- * @route   PUT /api/v1/admin/profile
+ * @route   PUT /api/admin/profile
  * @access  Private (Admin, SuperAdmin)
  */
 export const updateAdminProfile = asyncHandler(async (req, res, next) => {
@@ -402,7 +437,7 @@ export const updateAdminProfile = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Change admin password
- * @route   PUT /api/v1/admin/change-password
+ * @route   PUT /api/admin/change-password
  * @access  Private (Admin, SuperAdmin)
  */
 export const changePassword = asyncHandler(async (req, res, next) => {
@@ -449,7 +484,7 @@ export const changePassword = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Change admin password (SuperAdmin only)
- * @route   PUT /api/v1/admin/admins/:id/change-password
+ * @route   PUT /api/admin/admins/:id/change-password
  * @access  Private (SuperAdmin only)
  */
 export const changeAdminPassword = asyncHandler(async (req, res, next) => {
@@ -550,7 +585,7 @@ export const getUsers = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Get user details
- * @route   GET /api/v1/admin/users/:id
+ * @route   GET /api/admin/users/:id
  * @access  Private (Admin, SuperAdmin)
  */
 export const getUserDetails = asyncHandler(async (req, res, next) => {
@@ -700,7 +735,7 @@ export const blockUser = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Send message to user
- * @route   POST /api/v1/admin/users/:id/message
+ * @route   POST /api/admin/users/:id/message
  * @access  Private (Admin, SuperAdmin)
  */
 export const sendMessageToUser = asyncHandler(async (req, res, next) => {
@@ -816,7 +851,7 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Get user reviews
- * @route   GET /api/v1/admin/users/:id/reviews
+ * @route   GET /api/admin/users/:id/reviews
  * @access  Private (Admin, SuperAdmin)
  */
 export const getUserReviews = asyncHandler(async (req, res, next) => {
@@ -921,7 +956,7 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Export users data
- * @route   GET /api/v1/admin/users/export
+ * @route   GET /api/admin/users/export
  * @access  Private (Admin, SuperAdmin)
  */
 export const exportUsers = asyncHandler(async (req, res, next) => {
