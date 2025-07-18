@@ -112,38 +112,35 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
     
     try {
-      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
-      
-      // رفع الصورة على Cloudinary باستخدام buffer
-      console.log('🔄 Starting Cloudinary upload...');
+      // تحويل الصورة إلى base64 مباشرة
+      console.log('🔄 Converting image to base64...');
       console.log('📸 Buffer size:', req.file.buffer.length);
-      console.log('📸 Buffer type:', typeof req.file.buffer);
       
-      const uploadResult = await uploadOptimizedImage(req.file.buffer, {
-        folder: 'arthub/admin-profiles',
-        public_id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        overwrite: true,
-        resource_type: 'image'
+      const base64Data = req.file.buffer.toString('base64');
+      const mimeType = req.file.mimetype || 'image/jpeg';
+      const dataUrl = `data:${mimeType};base64,${base64Data}`;
+      
+      console.log('✅ Image converted to base64 successfully');
+      
+      profileImageData = {
+        url: dataUrl,
+        id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        originalName: req.file.originalname,
+        mimeType: mimeType,
+        size: req.file.size
+      };
+      
+      console.log('✅ Profile image processed successfully:', {
+        id: profileImageData.id,
+        size: profileImageData.size,
+        mimeType: profileImageData.mimeType
       });
-
-      console.log('📊 Upload result:', uploadResult);
-
-      if (uploadResult && uploadResult.secure_url) {
-        profileImageData = {
-          url: uploadResult.secure_url,
-          id: uploadResult.public_id
-        };
-        console.log('✅ Profile image uploaded to Cloudinary:', profileImageData.url);
-      } else {
-        console.log('⚠️ Upload result is invalid, using fallback');
-        throw new Error('Invalid upload result');
-      }
+      
     } catch (error) {
-      console.error('❌ Error uploading profile image:', error);
+      console.error('❌ Error processing image:', error);
       console.error('❌ Error details:', {
         message: error.message,
-        stack: error.stack,
-        code: error.code
+        stack: error.stack
       });
       
       // Fallback: استخدام صورة افتراضية بدلاً من إرجاع خطأ
@@ -237,27 +234,35 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Handle profile image upload to Cloudinary
-  let uploadedImageUrl = null;
+  // Handle profile image upload
+  let uploadedImageData = null;
   if (req.file) {
     try {
-      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
+      console.log('🔄 Processing uploaded image...');
       
-      // رفع الصورة على Cloudinary باستخدام buffer
-      const uploadResult = await uploadOptimizedImage(req.file.buffer, {
-        folder: 'arthub/admin-profiles',
-        public_id: `admin_${admin._id}_${Date.now()}`,
-        overwrite: true,
-        resource_type: 'image'
+      // تحويل الصورة إلى base64 مباشرة
+      const base64Data = req.file.buffer.toString('base64');
+      const mimeType = req.file.mimetype || 'image/jpeg';
+      const dataUrl = `data:${mimeType};base64,${base64Data}`;
+      
+      uploadedImageData = {
+        url: dataUrl,
+        id: `admin_${admin._id}_${Date.now()}`,
+        originalName: req.file.originalname,
+        mimeType: mimeType,
+        size: req.file.size
+      };
+      
+      console.log('✅ Profile image processed successfully:', {
+        id: uploadedImageData.id,
+        size: uploadedImageData.size,
+        mimeType: uploadedImageData.mimeType
       });
-
-      uploadedImageUrl = uploadResult.secure_url;
-      console.log('✅ Profile image uploaded to Cloudinary:', uploadedImageUrl);
     } catch (error) {
-      console.error('❌ Error uploading profile image:', error);
+      console.error('❌ Error processing image:', error);
       return res.status(400).json({
         success: false,
-        message: 'فشل في رفع الصورة',
+        message: 'فشل في معالجة الصورة',
         data: null
       });
     }
@@ -268,8 +273,8 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
   if (email) admin.email = email;
   if (role && ['admin', 'superadmin'].includes(role)) admin.role = role;
   if (typeof isActive === 'boolean') admin.isActive = isActive;
-  if (uploadedImageUrl) {
-    admin.profileImage = uploadedImageUrl;
+  if (uploadedImageData) {
+    admin.profileImage = uploadedImageData;
   }
   
   // Update password if provided
