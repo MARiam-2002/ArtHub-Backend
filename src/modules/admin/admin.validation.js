@@ -79,7 +79,7 @@ export const createAdminSchema = {
       filename: joi.string(),
       path: joi.string()
     }).optional()
-  })
+  }).optional()
 };
 
 // Update admin validation

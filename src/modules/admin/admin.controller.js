@@ -99,6 +99,10 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
 
   // Handle profile image upload to Cloudinary
   let profileImageData = null;
+  console.log('🔍 Request body:', req.body);
+  console.log('🔍 Request files:', req.files);
+  console.log('🔍 Request file:', req.file);
+  
   if (req.file) {
     console.log('📸 File received:', {
       originalname: req.file.originalname,
