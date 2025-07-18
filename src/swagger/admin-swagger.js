@@ -1177,74 +1177,8 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'جلب جميع المستخدمين',
-      description: 'جلب قائمة جميع المستخدمين مع التصفية والبحث',
+      description: 'جلب جميع المستخدمين - الفرونت هاندل سيقوم بالتصفية والترتيب والتصفح',
       security: [{ BearerAuth: [] }],
-      parameters: [
-        {
-          in: 'query',
-          name: 'page',
-          schema: {
-            type: 'integer',
-            default: 1
-          },
-          description: 'رقم الصفحة'
-        },
-        {
-          in: 'query',
-          name: 'limit',
-          schema: {
-            type: 'integer',
-            default: 20
-          },
-          description: 'عدد العناصر في الصفحة'
-        },
-        {
-          in: 'query',
-          name: 'search',
-          schema: {
-            type: 'string'
-          },
-          description: 'البحث في الاسم أو البريد الإلكتروني'
-        },
-        {
-          in: 'query',
-          name: 'role',
-          schema: {
-            type: 'string',
-            enum: ['user', 'artist']
-          },
-          description: 'تصفية حسب نوع المستخدم'
-        },
-        {
-          in: 'query',
-          name: 'status',
-          schema: {
-            type: 'string',
-            enum: ['active', 'inactive', 'banned']
-          },
-          description: 'تصفية حسب الحالة'
-        },
-        {
-          in: 'query',
-          name: 'sortBy',
-          schema: {
-            type: 'string',
-            enum: ['createdAt', 'displayName', 'email', 'lastLogin'],
-            default: 'createdAt'
-          },
-          description: 'حقل الترتيب'
-        },
-        {
-          in: 'query',
-          name: 'sortOrder',
-          schema: {
-            type: 'string',
-            enum: ['asc', 'desc'],
-            default: 'desc'
-          },
-          description: 'ترتيب النتائج'
-        }
-      ],
       responses: {
         200: {
           description: 'تم جلب المستخدمين بنجاح',
@@ -1259,7 +1193,7 @@ export const adminPaths = {
                   },
                   message: {
                     type: 'string',
-                    example: 'تم جلب المستخدمين بنجاح'
+                    example: 'تم جلب قائمة المستخدمين بنجاح'
                   },
                   data: {
                     type: 'object',
@@ -1278,6 +1212,9 @@ export const adminPaths = {
                             email: {
                               type: 'string'
                             },
+                            phoneNumber: {
+                              type: 'string'
+                            },
                             role: {
                               type: 'string',
                               enum: ['user', 'artist']
@@ -1285,26 +1222,48 @@ export const adminPaths = {
                             isActive: {
                               type: 'boolean'
                             },
+                            isVerified: {
+                              type: 'boolean'
+                            },
+                            profileImage: {
+                              type: 'string'
+                            },
+                            lastActive: {
+                              type: 'string',
+                              format: 'date-time'
+                            },
                             createdAt: {
                               type: 'string',
                               format: 'date-time'
+                            },
+                            job: {
+                              type: 'string'
+                            },
+                            location: {
+                              type: 'string'
+                            },
+                            bio: {
+                              type: 'string'
                             }
                           }
                         }
                       },
-                      pagination: {
+                      statistics: {
                         type: 'object',
                         properties: {
-                          page: {
+                          totalUsers: {
                             type: 'integer'
                           },
-                          limit: {
+                          activeUsers: {
                             type: 'integer'
                           },
-                          total: {
+                          bannedUsers: {
                             type: 'integer'
                           },
-                          pages: {
+                          clients: {
+                            type: 'integer'
+                          },
+                          artists: {
                             type: 'integer'
                           }
                         }

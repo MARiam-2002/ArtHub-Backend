@@ -442,55 +442,12 @@ router.put('/change-password',
  *   get:
  *     summary: Get all users (clients and artists)
  *     tags: [Admin Dashboard]
- *     description: Get paginated list of all users with filtering and search
+ *     description: Get all users - frontend will handle filtering, sorting, and pagination
  *     security:
  *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *         description: Items per page
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Search in name, email, or phone
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [user, artist]
- *         description: Filter by user role
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive, banned]
- *         description: Filter by user status
- *       - in: query
- *         name: sortBy
- *         schema:
- *           type: string
- *           enum: [createdAt, displayName, email, lastLogin]
- *           default: createdAt
- *         description: Sort field
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *           default: desc
- *         description: Sort order
  *     responses:
- *    200       description: Users retrieved successfully
+ *       200:
+ *         description: Users retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -507,19 +464,23 @@ router.put('/change-password',
  *                       type: array
  *                       items:
  *                         $ref: #/components/schemas/UserForAdmin'
- *                     pagination:
- *                       $ref: #/components/schemas/PaginationResponse'
- *                 meta:
- *                   type: object
- *                   properties:
- *                     totalUsers:
- *                       type: number
- *                     activeUsers:
- *                       type: number
- *                     bannedUsers:
- *                       type: number
- *    401       description: Unauthorized
- *    403       description: Forbidden - Admin only
+ *                     statistics:
+ *                       type: object
+ *                       properties:
+ *                         totalUsers:
+ *                           type: number
+ *                         activeUsers:
+ *                           type: number
+ *                         bannedUsers:
+ *                           type: number
+ *                         clients:
+ *                           type: number
+ *                         artists:
+ *                           type: number
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
  */
 router.get('/users', 
   authenticate, 

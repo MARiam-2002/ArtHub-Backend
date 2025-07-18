@@ -153,13 +153,7 @@ export const changePasswordSchema = {
 // Get users validation
 export const getUsersSchema = {
   query: joi.object({
-    page: joi.number().integer().min(1).optional(),
-    limit: joi.number().integer().min(1).max(100).default(20),
-    search: joi.string().optional(),
-    role: joi.string().valid('user', 'artist').optional(),
-    status: joi.string().valid('active', 'inactive', 'banned').optional(),
-    sortBy: joi.string().valid('createdAt', 'displayName', 'email', 'lastLogin').default('createdAt'),
-    sortOrder: joi.string().valid('asc', 'desc').default('desc')
+    // No query parameters needed - frontend will handle filtering and sorting
   })
 };
 

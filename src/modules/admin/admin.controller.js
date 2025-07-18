@@ -527,14 +527,14 @@ export const changeAdminPassword = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    Get all users (clients and artists) - Simple version for frontend filtering
- * @route   GET /api/v1/users
+ * @desc    Get all users (clients and artists) - Frontend handles filtering, sorting, and pagination
+ * @route   GET /api/admin/users
  * @access  Private (Admin, SuperAdmin)
  */
 export const getUsers = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  // Get all users (clients and artists) without pagination - frontend will handle filtering
+  // Get all users (clients and artists) - frontend will handle filtering, sorting, and pagination
   const users = await userModel.find({ 
     role: { $in: ['user', 'artist'] }, 
     isDeleted: false 
