@@ -1,4 +1,4 @@
-import multer, { diskStorage } from 'multer';
+import multer, { memoryStorage } from 'multer';
 
 export const filterObject = {
   image: ['image/png', 'image/jpeg'],
@@ -13,5 +13,5 @@ export const fileUpload = filterArray => {
     return cb(null, true);
   };
 
-  return multer({ storage: diskStorage({}), fileFilter });
+  return multer({ storage: memoryStorage(), fileFilter });
 };

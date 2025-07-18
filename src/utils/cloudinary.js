@@ -56,11 +56,11 @@ export const getOptimizedImageUrl = (publicId, options = {}) => {
 
 /**
  * رفع صورة مع تطبيق إعدادات التحسين الافتراضية
- * @param {string} imagePath - مسار الصورة المحلي
+ * @param {string|Buffer} imageData - مسار الصورة المحلي أو buffer
  * @param {Object} options - خيارات الرفع والتحسين
  * @returns {Promise<Object>} نتيجة رفع الصورة
  */
-export const uploadOptimizedImage = async (imagePath, options = {}) => {
+export const uploadOptimizedImage = async (imageData, options = {}) => {
   const defaultOptions = {
     folder: 'arthub/images',
     format: 'auto',
@@ -81,7 +81,16 @@ export const uploadOptimizedImage = async (imagePath, options = {}) => {
 
   const mergedOptions = { ...defaultOptions, ...options };
 
-  return await cloudinary.uploader.upload(imagePath, mergedOptions);
+  // إذا كان imageData buffer، استخدم stream
+  if (Buffer.isBuffer(imageData)) {
+    return await cloudinary.uploader.upload_stream(mergedOptions, (error, result) => {
+      if (error) throw error;
+      return result;
+    }).end(imageData);
+  }
+
+  // إذا كان string، استخدم upload العادي
+  return await cloudinary.uploader.upload(imageData, mergedOptions);
 };
 
 /**

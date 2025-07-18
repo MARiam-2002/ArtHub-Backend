@@ -103,8 +103,8 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     try {
       const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
       
-      // رفع الصورة على Cloudinary
-      const uploadResult = await uploadOptimizedImage(req.file.path, {
+      // رفع الصورة على Cloudinary باستخدام buffer
+      const uploadResult = await uploadOptimizedImage(req.file.buffer, {
         folder: 'arthub/admin-profiles',
         public_id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         overwrite: true,
@@ -203,8 +203,8 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     try {
       const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
       
-      // رفع الصورة على Cloudinary
-      const uploadResult = await uploadOptimizedImage(req.file.path, {
+      // رفع الصورة على Cloudinary باستخدام buffer
+      const uploadResult = await uploadOptimizedImage(req.file.buffer, {
         folder: 'arthub/admin-profiles',
         public_id: `admin_${admin._id}_${Date.now()}`,
         overwrite: true,
