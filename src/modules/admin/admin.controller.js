@@ -111,12 +111,15 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
       
       // رفع الصورة على Cloudinary باستخدام buffer
+      console.log('🔄 Starting Cloudinary upload...');
       const uploadResult = await uploadOptimizedImage(req.file.buffer, {
         folder: 'arthub/admin-profiles',
         public_id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         overwrite: true,
         resource_type: 'image'
       });
+
+      console.log('📊 Upload result:', uploadResult);
 
       profileImageData = {
         url: uploadResult.secure_url,
@@ -125,6 +128,11 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       console.log('✅ Profile image uploaded to Cloudinary:', profileImageData.url);
     } catch (error) {
       console.error('❌ Error uploading profile image:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code
+      });
       return res.status(400).json({
         success: false,
         message: 'فشل في رفع الصورة',

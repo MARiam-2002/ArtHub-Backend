@@ -16,6 +16,13 @@ cloudinary.config({
   secure: true
 });
 
+// التحقق من إعدادات Cloudinary
+console.log('🔧 Cloudinary config check:', {
+  cloud_name: process.env.CLOUD_NAME ? 'Set' : 'Missing',
+  api_key: process.env.API_KEY ? 'Set' : 'Missing',
+  api_secret: process.env.API_SECRET ? 'Set' : 'Missing'
+});
+
 /**
  * إنشاء URL للصورة مع إعدادات CDN للتخزين المؤقت وتحسينات الأداء
  * @param {string} publicId - معرف الصورة في Cloudinary
@@ -83,16 +90,26 @@ export const uploadOptimizedImage = async (imageData, options = {}) => {
 
   // إذا كان imageData buffer، استخدم stream
   if (Buffer.isBuffer(imageData)) {
+    console.log('🔄 Using buffer upload with size:', imageData.length);
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(mergedOptions, (error, result) => {
         if (error) {
+          console.error('❌ Cloudinary upload error:', error);
           reject(error);
         } else {
+          console.log('✅ Cloudinary upload success:', result);
           resolve(result);
         }
       });
       
+      // إرسال البيانات
       uploadStream.end(imageData);
+    }).catch(async (error) => {
+      console.log('🔄 Stream upload failed, trying direct upload...');
+      // Fallback: تحويل buffer إلى base64
+      const base64Data = imageData.toString('base64');
+      const dataURI = `data:image/jpeg;base64,${base64Data}`;
+      return await cloudinary.uploader.upload(dataURI, mergedOptions);
     });
   }
 
