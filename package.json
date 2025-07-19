@@ -1,7 +1,7 @@
 {
   "name": "arthub-backend",
-  "version": "1.0.2",
-  "description": "API backend for ArtHub platform - Updated with Short URL Image System",
+  "version": "1.0.3",
+  "description": "API backend for ArtHub platform - Updated with Cloudinary Organized Folders",
   "main": "index.js",
   "type": "module",
   "scripts": {

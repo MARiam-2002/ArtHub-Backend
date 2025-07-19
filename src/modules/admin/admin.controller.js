@@ -1,5 +1,5 @@
-// NEW VERSION 2025-07-18 - Admin Controller with Short URL Image System
-// FORCE DEPLOYMENT TRIGGER v1.0.2 - This comment forces Vercel to redeploy
+// NEW VERSION 2025-07-18 - Admin Controller with Cloudinary Organized Folders
+// FORCE DEPLOYMENT TRIGGER v1.0.3 - This comment forces Vercel to redeploy
 import userModel from '../../../DB/models/user.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -115,36 +115,72 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
     
     try {
-      // حفظ الصورة في قاعدة البيانات مع مسار قصير
-      console.log('🔄 Processing image for short URL...');
+      // رفع الصورة إلى Cloudinary مع تنظيم أفضل
+      console.log('🔄 Uploading image to Cloudinary with organized folders...');
       console.log('📸 Buffer size:', req.file.buffer.length);
       
-      const imageId = `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const mimeType = req.file.mimetype || 'image/jpeg';
+      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
       
-      // حفظ الصورة في قاعدة البيانات
-      const imageData = {
-        id: imageId,
-        buffer: req.file.buffer,
-        mimeType: mimeType,
-        originalName: req.file.originalname,
-        size: req.file.size,
-        createdAt: new Date()
-      };
+      // إنشاء folder منظم: arthub/admin-profiles/YYYY/MM
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const folder = `arthub/admin-profiles/${year}/${month}`;
       
-      // حفظ في collection منفصل للصور
-      const imageCollection = mongoose.connection.collection('admin_images');
-      await imageCollection.insertOne(imageData);
+      // إنشاء public ID فريد
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      const publicId = `${folder}/admin_${timestamp}_${randomId}`;
       
-      console.log('✅ Image saved to database successfully');
-      
-      profileImageData = {
-        url: `/api/admin/images/${imageId}`,
-        id: imageId,
-        originalName: req.file.originalname,
-        mimeType: mimeType,
-        size: req.file.size
-      };
+      try {
+        const uploadResult = await uploadOptimizedImage(req.file.buffer, {
+          folder: folder,
+          public_id: publicId,
+          resource_type: 'image',
+          format: 'auto',
+          quality: 'auto:good',
+          flags: 'progressive',
+          eager: [
+            { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
+            { width: 400, crop: 'scale' },
+            { width: 800, crop: 'scale' }
+          ],
+          eager_async: true
+        });
+        
+        console.log('✅ Image uploaded to Cloudinary successfully');
+        console.log('📁 Folder structure:', folder);
+        console.log('🆔 Public ID:', uploadResult.public_id);
+        console.log('🔗 URL:', uploadResult.secure_url);
+        
+        profileImageData = {
+          url: uploadResult.secure_url,
+          id: uploadResult.public_id,
+          originalName: req.file.originalname,
+          mimeType: req.file.mimetype,
+          size: req.file.size,
+          cloudinaryId: uploadResult.public_id,
+          folder: folder,
+          variants: {
+            thumbnail: uploadResult.eager?.[0]?.secure_url || uploadResult.secure_url,
+            small: uploadResult.eager?.[1]?.secure_url || uploadResult.secure_url,
+            medium: uploadResult.eager?.[2]?.secure_url || uploadResult.secure_url
+          }
+        };
+        
+      } catch (cloudinaryError) {
+        console.error('❌ Cloudinary upload error:', cloudinaryError);
+        
+        // Fallback: استخدام صورة افتراضية
+        console.log('🔄 Using fallback: default image');
+        profileImageData = {
+          url: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png',
+          id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc',
+          originalName: req.file.originalname,
+          mimeType: req.file.mimetype,
+          size: req.file.size
+        };
+      }
       
       console.log('✅ Profile image processed successfully:', {
         id: profileImageData.id,
@@ -210,55 +246,7 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
   });
 });
 
-/**
- * @desc    Get admin image
- * @route   GET /api/admin/images/:imageId
- * @access  Public
- */
-export const getAdminImage = asyncHandler(async (req, res, next) => {
-  await ensureDatabaseConnection();
-  
-  const { imageId } = req.params;
-  
-  if (!imageId) {
-    return res.status(400).json({
-      success: false,
-      message: 'معرف الصورة مطلوب',
-      data: null
-    });
-  }
-  
-  try {
-    // البحث عن الصورة في قاعدة البيانات
-    const imageCollection = mongoose.connection.collection('admin_images');
-    const image = await imageCollection.findOne({ id: imageId });
-    
-    if (!image) {
-      return res.status(404).json({
-        success: false,
-        message: 'الصورة غير موجودة',
-        data: null
-      });
-    }
-    
-    // إرسال الصورة
-    res.set({
-      'Content-Type': image.mimeType,
-      'Content-Length': image.buffer.length,
-      'Cache-Control': 'public, max-age=31536000' // cache for 1 year
-    });
-    
-    res.send(image.buffer);
-    
-  } catch (error) {
-    console.error('❌ Error serving image:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'خطأ في عرض الصورة',
-      data: null
-    });
-  }
-});
+
 
 /**
  * @desc    Update admin
@@ -306,29 +294,51 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     try {
       console.log('🔄 Processing uploaded image for update...');
       
-      const imageId = `admin_${admin._id}_${Date.now()}`;
-      const mimeType = req.file.mimetype || 'image/jpeg';
+      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
       
-      // حفظ الصورة في قاعدة البيانات
-      const imageData = {
-        id: imageId,
-        buffer: req.file.buffer,
-        mimeType: mimeType,
-        originalName: req.file.originalname,
-        size: req.file.size,
-        createdAt: new Date()
-      };
+      // إنشاء folder منظم: arthub/admin-profiles/YYYY/MM
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const folder = `arthub/admin-profiles/${year}/${month}`;
       
-      // حفظ في collection منفصل للصور
-      const imageCollection = mongoose.connection.collection('admin_images');
-      await imageCollection.insertOne(imageData);
+      // إنشاء public ID فريد
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substr(2, 9);
+      const publicId = `${folder}/admin_${admin._id}_${timestamp}_${randomId}`;
+      
+      const uploadResult = await uploadOptimizedImage(req.file.buffer, {
+        folder: folder,
+        public_id: publicId,
+        resource_type: 'image',
+        format: 'auto',
+        quality: 'auto:good',
+        flags: 'progressive',
+        eager: [
+          { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
+          { width: 400, crop: 'scale' },
+          { width: 800, crop: 'scale' }
+        ],
+        eager_async: true
+      });
+      
+      console.log('✅ Image uploaded to Cloudinary successfully');
+      console.log('📁 Folder structure:', folder);
+      console.log('🆔 Public ID:', uploadResult.public_id);
       
       uploadedImageData = {
-        url: `/api/admin/images/${imageId}`,
-        id: imageId,
+        url: uploadResult.secure_url,
+        id: uploadResult.public_id,
         originalName: req.file.originalname,
-        mimeType: mimeType,
-        size: req.file.size
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        cloudinaryId: uploadResult.public_id,
+        folder: folder,
+        variants: {
+          thumbnail: uploadResult.eager?.[0]?.secure_url || uploadResult.secure_url,
+          small: uploadResult.eager?.[1]?.secure_url || uploadResult.secure_url,
+          medium: uploadResult.eager?.[2]?.secure_url || uploadResult.secure_url
+        }
       };
       
       console.log('✅ Profile image processed successfully:', {
