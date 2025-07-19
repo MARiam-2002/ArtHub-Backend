@@ -101,6 +101,18 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
+  // Create admin first (password will be hashed by pre-save hook)
+  const adminData = {
+    displayName,
+    email,
+    password,
+    role,
+    isActive: true,
+    isVerified: true
+  };
+
+  const admin = await userModel.create(adminData);
+
   // Handle profile image upload - SIMPLE UPLOAD v1.0.6
   let profileImageData = null;
   console.log('🔍 Request file:', req.file);
@@ -119,11 +131,11 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
         api_secret: process.env.API_SECRET
       });
       
-      // رفع الصورة مباشرة مثل المثال
+      // رفع الصورة مباشرة مع admin._id في الباث
       const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
         req.file.path,
         {
-          folder: `arthub/admin-profiles/${_id}`
+          folder: `arthub/admin-profiles/${admin._id}`
         }
       );
       
@@ -141,6 +153,10 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       
       console.log('✅ Profile image processed successfully');
       
+      // تحديث الأدمن بالصورة
+      admin.profileImage = profileImageData;
+      await admin.save();
+      
     } catch (error) {
       console.error('❌ Error uploading image:', error);
       
@@ -152,29 +168,6 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     }
   } else {
     console.log('📸 No file uploaded');
-  }
-
-  // Create admin (password will be hashed by pre-save hook)
-  const adminData = {
-    displayName,
-    email,
-    password,
-    role,
-    isActive: true,
-    isVerified: true
-  };
-
-  // Add profile image if uploaded
-  if (profileImageData) {
-    adminData.profileImage = profileImageData;
-  }
-
-  const admin = await userModel.create(adminData);
-
-  // إذا تم رفع صورة، تأكد من حفظها بشكل صحيح
-  if (profileImageData) {
-    admin.profileImage = profileImageData;
-    await admin.save();
   }
 
   res.status(201).json({
@@ -249,11 +242,11 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
         api_secret: process.env.API_SECRET
       });
       
-      // رفع الصورة مباشرة مثل المثال
+      // رفع الصورة مباشرة مع admin._id في الباث
       const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
         req.file.path,
         {
-          folder: 'arthub/admin-profiles'
+          folder: `arthub/admin-profiles/${admin._id}`
         }
       );
       
