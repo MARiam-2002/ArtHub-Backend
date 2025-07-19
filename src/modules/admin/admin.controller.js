@@ -146,9 +146,7 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       profileImageData = {
         url: secure_url,
         id: public_id,
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        size: req.file.size
+        
       };
       
       console.log('✅ Profile image processed successfully');
@@ -226,8 +224,7 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Handle profile image upload - SIMPLE UPLOAD v1.0.6
-  let uploadedImageData = null;
+  // Handle profile image upload - UPDATE BASED ON EXISTING public_id
   if (req.file) {
     try {
       console.log('🔄 Uploading image to Cloudinary...');
@@ -242,25 +239,48 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
         api_secret: process.env.API_SECRET
       });
       
-      // رفع الصورة مباشرة مع admin._id في الباث
-      const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
-        req.file.path,
-        {
-          folder: `arthub/admin-profiles/${admin._id}`
-        }
-      );
-      
-      console.log('✅ Image uploaded successfully');
-      console.log('🔗 URL:', secure_url);
-      console.log('🆔 Public ID:', public_id);
-      
-      uploadedImageData = {
-        url: secure_url,
-        id: public_id,
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        size: req.file.size
-      };
+      // التحقق من وجود صورة سابقة
+      if (admin.profileImage && admin.profileImage.id) {
+        console.log('📁 Found existing image, updating...');
+        console.log('🆔 Existing Public ID:', admin.profileImage.id);
+        
+        // رفع الصورة مع public_id الموجود
+        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+          req.file.path,
+          {
+            public_id: admin.profileImage.id, // استخدام الـ public_id الموجود
+          }
+        );
+        
+        console.log('✅ Image updated successfully');
+        console.log('🔗 New URL:', secure_url);
+        console.log('🆔 Updated Public ID:', public_id);
+        
+        // تحديث بيانات الصورة
+        admin.profileImage.url = secure_url;
+       
+        
+      } else {
+        console.log('📁 No existing image, creating new one...');
+        
+        // إنشاء صورة جديدة
+        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+          req.file.path,
+          {
+            folder: `arthub/admin-profiles/${admin._id}`
+          }
+        );
+        
+        console.log('✅ New image uploaded successfully');
+        console.log('🔗 URL:', secure_url);
+        console.log('🆔 Public ID:', public_id);
+        
+        // إنشاء بيانات الصورة الجديدة
+        admin.profileImage = {
+          url: secure_url,
+          id: public_id,
+        };
+      }
       
       console.log('✅ Profile image processed successfully');
       
@@ -280,9 +300,6 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
   if (email) admin.email = email;
   if (role && ['admin', 'superadmin'].includes(role)) admin.role = role;
   if (typeof isActive === 'boolean') admin.isActive = isActive;
-  if (uploadedImageData) {
-    admin.profileImage = uploadedImageData;
-  }
   
   // Update password if provided
   if (password) {
