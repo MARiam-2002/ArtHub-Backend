@@ -1,7 +1,7 @@
 {
   "name": "arthub-backend",
-  "version": "1.0.3",
-  "description": "API backend for ArtHub platform - Updated with Cloudinary Organized Folders",
+  "version": "1.0.4",
+  "description": "API backend for ArtHub platform - Updated with Cloudinary Organized Folders v1.0.4",
   "main": "index.js",
   "type": "module",
   "scripts": {

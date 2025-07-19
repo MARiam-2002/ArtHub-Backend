@@ -1,5 +1,6 @@
 // NEW VERSION 2025-07-18 - Admin Controller with Cloudinary Organized Folders
-// FORCE DEPLOYMENT TRIGGER v1.0.3 - This comment forces Vercel to redeploy
+// FORCE DEPLOYMENT TRIGGER v1.0.4 - This comment forces Vercel to redeploy
+// CLOUDINARY ORGANIZED FOLDERS SYSTEM - UPDATED 2025-07-19
 import userModel from '../../../DB/models/user.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -99,12 +100,12 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Handle profile image upload - NEW VERSION 2025-07-18
+  // Handle profile image upload - CLOUDINARY ORGANIZED FOLDERS v1.0.3
   let profileImageData = null;
   console.log('🔍 Request body:', req.body);
   console.log('🔍 Request files:', req.files);
   console.log('🔍 Request file:', req.file);
-  console.log('🆕 NEW VERSION: Using base64 encoding instead of Cloudinary');
+  console.log('🆕 CLOUDINARY ORGANIZED FOLDERS v1.0.3: Using Cloudinary with organized folders');
   
   if (req.file) {
     console.log('📸 File received:', {

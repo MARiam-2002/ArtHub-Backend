@@ -1,5 +1,6 @@
 // NEW VERSION 2025-07-18 - Admin Router with Cloudinary Organized Folders
-// FORCE DEPLOYMENT TRIGGER v1.0.3 - This comment forces Vercel to redeploy
+// FORCE DEPLOYMENT TRIGGER v1.0.4 - This comment forces Vercel to redeploy
+// CLOUDINARY ORGANIZED FOLDERS SYSTEM - UPDATED 2025-07-19
 import { Router } from 'express';
 import * as adminController from './admin.controller.js';
 import { authenticate } from '../../middleware/auth.middleware.js';
