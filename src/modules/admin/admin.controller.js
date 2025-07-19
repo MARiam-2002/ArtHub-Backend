@@ -116,41 +116,37 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
     
     try {
-      // رفع الصورة إلى Cloudinary مع تنظيم أفضل
-      console.log('🔄 Uploading image to Cloudinary with organized folders...');
+      // رفع الصورة إلى Cloudinary مباشرة
+      console.log('🔄 Uploading image to Cloudinary directly...');
       console.log('📸 Buffer size:', req.file.buffer.length);
       
-      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
+      const cloudinary = await import('cloudinary');
       
-      // إنشاء folder منظم: arthub/admin-profiles/YYYY/MM
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const folder = `arthub/admin-profiles/${year}/${month}`;
+      // تكوين Cloudinary
+      cloudinary.v2.config({
+        cloud_name: process.env.CLOUD_NAME,
+        api_key: process.env.API_KEY,
+        api_secret: process.env.API_SECRET,
+        secure: true
+      });
       
-      // إنشاء public ID فريد
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substr(2, 9);
-      const publicId = `${folder}/admin_${timestamp}_${randomId}`;
+      // تحويل buffer إلى base64 string
+      const base64Image = req.file.buffer.toString('base64');
+      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
       
       try {
-        const uploadResult = await uploadOptimizedImage(req.file.buffer, {
-          folder: folder,
-          public_id: publicId,
-          resource_type: 'image',
-          format: 'auto',
-          quality: 'auto:good',
-          flags: 'progressive',
-          eager: [
-            { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
-            { width: 400, crop: 'scale' },
-            { width: 800, crop: 'scale' }
-          ],
-          eager_async: true
-        });
+        // رفع الصورة مباشرة إلى Cloudinary
+        const uploadResult = await cloudinary.v2.uploader.upload(
+          dataURI,
+          {
+            folder: 'arthub/admin-profiles',
+            resource_type: 'image',
+            format: 'auto',
+            quality: 'auto:good'
+          }
+        );
         
         console.log('✅ Image uploaded to Cloudinary successfully');
-        console.log('📁 Folder structure:', folder);
         console.log('🆔 Public ID:', uploadResult.public_id);
         console.log('🔗 URL:', uploadResult.secure_url);
         
@@ -159,14 +155,7 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
           id: uploadResult.public_id,
           originalName: req.file.originalname,
           mimeType: req.file.mimetype,
-          size: req.file.size,
-          cloudinaryId: uploadResult.public_id,
-          folder: folder,
-          variants: {
-            thumbnail: uploadResult.eager?.[0]?.secure_url || uploadResult.secure_url,
-            small: uploadResult.eager?.[1]?.secure_url || uploadResult.secure_url,
-            medium: uploadResult.eager?.[2]?.secure_url || uploadResult.secure_url
-          }
+          size: req.file.size
         };
         
       } catch (cloudinaryError) {
@@ -295,51 +284,40 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     try {
       console.log('🔄 Processing uploaded image for update...');
       
-      const { uploadOptimizedImage } = await import('../../utils/cloudinary.js');
+      const cloudinary = await import('cloudinary');
       
-      // إنشاء folder منظم: arthub/admin-profiles/YYYY/MM
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const folder = `arthub/admin-profiles/${year}/${month}`;
-      
-      // إنشاء public ID فريد
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substr(2, 9);
-      const publicId = `${folder}/admin_${admin._id}_${timestamp}_${randomId}`;
-      
-      const uploadResult = await uploadOptimizedImage(req.file.buffer, {
-        folder: folder,
-        public_id: publicId,
-        resource_type: 'image',
-        format: 'auto',
-        quality: 'auto:good',
-        flags: 'progressive',
-        eager: [
-          { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
-          { width: 400, crop: 'scale' },
-          { width: 800, crop: 'scale' }
-        ],
-        eager_async: true
+      // تكوين Cloudinary
+      cloudinary.v2.config({
+        cloud_name: process.env.CLOUD_NAME,
+        api_key: process.env.API_KEY,
+        api_secret: process.env.API_SECRET,
+        secure: true
       });
       
+      // تحويل buffer إلى base64 string
+      const base64Image = req.file.buffer.toString('base64');
+      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+      
+      const uploadResult = await cloudinary.v2.uploader.upload(
+        dataURI,
+        {
+          folder: 'arthub/admin-profiles',
+          resource_type: 'image',
+          format: 'auto',
+          quality: 'auto:good'
+        }
+      );
+      
       console.log('✅ Image uploaded to Cloudinary successfully');
-      console.log('📁 Folder structure:', folder);
       console.log('🆔 Public ID:', uploadResult.public_id);
+      console.log('🔗 URL:', uploadResult.secure_url);
       
       uploadedImageData = {
         url: uploadResult.secure_url,
         id: uploadResult.public_id,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
-        size: req.file.size,
-        cloudinaryId: uploadResult.public_id,
-        folder: folder,
-        variants: {
-          thumbnail: uploadResult.eager?.[0]?.secure_url || uploadResult.secure_url,
-          small: uploadResult.eager?.[1]?.secure_url || uploadResult.secure_url,
-          medium: uploadResult.eager?.[2]?.secure_url || uploadResult.secure_url
-        }
+        size: req.file.size
       };
       
       console.log('✅ Profile image processed successfully:', {
