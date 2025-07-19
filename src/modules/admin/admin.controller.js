@@ -123,7 +123,7 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
         req.file.path,
         {
-          folder: 'arthub/admin-profiles'
+          folder: `arthub/admin-profiles/${_id}`
         }
       );
       
