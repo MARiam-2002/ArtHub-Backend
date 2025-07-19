@@ -1,5 +1,5 @@
-// NEW VERSION 2025-07-18 - Admin Controller with Base64 Image Upload
-// FORCE DEPLOYMENT TRIGGER - This comment forces Vercel to redeploy
+// NEW VERSION 2025-07-18 - Admin Controller with Short URL Image System
+// FORCE DEPLOYMENT TRIGGER v1.0.2 - This comment forces Vercel to redeploy
 import userModel from '../../../DB/models/user.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -115,19 +115,32 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
     
     try {
-      // تحويل الصورة إلى base64 مباشرة
-      console.log('🔄 Converting image to base64...');
+      // حفظ الصورة في قاعدة البيانات مع مسار قصير
+      console.log('🔄 Processing image for short URL...');
       console.log('📸 Buffer size:', req.file.buffer.length);
       
-      const base64Data = req.file.buffer.toString('base64');
+      const imageId = `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const mimeType = req.file.mimetype || 'image/jpeg';
-      const dataUrl = `data:${mimeType};base64,${base64Data}`;
       
-      console.log('✅ Image converted to base64 successfully');
+      // حفظ الصورة في قاعدة البيانات
+      const imageData = {
+        id: imageId,
+        buffer: req.file.buffer,
+        mimeType: mimeType,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        createdAt: new Date()
+      };
+      
+      // حفظ في collection منفصل للصور
+      const imageCollection = mongoose.connection.collection('admin_images');
+      await imageCollection.insertOne(imageData);
+      
+      console.log('✅ Image saved to database successfully');
       
       profileImageData = {
-        url: dataUrl,
-        id: `admin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        url: `/api/admin/images/${imageId}`,
+        id: imageId,
         originalName: req.file.originalname,
         mimeType: mimeType,
         size: req.file.size
@@ -198,6 +211,56 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * @desc    Get admin image
+ * @route   GET /api/admin/images/:imageId
+ * @access  Public
+ */
+export const getAdminImage = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { imageId } = req.params;
+  
+  if (!imageId) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الصورة مطلوب',
+      data: null
+    });
+  }
+  
+  try {
+    // البحث عن الصورة في قاعدة البيانات
+    const imageCollection = mongoose.connection.collection('admin_images');
+    const image = await imageCollection.findOne({ id: imageId });
+    
+    if (!image) {
+      return res.status(404).json({
+        success: false,
+        message: 'الصورة غير موجودة',
+        data: null
+      });
+    }
+    
+    // إرسال الصورة
+    res.set({
+      'Content-Type': image.mimeType,
+      'Content-Length': image.buffer.length,
+      'Cache-Control': 'public, max-age=31536000' // cache for 1 year
+    });
+    
+    res.send(image.buffer);
+    
+  } catch (error) {
+    console.error('❌ Error serving image:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'خطأ في عرض الصورة',
+      data: null
+    });
+  }
+});
+
+/**
  * @desc    Update admin
  * @route   PUT /api/admin/admins/:id
  * @access  Private (SuperAdmin only)
@@ -241,16 +304,28 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
   let uploadedImageData = null;
   if (req.file) {
     try {
-      console.log('🔄 Processing uploaded image...');
+      console.log('🔄 Processing uploaded image for update...');
       
-      // تحويل الصورة إلى base64 مباشرة
-      const base64Data = req.file.buffer.toString('base64');
+      const imageId = `admin_${admin._id}_${Date.now()}`;
       const mimeType = req.file.mimetype || 'image/jpeg';
-      const dataUrl = `data:${mimeType};base64,${base64Data}`;
+      
+      // حفظ الصورة في قاعدة البيانات
+      const imageData = {
+        id: imageId,
+        buffer: req.file.buffer,
+        mimeType: mimeType,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        createdAt: new Date()
+      };
+      
+      // حفظ في collection منفصل للصور
+      const imageCollection = mongoose.connection.collection('admin_images');
+      await imageCollection.insertOne(imageData);
       
       uploadedImageData = {
-        url: dataUrl,
-        id: `admin_${admin._id}_${Date.now()}`,
+        url: `/api/admin/images/${imageId}`,
+        id: imageId,
         originalName: req.file.originalname,
         mimeType: mimeType,
         size: req.file.size

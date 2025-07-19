@@ -1,3 +1,5 @@
+// NEW VERSION 2025-07-18 - Admin Router with Short URL Image System
+// FORCE DEPLOYMENT TRIGGER v1.0.2 - This comment forces Vercel to redeploy
 import { Router } from 'express';
 import * as adminController from './admin.controller.js';
 import { authenticate } from '../../middleware/auth.middleware.js';
@@ -203,6 +205,33 @@ router.post('/admins',
   isValidation(Validators.createAdminSchema), 
   adminController.createAdmin
 );
+
+/**
+ * @swagger
+ * /api/admin/images/{imageId}:
+ *   get:
+ *     summary: Get admin image
+ *     tags: [Admin Dashboard]
+ *     description: Get admin profile image by image ID
+ *     parameters:
+ *       - in: path
+ *         name: imageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Image ID
+ *     responses:
+ *       200:
+ *         description: Image retrieved successfully
+ *         content:
+ *           image/*:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Image not found
+ */
+router.get('/images/:imageId', adminController.getAdminImage);
 
 /**
  * @swagger
