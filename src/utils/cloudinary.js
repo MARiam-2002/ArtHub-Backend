@@ -102,16 +102,32 @@ export const uploadOptimizedImage = async (imageData, options = {}) => {
     // التحقق من إعدادات Cloudinary أولاً
     if (!process.env.CLOUD_NAME || !process.env.API_KEY || !process.env.API_SECRET) {
       console.error('❌ Cloudinary environment variables are missing');
+      console.error('CLOUD_NAME:', process.env.CLOUD_NAME ? 'Set' : 'Missing');
+      console.error('API_KEY:', process.env.API_KEY ? 'Set' : 'Missing');
+      console.error('API_SECRET:', process.env.API_SECRET ? 'Set' : 'Missing');
       throw new Error('Cloudinary configuration is incomplete');
     }
+    
+    console.log('🔧 Cloudinary config verified, attempting upload...');
     
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(mergedOptions, (error, result) => {
         if (error) {
           console.error('❌ Cloudinary upload error:', error);
+          console.error('❌ Error details:', {
+            message: error.message,
+            http_code: error.http_code,
+            name: error.name
+          });
           reject(error);
         } else {
-          console.log('✅ Cloudinary upload success:', result);
+          console.log('✅ Cloudinary upload success:', {
+            public_id: result.public_id,
+            secure_url: result.secure_url,
+            width: result.width,
+            height: result.height,
+            bytes: result.bytes
+          });
           resolve(result);
         }
       });
@@ -120,13 +136,20 @@ export const uploadOptimizedImage = async (imageData, options = {}) => {
       uploadStream.end(imageData);
     }).catch(async (error) => {
       console.log('🔄 Stream upload failed, trying direct upload...');
+      console.log('🔄 Error was:', error.message);
       try {
         // Fallback: تحويل buffer إلى base64
         const base64Data = imageData.toString('base64');
         const dataURI = `data:image/jpeg;base64,${base64Data}`;
+        console.log('🔄 Attempting direct upload with base64 data...');
         return await cloudinary.uploader.upload(dataURI, mergedOptions);
       } catch (fallbackError) {
         console.error('❌ Direct upload also failed:', fallbackError);
+        console.error('❌ Fallback error details:', {
+          message: fallbackError.message,
+          http_code: fallbackError.http_code,
+          name: fallbackError.name
+        });
         throw fallbackError;
       }
     });

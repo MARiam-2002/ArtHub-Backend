@@ -27,7 +27,8 @@
     "db:seed": "node scripts/seed.js",
     "db:seed:mock": "node scripts/seed-database.js",
     "test:mock": "node scripts/test-mock-data.js",
-    "db:check": "node scripts/check-data.js"
+    "db:check": "node scripts/check-data.js",
+    "test:cloudinary": "node scripts/test-cloudinary-upload.js"
   },
   "engines": {
     "node": "18.x || >= 16"

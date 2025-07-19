@@ -5,6 +5,7 @@ import userModel from '../../../DB/models/user.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
+import { uploadOptimizedImage } from '../../utils/cloudinary.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
@@ -100,12 +101,12 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Handle profile image upload - CLOUDINARY ORGANIZED FOLDERS v1.0.3
+  // Handle profile image upload - CLOUDINARY ORGANIZED FOLDERS v1.0.4
   let profileImageData = null;
   console.log('🔍 Request body:', req.body);
   console.log('🔍 Request files:', req.files);
   console.log('🔍 Request file:', req.file);
-  console.log('🆕 CLOUDINARY ORGANIZED FOLDERS v1.0.3: Using Cloudinary with organized folders');
+  console.log('🆕 CLOUDINARY ORGANIZED FOLDERS v1.0.4: Using Cloudinary utility with organized folders');
   
   if (req.file) {
     console.log('📸 File received:', {
@@ -116,61 +117,35 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
     
     try {
-      // رفع الصورة إلى Cloudinary مباشرة
-      console.log('🔄 Uploading image to Cloudinary directly...');
+      // رفع الصورة إلى Cloudinary باستخدام الوحدة المساعدة
+      console.log('🔄 Uploading image to Cloudinary using utility...');
       console.log('📸 Buffer size:', req.file.buffer.length);
       
-      const cloudinary = await import('cloudinary');
+      const uploadOptions = {
+        folder: 'arthub/admin-profiles',
+        resource_type: 'image',
+        format: 'auto',
+        quality: 'auto:good',
+        eager: [
+          { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
+          { width: 400, crop: 'scale' }
+        ],
+        eager_async: true
+      };
       
-      // تكوين Cloudinary
-      cloudinary.v2.config({
-        cloud_name: process.env.CLOUD_NAME,
-        api_key: process.env.API_KEY,
-        api_secret: process.env.API_SECRET,
-        secure: true
-      });
+      const uploadResult = await uploadOptimizedImage(req.file.buffer, uploadOptions);
       
-      // تحويل buffer إلى base64 string
-      const base64Image = req.file.buffer.toString('base64');
-      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+      console.log('✅ Image uploaded to Cloudinary successfully');
+      console.log('🆔 Public ID:', uploadResult.public_id);
+      console.log('🔗 URL:', uploadResult.secure_url);
       
-      try {
-        // رفع الصورة مباشرة إلى Cloudinary
-        const uploadResult = await cloudinary.v2.uploader.upload(
-          dataURI,
-          {
-            folder: 'arthub/admin-profiles',
-            resource_type: 'image',
-            format: 'auto',
-            quality: 'auto:good'
-          }
-        );
-        
-        console.log('✅ Image uploaded to Cloudinary successfully');
-        console.log('🆔 Public ID:', uploadResult.public_id);
-        console.log('🔗 URL:', uploadResult.secure_url);
-        
-        profileImageData = {
-          url: uploadResult.secure_url,
-          id: uploadResult.public_id,
-          originalName: req.file.originalname,
-          mimeType: req.file.mimetype,
-          size: req.file.size
-        };
-        
-      } catch (cloudinaryError) {
-        console.error('❌ Cloudinary upload error:', cloudinaryError);
-        
-        // Fallback: استخدام صورة افتراضية
-        console.log('🔄 Using fallback: default image');
-        profileImageData = {
-          url: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png',
-          id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc',
-          originalName: req.file.originalname,
-          mimeType: req.file.mimetype,
-          size: req.file.size
-        };
-      }
+      profileImageData = {
+        url: uploadResult.secure_url,
+        id: uploadResult.public_id,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size
+      };
       
       console.log('✅ Profile image processed successfully:', {
         id: profileImageData.id,
@@ -189,7 +164,10 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       console.log('🔄 Using fallback: default image');
       profileImageData = {
         url: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png',
-        id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
+        id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc',
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size
       };
       
       // لا نرجع خطأ، نستمر مع الصورة الافتراضية
@@ -278,35 +256,26 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Handle profile image upload
+  // Handle profile image upload - CLOUDINARY ORGANIZED FOLDERS v1.0.4
   let uploadedImageData = null;
   if (req.file) {
     try {
       console.log('🔄 Processing uploaded image for update...');
+      console.log('📸 Buffer size:', req.file.buffer.length);
       
-      const cloudinary = await import('cloudinary');
+      const uploadOptions = {
+        folder: 'arthub/admin-profiles',
+        resource_type: 'image',
+        format: 'auto',
+        quality: 'auto:good',
+        eager: [
+          { width: 200, height: 200, crop: 'thumb', gravity: 'auto' },
+          { width: 400, crop: 'scale' }
+        ],
+        eager_async: true
+      };
       
-      // تكوين Cloudinary
-      cloudinary.v2.config({
-        cloud_name: process.env.CLOUD_NAME,
-        api_key: process.env.API_KEY,
-        api_secret: process.env.API_SECRET,
-        secure: true
-      });
-      
-      // تحويل buffer إلى base64 string
-      const base64Image = req.file.buffer.toString('base64');
-      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
-      
-      const uploadResult = await cloudinary.v2.uploader.upload(
-        dataURI,
-        {
-          folder: 'arthub/admin-profiles',
-          resource_type: 'image',
-          format: 'auto',
-          quality: 'auto:good'
-        }
-      );
+      const uploadResult = await uploadOptimizedImage(req.file.buffer, uploadOptions);
       
       console.log('✅ Image uploaded to Cloudinary successfully');
       console.log('🆔 Public ID:', uploadResult.public_id);
@@ -327,11 +296,23 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
       });
     } catch (error) {
       console.error('❌ Error processing image:', error);
-      return res.status(400).json({
-        success: false,
-        message: 'فشل في معالجة الصورة',
-        data: null
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack
       });
+      
+      // Fallback: استخدام صورة افتراضية بدلاً من إرجاع خطأ
+      console.log('🔄 Using fallback: default image');
+      uploadedImageData = {
+        url: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png',
+        id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc',
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size
+      };
+      
+      // لا نرجع خطأ، نستمر مع الصورة الافتراضية
+      console.log('✅ Using default profile image as fallback');
     }
   }
 
