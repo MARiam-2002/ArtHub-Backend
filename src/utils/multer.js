@@ -1,10 +1,11 @@
-import multer, { memoryStorage } from 'multer';
+import multer, { diskStorage } from 'multer';
 
 export const filterObject = {
   image: ['image/png', 'image/jpeg'],
   pdf: ['application/pdf'],
   video: ['video/mp4']
 };
+
 export const fileUpload = filterArray => {
   const fileFilter = (req, file, cb) => {
     if (!filterArray.includes(file.mimetype)) {
@@ -13,5 +14,8 @@ export const fileUpload = filterArray => {
     return cb(null, true);
   };
 
-  return multer({ storage: memoryStorage(), fileFilter });
+  return multer({ 
+    storage: diskStorage({}), 
+    fileFilter 
+  });
 };

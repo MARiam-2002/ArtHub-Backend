@@ -101,54 +101,39 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Handle profile image upload - SIMPLE UPLOAD v1.0.5
+  // Handle profile image upload - SIMPLE UPLOAD v1.0.6
   let profileImageData = null;
-  console.log('🔍 Request body:', req.body);
   console.log('🔍 Request file:', req.file);
   
   if (req.file) {
-    console.log('📸 File received:', {
-      originalname: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
-    });
-    
     try {
-      // رفع الصورة إلى Cloudinary بشكل مباشر وبسيط
       console.log('🔄 Uploading image to Cloudinary...');
-      console.log('📸 Buffer size:', req.file.buffer.length);
       
-      // استخدام cloudinary مباشرة بدون تعقيد
+      // استخدام cloudinary مباشرة
       const cloudinary = await import('cloudinary');
       
       // تكوين Cloudinary
       cloudinary.v2.config({
         cloud_name: process.env.CLOUD_NAME,
         api_key: process.env.API_KEY,
-        api_secret: process.env.API_SECRET,
-        secure: true
+        api_secret: process.env.API_SECRET
       });
       
-      // تحويل buffer إلى base64 string
-      const base64Image = req.file.buffer.toString('base64');
-      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+      // رفع الصورة مباشرة مثل المثال
+      const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+        req.file.path,
+        {
+          folder: 'arthub/admin-profiles'
+        }
+      );
       
-      // رفع الصورة مباشرة
-      const uploadResult = await cloudinary.v2.uploader.upload(dataURI, {
-        folder: 'arthub/admin-profiles',
-        resource_type: 'image',
-        format: 'auto',
-        quality: 'auto:good'
-      });
-      
-      console.log('✅ Image uploaded to Cloudinary successfully');
-      console.log('🆔 Public ID:', uploadResult.public_id);
-      console.log('🔗 URL:', uploadResult.secure_url);
+      console.log('✅ Image uploaded successfully');
+      console.log('🔗 URL:', secure_url);
+      console.log('🆔 Public ID:', public_id);
       
       profileImageData = {
-        url: uploadResult.secure_url,
-        id: uploadResult.public_id,
+        url: secure_url,
+        id: public_id,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size
@@ -158,13 +143,7 @@ export const createAdmin = asyncHandler(async (req, res, next) => {
       
     } catch (error) {
       console.error('❌ Error uploading image:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        http_code: error.http_code,
-        name: error.name
-      });
       
-      // إرجاع خطأ بدلاً من استخدام صورة افتراضية
       return res.status(400).json({
         success: false,
         message: 'فشل في رفع الصورة: ' + error.message,
@@ -254,43 +233,37 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
     }
   }
 
-  // Handle profile image upload - SIMPLE UPLOAD v1.0.5
+  // Handle profile image upload - SIMPLE UPLOAD v1.0.6
   let uploadedImageData = null;
   if (req.file) {
     try {
-      console.log('🔄 Processing uploaded image for update...');
-      console.log('📸 Buffer size:', req.file.buffer.length);
+      console.log('🔄 Uploading image to Cloudinary...');
       
-      // استخدام cloudinary مباشرة بدون تعقيد
+      // استخدام cloudinary مباشرة
       const cloudinary = await import('cloudinary');
       
       // تكوين Cloudinary
       cloudinary.v2.config({
         cloud_name: process.env.CLOUD_NAME,
         api_key: process.env.API_KEY,
-        api_secret: process.env.API_SECRET,
-        secure: true
+        api_secret: process.env.API_SECRET
       });
       
-      // تحويل buffer إلى base64 string
-      const base64Image = req.file.buffer.toString('base64');
-      const dataURI = `data:${req.file.mimetype};base64,${base64Image}`;
+      // رفع الصورة مباشرة مثل المثال
+      const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+        req.file.path,
+        {
+          folder: 'arthub/admin-profiles'
+        }
+      );
       
-      // رفع الصورة مباشرة
-      const uploadResult = await cloudinary.v2.uploader.upload(dataURI, {
-        folder: 'arthub/admin-profiles',
-        resource_type: 'image',
-        format: 'auto',
-        quality: 'auto:good'
-      });
-      
-      console.log('✅ Image uploaded to Cloudinary successfully');
-      console.log('🆔 Public ID:', uploadResult.public_id);
-      console.log('🔗 URL:', uploadResult.secure_url);
+      console.log('✅ Image uploaded successfully');
+      console.log('🔗 URL:', secure_url);
+      console.log('🆔 Public ID:', public_id);
       
       uploadedImageData = {
-        url: uploadResult.secure_url,
-        id: uploadResult.public_id,
+        url: secure_url,
+        id: public_id,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size
@@ -300,13 +273,7 @@ export const updateAdmin = asyncHandler(async (req, res, next) => {
       
     } catch (error) {
       console.error('❌ Error uploading image:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        http_code: error.http_code,
-        name: error.name
-      });
       
-      // إرجاع خطأ بدلاً من استخدام صورة افتراضية
       return res.status(400).json({
         success: false,
         message: 'فشل في رفع الصورة: ' + error.message,
