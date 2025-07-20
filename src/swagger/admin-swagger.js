@@ -1197,8 +1197,33 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'جلب جميع المستخدمين',
-      description: 'جلب جميع المستخدمين - الفرونت هاندل سيقوم بالتصفية والترتيب والتصفح',
+      description: 'جلب جميع المستخدمين مع الباجينيشن - 10 مستخدمين في الصفحة افتراضياً',
       security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            default: 1,
+            minimum: 1
+          },
+          description: 'رقم الصفحة',
+          example: 1
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 10,
+            minimum: 1,
+            maximum: 100
+          },
+          description: 'عدد المستخدمين في الصفحة',
+          example: 10
+        }
+      ],
       responses: {
         200: {
           description: 'تم جلب المستخدمين بنجاح',
@@ -1224,46 +1249,68 @@ export const adminPaths = {
                           type: 'object',
                           properties: {
                             _id: {
-                              type: 'string'
+                              type: 'string',
+                              example: '507f1f77bcf86cd799439011'
                             },
                             displayName: {
-                              type: 'string'
+                              type: 'string',
+                              example: 'عمر خالد محمد'
                             },
                             email: {
-                              type: 'string'
+                              type: 'string',
+                              example: 'omar.2004@gmail.com'
                             },
                             phoneNumber: {
-                              type: 'string'
+                              type: 'string',
+                              example: '+201140067845'
                             },
                             role: {
                               type: 'string',
-                              enum: ['user', 'artist']
+                              enum: ['user', 'artist'],
+                              example: 'user'
                             },
                             isActive: {
-                              type: 'boolean'
+                              type: 'boolean',
+                              example: true
                             },
                             isVerified: {
-                              type: 'boolean'
+                              type: 'boolean',
+                              example: true
                             },
                             profileImage: {
-                              type: 'string'
+                              type: 'object',
+                              properties: {
+                                url: {
+                                  type: 'string',
+                                  example: 'https://example.com/profile.jpg'
+                                },
+                                id: {
+                                  type: 'string',
+                                  example: 'profile_id'
+                                }
+                              }
                             },
                             lastActive: {
                               type: 'string',
-                              format: 'date-time'
+                              format: 'date-time',
+                              example: '2025-01-18T10:30:00.000Z'
                             },
                             createdAt: {
                               type: 'string',
-                              format: 'date-time'
+                              format: 'date-time',
+                              example: '2023-01-15T10:30:00.000Z'
                             },
                             job: {
-                              type: 'string'
+                              type: 'string',
+                              example: 'طالب'
                             },
                             location: {
-                              type: 'string'
+                              type: 'string',
+                              example: 'القاهرة, مصر'
                             },
                             bio: {
-                              type: 'string'
+                              type: 'string',
+                              example: 'مستخدم نشط'
                             }
                           }
                         }
@@ -1272,19 +1319,45 @@ export const adminPaths = {
                         type: 'object',
                         properties: {
                           totalUsers: {
-                            type: 'integer'
+                            type: 'integer',
+                            example: 150
                           },
                           activeUsers: {
-                            type: 'integer'
+                            type: 'integer',
+                            example: 120
                           },
                           bannedUsers: {
-                            type: 'integer'
+                            type: 'integer',
+                            example: 5
                           },
                           clients: {
-                            type: 'integer'
+                            type: 'integer',
+                            example: 100
                           },
                           artists: {
-                            type: 'integer'
+                            type: 'integer',
+                            example: 50
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'integer',
+                            example: 1
+                          },
+                          limit: {
+                            type: 'integer',
+                            example: 10
+                          },
+                          total: {
+                            type: 'integer',
+                            example: 150
+                          },
+                          pages: {
+                            type: 'integer',
+                            example: 15
                           }
                         }
                       }

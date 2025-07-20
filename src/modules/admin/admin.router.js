@@ -499,9 +499,25 @@ router.put('/change-password',
  *   get:
  *     summary: Get all users (clients and artists)
  *     tags: [Admin Dashboard]
- *     description: Get all users - frontend will handle filtering, sorting, and pagination
+ *     description: Get all users with pagination - 10 users per page by default
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           minimum: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Number of users per page
  *     responses:
  *       200:
  *         description: Users retrieved successfully
@@ -512,28 +528,95 @@ router.put('/change-password',
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: "تم جلب قائمة المستخدمين بنجاح"
  *                 data:
  *                   type: object
  *                   properties:
  *                     users:
  *                       type: array
  *                       items:
- *                         $ref: #/components/schemas/UserForAdmin'
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                             example: "507f1f77bcf86cd799439011"
+ *                           displayName:
+ *                             type: string
+ *                             example: "عمر خالد محمد"
+ *                           email:
+ *                             type: string
+ *                             example: "omar.2004@gmail.com"
+ *                           phoneNumber:
+ *                             type: string
+ *                             example: "+201140067845"
+ *                           role:
+ *                             type: string
+ *                             enum: [user, artist]
+ *                             example: "user"
+ *                           isActive:
+ *                             type: boolean
+ *                             example: true
+ *                           isVerified:
+ *                             type: boolean
+ *                             example: true
+ *                           profileImage:
+ *                             type: object
+ *                             properties:
+ *                               url:
+ *                                 type: string
+ *                               id:
+ *                                 type: string
+ *                           lastActive:
+ *                             type: string
+ *                             format: date-time
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           job:
+ *                             type: string
+ *                             example: "طالب"
+ *                           location:
+ *                             type: string
+ *                             example: "القاهرة, مصر"
+ *                           bio:
+ *                             type: string
+ *                             example: "مستخدم نشط"
  *                     statistics:
  *                       type: object
  *                       properties:
  *                         totalUsers:
  *                           type: number
+ *                           example: 150
  *                         activeUsers:
  *                           type: number
+ *                           example: 120
  *                         bannedUsers:
  *                           type: number
+ *                           example: 5
  *                         clients:
  *                           type: number
+ *                           example: 100
  *                         artists:
  *                           type: number
+ *                           example: 50
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: number
+ *                           example: 1
+ *                         limit:
+ *                           type: number
+ *                           example: 10
+ *                         total:
+ *                           type: number
+ *                           example: 150
+ *                         pages:
+ *                           type: number
+ *                           example: 15
  *       401:
  *         description: Unauthorized
  *       403:

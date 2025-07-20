@@ -640,20 +640,34 @@ export const changeAdminPassword = asyncHandler(async (req, res, next) => {
 export const getUsers = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  // Get all users (clients and artists) - frontend will handle filtering, sorting, and pagination
-  const users = await userModel.find({ 
+  const { page = 1, limit = 10 } = req.query;
+  
+  // Build query filter
+  const filter = { 
     role: { $in: ['user', 'artist'] }, 
     isDeleted: false 
-  })
-  .select('-password')
-  .lean();
+  };
+  
+  // Calculate pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  
+  // Get users with pagination
+  const users = await userModel.find(filter)
+    .select('-password')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .lean();
 
-  // Get basic statistics
-  const totalUsers = users.length;
-  const activeUsers = users.filter(user => user.isActive).length;
-  const bannedUsers = users.filter(user => !user.isActive).length;
-  const clients = users.filter(user => user.role === 'user').length;
-  const artists = users.filter(user => user.role === 'artist').length;
+  // Get total count for pagination
+  const totalUsers = await userModel.countDocuments(filter);
+  
+  // Get basic statistics for all users (not just current page)
+  const allUsers = await userModel.find(filter).select('isActive role').lean();
+  const activeUsers = allUsers.filter(user => user.isActive).length;
+  const bannedUsers = allUsers.filter(user => !user.isActive).length;
+  const clients = allUsers.filter(user => user.role === 'user').length;
+  const artists = allUsers.filter(user => user.role === 'artist').length;
 
   // Format users for admin view
   const formattedUsers = users.map(user => ({
@@ -684,6 +698,12 @@ export const getUsers = asyncHandler(async (req, res, next) => {
         bannedUsers,
         clients,
         artists
+      },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalUsers,
+        pages: Math.ceil(totalUsers / parseInt(limit))
       }
     }
   });

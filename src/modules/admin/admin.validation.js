@@ -165,7 +165,17 @@ export const changePasswordSchema = {
 // Get users validation
 export const getUsersSchema = {
   query: joi.object({
-    // No query parameters needed - frontend will handle filtering and sorting
+    page: joi.number().integer().min(1).default(1).messages({
+      'number.base': 'رقم الصفحة يجب أن يكون رقماً',
+      'number.integer': 'رقم الصفحة يجب أن يكون رقماً صحيحاً',
+      'number.min': 'رقم الصفحة يجب أن يكون أكبر من 0'
+    }),
+    limit: joi.number().integer().min(1).max(100).default(10).messages({
+      'number.base': 'عدد العناصر يجب أن يكون رقماً',
+      'number.integer': 'عدد العناصر يجب أن يكون رقماً صحيحاً',
+      'number.min': 'عدد العناصر يجب أن يكون أكبر من 0',
+      'number.max': 'عدد العناصر يجب أن يكون أقل من 100'
+    })
   })
 };
 
