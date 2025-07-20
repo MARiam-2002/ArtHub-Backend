@@ -289,11 +289,32 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
     rejectedTotal += monthData.rejected;
   });
   
+  // تحديد عدد الشهور المطلوبة حسب الفترة
+  let monthsToShow = 12;
+  switch (period) {
+    case '1month':
+      monthsToShow = 1;
+      break;
+    case '3months':
+      monthsToShow = 3;
+      break;
+    case '6months':
+      monthsToShow = 6;
+      break;
+    case '9months':
+      monthsToShow = 9;
+      break;
+    case '12months':
+    default:
+      monthsToShow = 12;
+      break;
+  }
+  
   // تحضير بيانات الرسوم البيانية من البيانات الفعلية
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
   
-  for (let i = 11; i >= 0; i--) {
+  for (let i = monthsToShow - 1; i >= 0; i--) {
     const targetMonth = currentMonth - i;
     const targetYear = currentYear;
     
@@ -306,7 +327,7 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
     };
     
     ordersChartData.push({
-      month: months[11 - i], // ترتيب عكسي للشهور
+      month: months[11 - (monthsToShow - 1 - i)], // ترتيب صحيح للشهور
       value: monthData.total,
       completed: monthData.completed,
       inProgress: monthData.inProgress,
@@ -342,7 +363,7 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
   });
   
   // تحضير بيانات الرسوم البيانية من البيانات الفعلية
-  for (let i = 11; i >= 0; i--) {
+  for (let i = monthsToShow - 1; i >= 0; i--) {
     const targetMonth = currentMonth - i;
     const targetYear = currentYear;
     
@@ -354,7 +375,7 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
     };
     
     revenueChartData.push({
-      month: months[11 - i], // ترتيب عكسي للشهور
+      month: months[11 - (monthsToShow - 1 - i)], // ترتيب صحيح للشهور
       value: monthData.totalRevenue,
       orderCount: monthData.orderCount,
       averageOrderValue: Math.round(monthData.averageOrderValue)
@@ -771,7 +792,7 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
     ) || { totalSales: 0, orderCount: 0 };
     
     chartData.push({
-      month: months[11 - i], // ترتيب عكسي للشهور
+      month: months[11 - (monthsToShow - 1 - i)], // ترتيب صحيح للشهور
       sales: monthData.totalSales,
       orders: monthData.orderCount
     });
