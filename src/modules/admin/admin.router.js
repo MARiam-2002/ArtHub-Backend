@@ -882,7 +882,7 @@ router.get('/users/:id',
  *    403       description: Forbidden - Admin only
  *    404       description: User not found
  */
-router.patch('/users/:id/block', 
+router.delete('/users/:id/block', 
   authenticate, 
   isAuthorized('admin', 'superadmin'), 
   isValidation(Validators.blockUserSchema), 

@@ -814,7 +814,6 @@ export const blockUser = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { action, reason } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -833,13 +832,16 @@ export const blockUser = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Update user status
-  if (action === 'block') {
-    user.isActive = false;
-    user.blockReason = reason;
+  // Toggle user status (block if active, unblock if inactive)
+  const wasActive = user.isActive;
+  user.isActive = !user.isActive;
+  
+  if (!user.isActive) {
+    // Blocking user
+    user.blockReason = 'تم الحظر من قبل الإدارة';
     user.blockedAt = new Date();
-  } else if (action === 'unblock') {
-    user.isActive = true;
+  } else {
+    // Unblocking user
     user.blockReason = null;
     user.blockedAt = null;
   }
@@ -848,7 +850,7 @@ export const blockUser = asyncHandler(async (req, res, next) => {
 
   res.json({
     success: true,
-    message: action === 'block' ? 'تم حظر المستخدم بنجاح' : 'تم إلغاء حظر المستخدم بنجاح',
+    message: wasActive ? 'تم حظر المستخدم بنجاح' : 'تم إلغاء حظر المستخدم بنجاح',
     data: {
       _id: user._id,
       displayName: user.displayName,

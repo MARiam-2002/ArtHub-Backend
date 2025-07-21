@@ -194,14 +194,8 @@ export const blockUserSchema = {
     id: joi.string().required().messages({
       'any.required': 'معرف المستخدم مطلوب'
     })
-  }),
-  body: joi.object({
-    action: joi.string().valid('block', 'unblock').required().messages({
-      'any.only': 'الإجراء يجب أن يكون block أو unblock',
-      'any.required': 'الإجراء مطلوب'
-    }),
-    reason: joi.string().optional()
   })
+  // لا حاجة لـ body validation لأننا لا نرسل أي بيانات
 };
 
 // Send message validation

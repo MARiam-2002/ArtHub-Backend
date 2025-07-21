@@ -47,7 +47,9 @@
     "test:export-correct": "node scripts/test-export-correct.js",
     "test:excel-only": "node scripts/test-excel-only.js",
     "test:swagger-excel-only": "node scripts/test-swagger-excel-only.js",
-    "test:notifications-fix": "node scripts/test-notifications-fix.js"
+    "test:notifications-fix": "node scripts/test-notifications-fix.js",
+    "test:block-user-simple": "node scripts/test-block-user-simple.js",
+    "test:block-user-delete": "node scripts/test-block-user-delete.js"
   },
   "engines": {
     "node": "18.x || >= 16"

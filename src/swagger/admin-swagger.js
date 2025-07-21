@@ -1540,10 +1540,10 @@ export const adminPaths = {
   },
 
   '/api/admin/users/{id}/block': {
-    patch: {
+    delete: {
       tags: ['Admin'],
       summary: 'حظر/إلغاء حظر المستخدم',
-      description: 'حظر أو إلغاء حظر حساب المستخدم',
+      description: 'تبديل حالة المستخدم (حظر إذا كان نشط، إلغاء حظر إذا كان محظور)',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -1556,28 +1556,7 @@ export const adminPaths = {
           description: 'معرف المستخدم'
         }
       ],
-      requestBody: {
-        required: true,
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              required: ['action'],
-              properties: {
-                action: {
-                  type: 'string',
-                  enum: ['block', 'unblock'],
-                  description: 'الإجراء المطلوب'
-                },
-                reason: {
-                  type: 'string',
-                  description: 'سبب الحظر (اختياري)'
-                }
-              }
-            }
-          }
-        }
-      },
+      // لا حاجة لـ requestBody لأننا لا نرسل أي بيانات
       responses: {
         200: {
           description: 'تم تحديث حالة المستخدم بنجاح',
