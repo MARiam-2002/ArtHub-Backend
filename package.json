@@ -39,7 +39,12 @@
     "test:export-simple": "node scripts/test-export-simple.js",
     "test:excel-debug": "node scripts/test-excel-debug.js",
     "test:excel-logs": "node scripts/test-excel-logs.js",
-    "test:excel-final": "node scripts/test-excel-final.js"
+    "test:excel-final": "node scripts/test-excel-final.js",
+    "test:swagger-docs": "node scripts/test-swagger-docs.js",
+    "test:swagger-simple": "node scripts/test-swagger-simple.js",
+    "rebuild:swagger": "node scripts/rebuild-swagger.js",
+    "clear:swagger-cache": "node scripts/clear-swagger-cache.js",
+    "test:export-correct": "node scripts/test-export-correct.js"
   },
   "engines": {
     "node": "18.x || >= 16"

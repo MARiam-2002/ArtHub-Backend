@@ -2374,7 +2374,7 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'تصدير بيانات المستخدمين',
-      description: 'تصدير بيانات المستخدمين بصيغة Excel جميلة مع ألوان التطبيق أو JSON',
+      description: 'تصدير جميع بيانات المستخدمين بصيغة Excel جميلة مع ألوان التطبيق أو JSON',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -2387,57 +2387,6 @@ export const adminPaths = {
           },
           description: 'صيغة التصدير (Excel أو JSON)',
           example: 'excel'
-        },
-        {
-          in: 'query',
-          name: 'type',
-          schema: {
-            type: 'string',
-            enum: ['basic', 'advanced'],
-            default: 'basic'
-          },
-          description: 'نوع التقرير (أساسي أو متقدم مع أوراق متعددة)',
-          example: 'basic'
-        },
-        {
-          in: 'query',
-          name: 'role',
-          schema: {
-            type: 'string',
-            enum: ['user', 'artist']
-          },
-          description: 'تصفية حسب نوع المستخدم (اختياري)',
-          example: 'artist'
-        },
-        {
-          in: 'query',
-          name: 'status',
-          schema: {
-            type: 'string',
-            enum: ['active', 'inactive']
-          },
-          description: 'تصفية حسب الحالة (اختياري)',
-          example: 'active'
-        },
-        {
-          in: 'query',
-          name: 'dateFrom',
-          schema: {
-            type: 'string',
-            format: 'date'
-          },
-          description: 'تاريخ البداية للتصفية (اختياري)',
-          example: '2023-01-01'
-        },
-        {
-          in: 'query',
-          name: 'dateTo',
-          schema: {
-            type: 'string',
-            format: 'date'
-          },
-          description: 'تاريخ النهاية للتصفية (اختياري)',
-          example: '2025-01-18'
         }
       ],
       responses: {
