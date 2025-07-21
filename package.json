@@ -31,7 +31,11 @@
     "test:cloudinary": "node scripts/test-cloudinary-upload.js",
     "test:simple-upload": "node scripts/test-simple-upload.js",
     "test:export-endpoint": "node scripts/test-export-endpoint.js",
-    "test:export-quick": "node scripts/test-export-quick.js"
+    "test:export-quick": "node scripts/test-export-quick.js",
+    "test:export-local": "node scripts/test-export-local.js",
+    "test:middleware": "node scripts/test-middleware.js",
+    "test:validation": "node scripts/test-validation.js",
+    "test:validation-simple": "node scripts/test-validation-simple.js"
   },
   "engines": {
     "node": "18.x || >= 16"
