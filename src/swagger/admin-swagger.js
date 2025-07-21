@@ -2374,7 +2374,7 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'تصدير بيانات المستخدمين',
-      description: 'تصدير بيانات المستخدمين بصيغة CSV/Excel',
+      description: 'تصدير بيانات المستخدمين بصيغة Excel جميلة مع ألوان التطبيق أو JSON',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -2382,30 +2382,42 @@ export const adminPaths = {
           name: 'format',
           schema: {
             type: 'string',
-            enum: ['csv', 'excel'],
-            default: 'csv'
+            enum: ['excel', 'json'],
+            default: 'excel'
           },
-          description: 'صيغة التصدير'
+          description: 'صيغة التصدير (Excel أو JSON)',
+          example: 'excel'
+        },
+        {
+          in: 'query',
+          name: 'type',
+          schema: {
+            type: 'string',
+            enum: ['basic', 'advanced'],
+            default: 'basic'
+          },
+          description: 'نوع التقرير (أساسي أو متقدم مع أوراق متعددة)',
+          example: 'basic'
         },
         {
           in: 'query',
           name: 'role',
           schema: {
             type: 'string',
-            enum: ['user', 'artist', 'all'],
-            default: 'all'
+            enum: ['user', 'artist']
           },
-          description: 'تصفية حسب نوع المستخدم'
+          description: 'تصفية حسب نوع المستخدم (اختياري)',
+          example: 'artist'
         },
         {
           in: 'query',
           name: 'status',
           schema: {
             type: 'string',
-            enum: ['active', 'inactive', 'banned', 'all'],
-            default: 'all'
+            enum: ['active', 'inactive']
           },
-          description: 'تصفية حسب الحالة'
+          description: 'تصفية حسب الحالة (اختياري)',
+          example: 'active'
         },
         {
           in: 'query',
@@ -2414,7 +2426,8 @@ export const adminPaths = {
             type: 'string',
             format: 'date'
           },
-          description: 'تاريخ البداية'
+          description: 'تاريخ البداية للتصفية (اختياري)',
+          example: '2023-01-01'
         },
         {
           in: 'query',
@@ -2423,21 +2436,166 @@ export const adminPaths = {
             type: 'string',
             format: 'date'
           },
-          description: 'تاريخ النهاية'
+          description: 'تاريخ النهاية للتصفية (اختياري)',
+          example: '2025-01-18'
         }
       ],
       responses: {
         200: {
           description: 'تم تصدير البيانات بنجاح',
           content: {
-            'application/csv': {
-              schema: {
-                type: 'string'
-              }
-            },
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
               schema: {
-                type: 'string'
+                type: 'string',
+                format: 'binary'
+              },
+              description: 'ملف Excel جميل مع ألوان التطبيق وإحصائيات'
+            },
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تصدير بيانات المستخدمين بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      users: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string',
+                              example: '507f1f77bcf86cd799439011'
+                            },
+                            displayName: {
+                              type: 'string',
+                              example: 'عمر خالد محمد'
+                            },
+                            email: {
+                              type: 'string',
+                              example: 'omar.2004@gmail.com'
+                            },
+                            phoneNumber: {
+                              type: 'string',
+                              example: '+201140067845'
+                            },
+                            role: {
+                              type: 'string',
+                              example: 'user'
+                            },
+                            isActive: {
+                              type: 'boolean',
+                              example: true
+                            },
+                            isVerified: {
+                              type: 'boolean',
+                              example: true
+                            },
+                            job: {
+                              type: 'string',
+                              example: 'طالب'
+                            },
+                            location: {
+                              type: 'string',
+                              example: 'القاهرة, مصر'
+                            },
+                            bio: {
+                              type: 'string',
+                              example: 'مستخدم نشط'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            },
+                            lastActive: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      statistics: {
+                        type: 'object',
+                        properties: {
+                          totalUsers: {
+                            type: 'integer',
+                            example: 150
+                          },
+                          activeUsers: {
+                            type: 'integer',
+                            example: 120
+                          },
+                          inactiveUsers: {
+                            type: 'integer',
+                            example: 5
+                          },
+                          artists: {
+                            type: 'integer',
+                            example: 50
+                          },
+                          clients: {
+                            type: 'integer',
+                            example: 100
+                          },
+                          verifiedUsers: {
+                            type: 'integer',
+                            example: 140
+                          },
+                          unverifiedUsers: {
+                            type: 'integer',
+                            example: 10
+                          }
+                        }
+                      },
+                      exportInfo: {
+                        type: 'object',
+                        properties: {
+                          format: {
+                            type: 'string',
+                            example: 'json'
+                          },
+                          totalUsers: {
+                            type: 'integer',
+                            example: 150
+                          },
+                          exportedAt: {
+                            type: 'string',
+                            format: 'date-time'
+                          },
+                          filters: {
+                            type: 'object',
+                            properties: {
+                              role: {
+                                type: 'string',
+                                example: 'artist'
+                              },
+                              status: {
+                                type: 'string',
+                                example: 'active'
+                              },
+                              dateFrom: {
+                                type: 'string',
+                                example: '2023-01-01'
+                              },
+                              dateTo: {
+                                type: 'string',
+                                example: '2025-01-18'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -2476,6 +2634,30 @@ export const adminPaths = {
                   message: {
                     type: 'string',
                     example: 'غير مصرح لك بالوصول لهذا المورد'
+                  }
+                }
+              }
+            }
+          }
+        },
+        500: {
+          description: 'خطأ في إنشاء ملف Excel',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'فشل في إنشاء ملف Excel'
+                  },
+                  error: {
+                    type: 'string',
+                    example: 'Error details'
                   }
                 }
               }

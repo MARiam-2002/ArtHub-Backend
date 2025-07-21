@@ -1088,30 +1088,115 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
 export const exportUsers = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const users = await userModel.find({ 
+  const { format = 'excel', type = 'basic', role, status, dateFrom, dateTo } = req.query;
+  
+  // بناء الفلاتر
+  const filter = { 
     role: { $in: ['user', 'artist'] }, 
     isDeleted: false 
-  })
-  .select('-password')
-  .lean();
+  };
 
-  const csvData = users.map(user => ({
-    ID: user._id,
-    Name: user.displayName,
-    Email: user.email,
-    Phone: user.phoneNumber || '',   Role: user.role,
-    Status: user.isActive ? 'Active' : 'Inactive',
-    Verified: user.isVerified ? 'Yes' : 'No',
-    Created: user.createdAt,
-    LastActive: user.lastActive || ''
-  }));
+  // فلتر حسب النوع
+  if (role && ['user', 'artist'].includes(role)) {
+    filter.role = role;
+  }
 
-  res.json({
-    success: true,
-    message: 'تم تصدير بيانات المستخدمين بنجاح',
-    data: {
-      totalUsers: users.length,
-      csvData
+  // فلتر حسب الحالة
+  if (status && ['active', 'inactive'].includes(status)) {
+    filter.isVerified = status === 'active';
+  }
+
+  // فلتر حسب التاريخ
+  if (dateFrom || dateTo) {
+    filter.createdAt = {};
+    if (dateFrom) filter.createdAt.$gte = new Date(dateFrom);
+    if (dateTo) filter.createdAt.$lte = new Date(dateTo);
+  }
+
+  const users = await userModel.find(filter)
+    .select('-password')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // إحصائيات
+  const statistics = {
+    totalUsers: users.length,
+    activeUsers: users.filter(u => u.isActive).length,
+    inactiveUsers: users.filter(u => !u.isActive).length,
+    artists: users.filter(u => u.role === 'artist').length,
+    clients: users.filter(u => u.role === 'user').length,
+    verifiedUsers: users.filter(u => u.isVerified).length,
+    unverifiedUsers: users.filter(u => !u.isVerified).length
+  };
+
+  if (format === 'excel') {
+    try {
+      const { generateUsersExcel, generateAdvancedUsersReport } = await import('../../utils/excelGenerator.js');
+      
+      let excelBuffer;
+      const fileName = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      
+      if (type === 'advanced') {
+        excelBuffer = await generateAdvancedUsersReport(users, {
+          role,
+          status,
+          dateFrom,
+          dateTo
+        });
+      } else {
+        excelBuffer = await generateUsersExcel(users);
+      }
+
+      // إعداد headers للتحميل
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.setHeader('Content-Length', excelBuffer.length);
+
+      res.send(excelBuffer);
+
+    } catch (error) {
+      console.error('❌ Error generating Excel file:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'فشل في إنشاء ملف Excel',
+        error: error.message
+      });
     }
-  });
+  } else {
+    // تصدير كـ JSON (للتوافق مع الإصدار السابق)
+    const jsonData = users.map(user => ({
+      _id: user._id,
+      displayName: user.displayName,
+      email: user.email,
+      phoneNumber: user.phoneNumber || '',
+      role: user.role,
+      isActive: user.isActive,
+      isVerified: user.isVerified,
+      job: user.job || '',
+      location: user.location || '',
+      bio: user.bio || '',
+      createdAt: user.createdAt,
+      lastActive: user.lastActive
+    }));
+
+    res.json({
+      success: true,
+      message: 'تم تصدير بيانات المستخدمين بنجاح',
+      data: {
+        users: jsonData,
+        statistics,
+        exportInfo: {
+          format: 'json',
+          totalUsers: users.length,
+          exportedAt: new Date().toISOString(),
+          filters: {
+            role,
+            status,
+            dateFrom,
+            dateTo
+          }
+        }
+      }
+    });
+  }
 }); 
