@@ -629,6 +629,8 @@ router.get('/users',
   adminController.getUsers
 );
 
+
+
 /**
  * @swagger
  * /api/admin/users/{id}:
@@ -1038,72 +1040,7 @@ router.get('/users/:id/reviews',
  *    403       description: Forbidden - Admin only
  *    404       description: User not found
  */
-/**
- * @swagger
- * /api/admin/users/export:
- *   get:
- *     summary: Export users data
- *     tags: [Admin Dashboard]
- *     description: Export users data to Excel format with beautiful design
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: format
- *         schema:
- *           type: string
- *           enum: [excel, json]
- *           default: excel
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [basic, advanced]
- *           default: basic
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [user, artist]
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *       - in: query
- *         name: dateFrom
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: dateTo
- *         schema:
- *           type: string
- *           format: date
- *     responses:
- *       200:
- *         description: Users data exported successfully
- *         content:
- *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
- *             schema:
- *               type: string
- *               format: binary
- *           application/json:
- *             schema:
- *               type: object
- *    401:
- *       description: Unauthorized
- *    403:
- *       description: Forbidden - Admin only
- *    500:
- *       description: Error generating Excel file
- */
-router.get('/users/export', 
-  authenticate, 
-  isAuthorized('admin', 'superadmin'), 
-  isValidation(Validators.exportUsersSchema), 
-  adminController.exportUsers
-);
+
 
 router.get('/users/:id/activity', 
   authenticate, 
