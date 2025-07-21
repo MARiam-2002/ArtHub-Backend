@@ -36,7 +36,10 @@
     "test:middleware": "node scripts/test-middleware.js",
     "test:validation": "node scripts/test-validation.js",
     "test:validation-simple": "node scripts/test-validation-simple.js",
-    "test:export-simple": "node scripts/test-export-simple.js"
+    "test:export-simple": "node scripts/test-export-simple.js",
+    "test:excel-debug": "node scripts/test-excel-debug.js",
+    "test:excel-logs": "node scripts/test-excel-logs.js",
+    "test:excel-final": "node scripts/test-excel-final.js"
   },
   "engines": {
     "node": "18.x || >= 16"

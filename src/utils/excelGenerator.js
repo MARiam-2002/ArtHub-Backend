@@ -232,9 +232,6 @@ export const generateUsersExcel = async (users, options = {}) => {
     }
   };
 
-  // إضافة مسافة صغيرة
-  worksheet.addRow([]);
-  
   // تعريف الأعمدة - مثل الداشبورد تماماً
   const columns = [
     { header: 'الاسم', key: 'displayName', width: 25 },
@@ -248,7 +245,7 @@ export const generateUsersExcel = async (users, options = {}) => {
   worksheet.columns = columns;
 
   // تنسيق رأس الجدول
-  const headerRow = worksheet.getRow(4);
+  const headerRow = worksheet.getRow(1);
   headerRow.eachCell((cell) => {
     cell.style = styles.header;
   });
