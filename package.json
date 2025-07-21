@@ -44,7 +44,9 @@
     "test:swagger-simple": "node scripts/test-swagger-simple.js",
     "rebuild:swagger": "node scripts/rebuild-swagger.js",
     "clear:swagger-cache": "node scripts/clear-swagger-cache.js",
-    "test:export-correct": "node scripts/test-export-correct.js"
+    "test:export-correct": "node scripts/test-export-correct.js",
+    "test:excel-only": "node scripts/test-excel-only.js",
+    "test:swagger-excel-only": "node scripts/test-swagger-excel-only.js"
   },
   "engines": {
     "node": "18.x || >= 16"

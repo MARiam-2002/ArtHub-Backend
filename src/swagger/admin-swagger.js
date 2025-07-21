@@ -2374,21 +2374,9 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'تصدير بيانات المستخدمين',
-      description: 'تصدير جميع بيانات المستخدمين بصيغة Excel جميلة مع ألوان التطبيق أو JSON',
+      description: 'تصدير جميع بيانات المستخدمين بصيغة Excel جميلة مع ألوان التطبيق',
       security: [{ BearerAuth: [] }],
-      parameters: [
-        {
-          in: 'query',
-          name: 'format',
-          schema: {
-            type: 'string',
-            enum: ['excel', 'json'],
-            default: 'excel'
-          },
-          description: 'صيغة التصدير (Excel أو JSON)',
-          example: 'excel'
-        }
-      ],
+      parameters: [],
       responses: {
         200: {
           description: 'تم تصدير البيانات بنجاح',

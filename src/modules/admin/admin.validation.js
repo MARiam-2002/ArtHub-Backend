@@ -280,7 +280,5 @@ export const getUserActivitySchema = {
 
 // Export users validation
 export const exportUsersSchema = {
-  query: joi.object({
-    format: joi.string().valid('excel', 'json').default('excel')
-  })
+  query: joi.object({})
 }; 

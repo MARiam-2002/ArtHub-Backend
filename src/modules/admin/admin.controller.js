@@ -1088,8 +1088,6 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
 export const exportUsers = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const { format = 'excel' } = req.query;
-  
   // جلب جميع المستخدمين بدون فلاتر
   const users = await userModel.find({ 
     role: { $in: ['user', 'artist'] }, 
@@ -1099,47 +1097,25 @@ export const exportUsers = asyncHandler(async (req, res, next) => {
     .sort({ createdAt: -1 })
     .lean();
 
-  if (format === 'excel') {
-    try {
-      const { generateUsersExcel } = await import('../../utils/excelGenerator.js');
-      
-      const excelBuffer = await generateUsersExcel(users);
-      const fileName = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+  try {
+    const { generateUsersExcel } = await import('../../utils/excelGenerator.js');
+    
+    const excelBuffer = await generateUsersExcel(users);
+    const fileName = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;
 
-      // إعداد headers للتحميل
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-      res.setHeader('Content-Length', excelBuffer.length);
+    // إعداد headers للتحميل
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', excelBuffer.length);
 
-      res.send(excelBuffer);
+    res.send(excelBuffer);
 
-    } catch (error) {
-      console.error('❌ Error generating Excel file:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'فشل في إنشاء ملف Excel',
-        error: error.message
-      });
-    }
-  } else {
-    // تصدير كـ JSON
-    const jsonData = users.map(user => ({
-      _id: user._id,
-      displayName: user.displayName,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt
-    }));
-
-    res.json({
-      success: true,
-      message: 'تم تصدير بيانات المستخدمين بنجاح',
-      data: {
-        users: jsonData,
-        totalUsers: users.length,
-        exportedAt: new Date().toISOString()
-      }
+  } catch (error) {
+    console.error('❌ Error generating Excel file:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'فشل في إنشاء ملف Excel',
+      error: error.message
     });
   }
 }); 
