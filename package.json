@@ -46,7 +46,8 @@
     "clear:swagger-cache": "node scripts/clear-swagger-cache.js",
     "test:export-correct": "node scripts/test-export-correct.js",
     "test:excel-only": "node scripts/test-excel-only.js",
-    "test:swagger-excel-only": "node scripts/test-swagger-excel-only.js"
+    "test:swagger-excel-only": "node scripts/test-swagger-excel-only.js",
+    "test:notifications-fix": "node scripts/test-notifications-fix.js"
   },
   "engines": {
     "node": "18.x || >= 16"

@@ -3,6 +3,7 @@ import mongoose, { Schema, Types, model } from 'mongoose';
 const notificationSchema = new Schema(
   {
     user: { type: Types.ObjectId, ref: 'User', required: true },
+    sender: { type: Types.ObjectId, ref: 'User' }, // إضافة حقل المرسل
     title: {
       ar: { type: String, required: true },
       en: { type: String }
@@ -29,6 +30,7 @@ notificationSchema.methods.getLocalizedContent = function (language = 'ar') {
   return {
     _id: this._id,
     user: this.user,
+    sender: this.sender,
     title: this.title[language] || this.title.ar,
     message: this.message[language] || this.message.ar,
     type: this.type,
