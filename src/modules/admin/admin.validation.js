@@ -281,11 +281,6 @@ export const getUserActivitySchema = {
 // Export users validation
 export const exportUsersSchema = {
   query: joi.object({
-    format: joi.string().valid('excel', 'json').default('excel'),
-    type: joi.string().valid('basic', 'advanced').default('basic'),
-    role: joi.string().valid('user', 'artist').optional(),
-    status: joi.string().valid('active', 'inactive').optional(),
-    dateFrom: joi.date().iso().optional(),
-    dateTo: joi.date().iso().optional()
+    format: joi.string().valid('excel', 'json').default('excel')
   })
 }; 

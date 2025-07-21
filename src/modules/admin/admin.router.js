@@ -635,7 +635,7 @@ router.get('/users',
  *   get:
  *     summary: Export users data
  *     tags: [Admin Dashboard]
- *     description: Export users data to Excel format with beautiful design
+ *     description: Export all users data to Excel format with beautiful design
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -645,32 +645,7 @@ router.get('/users',
  *           type: string
  *           enum: [excel, json]
  *           default: excel
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [basic, advanced]
- *           default: basic
- *       - in: query
- *         name: role
- *         schema:
- *           type: string
- *           enum: [user, artist]
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *       - in: query
- *         name: dateFrom
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: dateTo
- *         schema:
- *           type: string
- *           format: date
+ *         description: صيغة التصدير (Excel أو JSON)
  *     responses:
  *       200:
  *         description: Users data exported successfully
@@ -679,9 +654,30 @@ router.get('/users',
  *             schema:
  *               type: string
  *               format: binary
+ *             description: ملف Excel جميل مع ألوان التطبيق
  *           application/json:
  *             schema:
  *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تصدير بيانات المستخدمين بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     users:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     totalUsers:
+ *                       type: number
+ *                       example: 82
+ *                     exportedAt:
+ *                       type: string
+ *                       format: date-time
  *    401:
  *       description: Unauthorized
  *    403:

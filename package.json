@@ -35,7 +35,8 @@
     "test:export-local": "node scripts/test-export-local.js",
     "test:middleware": "node scripts/test-middleware.js",
     "test:validation": "node scripts/test-validation.js",
-    "test:validation-simple": "node scripts/test-validation-simple.js"
+    "test:validation-simple": "node scripts/test-validation-simple.js",
+    "test:export-simple": "node scripts/test-export-simple.js"
   },
   "engines": {
     "node": "18.x || >= 16"
