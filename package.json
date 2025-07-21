@@ -52,7 +52,10 @@
     "test:block-user-delete": "node scripts/test-block-user-delete.js",
     "test:notification-sender": "node scripts/test-notification-sender.js",
     "test:notifications-no-unread": "node scripts/test-notifications-no-unread.js",
-    "rebuild:swagger-notifications": "node scripts/rebuild-swagger-notifications.js"
+    "rebuild:swagger-notifications": "node scripts/rebuild-swagger-notifications.js",
+    "fix:swagger-json": "node scripts/fix-swagger-json.js",
+    "debug:swagger-json": "node scripts/debug-swagger-json.js",
+    "validate:json": "node scripts/validate-json.js"
   },
   "engines": {
     "node": "18.x || >= 16"

@@ -769,7 +769,7 @@
             "type": "string",
             "format": "password",
             "minLength": 8,
-            "pattern": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{8,}$",
+            "pattern": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{8}$",
             "example": "newPassword123!"
           },
           "confirmPassword": {
@@ -6776,9 +6776,7 @@
         }
       }
     }
-  }
-}
-    },
+  },
     "/notifications": {
       "get": {
         "summary": "Get user notifications",
@@ -11406,4 +11404,3 @@
       }
     }
   }
-}
