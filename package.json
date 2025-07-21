@@ -29,7 +29,8 @@
     "test:mock": "node scripts/test-mock-data.js",
     "db:check": "node scripts/check-data.js",
     "test:cloudinary": "node scripts/test-cloudinary-upload.js",
-    "test:simple-upload": "node scripts/test-simple-upload.js"
+    "test:simple-upload": "node scripts/test-simple-upload.js",
+    "test:export-endpoint": "node scripts/test-export-endpoint.js"
   },
   "engines": {
     "node": "18.x || >= 16"

@@ -1103,7 +1103,7 @@ export const exportUsers = asyncHandler(async (req, res, next) => {
 
   // فلتر حسب الحالة
   if (status && ['active', 'inactive'].includes(status)) {
-    filter.isVerified = status === 'active';
+    filter.isActive = status === 'active';
   }
 
   // فلتر حسب التاريخ
