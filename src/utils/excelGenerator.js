@@ -1,38 +1,69 @@
 import ExcelJS from 'exceljs';
 
 /**
- * إنشاء ملف Excel جميل لتصدير بيانات المستخدمين
+ * إنشاء ملف Excel جميل لتصدير بيانات المستخدمين - مثل الداشبورد
  * @param {Array} users - قائمة المستخدمين
  * @param {Object} options - خيارات إضافية
  * @returns {Promise<Buffer>} ملف Excel كـ Buffer
  */
 export const generateUsersExcel = async (users, options = {}) => {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('المستخدمين', {
+  const worksheet = workbook.addWorksheet('إدارة المستخدمين', {
     views: [{ rightToLeft: true }] // دعم اللغة العربية
   });
 
-  // تعريف ألوان التطبيق
+  // تعريف ألوان التطبيق - ألوان الداشبورد
   const colors = {
-    primary: '4A90E2',      // أزرق فاتح
-    secondary: 'F5A623',    // برتقالي
-    success: '7ED321',      // أخضر
-    danger: 'D0021B',       // أحمر
-    warning: 'F8E71C',      // أصفر
-    info: '9013FE',         // بنفسجي
-    light: 'F8F9FA',        // رمادي فاتح
-    dark: '2C3E50',         // رمادي داكن
+    primary: '4A90E2',      // أزرق فاتح - لون العنوان الرئيسي
+    secondary: 'F5A623',    // برتقالي - لون الفنانين
+    success: '7ED321',      // أخضر - لون النشط
+    danger: 'D0021B',       // أحمر - لون المحظور
+    warning: 'F8E71C',      // أصفر - لون التحذير
+    info: '9013FE',         // بنفسجي - لون العملاء
+    light: 'F8F9FA',        // رمادي فاتح - خلفية
+    dark: '2C3E50',         // رمادي داكن - نص
     white: 'FFFFFF',
-    border: 'E1E8ED'
+    border: 'E1E8ED',
+    headerBlue: '2C3E50',   // أزرق داكن للهيدر
+    lightBlue: 'E3F2FD',    // أزرق فاتح للخلفية
+    lightGreen: 'E8F5E8',   // أخضر فاتح
+    lightRed: 'FFEBEE'      // أحمر فاتح
   };
 
-  // تعريف الأنماط
+  // تعريف الأنماط - أنماط الداشبورد
   const styles = {
+    // عنوان رئيسي
+    mainTitle: {
+      font: {
+        name: 'Arial',
+        size: 18,
+        bold: true,
+        color: { argb: colors.headerBlue }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
+      }
+    },
+    // عنوان فرعي
+    subtitle: {
+      font: {
+        name: 'Arial',
+        size: 14,
+        bold: true,
+        color: { argb: colors.dark }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
+      }
+    },
+    // هيدر الجدول
     header: {
       fill: {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: colors.primary }
+        fgColor: { argb: colors.headerBlue }
       },
       font: {
         name: 'Arial',
@@ -51,10 +82,12 @@ export const generateUsersExcel = async (users, options = {}) => {
         right: { style: 'thin', color: { argb: colors.border } }
       }
     },
+    // بيانات الجدول
     data: {
       font: {
         name: 'Arial',
-        size: 11
+        size: 11,
+        color: { argb: colors.dark }
       },
       alignment: {
         horizontal: 'center',
@@ -67,6 +100,30 @@ export const generateUsersExcel = async (users, options = {}) => {
         right: { style: 'thin', color: { argb: colors.border } }
       }
     },
+    // صف زوجي
+    dataEven: {
+      font: {
+        name: 'Arial',
+        size: 11,
+        color: { argb: colors.dark }
+      },
+      fill: {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: colors.lightBlue }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
+      },
+      border: {
+        top: { style: 'thin', color: { argb: colors.border } },
+        left: { style: 'thin', color: { argb: colors.border } },
+        bottom: { style: 'thin', color: { argb: colors.border } },
+        right: { style: 'thin', color: { argb: colors.border } }
+      }
+    },
+    // حالة نشط
     statusActive: {
       fill: {
         type: 'pattern',
@@ -78,8 +135,13 @@ export const generateUsersExcel = async (users, options = {}) => {
         size: 10,
         bold: true,
         color: { argb: colors.white }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
       }
     },
+    // حالة محظور
     statusInactive: {
       fill: {
         type: 'pattern',
@@ -91,8 +153,13 @@ export const generateUsersExcel = async (users, options = {}) => {
         size: 10,
         bold: true,
         color: { argb: colors.white }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
       }
     },
+    // نوع فنان
     roleArtist: {
       fill: {
         type: 'pattern',
@@ -104,8 +171,13 @@ export const generateUsersExcel = async (users, options = {}) => {
         size: 10,
         bold: true,
         color: { argb: colors.white }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
       }
     },
+    // نوع عميل
     roleUser: {
       fill: {
         type: 'pattern',
@@ -117,119 +189,94 @@ export const generateUsersExcel = async (users, options = {}) => {
         size: 10,
         bold: true,
         color: { argb: colors.white }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
+      }
+    },
+    // إحصائيات
+    stats: {
+      font: {
+        name: 'Arial',
+        size: 12,
+        bold: true,
+        color: { argb: colors.dark }
+      },
+      fill: {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: colors.lightGreen }
+      },
+      alignment: {
+        horizontal: 'center',
+        vertical: 'middle'
+      }
+    },
+    // معلومات التصدير
+    exportInfo: {
+      font: {
+        name: 'Arial',
+        size: 10,
+        color: { argb: colors.dark }
+      },
+      fill: {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: colors.light }
+      },
+      alignment: {
+        horizontal: 'right',
+        vertical: 'middle'
       }
     }
   };
 
-  // تعريف الأعمدة
+  // إضافة مسافة صغيرة
+  worksheet.addRow([]);
+  
+  // تعريف الأعمدة - مثل الداشبورد تماماً
   const columns = [
-    { header: 'الرقم', key: 'index', width: 8 },
     { header: 'الاسم', key: 'displayName', width: 25 },
-    { header: 'البريد الإلكتروني', key: 'email', width: 30 },
-    { header: 'رقم الهاتف', key: 'phoneNumber', width: 15 },
     { header: 'النوع', key: 'role', width: 12 },
+    { header: 'البريد الإلكتروني', key: 'email', width: 30 },
     { header: 'الحالة', key: 'status', width: 12 },
-    { header: 'مفعل', key: 'isVerified', width: 10 },
-    { header: 'تاريخ الانضمام', key: 'createdAt', width: 15 },
-    { header: 'آخر نشاط', key: 'lastActive', width: 15 },
-    { header: 'الوظيفة', key: 'job', width: 15 },
-    { header: 'الموقع', key: 'location', width: 20 },
-    { header: 'النبذة', key: 'bio', width: 30 }
+    { header: 'تاريخ الانضمام', key: 'createdAt', width: 15 }
   ];
 
   // إضافة الأعمدة
   worksheet.columns = columns;
 
   // تنسيق رأس الجدول
-  worksheet.getRow(1).eachCell((cell) => {
+  const headerRow = worksheet.getRow(4);
+  headerRow.eachCell((cell) => {
     cell.style = styles.header;
   });
 
-  // إضافة البيانات
+  // إضافة البيانات - مثل الداشبورد تماماً
   users.forEach((user, index) => {
     const row = worksheet.addRow({
-      index: index + 1,
       displayName: user.displayName || 'غير محدد',
-      email: user.email,
-      phoneNumber: user.phoneNumber || 'غير محدد',
       role: user.role === 'artist' ? 'فنان' : 'عميل',
+      email: user.email,
       status: user.isActive ? 'نشط' : 'محظور',
-      isVerified: user.isVerified ? 'نعم' : 'لا',
-      createdAt: user.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-EG') : 'غير محدد',
-      lastActive: user.lastActive ? new Date(user.lastActive).toLocaleDateString('ar-EG') : 'غير محدد',
-      job: user.job || 'غير محدد',
-      location: user.location || 'غير محدد',
-      bio: user.bio || 'غير محدد'
+      createdAt: user.createdAt ? new Date(user.createdAt).toLocaleDateString('ar-EG') : 'غير محدد'
     });
 
-    // تطبيق الأنماط على الصف
+    // تطبيق الأنماط على الصف - صفوف متناوبة
     row.eachCell((cell, colNumber) => {
-      cell.style = styles.data;
+      // تطبيق نمط الصف الزوجي أو الفردي
+      const isEvenRow = (index + 1) % 2 === 0;
+      cell.style = isEvenRow ? styles.dataEven : styles.data;
 
       // تنسيق خاص للحقول
-      if (colNumber === 5) { // النوع
+      if (colNumber === 2) { // النوع
         cell.style = user.role === 'artist' ? styles.roleArtist : styles.roleUser;
-      } else if (colNumber === 6) { // الحالة
+      } else if (colNumber === 4) { // الحالة
         cell.style = user.isActive ? styles.statusActive : styles.statusInactive;
-      } else if (colNumber === 7) { // مفعل
-        cell.style = user.isVerified ? styles.statusActive : styles.statusInactive;
       }
     });
   });
-
-  // إضافة إحصائيات في نهاية الملف
-  const statsRow = worksheet.addRow([]);
-  const statsRow2 = worksheet.addRow([]);
-  
-  const totalUsers = users.length;
-  const activeUsers = users.filter(u => u.isActive).length;
-  const artists = users.filter(u => u.role === 'artist').length;
-  const clients = users.filter(u => u.role === 'user').length;
-  const verifiedUsers = users.filter(u => u.isVerified).length;
-
-  // إضافة الإحصائيات
-  worksheet.addRow(['إحصائيات المستخدمين', '', '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['إجمالي المستخدمين', totalUsers, '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['المستخدمين النشطين', activeUsers, '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['الفنانين', artists, '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['العملاء', clients, '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['المستخدمين المفعلين', verifiedUsers, '', '', '', '', '', '', '', '', '', '']);
-
-  // تنسيق صفوف الإحصائيات
-  for (let i = statsRow.number; i <= worksheet.rowCount; i++) {
-    const row = worksheet.getRow(i);
-    row.eachCell((cell) => {
-      cell.style = {
-        ...styles.data,
-        font: {
-          name: 'Arial',
-          size: 11,
-          bold: i === statsRow.number + 1 // جعل العنوان عريض
-        }
-      };
-    });
-  }
-
-  // إضافة معلومات إضافية
-  const infoRow = worksheet.addRow([]);
-  worksheet.addRow(['تم إنشاء هذا الملف بواسطة', 'ArtHub Admin Dashboard', '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['تاريخ التصدير', new Date().toLocaleDateString('ar-EG'), '', '', '', '', '', '', '', '', '', '']);
-  worksheet.addRow(['وقت التصدير', new Date().toLocaleTimeString('ar-EG'), '', '', '', '', '', '', '', '', '', '']);
-
-  // تنسيق صفوف المعلومات
-  for (let i = infoRow.number + 1; i <= worksheet.rowCount; i++) {
-    const row = worksheet.getRow(i);
-    row.eachCell((cell) => {
-      cell.style = {
-        ...styles.data,
-        font: {
-          name: 'Arial',
-          size: 10,
-          italic: true
-        }
-      };
-    });
-  }
 
   // إنشاء الملف كـ Buffer
   const buffer = await workbook.xlsx.writeBuffer();
