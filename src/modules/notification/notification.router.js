@@ -43,12 +43,6 @@ const router = Router();
  *           type: integer
  *           default: 20
  *         description: Items per page
- *       - in: query
- *         name: unreadOnly
- *         schema:
- *           type: boolean
- *           default: false
- *         description: Get only unread notifications
  *     responses:
  *       200:
  *         description: Notifications retrieved successfully

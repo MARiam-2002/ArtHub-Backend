@@ -12,14 +12,11 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
     
     const userId = req.user._id;
-    const { page = 1, limit = 20, unreadOnly = false } = req.query;
+    const { page = 1, limit = 20 } = req.query;
     const skip = (page - 1) * limit;
 
     // Build filter
     const filter = { user: userId };
-    if (unreadOnly === 'true') {
-      filter.isRead = false;
-    }
 
     // Get notifications and counts in parallel
     const [notifications, totalCount, unreadCount] = await Promise.all([

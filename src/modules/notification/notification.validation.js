@@ -49,10 +49,7 @@ export const notificationIdSchema = Joi.object({
  *           default: 20
  *           description: عدد العناصر في الصفحة
  *           example: 20
- *         unreadOnly:
- *           type: boolean
- *           description: عرض الإشعارات غير المقروءة فقط
- *           example: false
+
  *         type:
  *           type: string
  *           enum: ["request", "message", "review", "system", "other"]
@@ -95,10 +92,6 @@ export const notificationQuerySchema = Joi.object({
       'number.integer': 'عدد العناصر يجب أن يكون رقماً صحيحاً',
       'number.min': 'عدد العناصر يجب أن يكون أكبر من أو يساوي 1',
       'number.max': 'عدد العناصر يجب أن يكون أقل من أو يساوي 100'
-    }),
-  unreadOnly: Joi.boolean()
-    .messages({
-      'boolean.base': 'خيار الإشعارات غير المقروءة يجب أن يكون قيمة منطقية'
     }),
   type: Joi.string()
     .valid('request', 'message', 'review', 'system', 'other')

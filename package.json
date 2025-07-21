@@ -49,7 +49,10 @@
     "test:swagger-excel-only": "node scripts/test-swagger-excel-only.js",
     "test:notifications-fix": "node scripts/test-notifications-fix.js",
     "test:block-user-simple": "node scripts/test-block-user-simple.js",
-    "test:block-user-delete": "node scripts/test-block-user-delete.js"
+    "test:block-user-delete": "node scripts/test-block-user-delete.js",
+    "test:notification-sender": "node scripts/test-notification-sender.js",
+    "test:notifications-no-unread": "node scripts/test-notifications-no-unread.js",
+    "rebuild:swagger-notifications": "node scripts/rebuild-swagger-notifications.js"
   },
   "engines": {
     "node": "18.x || >= 16"
