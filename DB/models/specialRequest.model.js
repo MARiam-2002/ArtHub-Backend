@@ -387,6 +387,7 @@ const specialRequestSchema = new Schema(
         'animation',
         'graphic_design',
         'character_design',
+        'ready_artwork',
         'concept_art',
         'other'
       ],

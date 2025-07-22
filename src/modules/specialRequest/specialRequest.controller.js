@@ -196,6 +196,10 @@ function getPriorityLabel(priority) {
  */
 function summarizeSpecialRequest(request) {
   const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341492/image_8_l86jgo.png';
+  let image = PLACEHOLDER_IMAGE;
+  if (request.requestType === 'ready_artwork' && request.artwork && request.artwork.image) {
+    image = request.artwork.image;
+  }
   return {
     _id: request._id,
     requestType: request.requestType,
@@ -208,7 +212,7 @@ function summarizeSpecialRequest(request) {
     artist: formatUserForRequest(request.artist),
     sender: formatUserForRequest(request.sender),
     orderType: 'special',
-    image: PLACEHOLDER_IMAGE
+    image
   };
 }
 

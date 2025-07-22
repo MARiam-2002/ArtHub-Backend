@@ -78,12 +78,16 @@ export const createSpecialRequestSchema = {
       .messages({
         'any.only': 'العملة غير مدعومة'
       }),
-    artworkId: Joi.string()
-      .pattern(/^[0-9a-fA-F]{24}$/)
-      .optional()
-      .messages({
+    artworkId: Joi.when('requestType', {
+      is: 'ready_artwork',
+      then: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+        'any.required': 'معرف العمل الفني مطلوب للطلبات الجاهزة',
+        'string.pattern.base': 'معرف العمل الفني غير صالح'
+      }),
+      otherwise: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional().messages({
         'string.pattern.base': 'معرف العمل الفني غير صالح'
       })
+    })
   }).options({ stripUnknown: true })
 };
 
