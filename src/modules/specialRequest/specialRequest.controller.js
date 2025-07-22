@@ -6,6 +6,7 @@ import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
 import { getPaginationParams } from '../../utils/pagination.js';
 import { sendPushNotificationToUser } from '../../utils/pushNotifications.js';
+import transactionModel from '../../../DB/models/transaction.model.js';
 
 /**
  * Helper function to safely format image URLs
@@ -194,6 +195,7 @@ function getPriorityLabel(priority) {
  * دالة تلخيص الطلب الخاص
  */
 function summarizeSpecialRequest(request) {
+  const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341492/image_8_l86jgo.png';
   return {
     _id: request._id,
     requestType: request.requestType,
@@ -204,7 +206,37 @@ function summarizeSpecialRequest(request) {
     createdAt: request.createdAt,
     technicalDetails: request.specifications?.technicalDetails || null,
     artist: request.artist?._id || request.artist,
-    sender: request.sender?._id || request.sender
+    sender: request.sender?._id || request.sender,
+    orderType: 'special',
+    image: PLACEHOLDER_IMAGE
+  };
+}
+
+/**
+ * دالة تلخيص الطلب العادي (transaction)
+ */
+function summarizeTransaction(tx) {
+  const PLACEHOLDER_IMAGE = 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1752341492/image_8_l86jgo.png';
+  let image = PLACEHOLDER_IMAGE;
+  // جلب صورة العمل الفني من العنصر الأول
+  if (tx.items?.[0]?.artwork) {
+    if (typeof tx.items[0].artwork === 'object' && tx.items[0].artwork.image) {
+      image = tx.items[0].artwork.image;
+    }
+  }
+  return {
+    _id: tx._id,
+    requestType: 'regular_order',
+    description: tx.items?.[0]?.description || tx.notes || 'طلب عادي',
+    budget: tx.pricing?.totalAmount || 0,
+    duration: null,
+    status: tx.status,
+    createdAt: tx.createdAt,
+    technicalDetails: null,
+    artist: tx.seller,
+    sender: tx.buyer,
+    orderType: 'regular',
+    image
   };
 }
 
@@ -337,81 +369,72 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     const { page = 1, limit = 10, status, requestType, priority, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     const { skip } = getPaginationParams({ page, limit });
 
-    // بناء الاستعلام
-    const query = { sender: userId };
-    
+    // بناء الاستعلام للطلبات الخاصة
+    const specialQuery = { sender: userId };
     if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-      query.status = status;
+      specialQuery.status = status;
     }
-    
     if (requestType) {
-      query.requestType = requestType;
+      specialQuery.requestType = requestType;
     }
-    
     if (priority) {
-      query.priority = priority;
+      specialQuery.priority = priority;
     }
 
-    // بناء خيارات الترتيب
-    const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // بناء الاستعلام للطلبات العادية (transactions)
+    const transactionQuery = { buyer: userId };
+    if (status) {
+      transactionQuery.status = status;
+    }
+    // لا يوجد requestType/priority في transaction بشكل مباشر
 
-    // تنفيذ الاستعلام
-    const [requests, totalCount] = await Promise.all([
-      specialRequestModel
-        .find(query)
-        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .populate('category', 'name image')
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      specialRequestModel.countDocuments(query)
-    ]);
+    // جلب الطلبات الخاصة
+    const specialRequests = await specialRequestModel.find(specialQuery)
+      .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .lean();
 
-    // Format requests for Flutter
-    const formattedRequests = requests.map(request => formatSpecialRequest(request));
+    // جلب الطلبات العادية
+    const transactions = await transactionModel.find(transactionQuery)
+      .populate('buyer', 'displayName profileImage')
+      .populate('seller', 'displayName profileImage')
+      .lean();
 
-    // إعداد معلومات الصفحات
+    // تلخيص ودمج
+    const summarizedSpecial = specialRequests.map(r => ({ ...summarizeSpecialRequest(r), orderType: 'special' }));
+    const summarizedTransactions = transactions.map(summarizeTransaction);
+    let allRequests = [...summarizedSpecial, ...summarizedTransactions];
+
+    // ترتيب حسب createdAt
+    allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    // pagination بعد الدمج
+    const paginated = allRequests.slice(skip, skip + Number(limit));
+
+    // pagination meta
     const paginationMeta = {
       currentPage: Number(page),
-      totalPages: Math.ceil(totalCount / Number(limit)),
-      totalItems: totalCount,
+      totalPages: Math.ceil(allRequests.length / Number(limit)),
+      totalItems: allRequests.length,
       itemsPerPage: Number(limit),
-      hasNextPage: skip + requests.length < totalCount,
+      hasNextPage: skip + paginated.length < allRequests.length,
       hasPrevPage: Number(page) > 1
     };
 
-    // Get status counts for filters
-    const statusCounts = await specialRequestModel.aggregate([
-      { $match: { sender: userId } },
-      { $group: { _id: '$status', count: { $sum: 1 } } }
-    ]);
-
-    const statusCountsMap = statusCounts.reduce((acc, item) => {
-      acc[item._id] = item.count;
-      return acc;
-    }, {});
-
-    const response = {
+    res.status(200).json({
       success: true,
       message: 'تم جلب الطلبات بنجاح',
       data: {
-        requests: formattedRequests,
+        requests: paginated,
         pagination: paginationMeta,
-        statusCounts: statusCountsMap,
-        totalCount
+        totalCount: allRequests.length
       },
       meta: {
         timestamp: new Date().toISOString(),
         userId: userId,
         filters: { status, requestType, priority, sortBy, sortOrder }
       }
-    };
-
-    res.status(200).json(response);
-
+    });
   } catch (error) {
     console.error('Get user requests error:', error);
     next(new Error('حدث خطأ أثناء جلب الطلبات', { cause: 500 }));
