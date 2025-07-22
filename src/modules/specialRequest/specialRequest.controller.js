@@ -255,7 +255,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
     };
 
     if (technicalDetails) {
-      requestData.technicalDetails = technicalDetails;
+      requestData.specifications = { technicalDetails };
     }
 
     const specialRequest = await specialRequestModel.create(requestData);
