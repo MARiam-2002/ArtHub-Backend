@@ -79,7 +79,7 @@ export const createSpecialRequestSchema = {
       .messages({
         'any.only': 'العملة غير مدعومة'
       }),
-    artworkId: Joi.when('requestType', {
+    artwork: Joi.when('requestType', {
       is: 'ready_artwork',
       then: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
         'any.required': 'معرف العمل الفني مطلوب للطلبات الجاهزة',

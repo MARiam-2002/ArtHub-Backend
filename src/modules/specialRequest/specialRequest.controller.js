@@ -259,7 +259,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       duration,
       technicalDetails, // اختياري
       currency = 'SAR',
-      artworkId // جديد
+      artwork// جديد
     } = req.body;
 
     const senderId = req.user._id;
@@ -309,8 +309,8 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       currency,
     };
 
-    if (artworkId) {
-      requestData.artwork = artworkId;
+    if (artwork) {
+      requestData.artwork = artwork;
     }
 
     if (technicalDetails) {
