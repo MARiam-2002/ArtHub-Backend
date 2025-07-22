@@ -394,7 +394,8 @@ const specialRequestSchema = new Schema(
     },
     title: {
       type: String,
-      required: true,
+      // كان required: true
+      required: false,
       maxlength: 100,
       index: 'text'
     },
