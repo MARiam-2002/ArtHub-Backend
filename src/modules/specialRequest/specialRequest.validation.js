@@ -23,7 +23,7 @@ export const createSpecialRequestSchema = {
         'portrait',
         'logo_design',
         'illustration',
-        ready_artwork,
+        'ready_artwork',
         'digital_art',
         'traditional_art',
         'animation',
