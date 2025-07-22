@@ -12862,8 +12862,8 @@
         "tags": [
           "Admin"
         ],
-        "summary": "إرسال رسالة للمستخدم",
-        "description": "إرسال رسالة إلى مستخدم محدد وإنشاء إشعار نظام",
+        "summary": "إرسال رسالة للمستخدم مع المرفقات",
+        "description": "إرسال رسالة إلى مستخدم محدد مع ملفات مرفقة وإنشاء إشعار نظام",
         "security": [
           {
             "BearerAuth": []
@@ -12883,10 +12883,11 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "required": [
+                  "subject",
                   "message"
                 ],
                 "properties": {
@@ -12894,7 +12895,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 200,
-                    "description": "موضوع الرسالة (اختياري)",
+                    "description": "موضوع الرسالة",
                     "example": "رسالة ترحيب من إدارة المنصة"
                   },
                   "message": {
@@ -12903,6 +12904,15 @@
                     "maxLength": 2000,
                     "description": "محتوى الرسالة",
                     "example": "مرحباً! نود أن نرحب بك في منصة ArtHub ونشكرك على انضمامك إلينا. نتمنى لك تجربة ممتعة معنا!"
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "الملفات المرفقة (صور، فيديوهات، مستندات، إلخ)",
+                    "example": ["image1.jpg", "document.pdf", "video.mp4"]
                   }
                 }
               }
@@ -12949,6 +12959,45 @@
                           "format": "date-time",
                           "example": "2025-01-18T10:30:00.000Z"
                         },
+                        "attachmentsCount": {
+                          "type": "number",
+                          "description": "عدد الملفات المرفقة",
+                          "example": 3
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "description": "قائمة الملفات المرفقة",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "originalName": {
+                                "type": "string",
+                                "description": "اسم الملف الأصلي",
+                                "example": "document.pdf"
+                              },
+                              "url": {
+                                "type": "string",
+                                "description": "رابط الملف في Cloudinary",
+                                "example": "https://res.cloudinary.com/example/document.pdf"
+                              },
+                              "format": {
+                                "type": "string",
+                                "description": "صيغة الملف",
+                                "example": "pdf"
+                              },
+                              "size": {
+                                "type": "number",
+                                "description": "حجم الملف بالبايت",
+                                "example": 1024000
+                              },
+                              "type": {
+                                "type": "string",
+                                "description": "نوع MIME للملف",
+                                "example": "application/pdf"
+                              }
+                            }
+                          }
+                        },
                         "notification": {
                           "type": "object",
                           "properties": {
@@ -12987,6 +13036,35 @@
                                   "type": "string",
                                   "example": "https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png"
                                 },
+                                "attachments": {
+                                  "type": "array",
+                                  "description": "الملفات المرفقة في الإشعار",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "originalName": {
+                                        "type": "string",
+                                        "example": "document.pdf"
+                                      },
+                                      "url": {
+                                        "type": "string",
+                                        "example": "https://res.cloudinary.com/example/document.pdf"
+                                      },
+                                      "format": {
+                                        "type": "string",
+                                        "example": "pdf"
+                                      },
+                                      "size": {
+                                        "type": "number",
+                                        "example": 1024000
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "example": "application/pdf"
+                                      }
+                                    }
+                                  }
+                                },
                                 "sentAt": {
                                   "type": "string",
                                   "format": "date-time",
@@ -13004,7 +13082,7 @@
             }
           },
           "400": {
-            "description": "طلب غير صحيح - بيانات غير صالحة",
+            "description": "طلب غير صحيح - بيانات غير صالحة أو فشل في رفع الملفات",
             "content": {
               "application/json": {
                 "schema": {
@@ -13016,7 +13094,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "نص الرسالة مطلوب"
+                      "example": "موضوع الرسالة مطلوب"
                     }
                   }
                 }

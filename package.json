@@ -54,6 +54,7 @@
     "test:notifications-no-unread": "node scripts/test-notifications-no-unread.js",
     "test:admin-message": "node scripts/test-admin-message.js",
     "test:admin-message-attachments": "node scripts/test-admin-message-with-attachments.js",
+    "update:swagger-admin-message-attachments": "node scripts/update-swagger-admin-message-attachments.js",
     "rebuild:swagger-admin-message": "node scripts/rebuild-swagger-admin-message.js",
     "rebuild:swagger-notifications": "node scripts/rebuild-swagger-notifications.js",
     "fix:swagger-json": "node scripts/fix-swagger-json.js",
