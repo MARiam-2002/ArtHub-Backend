@@ -24,6 +24,24 @@ if (!swaggerDocument.components) swaggerDocument.components = {};
 if (!swaggerDocument.components.schemas) swaggerDocument.components.schemas = {};
 Object.assign(swaggerDocument.components.schemas, swaggerDefinition.components?.schemas || swaggerDefinition);
 
+// تصحيح requestBody للـ endpoint الخاص بإنشاء طلب خاص ليستخدم $ref
+if (
+  swaggerDocument.paths &&
+  swaggerDocument.paths['/api/special-requests'] &&
+  swaggerDocument.paths['/api/special-requests'].post
+) {
+  swaggerDocument.paths['/api/special-requests'].post.requestBody = {
+    required: true,
+    content: {
+      'application/json': {
+        schema: {
+          $ref: '#/components/schemas/SpecialRequestCreate'
+        }
+      }
+    }
+  };
+}
+
 // كتابة الملف المحدث
 fs.writeFileSync(swaggerJsonPath, JSON.stringify(swaggerDocument, null, 2), 'utf8');
 

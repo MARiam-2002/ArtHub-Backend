@@ -7806,44 +7806,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "artist",
-                  "requestType",
-                  "description",
-                  "budget"
-                ],
-                "properties": {
-                  "artist": {
-                    "type": "string",
-                    "description": "معرف الفنان"
-                  },
-                  "requestType": {
-                    "type": "string",
-                    "description": "نوع الطلب الخاص"
-                  },
-                  "description": {
-                    "type": "string",
-                    "description": "وصف تفصيلي للطلب"
-                  },
-                  "budget": {
-                    "type": "number",
-                    "description": "الميزانية المقترحة"
-                  },
-                  "deadline": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "الموعد النهائي (اختياري)"
-                  },
-                  "attachments": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "format": "uri"
-                    },
-                    "description": "روابط ملفات مرفقة (اختياري)"
-                  }
-                }
+                "$ref": "#/components/schemas/SpecialRequestCreate"
               }
             }
           }
