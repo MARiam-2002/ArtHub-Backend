@@ -80,6 +80,7 @@ router.get('/types', controller.getRequestTypes);
  *               - title
  *               - description
  *               - budget
+ *               - duration
  *             properties:
  *               artist:
  *                 type: string
@@ -87,7 +88,7 @@ router.get('/types', controller.getRequestTypes);
  *               requestType:
  *                 type: string
  *                 enum: [custom_artwork, portrait, logo_design, illustration, digital_art, traditional_art, animation, graphic_design, character_design, concept_art, other]
- *                 description: نوع الطلب الخاص
+ *                 description: نوع العمل
  *               title:
  *                 type: string
  *                 minLength: 5
@@ -97,12 +98,21 @@ router.get('/types', controller.getRequestTypes);
  *                 type: string
  *                 minLength: 20
  *                 maxLength: 2000
- *                 description: وصف تفصيلي للطلب
+ *                 description: وصف تفصيلي للعمل
  *               budget:
  *                 type: number
  *                 minimum: 10
  *                 maximum: 100000
  *                 description: الميزانية المقترحة
+ *               duration:
+ *                 type: number
+ *                 minimum: 1
+ *                 maximum: 365
+ *                 description: المدة المطلوبة بالأيام
+ *               technicalDetails:
+ *                 type: string
+ *                 maxLength: 1000
+ *                 description: مقاسات أو تفاصيل فنية (اختياري)
  *               currency:
  *                 type: string
  *                 enum: [SAR, USD, EUR, AED]
@@ -171,6 +181,10 @@ router.get('/types', controller.getRequestTypes);
  *                     items:
  *                       type: string
  *                       enum: [PNG, JPG, JPEG, SVG, PDF, AI, PSD, EPS]
+ *                   technicalDetails:
+ *                     type: string
+ *                     maxLength: 1000
+ *                     description: مقاسات أو تفاصيل فنية (اختياري)
  *                 description: مواصفات العمل المطلوب
  *               communicationPreferences:
  *                 type: object
@@ -855,6 +869,9 @@ router.delete('/:requestId', isAuthenticated, controller.deleteRequest);
  *         budget:
  *           type: number
  *           description: الميزانية المقترحة
+ *         duration:
+ *           type: number
+ *           description: المدة المطلوبة بالأيام
  *         currency:
  *           type: string
  *           enum: [SAR, USD, EUR, AED]

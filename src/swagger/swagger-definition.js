@@ -2194,6 +2194,49 @@ export const swaggerDefinition = {
             example: true
           }
         }
+      },
+      SpecialRequestCreate: {
+        type: 'object',
+        required: ['artist', 'requestType', 'description', 'budget', 'duration'],
+        properties: {
+          artist: {
+            type: 'string',
+            description: 'معرف الفنان'
+          },
+          requestType: {
+            type: 'string',
+            description: 'نوع العمل'
+          },
+          description: {
+            type: 'string',
+            description: 'وصف تفصيلي عن العمل'
+          },
+          budget: {
+            type: 'number',
+            description: 'الميزانية المقترحة'
+          },
+          duration: {
+            type: 'number',
+            description: 'المدة المطلوبة بالأيام'
+          },
+          technicalDetails: {
+            type: 'string',
+            description: 'مقاسات أو تفاصيل فنية (اختياري)'
+          },
+          deadline: {
+            type: 'string',
+            format: 'date-time',
+            description: 'الموعد النهائي (اختياري)'
+          },
+          attachments: {
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'uri'
+            },
+            description: 'روابط ملفات مرفقة (اختياري)'
+          }
+        }
       }
     },
     examples: {

@@ -32,29 +32,19 @@ export const createSpecialRequestSchema = {
         'other'
       )
       .messages({
-        'string.empty': 'نوع الطلب مطلوب',
-        'any.required': 'نوع الطلب مطلوب',
-        'any.only': 'نوع الطلب غير صالح'
-      }),
-    title: Joi.string()
-      .required()
-      .min(5)
-      .max(100)
-      .messages({
-        'string.empty': 'عنوان الطلب مطلوب',
-        'string.min': 'عنوان الطلب يجب أن يكون على الأقل 5 أحرف',
-        'string.max': 'عنوان الطلب يجب ألا يتجاوز 100 حرف',
-        'any.required': 'عنوان الطلب مطلوب'
+        'string.empty': 'نوع العمل مطلوب',
+        'any.required': 'نوع العمل مطلوب',
+        'any.only': 'نوع العمل غير صالح'
       }),
     description: Joi.string()
       .required()
       .min(20)
       .max(2000)
       .messages({
-        'string.empty': 'وصف الطلب مطلوب',
-        'string.min': 'وصف الطلب يجب أن يكون على الأقل 20 حرف',
-        'string.max': 'وصف الطلب يجب ألا يتجاوز 2000 حرف',
-        'any.required': 'وصف الطلب مطلوب'
+        'string.empty': 'وصف تفصيلي للعمل مطلوب',
+        'string.min': 'الوصف يجب أن يكون على الأقل 20 حرف',
+        'string.max': 'الوصف يجب ألا يتجاوز 2000 حرف',
+        'any.required': 'وصف تفصيلي للعمل مطلوب'
       }),
     budget: Joi.number()
       .required()
@@ -62,122 +52,33 @@ export const createSpecialRequestSchema = {
       .max(100000)
       .messages({
         'number.base': 'الميزانية يجب أن تكون رقم',
-        'number.min': 'الميزانية يجب أن تكون على الأقل 10 ريال',
-        'number.max': 'الميزانية يجب ألا تتجاوز 100,000 ريال',
-        'any.required': 'الميزانية مطلوبة'
+        'number.min': 'الميزانية يجب أن تكون على الأقل 10',
+        'number.max': 'الميزانية يجب ألا تتجاوز 100,000',
+        'any.required': 'الميزانية المقترحة مطلوبة'
+      }),
+    duration: Joi.number()
+      .required()
+      .min(1)
+      .max(365)
+      .messages({
+        'number.base': 'المدة يجب أن تكون رقم',
+        'number.min': 'المدة يجب أن تكون يوم واحد على الأقل',
+        'number.max': 'المدة يجب ألا تتجاوز 365 يوم',
+        'any.required': 'المدة المطلوبة مطلوبة'
+      }),
+    technicalDetails: Joi.string()
+      .max(1000)
+      .optional()
+      .messages({
+        'string.max': 'التفاصيل الفنية يجب ألا تتجاوز 1000 حرف'
       }),
     currency: Joi.string()
       .valid('SAR', 'USD', 'EUR', 'AED')
       .default('SAR')
       .messages({
         'any.only': 'العملة غير مدعومة'
-      }),
-    deadline: Joi.date()
-      .min('now')
-      .max(Joi.ref('$now', { adjust: value => new Date(value.getTime() + 365 * 24 * 60 * 60 * 1000) }))
-      .messages({
-        'date.base': 'الموعد النهائي يجب أن يكون تاريخ صالح',
-        'date.min': 'الموعد النهائي يجب أن يكون في المستقبل',
-        'date.max': 'الموعد النهائي يجب ألا يتجاوز سنة من الآن'
-      }),
-    priority: Joi.string()
-      .valid('low', 'medium', 'high', 'urgent')
-      .default('medium')
-      .messages({
-        'any.only': 'أولوية الطلب غير صالحة'
-      }),
-    category: Joi.string()
-      .pattern(MONGODB_OBJECTID_REGEX)
-      .messages({
-        'string.pattern.base': 'معرف الفئة غير صالح'
-      }),
-    tags: Joi.array()
-      .items(Joi.string().min(2).max(30))
-      .max(10)
-      .messages({
-        'array.base': 'العلامات يجب أن تكون قائمة',
-        'array.max': 'لا يمكن إضافة أكثر من 10 علامات',
-        'string.min': 'العلامة يجب أن تكون على الأقل حرفين',
-        'string.max': 'العلامة يجب ألا تتجاوز 30 حرف'
-      }),
-    attachments: Joi.array()
-      .items(
-        Joi.object({
-          url: Joi.string().uri().required().messages({
-            'string.uri': 'رابط المرفق غير صالح',
-            'any.required': 'رابط المرفق مطلوب'
-          }),
-          type: Joi.string().valid('image', 'document', 'reference').required().messages({
-            'any.only': 'نوع المرفق غير صالح',
-            'any.required': 'نوع المرفق مطلوب'
-          }),
-          name: Joi.string().max(100).messages({
-            'string.max': 'اسم المرفق يجب ألا يتجاوز 100 حرف'
-          }),
-          description: Joi.string().max(200).messages({
-            'string.max': 'وصف المرفق يجب ألا يتجاوز 200 حرف'
-          })
-        })
-      )
-      .max(10)
-      .messages({
-        'array.base': 'المرفقات يجب أن تكون قائمة',
-        'array.max': 'لا يمكن إرفاق أكثر من 10 ملفات'
-      }),
-    specifications: Joi.object({
-      dimensions: Joi.object({
-        width: Joi.number().positive().messages({
-          'number.positive': 'العرض يجب أن يكون رقم موجب'
-        }),
-        height: Joi.number().positive().messages({
-          'number.positive': 'الارتفاع يجب أن يكون رقم موجب'
-        }),
-        unit: Joi.string().valid('px', 'cm', 'in', 'mm').default('px').messages({
-          'any.only': 'وحدة القياس غير صالحة'
-        })
-      }),
-      format: Joi.string().valid('digital', 'print', 'both').messages({
-        'any.only': 'تنسيق العمل غير صالح'
-      }),
-      resolution: Joi.number().positive().messages({
-        'number.positive': 'الدقة يجب أن تكون رقم موجب'
-      }),
-      colorMode: Joi.string().valid('RGB', 'CMYK', 'Grayscale').messages({
-        'any.only': 'نمط الألوان غير صالح'
-      }),
-      fileFormat: Joi.array().items(
-        Joi.string().valid('PNG', 'JPG', 'JPEG', 'SVG', 'PDF', 'AI', 'PSD', 'EPS')
-      ).messages({
-        'any.only': 'تنسيق الملف غير مدعوم'
       })
-    }),
-    communicationPreferences: Joi.object({
-      preferredMethod: Joi.string().valid('chat', 'email', 'phone', 'video_call').default('chat').messages({
-        'any.only': 'طريقة التواصل المفضلة غير صالحة'
-      }),
-      timezone: Joi.string().messages({
-        'string.base': 'المنطقة الزمنية يجب أن تكون نص'
-      }),
-      availableHours: Joi.object({
-        start: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).messages({
-          'string.pattern.base': 'وقت البداية غير صالح (استخدم تنسيق HH:MM)'
-        }),
-        end: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).messages({
-          'string.pattern.base': 'وقت النهاية غير صالح (استخدم تنسيق HH:MM)'
-        })
-      })
-    }),
-    isPrivate: Joi.boolean().default(false).messages({
-      'boolean.base': 'حالة الخصوصية يجب أن تكون true أو false'
-    }),
-    allowRevisions: Joi.boolean().default(true).messages({
-      'boolean.base': 'السماح بالتعديلات يجب أن يكون true أو false'
-    }),
-    maxRevisions: Joi.number().min(0).max(10).default(3).messages({
-      'number.min': 'عدد التعديلات يجب أن يكون 0 أو أكثر',
-      'number.max': 'عدد التعديلات يجب ألا يتجاوز 10'
-    })
-  })
+  }).options({ stripUnknown: true })
 };
 
 /**

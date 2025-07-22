@@ -84,6 +84,7 @@ function formatSpecialRequest(request) {
     requestTypeLabel: getRequestTypeLabel(request.requestType),
     budget: request.budget || 0,
     currency: request.currency || 'SAR',
+    duration: request.duration || 7, // المدة المطلوبة
     quotedPrice: request.quotedPrice || null,
     finalPrice: request.finalPrice || null,
     status: request.status || 'pending',
@@ -196,32 +197,23 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     
-    const { 
-      artist, 
-      requestType, 
-      title,
-      description, 
-      budget, 
-      currency = 'SAR',
-      deadline, 
-      attachments = [],
-      priority = 'medium',
-      category,
-      tags = [],
-      specifications,
-      communicationPreferences,
-      isPrivate = false,
-      allowRevisions = true,
-      maxRevisions = 3
+    const {
+      artist,
+      requestType,
+      description,
+      budget,
+      duration,
+      technicalDetails, // اختياري
+      currency = 'SAR'
     } = req.body;
-    
+
     const senderId = req.user._id;
 
     // Validate required fields
-    if (!artist || !requestType || !title || !description || !budget) {
+    if (!artist || !requestType || !description || !budget || !duration) {
       return res.status(400).json({
         success: false,
-        message: 'المعلومات المطلوبة: الفنان، نوع الطلب، العنوان، الوصف، والميزانية',
+        message: 'المعلومات المطلوبة: الفنان، نوع العمل، الوصف التفصيلي، الميزانية المقترحة، والمدة المطلوبة',
         data: null
       });
     }
@@ -251,38 +243,19 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Validate category if provided
-    let categoryData = null;
-    if (category && mongoose.Types.ObjectId.isValid(category)) {
-      categoryData = await categoryModel.findById(category).lean();
-    }
-
     // إنشاء الطلب
     const requestData = {
       sender: senderId,
       artist,
       requestType,
-      title: title.trim(),
       description: description.trim(),
       budget: Number(budget),
+      duration: Number(duration),
       currency,
-      priority,
-      attachments: attachments || [],
-      tags: tags || [],
-      specifications: specifications || {},
-      communicationPreferences: communicationPreferences || {},
-      isPrivate,
-      allowRevisions,
-      maxRevisions: Number(maxRevisions),
-      status: 'pending'
     };
 
-    if (deadline) {
-      requestData.deadline = new Date(deadline);
-    }
-
-    if (categoryData) {
-      requestData.category = category;
+    if (technicalDetails) {
+      requestData.technicalDetails = technicalDetails;
     }
 
     const specialRequest = await specialRequestModel.create(requestData);
@@ -303,7 +276,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
         artist,
         {
           title: 'طلب خاص جديد',
-          body: `لديك طلب خاص جديد من ${senderName}: ${title}`
+          body: `لديك طلب خاص جديد من ${senderName}: ${description}`
         },
         {
           screen: 'SPECIAL_REQUEST_DETAILS',

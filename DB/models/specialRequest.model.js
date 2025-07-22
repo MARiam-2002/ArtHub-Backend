@@ -217,6 +217,11 @@ const SpecificationsSchema = new Schema({
   additionalRequirements: {
     type: String,
     maxlength: 1000
+  },
+  // New field for technical details/specifications (مقاسات أو تفاصيل فنية)
+  technicalDetails: {
+    type: String,
+    maxlength: 1000
   }
 }, { _id: false });
 
@@ -410,6 +415,14 @@ const specialRequestSchema = new Schema(
       type: String,
       enum: ['SAR', 'USD', 'EUR', 'AED'],
       default: 'SAR'
+    },
+    // Duration in days (المدة المطلوبة)
+    duration: {
+      type: Number,
+      min: 1,
+      max: 365,
+      default: 7,
+      index: true
     },
     quotedPrice: {
       type: Number,
