@@ -895,7 +895,7 @@ router.delete('/users/:id/block',
  *   post:
  *     summary: Send message to user
  *     tags: [Admin Dashboard]
- *     description: Send a message to a specific user (via email or chat)
+ *     description: Send a message to a specific user and create system notification
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -912,30 +912,106 @@ router.delete('/users/:id/block',
  *           schema:
  *             type: object
  *             required:
- *               - subject
  *               - message
- *               - deliveryMethod
  *             properties:
  *               subject:
  *                 type: string
- *                 description: Message subject
+ *                 minLength: 1
+ *                 maxLength: 200
+ *                 description: Message subject (optional)
+ *                 example: "رسالة ترحيب من إدارة المنصة"
  *               message:
  *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 2000
  *                 description: Message content
- *               deliveryMethod:
- *                 type: string
- *                 enum: [email, chat, both]
- *                 description: How to deliver the message
- *               attachments:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: File URLs to attach
+ *                 example: "مرحباً! نود أن نرحب بك في منصة ArtHub ونشكرك على انضمامك إلينا. نتمنى لك تجربة ممتعة معنا!"
  *     responses:
- *    200       description: Message sent successfully
- *    401       description: Unauthorized
- *    403       description: Forbidden - Admin only
- *    404       description: User not found
+ *       200:
+ *         description: Message sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم إرسال الرسالة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     userName:
+ *                       type: string
+ *                       example: "عمر خالد محمد"
+ *                     notificationId:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439012"
+ *                     messageType:
+ *                       type: string
+ *                       example: "system_notification"
+ *                     sentAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
+ *                     notification:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: "507f1f77bcf86cd799439012"
+ *                         title:
+ *                           type: string
+ *                           example: "رسالة ترحيب من إدارة المنصة"
+ *                         message:
+ *                           type: string
+ *                           example: "مرحباً! نود أن نرحب بك في منصة ArtHub..."
+ *                         type:
+ *                           type: string
+ *                           example: "system"
+ *                         data:
+ *                           type: object
+ *                           properties:
+ *                             adminName:
+ *                               type: string
+ *                               example: "أحمد محمد"
+ *                             adminRole:
+ *                               type: string
+ *                               example: "admin"
+ *                             messageType:
+ *                               type: string
+ *                               example: "admin_message"
+ *                             platformLogo:
+ *                               type: string
+ *                               example: "https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png"
+ *                             sentAt:
+ *                               type: string
+ *                               format: date-time
+ *                               example: "2025-01-18T10:30:00.000Z"
+ *       400:
+ *         description: Bad request - Invalid data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "نص الرسالة مطلوب"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ *       404:
+ *         description: User not found
  */
 router.post('/users/:id/send-message', 
   authenticate, 

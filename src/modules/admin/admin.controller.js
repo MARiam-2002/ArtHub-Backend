@@ -873,7 +873,7 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { message, type = 'email' } = req.body;
+  const { message, subject } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -892,38 +892,61 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     });
   }
 
-  if (type === 'email') {
-    // Send email message
-    const { sendEmail } = await import('../../utils/sendEmails.js');
-    await sendEmail({
-      to: user.email,
-      subject: 'رسالة من إدارة المنصة',
-      message: message
-    });
-  } else if (type === 'chat') {
-    // Send chat message (implement chat functionality)
-    const chatModel = (await import('../../../DB/models/chat.model.js')).default;
-    const messageModel = (await import('../../../DB/models/message.model.js')).default;
-    
-    // Create or find chat between admin and user
-    let chat = await chatModel.findOne({
-      participants: [req.user._id, user._id]
-    });
-
-    if (!chat) {
-      chat = await chatModel.create({
-        participants: [req.user._id, user._id],
-        type: 'admin'
-      });
+  // إنشاء notification من نوع system
+  const notificationModel = (await import('../../../DB/models/notification.model.js')).default;
+  
+  const notification = await notificationModel.create({
+    user: user._id,
+    sender: req.user._id, // الأدمن المرسل
+    title: {
+      ar: subject || 'رسالة من إدارة المنصة',
+      en: subject || 'Message from Platform Administration'
+    },
+    message: {
+      ar: message,
+      en: message
+    },
+    type: 'system', // نوع system للإشعارات الإدارية
+    data: {
+      adminName: req.user.displayName,
+      adminRole: req.user.role,
+      messageType: 'admin_message',
+      platformLogo: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png', // logo التطبيق
+      sentAt: new Date()
     }
+  });
 
-    // Send message
-    await messageModel.create({
-      chat: chat._id,
-      sender: req.user._id,
-      content: message,
-      type: 'text'
-    });
+  // إرسال push notification إذا كان المستخدم مفعل الإشعارات
+  if (user.notificationSettings?.enablePush && user.fcmTokens?.length > 0) {
+    try {
+      const { sendPushNotification } = await import('../../utils/pushNotifications.js');
+      await sendPushNotification({
+        tokens: user.fcmTokens,
+        title: subject || 'رسالة من إدارة المنصة',
+        body: message,
+        data: {
+          type: 'admin_message',
+          notificationId: notification._id.toString(),
+          adminId: req.user._id.toString()
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error sending push notification:', error);
+    }
+  }
+
+  // إرسال email إذا كان مفعل
+  if (user.notificationSettings?.enableEmail) {
+    try {
+      const { sendEmail } = await import('../../utils/sendEmails.js');
+      await sendEmail({
+        to: user.email,
+        subject: subject || 'رسالة من إدارة المنصة',
+        message: message
+      });
+    } catch (error) {
+      console.error('❌ Error sending email:', error);
+    }
   }
 
   res.json({
@@ -931,8 +954,17 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     message: 'تم إرسال الرسالة بنجاح',
     data: {
       userId: user._id,
-      messageType: type,
-      sentAt: new Date()
+      userName: user.displayName,
+      notificationId: notification._id,
+      messageType: 'system_notification',
+      sentAt: new Date(),
+      notification: {
+        _id: notification._id,
+        title: notification.title.ar,
+        message: notification.message.ar,
+        type: notification.type,
+        data: notification.data
+      }
     }
   });
 });

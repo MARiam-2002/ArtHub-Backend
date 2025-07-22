@@ -206,21 +206,15 @@ export const sendMessageSchema = {
     })
   }),
   body: joi.object({
-    subject: joi.string().min(1).max(200).required().messages({
-      'string.min': 'موضوع الرسالة مطلوب',
-      'string.max': 'موضوع الرسالة يجب أن يكون أقل من 200 حرف',
-      'any.required': 'موضوع الرسالة مطلوب'
+    subject: joi.string().min(1).max(200).optional().messages({
+      'string.min': 'موضوع الرسالة يجب أن يكون حرف واحد على الأقل',
+      'string.max': 'موضوع الرسالة يجب أن يكون أقل من 200 حرف'
     }),
     message: joi.string().min(1).max(2000).required().messages({
       'string.min': 'نص الرسالة مطلوب',
       'string.max': 'نص الرسالة يجب أن يكون أقل من 2000 حرف',
       'any.required': 'نص الرسالة مطلوب'
-    }),
-    deliveryMethod: joi.string().valid('email', 'chat', 'both').required().messages({
-      'any.only': 'طريقة التوصيل يجب أن تكون email أو chat أو both',
-      'any.required': 'طريقة التوصيل مطلوبة'
-    }),
-    attachments: joi.array().items(joi.string().uri()).optional()
+    })
   })
 };
 
