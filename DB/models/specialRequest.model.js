@@ -464,6 +464,11 @@ const specialRequestSchema = new Schema(
     estimatedDelivery: {
       type: Date
     },
+    artwork: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Artwork',
+      required: false
+    },
     // Enhanced attachments
     attachments: [AttachmentSchema],
     // Work specifications

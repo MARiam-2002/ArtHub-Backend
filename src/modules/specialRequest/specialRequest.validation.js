@@ -77,6 +77,12 @@ export const createSpecialRequestSchema = {
       .default('SAR')
       .messages({
         'any.only': 'العملة غير مدعومة'
+      }),
+    artworkId: Joi.string()
+      .pattern(/^[0-9a-fA-F]{24}$/)
+      .optional()
+      .messages({
+        'string.pattern.base': 'معرف العمل الفني غير صالح'
       })
   }).options({ stripUnknown: true })
 };

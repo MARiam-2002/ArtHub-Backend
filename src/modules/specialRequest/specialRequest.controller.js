@@ -254,7 +254,8 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       budget,
       duration,
       technicalDetails, // اختياري
-      currency = 'SAR'
+      currency = 'SAR',
+      artworkId // جديد
     } = req.body;
 
     const senderId = req.user._id;
@@ -303,6 +304,10 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       duration: Number(duration),
       currency,
     };
+
+    if (artworkId) {
+      requestData.artwork = artworkId;
+    }
 
     if (technicalDetails) {
       requestData.specifications = { technicalDetails };
@@ -381,30 +386,16 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       specialQuery.priority = priority;
     }
 
-    // بناء الاستعلام للطلبات العادية (transactions)
-    const transactionQuery = { buyer: userId };
-    if (status) {
-      transactionQuery.status = status;
-    }
-    // لا يوجد requestType/priority في transaction بشكل مباشر
-
-    // جلب الطلبات الخاصة
+    // جلب الطلبات الخاصة فقط
     const specialRequests = await specialRequestModel.find(specialQuery)
       .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
       .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-      .lean();
-
-    // جلب الطلبات العادية
-    const transactions = await transactionModel.find(transactionQuery)
-      .populate('buyer', 'displayName profileImage')
-      .populate('seller', 'displayName profileImage')
-      .populate('items.artwork', 'image title')
+      .populate('artwork', 'title image')
       .lean();
 
     // تلخيص ودمج
     const summarizedSpecial = specialRequests.map(r => ({ ...summarizeSpecialRequest(r), orderType: 'special' }));
-    const summarizedTransactions = transactions.map(summarizeTransaction);
-    let allRequests = [...summarizedSpecial, ...summarizedTransactions];
+    let allRequests = [...summarizedSpecial];
 
     // ترتيب حسب createdAt
     allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -431,7 +422,6 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
         totalCount: allRequests.length
       },
       meta: {
-        timestamp: new Date().toISOString(),
         userId: userId,
         filters: { status, requestType, priority, sortBy, sortOrder }
       }
