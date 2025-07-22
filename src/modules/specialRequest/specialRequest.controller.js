@@ -205,8 +205,8 @@ function summarizeSpecialRequest(request) {
     status: request.status,
     createdAt: request.createdAt,
     technicalDetails: request.specifications?.technicalDetails || null,
-    artist: request.artist?._id || request.artist,
-    sender: request.sender?._id || request.sender,
+    artist: formatUserForRequest(request.artist),
+    sender: formatUserForRequest(request.sender),
     orderType: 'special',
     image: PLACEHOLDER_IMAGE
   };
@@ -233,8 +233,8 @@ function summarizeTransaction(tx) {
     status: tx.status,
     createdAt: tx.createdAt,
     technicalDetails: null,
-    artist: tx.seller,
-    sender: tx.buyer,
+    artist: formatUserForRequest(tx.seller),
+    sender: formatUserForRequest(tx.buyer),
     orderType: 'regular',
     image
   };
