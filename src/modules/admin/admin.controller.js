@@ -838,10 +838,12 @@ export const blockUser = asyncHandler(async (req, res, next) => {
   
   if (!user.isActive) {
     // Blocking user
+    user.status = 'banned';
     user.blockReason = 'تم الحظر من قبل الإدارة';
     user.blockedAt = new Date();
   } else {
     // Unblocking user
+    user.status = 'active';
     user.blockReason = null;
     user.blockedAt = null;
   }
@@ -855,6 +857,7 @@ export const blockUser = asyncHandler(async (req, res, next) => {
       _id: user._id,
       displayName: user.displayName,
       isActive: user.isActive,
+      status: user.status,
       blockReason: user.blockReason,
       blockedAt: user.blockedAt
     }
