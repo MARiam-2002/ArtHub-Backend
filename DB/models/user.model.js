@@ -63,7 +63,7 @@ const userSchema = new Schema(
       id: {
         type: String,
         default:
-          'WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c'
+          'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
       }
     },
 

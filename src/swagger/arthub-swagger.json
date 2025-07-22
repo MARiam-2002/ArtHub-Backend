@@ -2831,19 +2831,6 @@
           },
           "requestType": {
             "type": "string",
-            "enum": [
-              "custom_artwork",
-              "portrait",
-              "logo_design",
-              "illustration",
-              "digital_art",
-              "traditional_art",
-              "animation",
-              "graphic_design",
-              "character_design",
-              "concept_art",
-              "other"
-            ],
             "description": "نوع العمل"
           },
           "description": {
@@ -2862,20 +2849,19 @@
             "type": "string",
             "description": "مقاسات أو تفاصيل فنية (اختياري)"
           },
-          "currency": {
+          "deadline": {
             "type": "string",
-            "enum": ["SAR", "USD", "EUR", "AED"],
-            "description": "العملة (افتراضي SAR)"
+            "format": "date-time",
+            "description": "الموعد النهائي (اختياري)"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "روابط ملفات مرفقة (اختياري)"
           }
-        },
-        "example": {
-          "artist": "60d0fe4f5311236168a109ca",
-          "requestType": "custom_artwork",
-          "description": "مجموعة من 3 لوحات فنية جدارية من قماش قطني بتصميم عصري، تناسب غرفة النوم والمعيشة.",
-          "budget": 300,
-          "duration": 3,
-          "technicalDetails": "مقاس كل لوحة 40x60 سم، ألوان أكريليك على قماش، إطار خشبي.",
-          "currency": "SAR"
         }
       }
     },
@@ -7499,7 +7485,7 @@
           "Special Requests"
         ],
         "summary": "إنشاء طلب خاص",
-        "description": "إرسال طلب خاص لفنان محدد",
+        "description": "إنشاء طلب خاص لفنان محدد",
         "security": [
           {
             "BearerAuth": []
@@ -7517,13 +7503,115 @@
         },
         "responses": {
           "201": {
-            "description": "تم إنشاء الطلب الخاص بنجاح"
+            "description": "تم إنشاء الطلب الخاص بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إنشاء الطلب الخاص بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "artist": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "requestType": {
+                          "type": "string",
+                          "example": "custom_artwork"
+                        },
+                        "description": {
+                          "type": "string",
+                          "example": "مجموعة من 3 لوحات فنية جدارية من قماش قطني بتصميم عصري، تناسب غرفة النوم والمعيشة."
+                        },
+                        "budget": {
+                          "type": "number",
+                          "example": 300
+                        },
+                        "duration": {
+                          "type": "number",
+                          "example": 3
+                        },
+                        "technicalDetails": {
+                          "type": "string",
+                          "example": "مقاس كل لوحة 40x60 سم، ألوان أكريليك على قماش، إطار خشبي."
+                        },
+                        "currency": {
+                          "type": "string",
+                          "example": "SAR"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
-            "description": "بيانات غير صالحة"
+            "description": "بيانات غير صالحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "بيانات غير صالحة"
+                    }
+                  }
+                }
+              }
+            }
           },
           "404": {
-            "description": "الفنان غير موجود"
+            "description": "الفنان غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الفنان غير موجود"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -11634,8 +11722,8 @@
         "tags": [
           "Admin"
         ],
-        "summary": "إرسال رسالة للمستخدم",
-        "description": "إرسال رسالة إلى مستخدم محدد (بالبريد الإلكتروني أو المحادثة)",
+        "summary": "إرسال رسالة للمستخدم مع المرفقات",
+        "description": "إرسال رسالة إلى مستخدم محدد مع ملفات مرفقة وإنشاء إشعار نظام",
         "security": [
           {
             "BearerAuth": []
@@ -11655,38 +11743,40 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
                 "required": [
                   "subject",
-                  "message",
-                  "deliveryMethod"
+                  "message"
                 ],
                 "properties": {
                   "subject": {
                     "type": "string",
-                    "description": "موضوع الرسالة"
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "موضوع الرسالة",
+                    "example": "رسالة ترحيب من إدارة المنصة"
                   },
                   "message": {
                     "type": "string",
-                    "description": "محتوى الرسالة"
-                  },
-                  "deliveryMethod": {
-                    "type": "string",
-                    "enum": [
-                      "email",
-                      "chat",
-                      "both"
-                    ],
-                    "description": "طريقة التوصيل"
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "description": "محتوى الرسالة",
+                    "example": "مرحباً! نود أن نرحب بك في منصة ArtHub ونشكرك على انضمامك إلينا. نتمنى لك تجربة ممتعة معنا!"
                   },
                   "attachments": {
                     "type": "array",
                     "items": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "binary"
                     },
-                    "description": "روابط الملفات المرفقة"
+                    "description": "الملفات المرفقة (صور، فيديوهات، مستندات، إلخ)",
+                    "example": [
+                      "image1.jpg",
+                      "document.pdf",
+                      "video.mp4"
+                    ]
                   }
                 }
               }
@@ -11708,6 +11798,137 @@
                     "message": {
                       "type": "string",
                       "example": "تم إرسال الرسالة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "userId": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "userName": {
+                          "type": "string",
+                          "example": "عمر خالد محمد"
+                        },
+                        "notificationId": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439012"
+                        },
+                        "messageType": {
+                          "type": "string",
+                          "example": "system_notification"
+                        },
+                        "sentAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        },
+                        "attachmentsCount": {
+                          "type": "number",
+                          "example": 3
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "originalName": {
+                                "type": "string",
+                                "example": "document.pdf"
+                              },
+                              "url": {
+                                "type": "string",
+                                "example": "https://res.cloudinary.com/example/document.pdf"
+                              },
+                              "format": {
+                                "type": "string",
+                                "example": "pdf"
+                              },
+                              "size": {
+                                "type": "number",
+                                "example": 1024000
+                              },
+                              "type": {
+                                "type": "string",
+                                "example": "application/pdf"
+                              }
+                            }
+                          }
+                        },
+                        "notification": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439012"
+                            },
+                            "title": {
+                              "type": "string",
+                              "example": "رسالة ترحيب من إدارة المنصة"
+                            },
+                            "message": {
+                              "type": "string",
+                              "example": "مرحباً! نود أن نرحب بك في منصة ArtHub..."
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "data": {
+                              "type": "object",
+                              "properties": {
+                                "adminName": {
+                                  "type": "string",
+                                  "example": "أحمد محمد"
+                                },
+                                "adminRole": {
+                                  "type": "string",
+                                  "example": "admin"
+                                },
+                                "messageType": {
+                                  "type": "string",
+                                  "example": "admin_message"
+                                },
+                                "platformLogo": {
+                                  "type": "string",
+                                  "example": "https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png"
+                                },
+                                "attachments": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                },
+                                "sentAt": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "example": "2025-01-18T10:30:00.000Z"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة أو فشل في رفع الملفات",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "موضوع الرسالة مطلوب"
                     }
                   }
                 }
@@ -13614,203 +13835,6 @@
         }
       }
     },
-    "/api/special-requests": {
-      "post": {
-        "tags": [
-          "Special Requests"
-        ],
-        "summary": "إنشاء طلب خاص",
-        "description": "إنشاء طلب خاص لفنان محدد",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "artist",
-                  "requestType",
-                  "description",
-                  "budget",
-                  "duration"
-                ],
-                "properties": {
-                  "artist": {
-                    "type": "string",
-                    "description": "معرف الفنان"
-                  },
-                  "requestType": {
-                    "type": "string",
-                    "enum": [
-                      "custom_artwork",
-                      "portrait",
-                      "logo_design",
-                      "illustration",
-                      "digital_art",
-                      "traditional_art",
-                      "animation",
-                      "graphic_design",
-                      "character_design",
-                      "concept_art",
-                      "other"
-                    ],
-                    "description": "نوع العمل"
-                  },
-                  "description": {
-                    "type": "string",
-                    "description": "وصف تفصيلي عن العمل"
-                  },
-                  "budget": {
-                    "type": "number",
-                    "description": "الميزانية المقترحة"
-                  },
-                  "duration": {
-                    "type": "number",
-                    "description": "المدة المطلوبة بالأيام"
-                  },
-                  "technicalDetails": {
-                    "type": "string",
-                    "description": "مقاسات أو تفاصيل فنية (اختياري)"
-                  },
-                  "currency": {
-                    "type": "string",
-                    "enum": ["SAR", "USD", "EUR", "AED"],
-                    "description": "العملة (افتراضي SAR)"
-                  }
-                },
-                "example": {
-                  "artist": "60d0fe4f5311236168a109ca",
-                  "requestType": "custom_artwork",
-                  "description": "مجموعة من 3 لوحات فنية جدارية من قماش قطني بتصميم عصري، تناسب غرفة النوم والمعيشة.",
-                  "budget": 300,
-                  "duration": 3,
-                  "technicalDetails": "مقاس كل لوحة 40x60 سم، ألوان أكريليك على قماش، إطار خشبي.",
-                  "currency": "SAR"
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "تم إنشاء الطلب الخاص بنجاح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "تم إنشاء الطلب الخاص بنجاح"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "_id": {
-                          "type": "string",
-                          "example": "507f1f77bcf86cd799439011"
-                        },
-                        "artist": {
-                          "type": "string",
-                          "example": "507f1f77bcf86cd799439011"
-                        },
-                        "requestType": {
-                          "type": "string",
-                          "example": "custom_artwork"
-                        },
-                        "description": {
-                          "type": "string",
-                          "example": "مجموعة من 3 لوحات فنية جدارية من قماش قطني بتصميم عصري، تناسب غرفة النوم والمعيشة."
-                        },
-                        "budget": {
-                          "type": "number",
-                          "example": 300
-                        },
-                        "duration": {
-                          "type": "number",
-                          "example": 3
-                        },
-                        "technicalDetails": {
-                          "type": "string",
-                          "example": "مقاس كل لوحة 40x60 سم، ألوان أكريليك على قماش، إطار خشبي."
-                        },
-                        "currency": {
-                          "type": "string",
-                          "example": "SAR"
-                        },
-                        "status": {
-                          "type": "string",
-                          "example": "pending"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "example": "2025-01-18T10:30:00.000Z"
-                        },
-                        "updatedAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "example": "2025-01-18T10:30:00.000Z"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "بيانات غير صالحة",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "بيانات غير صالحة"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "الفنان غير موجود",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "الفنان غير موجود"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/dashboard/sales/report": {
       "get": {
         "tags": [
@@ -13935,6 +13959,1973 @@
                                 "type": "number",
                                 "example": 167
                               }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - للمديرين فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/admins/{id}": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "تحديث الأدمن",
+        "description": "تحديث معلومات الأدمن مع دعم رفع ملف الصورة وتغيير كلمة المرور (السوبر أدمن فقط)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الأدمن"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50,
+                    "description": "اسم العرض",
+                    "example": "أحمد محمد"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "البريد الإلكتروني",
+                    "example": "ahmed@example.com"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "superadmin"
+                    ],
+                    "description": "نوع الأدمن",
+                    "example": "admin"
+                  },
+                  "isActive": {
+                    "type": "boolean",
+                    "description": "هل الحساب نشط",
+                    "example": true
+                  },
+                  "profileImage": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "صورة الملف الشخصي (JPEG, PNG)",
+                    "example": "image file"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "description": "كلمة المرور الجديدة (سيتم تشفيرها تلقائياً)",
+                    "example": "NewPassword123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث الأدمن بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث الأدمن بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "ahmed@example.com"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "example": "أحمد محمد"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "admin"
+                        },
+                        "isActive": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "profileImage": {
+                          "type": "string",
+                          "example": "https://res.cloudinary.com/example/image/upload/arthub/admin-profiles/admin_507f1f77bcf86cd799439011_1234567890.jpg",
+                          "description": "رابط صورة الملف الشخصي على Cloudinary"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "بيانات غير صحيحة"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - السوبر أدمن فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الأدمن غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الأدمن غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "حذف الأدمن",
+        "description": "حذف الأدمن (السوبر أدمن فقط)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الأدمن"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف الأدمن بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم حذف الأدمن بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "لا يمكن حذف السوبر أدمن"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - السوبر أدمن فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الأدمن غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الأدمن غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/admins/{id}/change-password": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "تغيير كلمة مرور الأدمن",
+        "description": "تغيير كلمة مرور الأدمن (السوبر أدمن فقط)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الأدمن"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "newPassword"
+                ],
+                "properties": {
+                  "newPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "description": "كلمة المرور الجديدة",
+                    "example": "NewPassword123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تغيير كلمة المرور بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تغيير كلمة المرور بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "كلمة المرور يجب أن تكون 8 أحرف على الأقل"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - السوبر أدمن فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الأدمن غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الأدمن غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}/orders": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "جلب طلبات المستخدم",
+        "description": "جلب جميع طلبات مستخدم محدد",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف المستخدم"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "rejected",
+                "completed",
+                "cancelled"
+              ]
+            },
+            "description": "تصفية حسب حالة الطلب"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt",
+                "price"
+              ],
+              "default": "createdAt"
+            },
+            "description": "حقل الترتيب"
+          },
+          {
+            "in": "query",
+            "name": "sortOrder",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "description": "ترتيب النتائج"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب طلبات المستخدم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب طلبات المستخدم بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "orders": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            },
+                            "pages": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - الأدمن فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "المستخدم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "المستخدم غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/export": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "تصدير بيانات المستخدمين",
+        "description": "تصدير جميع بيانات المستخدمين بصيغة Excel جميلة مع ألوان التطبيق",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "تم تصدير البيانات بنجاح",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "description": "ملف Excel جميل مع ألوان التطبيق وإحصائيات"
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تصدير بيانات المستخدمين بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "users": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "example": "507f1f77bcf86cd799439011"
+                              },
+                              "displayName": {
+                                "type": "string",
+                                "example": "عمر خالد محمد"
+                              },
+                              "email": {
+                                "type": "string",
+                                "example": "omar.2004@gmail.com"
+                              },
+                              "phoneNumber": {
+                                "type": "string",
+                                "example": "+201140067845"
+                              },
+                              "role": {
+                                "type": "string",
+                                "example": "user"
+                              },
+                              "isActive": {
+                                "type": "boolean",
+                                "example": true
+                              },
+                              "isVerified": {
+                                "type": "boolean",
+                                "example": true
+                              },
+                              "job": {
+                                "type": "string",
+                                "example": "طالب"
+                              },
+                              "location": {
+                                "type": "string",
+                                "example": "القاهرة, مصر"
+                              },
+                              "bio": {
+                                "type": "string",
+                                "example": "مستخدم نشط"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "lastActive": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "statistics": {
+                          "type": "object",
+                          "properties": {
+                            "totalUsers": {
+                              "type": "integer",
+                              "example": 150
+                            },
+                            "activeUsers": {
+                              "type": "integer",
+                              "example": 120
+                            },
+                            "inactiveUsers": {
+                              "type": "integer",
+                              "example": 5
+                            },
+                            "artists": {
+                              "type": "integer",
+                              "example": 50
+                            },
+                            "clients": {
+                              "type": "integer",
+                              "example": 100
+                            },
+                            "verifiedUsers": {
+                              "type": "integer",
+                              "example": 140
+                            },
+                            "unverifiedUsers": {
+                              "type": "integer",
+                              "example": 10
+                            }
+                          }
+                        },
+                        "exportInfo": {
+                          "type": "object",
+                          "properties": {
+                            "format": {
+                              "type": "string",
+                              "example": "json"
+                            },
+                            "totalUsers": {
+                              "type": "integer",
+                              "example": 150
+                            },
+                            "exportedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "filters": {
+                              "type": "object",
+                              "properties": {
+                                "role": {
+                                  "type": "string",
+                                  "example": "artist"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "example": "active"
+                                },
+                                "dateFrom": {
+                                  "type": "string",
+                                  "example": "2023-01-01"
+                                },
+                                "dateTo": {
+                                  "type": "string",
+                                  "example": "2025-01-18"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - الأدمن فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في إنشاء ملف Excel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "فشل في إنشاء ملف Excel"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Error details"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reviews": {
+      "get": {
+        "tags": [
+          "Reviews Management"
+        ],
+        "summary": "جلب تقييمات الأعمال الفنية",
+        "description": "جلب قائمة تقييمات الأعمال الفنية (اللوحات) فقط مع التفاصيل الأساسية للعرض في الجدول. يتم الترتيب والتصفية من الفرونت.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب التقييمات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب التقييمات بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reviews": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "number",
+                                "example": 1,
+                                "description": "الرقم التسلسلي"
+                              },
+                              "_id": {
+                                "type": "string",
+                                "example": "507f1f77bcf86cd799439011",
+                                "description": "معرف التقييم"
+                              },
+                              "artworkTitle": {
+                                "type": "string",
+                                "example": "لوحة زيتية مخصصة",
+                                "description": "اسم العمل الفني"
+                              },
+                              "clientName": {
+                                "type": "string",
+                                "example": "منى سالم",
+                                "description": "اسم العميل"
+                              },
+                              "clientEmail": {
+                                "type": "string",
+                                "example": "mona.salem@example.com",
+                                "description": "بريد العميل"
+                              },
+                              "artistName": {
+                                "type": "string",
+                                "example": "أحمد محمد",
+                                "description": "اسم الفنان"
+                              },
+                              "artistEmail": {
+                                "type": "string",
+                                "example": "ahmed.mohamed@example.com",
+                                "description": "بريد الفنان"
+                              },
+                              "rating": {
+                                "type": "number",
+                                "example": 4,
+                                "description": "التقييم (1-5)"
+                              },
+                              "comment": {
+                                "type": "string",
+                                "example": "عمل رائع ومميز",
+                                "description": "التعليق"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2025-01-18T10:30:00.000Z",
+                                "description": "تاريخ التقييم"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2025-01-18T10:30:00.000Z",
+                                "description": "تاريخ آخر تحديث"
+                              },
+                              "artworkImage": {
+                                "type": "string",
+                                "example": "https://example.com/artwork.jpg",
+                                "description": "صورة العمل الفني"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "number",
+                              "example": 1
+                            },
+                            "limit": {
+                              "type": "number",
+                              "example": 20
+                            },
+                            "total": {
+                              "type": "number",
+                              "example": 150
+                            },
+                            "pages": {
+                              "type": "number",
+                              "example": 8
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح - يرجى تسجيل الدخول"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - للمديرين فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "ممنوع - تحتاج صلاحيات إدارية"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reports/{id}": {
+      "get": {
+        "tags": [
+          "Reports Management"
+        ],
+        "summary": "جلب تفاصيل بلاغ محدد",
+        "description": "جلب تفاصيل كاملة لبلاغ محدد لعرضه في النافذة المنبثقة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف البلاغ"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب تفاصيل البلاغ بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب تفاصيل البلاغ بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "description": {
+                          "type": "string",
+                          "example": "تأخر الفنان في تسليم العمل لمدة أسبوع كامل",
+                          "description": "تفاصيل البلاغ"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - للمديرين فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "البلاغ غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "البلاغ غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Reports Management"
+        ],
+        "summary": "حذف بلاغ",
+        "description": "حذف بلاغ محدد من النظام",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف البلاغ"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف البلاغ بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم حذف البلاغ بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "deletedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "معرف البلاغ غير صالح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "معرف البلاغ غير صالح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - للمديرين فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "البلاغ غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "البلاغ غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/orders/{id}/status": {
+      "patch": {
+        "tags": [
+          "Order Management"
+        ],
+        "summary": "تحديث حالة الطلب",
+        "description": "تحديث حالة الطلب مع إرسال إشعارات للمستخدمين",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الطلب"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "accepted",
+                      "rejected",
+                      "in_progress",
+                      "review",
+                      "completed",
+                      "cancelled"
+                    ],
+                    "description": "الحالة الجديدة للطلب"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث حالة الطلب بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث حالة الطلب بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "status": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "string",
+                              "example": "completed"
+                            },
+                            "label": {
+                              "type": "string",
+                              "example": "مكتمل"
+                            },
+                            "color": {
+                              "type": "string",
+                              "example": "#4CAF50"
+                            }
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "بيانات غير صحيحة"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - للمديرين فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الطلب غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الطلب غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/charts": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "بيانات الرسوم البيانية",
+        "description": "جلب بيانات الرسوم البيانية للإيرادات والطلبات",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1month",
+                "3months",
+                "6months",
+                "9months",
+                "12months"
+              ],
+              "default": "12months"
+            },
+            "description": "الفترة الزمنية للبيانات",
+            "example": "12months"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب بيانات الرسوم البيانية بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بيانات الرسوم البيانية بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "revenue": {
+                          "type": "object",
+                          "properties": {
+                            "labels": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": [
+                                "يناير",
+                                "فبراير",
+                                "مارس",
+                                "أبريل",
+                                "مايو",
+                                "يونيو",
+                                "يوليو",
+                                "أغسطس",
+                                "سبتمبر",
+                                "أكتوبر",
+                                "نوفمبر",
+                                "ديسمبر"
+                              ]
+                            },
+                            "data": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "example": [
+                                120000,
+                                135000,
+                                142000,
+                                138000,
+                                156000,
+                                168000,
+                                175000,
+                                182000,
+                                195000,
+                                210000,
+                                225000,
+                                240000
+                              ]
+                            },
+                            "summary": {
+                              "type": "object",
+                              "properties": {
+                                "yearly": {
+                                  "type": "number",
+                                  "example": 847392
+                                },
+                                "monthly": {
+                                  "type": "number",
+                                  "example": 124500
+                                },
+                                "weekly": {
+                                  "type": "number",
+                                  "example": 28900
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "orders": {
+                          "type": "object",
+                          "properties": {
+                            "labels": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": [
+                                "يناير",
+                                "فبراير",
+                                "مارس",
+                                "أبريل",
+                                "مايو",
+                                "يونيو",
+                                "يوليو",
+                                "أغسطس",
+                                "سبتمبر",
+                                "أكتوبر",
+                                "نوفمبر",
+                                "ديسمبر"
+                              ]
+                            },
+                            "data": {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "example": [
+                                85,
+                                92,
+                                98,
+                                105,
+                                112,
+                                118,
+                                125,
+                                132,
+                                140,
+                                148,
+                                156,
+                                165
+                              ]
+                            },
+                            "summary": {
+                              "type": "object",
+                              "properties": {
+                                "pending": {
+                                  "type": "number",
+                                  "example": 89
+                                },
+                                "completed": {
+                                  "type": "number",
+                                  "example": 1243
+                                },
+                                "rejected": {
+                                  "type": "number",
+                                  "example": 23
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح - يرجى تسجيل الدخول"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - للمديرين فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "ممنوع - تحتاج صلاحيات إدارية"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/sales/top-artists": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "أفضل الفنانين مبيعاً",
+        "description": "جلب قائمة أفضل الفنانين مبيعاً مع إحصائيات النمو",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "7days",
+                "30days",
+                "90days",
+                "1year"
+              ],
+              "default": "30days"
+            },
+            "description": "الفترة الزمنية"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد الفنانين المطلوب عرضهم"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب أفضل الفنانين مبيعاً بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب أفضل الفنانين مبيعاً بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "period": {
+                          "type": "string",
+                          "example": "30days"
+                        },
+                        "artists": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "example": "507f1f77bcf86cd799439011"
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "أحمد محمد"
+                              },
+                              "image": {
+                                "type": "string",
+                                "example": "https://example.com/profile.jpg"
+                              },
+                              "job": {
+                                "type": "string",
+                                "example": "فنان تشكيلي"
+                              },
+                              "orderCount": {
+                                "type": "number",
+                                "example": 25
+                              },
+                              "sales": {
+                                "type": "number",
+                                "example": 125000
+                              },
+                              "growth": {
+                                "type": "object",
+                                "properties": {
+                                  "percentage": {
+                                    "type": "number",
+                                    "example": 12
+                                  },
+                                  "isPositive": {
+                                    "type": "boolean",
+                                    "example": true
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "totalArtists": {
+                              "type": "number",
+                              "example": 10
+                            },
+                            "totalSales": {
+                              "type": "number",
+                              "example": 847392
+                            },
+                            "averageGrowth": {
+                              "type": "number",
+                              "example": 8
                             }
                           }
                         }

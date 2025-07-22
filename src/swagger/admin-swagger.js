@@ -1645,8 +1645,8 @@ export const adminPaths = {
   '/api/admin/users/{id}/send-message': {
     post: {
       tags: ['Admin'],
-      summary: 'إرسال رسالة للمستخدم',
-      description: 'إرسال رسالة إلى مستخدم محدد (بالبريد الإلكتروني أو المحادثة)',
+      summary: 'إرسال رسالة للمستخدم مع المرفقات',
+      description: 'إرسال رسالة إلى مستخدم محدد مع ملفات مرفقة وإنشاء إشعار نظام',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -1662,30 +1662,33 @@ export const adminPaths = {
       requestBody: {
         required: true,
         content: {
-          'application/json': {
+          'multipart/form-data': {
             schema: {
               type: 'object',
-              required: ['subject', 'message', 'deliveryMethod'],
+              required: ['subject', 'message'],
               properties: {
                 subject: {
                   type: 'string',
-                  description: 'موضوع الرسالة'
+                  minLength: 1,
+                  maxLength: 200,
+                  description: 'موضوع الرسالة',
+                  example: 'رسالة ترحيب من إدارة المنصة'
                 },
                 message: {
                   type: 'string',
-                  description: 'محتوى الرسالة'
-                },
-                deliveryMethod: {
-                  type: 'string',
-                  enum: ['email', 'chat', 'both'],
-                  description: 'طريقة التوصيل'
+                  minLength: 1,
+                  maxLength: 2000,
+                  description: 'محتوى الرسالة',
+                  example: 'مرحباً! نود أن نرحب بك في منصة ArtHub ونشكرك على انضمامك إلينا. نتمنى لك تجربة ممتعة معنا!'
                 },
                 attachments: {
                   type: 'array',
                   items: {
-                    type: 'string'
+                    type: 'string',
+                    format: 'binary'
                   },
-                  description: 'روابط الملفات المرفقة'
+                  description: 'الملفات المرفقة (صور، فيديوهات، مستندات، إلخ)',
+                  example: ['image1.jpg', 'document.pdf', 'video.mp4']
                 }
               }
             }
@@ -1707,6 +1710,137 @@ export const adminPaths = {
                   message: {
                     type: 'string',
                     example: 'تم إرسال الرسالة بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      userId: {
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439011'
+                      },
+                      userName: {
+                        type: 'string',
+                        example: 'عمر خالد محمد'
+                      },
+                      notificationId: {
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439012'
+                      },
+                      messageType: {
+                        type: 'string',
+                        example: 'system_notification'
+                      },
+                      sentAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:00.000Z'
+                      },
+                      attachmentsCount: {
+                        type: 'number',
+                        example: 3
+                      },
+                      attachments: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            originalName: {
+                              type: 'string',
+                              example: 'document.pdf'
+                            },
+                            url: {
+                              type: 'string',
+                              example: 'https://res.cloudinary.com/example/document.pdf'
+                            },
+                            format: {
+                              type: 'string',
+                              example: 'pdf'
+                            },
+                            size: {
+                              type: 'number',
+                              example: 1024000
+                            },
+                            type: {
+                              type: 'string',
+                              example: 'application/pdf'
+                            }
+                          }
+                        }
+                      },
+                      notification: {
+                        type: 'object',
+                        properties: {
+                          _id: {
+                            type: 'string',
+                            example: '507f1f77bcf86cd799439012'
+                          },
+                          title: {
+                            type: 'string',
+                            example: 'رسالة ترحيب من إدارة المنصة'
+                          },
+                          message: {
+                            type: 'string',
+                            example: 'مرحباً! نود أن نرحب بك في منصة ArtHub...'
+                          },
+                          type: {
+                            type: 'string',
+                            example: 'system'
+                          },
+                          data: {
+                            type: 'object',
+                            properties: {
+                              adminName: {
+                                type: 'string',
+                                example: 'أحمد محمد'
+                              },
+                              adminRole: {
+                                type: 'string',
+                                example: 'admin'
+                              },
+                              messageType: {
+                                type: 'string',
+                                example: 'admin_message'
+                              },
+                              platformLogo: {
+                                type: 'string',
+                                example: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png'
+                              },
+                              attachments: {
+                                type: 'array',
+                                items: {
+                                  type: 'object'
+                                }
+                              },
+                              sentAt: {
+                                type: 'string',
+                                format: 'date-time',
+                                example: '2025-01-18T10:30:00.000Z'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'بيانات غير صحيحة أو فشل في رفع الملفات',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'موضوع الرسالة مطلوب'
                   }
                 }
               }
