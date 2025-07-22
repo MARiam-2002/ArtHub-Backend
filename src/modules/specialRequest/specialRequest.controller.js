@@ -398,6 +398,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     const transactions = await transactionModel.find(transactionQuery)
       .populate('buyer', 'displayName profileImage')
       .populate('seller', 'displayName profileImage')
+      .populate('items.artwork', 'image title')
       .lean();
 
     // تلخيص ودمج
