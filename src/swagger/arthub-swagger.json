@@ -318,8 +318,7 @@
           "password": {
             "type": "string",
             "format": "password",
-            "example": "NewPassword123!",
-            "minLength": 8
+            "example": "NewPassword123!"
           },
           "confirmPassword": {
             "type": "string",
@@ -874,7 +873,7 @@
             "example": "60d0fe4f5311236168a109ca"
           },
           "name": {
-            "type": "string",
+            "type": "object",
             "properties": {
               "ar": {
                 "type": "string",
@@ -884,11 +883,10 @@
                 "type": "string",
                 "example": "Oil Paintings"
               }
-            },
-            "example": "لوحات زيتية"
+            }
           },
           "description": {
-            "type": "string",
+            "type": "object",
             "properties": {
               "ar": {
                 "type": "string",
@@ -898,8 +896,7 @@
                 "type": "string",
                 "example": "Paintings created with oil colors"
               }
-            },
-            "example": "لوحات مرسومة بالألوان الزيتية"
+            }
           },
           "image": {
             "type": "object",
@@ -912,10 +909,6 @@
               "publicId": {
                 "type": "string",
                 "example": "category_123456"
-              },
-              "id": {
-                "type": "string",
-                "example": "demo/category_id"
               }
             }
           },
@@ -936,40 +929,6 @@
             "type": "string",
             "format": "date-time",
             "example": "2023-05-15T10:30:45.123Z"
-          },
-          "recentArtworks": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "_id": {
-                  "type": "string"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "images": {
-                  "type": "array",
-                  "items": {
-                    "type": "object"
-                  }
-                },
-                "price": {
-                  "type": "number"
-                },
-                "artist": {
-                  "type": "object",
-                  "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "avatar": {
-                      "type": "object"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       },
@@ -2679,6 +2638,229 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CreateArtistReviewRequest": {
+        "type": "object",
+        "required": [
+          "artist",
+          "rating"
+        ],
+        "properties": {
+          "artist": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "description": "معرف الفنان المراد تقييمه",
+            "example": "60d0fe4f5311236168a109ca"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5,
+            "description": "التقييم من 1 إلى 5 نجوم",
+            "example": 5
+          },
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 100,
+            "description": "عنوان التقييم (اختياري)",
+            "example": "فنان ممتاز"
+          },
+          "comment": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "description": "التعليق التفصيلي (اختياري)",
+            "example": "فنان محترف ومبدع"
+          },
+          "pros": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "maxItems": 10,
+            "description": "النقاط الإيجابية (اختياري)",
+            "example": [
+              "احترافية عالية",
+              "جودة ممتازة"
+            ]
+          },
+          "cons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "maxItems": 10,
+            "description": "النقاط السلبية (اختياري)",
+            "example": [
+              "بطء في التسليم"
+            ]
+          },
+          "isRecommended": {
+            "type": "boolean",
+            "description": "هل توصي بهذا الفنان (اختياري)",
+            "example": true
+          },
+          "subRatings": {
+            "type": "object",
+            "description": "التقييمات الفرعية (اختياري)",
+            "properties": {
+              "professionalism": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "تقييم الاحترافية",
+                "example": 5
+              },
+              "communication": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "تقييم التواصل",
+                "example": 5
+              },
+              "delivery": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "تقييم التسليم",
+                "example": 5
+              },
+              "creativity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "تقييم الإبداع",
+                "example": 5
+              },
+              "valueForMoney": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "تقييم القيمة مقابل المال",
+                "example": 5
+              },
+              "responsiveness": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "تقييم سرعة الاستجابة",
+                "example": 5
+              }
+            }
+          },
+          "workingExperience": {
+            "type": "object",
+            "description": "تجربة العمل مع الفنان (اختياري)",
+            "properties": {
+              "projectType": {
+                "type": "string",
+                "enum": [
+                  "commission",
+                  "collaboration",
+                  "purchase",
+                  "consultation",
+                  "other"
+                ],
+                "description": "نوع المشروع",
+                "example": "commission"
+              },
+              "duration": {
+                "type": "string",
+                "enum": [
+                  "less_than_week",
+                  "one_to_two_weeks",
+                  "two_to_four_weeks",
+                  "one_to_three_months",
+                  "more_than_three_months"
+                ],
+                "description": "مدة المشروع",
+                "example": "less_than_week"
+              },
+              "budget": {
+                "type": "string",
+                "enum": [
+                  "under_100",
+                  "100_500",
+                  "500_1000",
+                  "1000_5000",
+                  "over_5000"
+                ],
+                "description": "نطاق الميزانية",
+                "example": "under_100"
+              }
+            }
+          },
+          "anonymous": {
+            "type": "boolean",
+            "default": false,
+            "description": "نشر التقييم بشكل مجهول (اختياري)",
+            "example": false
+          }
+        },
+        "examples": {
+          "default": {
+            "summary": "مثال بسيط",
+            "description": "مثال بسيط - فقط الحقول الأساسية",
+            "value": {
+              "artist": "60d0fe4f5311236168a109ca",
+              "rating": 5
+            }
+          }
+        }
+      },
+      "SpecialRequestCreate": {
+        "type": "object",
+        "required": [
+          "artist",
+          "requestType",
+          "description",
+          "budget",
+          "duration"
+        ],
+        "properties": {
+          "artist": {
+            "type": "string",
+            "description": "معرف الفنان"
+          },
+          "requestType": {
+            "type": "string",
+            "description": "نوع العمل"
+          },
+          "description": {
+            "type": "string",
+            "description": "وصف تفصيلي عن العمل"
+          },
+          "budget": {
+            "type": "number",
+            "description": "الميزانية المقترحة"
+          },
+          "duration": {
+            "type": "number",
+            "description": "المدة المطلوبة بالأيام"
+          },
+          "technicalDetails": {
+            "type": "string",
+            "description": "مقاسات أو تفاصيل فنية (اختياري)"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "description": "الموعد النهائي (اختياري)"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "روابط ملفات مرفقة (اختياري)"
           }
         }
       }

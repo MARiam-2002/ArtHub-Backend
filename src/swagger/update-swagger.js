@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { adminPaths } from './admin-swagger.js';
 import { dashboardPaths } from './dashboard-swagger.js';
+import { swaggerDefinition } from './swagger-definition.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,11 @@ swaggerDocument.paths = {
   ...adminPaths,
   ...dashboardPaths
 };
+
+// بعد دمج المسارات، أضف جميع الـ schemas من swagger-definition.js إلى components.schemas
+if (!swaggerDocument.components) swaggerDocument.components = {};
+if (!swaggerDocument.components.schemas) swaggerDocument.components.schemas = {};
+Object.assign(swaggerDocument.components.schemas, swaggerDefinition.components?.schemas || swaggerDefinition);
 
 // كتابة الملف المحدث
 fs.writeFileSync(swaggerJsonPath, JSON.stringify(swaggerDocument, null, 2), 'utf8');
