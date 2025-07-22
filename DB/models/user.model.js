@@ -58,12 +58,12 @@ const userSchema = new Schema(
       url: {
         type: String,
         default:
-          'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc.png'
+          'https://res.cloudinary.com/dgzucjqgi/image/upload/v1753201276/WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c.jpg'
       },
       id: {
         type: String,
         default:
-          'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
+          'WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c'
       }
     },
 
