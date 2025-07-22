@@ -865,7 +865,7 @@ export const blockUser = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    Send message to user
+ * @desc    Send message to user with attachments
  * @route   POST /api/admin/users/:id/message
  * @access  Private (Admin, SuperAdmin)
  */
@@ -892,7 +892,63 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // إنشاء notification من نوع system
+  // معالجة الملفات المرفقة
+  let attachments = [];
+  if (req.files && req.files.length > 0) {
+    try {
+      console.log('📎 Processing attachments:', req.files.length, 'files');
+      
+      const cloudinary = await import('cloudinary');
+      cloudinary.v2.config({
+        cloud_name: process.env.CLOUD_NAME,
+        api_key: process.env.API_KEY,
+        api_secret: process.env.API_SECRET
+      });
+
+      // رفع جميع الملفات
+      const uploadPromises = req.files.map(async (file, index) => {
+        try {
+          console.log(`📤 Uploading file ${index + 1}:`, file.originalname);
+          
+          const { secure_url, public_id, format, bytes } = await cloudinary.v2.uploader.upload(
+            file.path,
+            {
+              folder: `arthub/admin-messages/${user._id}/${Date.now()}`,
+              resource_type: 'auto', // يدعم جميع أنواع الملفات
+              allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'mp4', 'mov', 'avi', 'mp3', 'wav']
+            }
+          );
+
+          console.log(`✅ File ${index + 1} uploaded:`, secure_url);
+          
+          return {
+            originalName: file.originalname,
+            url: secure_url,
+            id: public_id,
+            format: format,
+            size: bytes,
+            type: file.mimetype
+          };
+        } catch (error) {
+          console.error(`❌ Error uploading file ${index + 1}:`, error);
+          throw new Error(`فشل في رفع الملف: ${file.originalname}`);
+        }
+      });
+
+      attachments = await Promise.all(uploadPromises);
+      console.log('✅ All attachments uploaded successfully');
+      
+    } catch (error) {
+      console.error('❌ Error processing attachments:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'فشل في رفع الملفات المرفقة: ' + error.message,
+        data: null
+      });
+    }
+  }
+
+  // إنشاء notification من نوع system مع المرفقات
   const notificationModel = (await import('../../../DB/models/notification.model.js')).default;
   
   const notification = await notificationModel.create({
@@ -911,7 +967,8 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
       adminName: req.user.displayName,
       adminRole: req.user.role,
       messageType: 'admin_message',
-      platformLogo: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png', // logo التطبيق
+      platformLogo: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png',
+      attachments: attachments, // إضافة المرفقات
       sentAt: new Date()
     }
   });
@@ -927,7 +984,8 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
         data: {
           type: 'admin_message',
           notificationId: notification._id.toString(),
-          adminId: req.user._id.toString()
+          adminId: req.user._id.toString(),
+          hasAttachments: attachments.length > 0
         }
       });
     } catch (error) {
@@ -942,7 +1000,8 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
       await sendEmail({
         to: user.email,
         subject: subject || 'رسالة من إدارة المنصة',
-        message: message
+        message: message,
+        attachments: attachments // إضافة المرفقات للـ email
       });
     } catch (error) {
       console.error('❌ Error sending email:', error);
@@ -958,6 +1017,14 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
       notificationId: notification._id,
       messageType: 'system_notification',
       sentAt: new Date(),
+      attachmentsCount: attachments.length,
+      attachments: attachments.map(file => ({
+        originalName: file.originalName,
+        url: file.url,
+        format: file.format,
+        size: file.size,
+        type: file.type
+      })),
       notification: {
         _id: notification._id,
         title: notification.title.ar,

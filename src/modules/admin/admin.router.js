@@ -893,9 +893,9 @@ router.delete('/users/:id/block',
  * @swagger
  * /api/admin/users/{id}/send-message:
  *   post:
- *     summary: Send message to user
+ *     summary: Send message to user with attachments
  *     tags: [Admin Dashboard]
- *     description: Send a message to a specific user and create system notification
+ *     description: Send a message to a specific user with file attachments and create system notification
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -908,17 +908,18 @@ router.delete('/users/:id/block',
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
+ *               - subject
  *               - message
  *             properties:
  *               subject:
  *                 type: string
  *                 minLength: 1
  *                 maxLength: 200
- *                 description: Message subject (optional)
+ *                 description: Message subject
  *                 example: "رسالة ترحيب من إدارة المنصة"
  *               message:
  *                 type: string
@@ -926,6 +927,13 @@ router.delete('/users/:id/block',
  *                 maxLength: 2000
  *                 description: Message content
  *                 example: "مرحباً! نود أن نرحب بك في منصة ArtHub ونشكرك على انضمامك إلينا. نتمنى لك تجربة ممتعة معنا!"
+ *               attachments:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: File attachments (images, videos, documents, etc.)
+ *                 example: ["image1.jpg", "document.pdf", "video.mp4"]
  *     responses:
  *       200:
  *         description: Message sent successfully
@@ -959,6 +967,29 @@ router.delete('/users/:id/block',
  *                       type: string
  *                       format: date-time
  *                       example: "2025-01-18T10:30:00.000Z"
+ *                     attachmentsCount:
+ *                       type: number
+ *                       example: 3
+ *                     attachments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           originalName:
+ *                             type: string
+ *                             example: "document.pdf"
+ *                           url:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/document.pdf"
+ *                           format:
+ *                             type: string
+ *                             example: "pdf"
+ *                           size:
+ *                             type: number
+ *                             example: 1024000
+ *                           type:
+ *                             type: string
+ *                             example: "application/pdf"
  *                     notification:
  *                       type: object
  *                       properties:
@@ -989,12 +1020,16 @@ router.delete('/users/:id/block',
  *                             platformLogo:
  *                               type: string
  *                               example: "https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png"
+ *                             attachments:
+ *                               type: array
+ *                               items:
+ *                                 type: object
  *                             sentAt:
  *                               type: string
  *                               format: date-time
  *                               example: "2025-01-18T10:30:00.000Z"
  *       400:
- *         description: Bad request - Invalid data
+ *         description: Bad request - Invalid data or file upload failed
  *         content:
  *           application/json:
  *             schema:
@@ -1005,7 +1040,7 @@ router.delete('/users/:id/block',
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "نص الرسالة مطلوب"
+ *                   example: "موضوع الرسالة مطلوب"
  *       401:
  *         description: Unauthorized
  *       403:
@@ -1016,6 +1051,7 @@ router.delete('/users/:id/block',
 router.post('/users/:id/send-message', 
   authenticate, 
   isAuthorized('admin', 'superadmin'), 
+  fileUpload([...filterObject.image, ...filterObject.pdf, ...filterObject.video]).array('attachments', 10),
   isValidation(Validators.sendMessageSchema), 
   adminController.sendMessageToUser
 );

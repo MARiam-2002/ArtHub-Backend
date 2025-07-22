@@ -206,9 +206,10 @@ export const sendMessageSchema = {
     })
   }),
   body: joi.object({
-    subject: joi.string().min(1).max(200).optional().messages({
+    subject: joi.string().min(1).max(200).required().messages({
       'string.min': 'موضوع الرسالة يجب أن يكون حرف واحد على الأقل',
-      'string.max': 'موضوع الرسالة يجب أن يكون أقل من 200 حرف'
+      'string.max': 'موضوع الرسالة يجب أن يكون أقل من 200 حرف',
+      'any.required': 'موضوع الرسالة مطلوب'
     }),
     message: joi.string().min(1).max(2000).required().messages({
       'string.min': 'نص الرسالة مطلوب',
