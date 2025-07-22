@@ -191,6 +191,24 @@ function getPriorityLabel(priority) {
 }
 
 /**
+ * دالة تلخيص الطلب الخاص
+ */
+function summarizeSpecialRequest(request) {
+  return {
+    _id: request._id,
+    requestType: request.requestType,
+    description: request.description,
+    budget: request.budget,
+    duration: request.duration,
+    status: request.status,
+    createdAt: request.createdAt,
+    technicalDetails: request.specifications?.technicalDetails || null,
+    artist: request.artist?._id || request.artist,
+    sender: request.sender?._id || request.sender
+  };
+}
+
+/**
  * إنشاء طلب خاص جديد - Enhanced for Flutter
  */
 export const createSpecialRequest = asyncHandler(async (req, res, next) => {
@@ -292,7 +310,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم إنشاء الطلب الخاص بنجاح',
       data: {
-        specialRequest: formatSpecialRequest(populatedRequest)
+        specialRequest: summarizeSpecialRequest(populatedRequest)
       },
       meta: {
         timestamp: new Date().toISOString(),
