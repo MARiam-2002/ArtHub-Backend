@@ -1051,7 +1051,14 @@ router.delete('/users/:id/block',
 router.post('/users/:id/send-message', 
   authenticate, 
   isAuthorized('admin', 'superadmin'), 
-  fileUpload([...filterObject.image, ...filterObject.pdf, ...filterObject.video]).array('attachments', 10),
+  fileUpload([
+    ...filterObject.image, 
+    ...filterObject.document, 
+    ...filterObject.video, 
+    ...filterObject.audio, 
+    ...filterObject.archive, 
+    ...filterObject.code
+  ]).array('attachments', 10),
   isValidation(Validators.sendMessageSchema), 
   adminController.sendMessageToUser
 );

@@ -915,7 +915,20 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
             {
               folder: `arthub/admin-messages/${user._id}/${Date.now()}`,
               resource_type: 'auto', // يدعم جميع أنواع الملفات
-              allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'mp4', 'mov', 'avi', 'mp3', 'wav']
+              allowed_formats: [
+              // صور
+              'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff',
+              // مستندات
+              'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf',
+              // فيديوهات
+              'mp4', 'mpeg', 'mov', 'avi', 'wmv', 'webm', 'ogg', '3gp', 'flv',
+              // صوت
+              'mp3', 'wav', 'aac', 'flac',
+              // ملفات مضغوطة
+              'zip', 'rar', '7z', 'gz', 'tar',
+              // ملفات برمجة
+              'js', 'json', 'xml', 'html', 'css', 'py', 'java'
+            ]
             }
           );
 
