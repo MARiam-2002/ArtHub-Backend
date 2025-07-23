@@ -7520,51 +7520,202 @@
                     "data": {
                       "type": "object",
                       "properties": {
-                        "_id": {
-                          "type": "string",
-                          "example": "507f1f77bcf86cd799439011"
-                        },
-                        "artist": {
-                          "type": "string",
-                          "example": "507f1f77bcf86cd799439011"
-                        },
-                        "requestType": {
-                          "type": "string",
-                          "example": "custom_artwork"
-                        },
-                        "description": {
-                          "type": "string",
-                          "example": "مجموعة من 3 لوحات فنية جدارية من قماش قطني بتصميم عصري، تناسب غرفة النوم والمعيشة."
-                        },
-                        "budget": {
-                          "type": "number",
-                          "example": 300
-                        },
-                        "duration": {
-                          "type": "number",
-                          "example": 3
-                        },
-                        "technicalDetails": {
-                          "type": "string",
-                          "example": "مقاس كل لوحة 40x60 سم، ألوان أكريليك على قماش، إطار خشبي."
-                        },
-                        "currency": {
-                          "type": "string",
-                          "example": "SAR"
-                        },
-                        "status": {
-                          "type": "string",
-                          "example": "pending"
-                        },
-                        "createdAt": {
+                        "specialRequest": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "title": {
+                              "type": "string",
+                              "example": "طلب خاص"
+                            },
+                            "description": {
+                              "type": "string",
+                              "example": "مجموعة من 3 لوحات فنية جدارية من قماش قطني بتصميم عصري، تناسب غرفة النوم والمعيشة."
+                            },
+                            "requestType": {
+                              "type": "string",
+                              "example": "custom_artwork"
+                            },
+                            "requestTypeLabel": {
+                              "type": "string",
+                              "example": "عمل فني مخصص"
+                            },
+                            "budget": {
+                              "type": "number",
+                              "example": 300
+                            },
+                            "currency": {
+                              "type": "string",
+                              "example": "SAR"
+                            },
+                            "duration": {
+                              "type": "number",
+                              "example": 3
+                            },
+                            "status": {
+                              "type": "string",
+                              "example": "pending"
+                            },
+                            "statusLabel": {
+                              "type": "string",
+                              "example": "في الانتظار"
+                            },
+                            "priority": {
+                              "type": "string",
+                              "example": "medium"
+                            },
+                            "priorityLabel": {
+                              "type": "string",
+                              "example": "متوسط"
+                            },
+                            "sender": {
+                              "type": "object",
+                              "properties": {
+                                "_id": {
+                                  "type": "string",
+                                  "example": "507f1f77bcf86cd799439013"
+                                },
+                                "displayName": {
+                                  "type": "string",
+                                  "example": "أحمد محمد"
+                                },
+                                "profileImage": {
+                                  "type": "string",
+                                  "example": "https://example.com/profile.jpg"
+                                },
+                                "job": {
+                                  "type": "string",
+                                  "example": "مصمم"
+                                },
+                                "rating": {
+                                  "type": "number",
+                                  "example": 4.5
+                                },
+                                "reviewsCount": {
+                                  "type": "number",
+                                  "example": 12
+                                },
+                                "isVerified": {
+                                  "type": "boolean",
+                                  "example": true
+                                }
+                              }
+                            },
+                            "artist": {
+                              "type": "object",
+                              "properties": {
+                                "_id": {
+                                  "type": "string",
+                                  "example": "507f1f77bcf86cd799439011"
+                                },
+                                "displayName": {
+                                  "type": "string",
+                                  "example": "فاطمة علي"
+                                },
+                                "profileImage": {
+                                  "type": "string",
+                                  "example": "https://example.com/artist.jpg"
+                                },
+                                "job": {
+                                  "type": "string",
+                                  "example": "فنانة"
+                                },
+                                "rating": {
+                                  "type": "number",
+                                  "example": 4.8
+                                },
+                                "reviewsCount": {
+                                  "type": "number",
+                                  "example": 25
+                                },
+                                "isVerified": {
+                                  "type": "boolean",
+                                  "example": true
+                                }
+                              }
+                            },
+                            "attachments": {
+                              "type": "array",
+                              "items": {
+                                "type": "object"
+                              },
+                              "example": []
+                            },
+                            "deliverables": {
+                              "type": "array",
+                              "items": {
+                                "type": "object"
+                              },
+                              "example": []
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": []
+                            },
+                            "currentProgress": {
+                              "type": "number",
+                              "example": 0
+                            },
+                            "usedRevisions": {
+                              "type": "number",
+                              "example": 0
+                            },
+                            "maxRevisions": {
+                              "type": "number",
+                              "example": 3
+                            },
+                            "allowRevisions": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "example": "2025-01-18T10:30:00.000Z"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "example": "2025-01-18T10:30:00.000Z"
+                            },
+                            "remainingDays": {
+                              "type": "number",
+                              "nullable": true,
+                              "example": null
+                            },
+                            "canEdit": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "canCancel": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "canComplete": {
+                              "type": "boolean",
+                              "example": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
                           "type": "string",
                           "format": "date-time",
                           "example": "2025-01-18T10:30:00.000Z"
                         },
-                        "updatedAt": {
+                        "userId": {
                           "type": "string",
-                          "format": "date-time",
-                          "example": "2025-01-18T10:30:00.000Z"
+                          "example": "507f1f77bcf86cd799439013"
                         }
                       }
                     }
