@@ -173,10 +173,16 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
           return res.fail(null, 'يجب أن يكون الملف صورة', 400);
         }
 
+        // التحقق من حجم الملف (5MB max)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (req.file.size > maxSize) {
+          return res.fail(null, 'حجم الصورة يجب أن يكون أقل من 5 ميجابايت', 400);
+        }
+
         // حذف الصورة القديمة من Cloudinary إذا كانت موجودة
         if (currentUser.profileImage && currentUser.profileImage.id) {
           try {
-            await cloudinary.v2.uploader.destroy(currentUser.profileImage.id);
+            await cloudinary.uploader.destroy(currentUser.profileImage.id);
             console.log('🗑️ Old image deleted successfully');
           } catch (error) {
             console.log('⚠️ Error deleting old image:', error.message);
@@ -184,7 +190,12 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
         }
 
         // رفع الصورة الجديدة إلى Cloudinary
-        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+        console.log('🔄 Starting image upload to Cloudinary...');
+        console.log('📁 File path:', req.file.path);
+        console.log('📏 File size:', req.file.size);
+        console.log('📄 File type:', req.file.mimetype);
+
+        const { secure_url, public_id } = await cloudinary.uploader.upload(
           req.file.path,
           {
             folder: `arthub/user-profiles/${currentUser._id}`,
@@ -206,6 +217,11 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
         };
       } catch (uploadError) {
         console.error('❌ Image upload error:', uploadError);
+        console.error('❌ Error details:', {
+          message: uploadError.message,
+          name: uploadError.name,
+          stack: uploadError.stack
+        });
         return res.fail(null, 'حدث خطأ أثناء رفع الصورة', 400);
       }
     }
