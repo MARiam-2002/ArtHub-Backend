@@ -59,16 +59,19 @@ export const updateProfileSchema = {
         'string.pattern.base': 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف واحد ورقم واحد على الأقل'
       })
   }),
-  file: joi.object({
-    fieldname: joi.string().valid('profileImage'),
-    originalname: joi.string(),
-    encoding: joi.string(),
-    mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'),
-    size: joi.number().max(5 * 1024 * 1024), // 5MB max
-    destination: joi.string(),
-    filename: joi.string(),
-    path: joi.string()
-  }).optional()
+  file: joi.alternatives().try(
+    joi.object({
+      fieldname: joi.string().valid('profileImage'),
+      originalname: joi.string(),
+      encoding: joi.string(),
+      mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'),
+      size: joi.number().max(5 * 1024 * 1024), // 5MB max
+      destination: joi.string(),
+      filename: joi.string(),
+      path: joi.string()
+    }),
+    joi.any().valid(null, undefined)
+  ).optional()
 };
 
 /**
