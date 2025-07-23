@@ -41,46 +41,22 @@ export const updateProfileSchema = joi.object({
     .label('الاسم')
     .messages(defaultMessages),
   
-  bio: joi
+  email: joi
     .string()
-    .max(500)
+    .email({ tlds: { allow: false } })
     .optional()
-    .allow('')
-    .label('النبذة الشخصية')
+    .label('البريد الإلكتروني')
     .messages(defaultMessages),
   
-  job: joi
+  password: joi
     .string()
-    .max(100)
+    .pattern(passwordPattern)
     .optional()
-    .allow('')
-    .label('المهنة')
-    .messages(defaultMessages),
-  
-  location: joi
-    .string()
-    .max(100)
-    .optional()
-    .allow('')
-    .label('الموقع')
-    .messages(defaultMessages),
-  
-  website: joi
-    .string()
-    .uri()
-    .optional()
-    .allow('')
-    .label('الموقع الإلكتروني')
-    .messages(defaultMessages),
-  
-  socialMedia: joi
-    .object({
-      instagram: joi.string().max(100).optional().allow('').label('إنستغرام'),
-      twitter: joi.string().max(100).optional().allow('').label('تويتر'),
-      facebook: joi.string().max(100).optional().allow('').label('فيسبوك')
-    })
-    .optional()
-    .label('وسائل التواصل الاجتماعي'),
+    .label('كلمة المرور الجديدة')
+    .messages({
+      ...defaultMessages,
+      'string.pattern.base': 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف واحد ورقم واحد على الأقل'
+    }),
   
   profileImage: joi
     .object({

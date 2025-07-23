@@ -11,6 +11,7 @@ import tokenModel from '../../../DB/models/token.model.js';
 import chatModel from '../../../DB/models/chat.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
+import cloudinary from '../../utils/cloudinary.js';
 // Removed errorHandler import - using direct error handling instead
 
 /**
@@ -127,32 +128,80 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     const updateData = {};
 
     // Only update provided fields
-    const allowedFields = ['displayName', 'bio', 'job', 'location', 'website', 'socialMedia'];
+    const allowedFields = ['displayName', 'email'];
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updateData[field] = req.body[field];
       }
     });
 
-    // Handle profile image if provided
-    if (req.file) {
-      updateData.profileImage = { url: req.file.path };
-    } else if (req.body.profileImage) {
-      updateData.profileImage = req.body.profileImage;
+    // Handle password update if provided
+    if (req.body.password) {
+      const hashedPassword = await bcryptjs.hash(req.body.password, 12);
+      updateData.password = hashedPassword;
     }
 
-    const user = await userModel
+    // التحقق من أن البريد الإلكتروني فريد إذا تم تحديثه
+    if (req.body.email) {
+      const existingUser = await userModel.findOne({ 
+        email: req.body.email, 
+        _id: { $ne: userId } 
+      });
+      
+      if (existingUser) {
+        return res.fail(null, 'البريد الإلكتروني مستخدم بالفعل', 400);
+      }
+    }
+
+    // جلب المستخدم الحالي
+    const currentUser = await userModel.findById(userId);
+    if (!currentUser) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
+    }
+
+    // Handle profile image if provided
+    if (req.file) {
+      // حذف الصورة القديمة من Cloudinary إذا كانت موجودة
+      if (currentUser.profileImage && currentUser.profileImage.id) {
+        try {
+          await cloudinary.v2.uploader.destroy(currentUser.profileImage.id);
+          console.log('🗑️ Old image deleted successfully');
+        } catch (error) {
+          console.log('⚠️ Error deleting old image:', error.message);
+        }
+      }
+
+      // رفع الصورة الجديدة إلى Cloudinary
+      const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+        req.file.path,
+        {
+          folder: `arthub/user-profiles/${currentUser._id}`
+        }
+      );
+      
+      console.log('✅ New image uploaded successfully');
+      console.log('🔗 URL:', secure_url);
+      console.log('🆔 Public ID:', public_id);
+      
+      // إنشاء بيانات الصورة الجديدة
+      updateData.profileImage = {
+        url: secure_url,
+        id: public_id,
+      };
+    }
+
+    const updatedUser = await userModel
       .findByIdAndUpdate(userId, updateData, { 
         new: true, 
         runValidators: true 
       })
       .select('-password');
 
-    if (!user) {
+    if (!updatedUser) {
       return res.fail(null, 'المستخدم غير موجود', 404);
     }
 
-    res.success(user, 'تم تحديث الملف الشخصي بنجاح');
+    res.success(updatedUser, 'تم تحديث الملف الشخصي بنجاح');
   } catch (error) {
     console.error('Update profile error:', error);
     next(new Error('حدث خطأ أثناء تحديث الملف الشخصي', { cause: 500 }));

@@ -702,47 +702,19 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 50,
-            "example": "أحمد محمد المحدث"
+            "example": "أحمد محمد"
           },
-          "bio": {
+          "email": {
             "type": "string",
-            "maxLength": 500,
-            "example": "فنان تشكيلي متخصص في الرسم الزيتي والألوان المائية"
+            "format": "email",
+            "example": "ahmed.mohamed@example.com"
           },
-          "job": {
+          "password": {
             "type": "string",
-            "maxLength": 100,
-            "example": "رسام ومصمم جرافيك"
-          },
-          "location": {
-            "type": "string",
-            "maxLength": 100,
-            "example": "جدة، السعودية"
-          },
-          "website": {
-            "type": "string",
-            "format": "uri",
-            "example": "https://www.my-new-portfolio.com"
-          },
-          "socialMedia": {
-            "type": "object",
-            "properties": {
-              "instagram": {
-                "type": "string",
-                "maxLength": 100,
-                "example": "@my_new_instagram"
-              },
-              "twitter": {
-                "type": "string",
-                "maxLength": 100,
-                "example": "@my_new_twitter"
-              },
-              "facebook": {
-                "type": "string",
-                "maxLength": 100,
-                "example": "my.new.facebook"
-              }
-            }
+            "format": "password",
+            "minLength": 8,
+            "pattern": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{8,}$",
+            "example": "newPassword123!"
           },
           "profileImage": {
             "type": "string",
