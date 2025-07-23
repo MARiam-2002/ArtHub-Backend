@@ -2827,40 +2827,61 @@
         "properties": {
           "artist": {
             "type": "string",
-            "description": "معرف الفنان"
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "description": "معرف الفنان (MongoDB ObjectId)",
+            "example": "507f1f77bcf86cd799439011"
           },
           "requestType": {
             "type": "string",
-            "description": "نوع العمل"
+            "enum": [
+              "custom_artwork",
+              "portrait",
+              "logo_design",
+              "illustration",
+              "ready_artwork",
+              "digital_art",
+              "traditional_art",
+              "animation",
+              "graphic_design",
+              "character_design",
+              "concept_art",
+              "other"
+            ],
+            "description": "نوع العمل المطلوب"
           },
           "description": {
             "type": "string",
-            "description": "وصف تفصيلي عن العمل"
+            "minLength": 20,
+            "maxLength": 2000,
+            "description": "وصف تفصيلي للعمل (20-2000 حرف)"
           },
           "budget": {
             "type": "number",
-            "description": "الميزانية المقترحة"
+            "minimum": 10,
+            "maximum": 100000,
+            "description": "الميزانية المقترحة (10-100,000)"
           },
           "duration": {
             "type": "number",
-            "description": "المدة المطلوبة بالأيام"
+            "minimum": 1,
+            "maximum": 365,
+            "description": "المدة المطلوبة بالأيام (1-365)"
           },
           "technicalDetails": {
             "type": "string",
-            "description": "مقاسات أو تفاصيل فنية (اختياري)"
+            "maxLength": 1000,
+            "description": "تفاصيل فنية إضافية (اختياري، أقل من 1000 حرف)"
           },
-          "deadline": {
+          "currency": {
             "type": "string",
-            "format": "date-time",
-            "description": "الموعد النهائي (اختياري)"
+            "enum": ["SAR", "USD", "EUR", "AED"],
+            "default": "SAR",
+            "description": "العملة (افتراضي: SAR)"
           },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uri"
-            },
-            "description": "روابط ملفات مرفقة (اختياري)"
+          "artwork": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{24}$",
+            "description": "معرف العمل الفني (مطلوب فقط إذا كان requestType هو ready_artwork)"
           }
         }
       }
