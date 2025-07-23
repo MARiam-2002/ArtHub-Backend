@@ -74,36 +74,14 @@ export const filterObject = {
 
 export const fileUpload = filterArray => {
   const fileFilter = (req, file, cb) => {
-    try {
-      // التحقق من وجود file و mimetype
-      if (!file) {
-        return cb(new Error('No file provided'), false);
-      }
-      
-      if (!file.mimetype) {
-        return cb(new Error('File mimetype is missing'), false);
-      }
-      
-      if (!filterArray || !Array.isArray(filterArray)) {
-        return cb(new Error('Invalid filter array'), false);
-      }
-      
-      if (!filterArray.includes(file.mimetype)) {
-        return cb(new Error(`Invalid file format. Allowed types: ${filterArray.join(', ')}`), false);
-      }
-      
-      return cb(null, true);
-    } catch (error) {
-      return cb(new Error(`File validation error: ${error.message}`), false);
+    if (!filterArray.includes(file.mimetype)) {
+      return cb(new Error('invalid file formate'), false);
     }
+    return cb(null, true);
   };
 
   return multer({ 
     storage: diskStorage({}), 
-    fileFilter,
-    limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB max
-      files: 1
-    }
+    fileFilter 
   });
 };
