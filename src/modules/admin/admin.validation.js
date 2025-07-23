@@ -216,7 +216,7 @@ export const sendMessageSchema = {
       'string.max': 'نص الرسالة يجب أن يكون أقل من 2000 حرف',
       'any.required': 'نص الرسالة مطلوب'
     })
-  })
+  }).unknown(true) // السماح بحقول إضافية مثل الملفات
 };
 
 // Get user orders validation

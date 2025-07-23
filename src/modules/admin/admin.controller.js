@@ -875,6 +875,11 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { message, subject } = req.body;
 
+  // Debug logging
+  console.log('🔍 Request body:', req.body);
+  console.log('📁 Request files:', req.files);
+  console.log('📋 Request headers:', req.headers['content-type']);
+
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       success: false,
