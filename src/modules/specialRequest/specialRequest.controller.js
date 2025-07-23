@@ -1001,7 +1001,7 @@ export const completeRequest = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * حذف طلب - Enhanced for Flutter
+ * حذف طلب خاص - بسيط ومباشر
  */
 export const deleteRequest = asyncHandler(async (req, res, next) => {
   try {
@@ -1038,16 +1038,7 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // التحقق من أن حالة الطلب تسمح بالحذف
-    if (!['pending', 'rejected', 'cancelled'].includes(request.status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'لا يمكن حذف طلب مقبول أو مكتمل',
-        data: null
-      });
-    }
-
-    // حذف الطلب
+    // حذف الطلب من قاعدة البيانات
     await specialRequestModel.findByIdAndDelete(requestId);
 
     const response = {
@@ -1055,10 +1046,6 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       message: 'تم حذف الطلب بنجاح',
       data: {
         deletedRequestId: requestId
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        userId: userId
       }
     };
 

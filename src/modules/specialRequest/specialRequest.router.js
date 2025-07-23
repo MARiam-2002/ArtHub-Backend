@@ -6,7 +6,8 @@ import {
   createSpecialRequestSchema,
   updateRequestStatusSchema,
   completeRequestSchema,
-  cancelSpecialRequestSchema
+  cancelSpecialRequestSchema,
+  deleteRequestSchema
 } from './specialRequest.validation.js';
 
 const router = Router();
@@ -658,7 +659,7 @@ router.post(
  *     tags:
  *       - Special Requests
  *     summary: حذف طلب خاص
- *     description: حذف طلب خاص نهائياً (فقط للطلبات المرفوضة أو الملغاة)
+ *     description: حذف طلب خاص نهائياً من قاعدة البيانات
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -667,6 +668,7 @@ router.post(
  *         required: true
  *         schema:
  *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: معرف الطلب
  *     responses:
  *       200:
@@ -687,8 +689,9 @@ router.post(
  *                   properties:
  *                     deletedRequestId:
  *                       type: string
+ *                       description: معرف الطلب المحذوف
  *       400:
- *         description: لا يمكن حذف الطلب في حالته الحالية
+ *         description: معرف الطلب غير صالح
  *       403:
  *         description: غير مصرح لك بحذف هذا الطلب
  *       404:
@@ -696,7 +699,11 @@ router.post(
  *       500:
  *         description: خطأ في الخادم
  */
-router.delete('/:requestId', isAuthenticated, controller.deleteRequest);
+router.delete('/:requestId', 
+  isAuthenticated, 
+  isValidation(deleteRequestSchema),
+  controller.deleteRequest
+);
 
 /**
  * @swagger

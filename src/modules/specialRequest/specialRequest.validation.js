@@ -397,3 +397,19 @@ export const requestIdSchema = {
       })
   })
 };
+
+/**
+ * Schema for deleting a special request
+ */
+export const deleteRequestSchema = {
+  params: Joi.object({
+    requestId: Joi.string()
+      .required()
+      .pattern(MONGODB_OBJECTID_REGEX)
+      .messages({
+        'string.empty': 'معرف الطلب مطلوب',
+        'string.pattern.base': 'معرف الطلب غير صالح',
+        'any.required': 'معرف الطلب مطلوب'
+      })
+  })
+};

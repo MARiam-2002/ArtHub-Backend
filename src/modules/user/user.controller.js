@@ -161,33 +161,53 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
 
     // Handle profile image if provided
     if (req.file) {
-      // حذف الصورة القديمة من Cloudinary إذا كانت موجودة
-      if (currentUser.profileImage && currentUser.profileImage.id) {
-        try {
-          await cloudinary.v2.uploader.destroy(currentUser.profileImage.id);
-          console.log('🗑️ Old image deleted successfully');
-        } catch (error) {
-          console.log('⚠️ Error deleting old image:', error.message);
-        }
+      // التحقق من وجود path للملف
+      if (!req.file.path) {
+        console.log('⚠️ File uploaded but no path available');
+        return res.fail(null, 'ملف الصورة غير صالح', 400);
       }
 
-      // رفع الصورة الجديدة إلى Cloudinary
-      const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
-        req.file.path,
-        {
-          folder: `arthub/user-profiles/${currentUser._id}`
+      try {
+        // التحقق من نوع الملف
+        if (!req.file.mimetype || !req.file.mimetype.startsWith('image/')) {
+          return res.fail(null, 'يجب أن يكون الملف صورة', 400);
         }
-      );
-      
-      console.log('✅ New image uploaded successfully');
-      console.log('🔗 URL:', secure_url);
-      console.log('🆔 Public ID:', public_id);
-      
-      // إنشاء بيانات الصورة الجديدة
-      updateData.profileImage = {
-        url: secure_url,
-        id: public_id,
-      };
+
+        // حذف الصورة القديمة من Cloudinary إذا كانت موجودة
+        if (currentUser.profileImage && currentUser.profileImage.id) {
+          try {
+            await cloudinary.v2.uploader.destroy(currentUser.profileImage.id);
+            console.log('🗑️ Old image deleted successfully');
+          } catch (error) {
+            console.log('⚠️ Error deleting old image:', error.message);
+          }
+        }
+
+        // رفع الصورة الجديدة إلى Cloudinary
+        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+          req.file.path,
+          {
+            folder: `arthub/user-profiles/${currentUser._id}`,
+            transformation: [
+              { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+              { quality: 'auto', fetch_format: 'auto' }
+            ]
+          }
+        );
+        
+        console.log('✅ New image uploaded successfully');
+        console.log('🔗 URL:', secure_url);
+        console.log('🆔 Public ID:', public_id);
+        
+        // إنشاء بيانات الصورة الجديدة
+        updateData.profileImage = {
+          url: secure_url,
+          id: public_id,
+        };
+      } catch (uploadError) {
+        console.error('❌ Image upload error:', uploadError);
+        return res.fail(null, 'حدث خطأ أثناء رفع الصورة', 400);
+      }
     }
 
     const updatedUser = await userModel
