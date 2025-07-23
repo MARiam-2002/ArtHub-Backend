@@ -7,8 +7,8 @@ export const isValidObjectId = (value, helpers) =>
 // ✅ Middleware for schema validation
 export const isValidation = Schema => (req, res, next) => {
   try {
-    // Check if Schema is an object with body, params, query properties
-    if (Schema && typeof Schema === 'object' && (Schema.body || Schema.params || Schema.query)) {
+    // Check if Schema is an object with body, params, query, files, file properties
+    if (Schema && typeof Schema === 'object' && (Schema.body || Schema.params || Schema.query || Schema.files || Schema.file)) {
       // Handle structured schema object
       const validationErrors = [];
       
@@ -36,6 +36,22 @@ export const isValidation = Schema => (req, res, next) => {
         }
       }
       
+      // Validate files (for multiple files)
+      if (Schema.files) {
+        const { error } = Schema.files.validate(req.files, { abortEarly: false });
+        if (error) {
+          validationErrors.push(...error.details.map(err => err.message));
+        }
+      }
+      
+      // Validate file (for single file)
+      if (Schema.file) {
+        const { error } = Schema.file.validate(req.file, { abortEarly: false });
+        if (error) {
+          validationErrors.push(...error.details.map(err => err.message));
+        }
+      }
+      
       if (validationErrors.length > 0) {
         return res.status(400).json({
           success: false,
@@ -49,7 +65,8 @@ export const isValidation = Schema => (req, res, next) => {
         ...req.body,
         ...req.params,
         ...req.query,
-        ...req.files
+        ...req.files,
+        ...req.file
       };
 
       const { error } = Schema.validate(copyReq, { abortEarly: false });

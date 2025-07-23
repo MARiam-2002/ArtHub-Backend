@@ -934,50 +934,112 @@ export const swaggerDefinition = {
             maxLength: 50,
             example: 'أحمد محمد المحدث'
           },
-          bio: {
+          email: {
             type: 'string',
-            maxLength: 500,
-            example: 'فنان تشكيلي متخصص في الرسم الزيتي والألوان المائية'
+            format: 'email',
+            example: 'ahmed.updated@example.com'
           },
-          job: {
+          password: {
             type: 'string',
-            maxLength: 100,
-            example: 'رسام ومصمم جرافيك'
-          },
-          location: {
-            type: 'string',
-            maxLength: 100,
-            example: 'جدة، السعودية'
-          },
-          website: {
-            type: 'string',
-            format: 'uri',
-            example: 'https://www.my-new-portfolio.com'
-          },
-          socialMedia: {
-            type: 'object',
-            properties: {
-              instagram: {
-                type: 'string',
-                maxLength: 100,
-                example: '@my_new_instagram'
-              },
-              twitter: {
-                type: 'string',
-                maxLength: 100,
-                example: '@my_new_twitter'
-              },
-              facebook: {
-                type: 'string',
-                maxLength: 100,
-                example: 'my.new.facebook'
-              }
-            }
+            format: 'password',
+            minLength: 8,
+            pattern: '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{8,}$',
+            example: 'newPassword123!'
           },
           profileImage: {
             type: 'string',
             format: 'binary',
-            description: 'Profile image file'
+            description: 'Profile image file (JPEG, PNG, JPG, GIF, WebP) - optional',
+            example: 'image file'
+          }
+        }
+      },
+      CreateAdminRequest: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: {
+            type: 'string',
+            format: 'email',
+            description: 'Admin email address (unique)',
+            example: 'newadmin@example.com'
+          },
+          password: {
+            type: 'string',
+            format: 'password',
+            minLength: 8,
+            pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d|.*[!@#$%^&*()_+\\-=\\[\\]{};\':"\\\\|,.<>\\/?])',
+            description: 'Admin password (must contain uppercase, lowercase, and number/special character)',
+            example: 'AdminPassword123!'
+          },
+          displayName: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 50,
+            description: 'Admin display name',
+            example: 'أحمد محمد'
+          },
+          role: {
+            type: 'string',
+            enum: ['admin', 'superadmin'],
+            default: 'admin',
+            description: 'Admin role in the system',
+            example: 'admin'
+          },
+          profileImage: {
+            type: 'string',
+            format: 'binary',
+            description: 'Profile image file (JPEG, PNG, JPG) - optional',
+            example: 'image file'
+          }
+        }
+      },
+      UpdateAdminRequest: {
+        type: 'object',
+        properties: {
+          displayName: {
+            type: 'string',
+            minLength: 2,
+            maxLength: 50,
+            description: 'Admin display name',
+            example: 'أحمد محمد المحدث'
+          },
+          email: {
+            type: 'string',
+            format: 'email',
+            description: 'Admin email address',
+            example: 'admin.updated@example.com'
+          },
+          password: {
+            type: 'string',
+            format: 'password',
+            minLength: 8,
+            pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d|.*[!@#$%^&*()_+\\-=\\[\\]{};\':"\\\\|,.<>\\/?])',
+            description: 'New admin password',
+            example: 'NewAdminPassword123!'
+          },
+          role: {
+            type: 'string',
+            enum: ['admin', 'superadmin'],
+            description: 'Admin role',
+            example: 'admin'
+          },
+          status: {
+            type: 'string',
+            enum: ['active', 'inactive', 'banned'],
+            description: 'Admin status',
+            example: 'active'
+          },
+          isActive: {
+            type: 'boolean',
+            description: 'Admin active status',
+            example: true
+          },
+          profileImage: {
+            type: 'string',
+            format: 'binary',
+            description: 'Profile image file (JPEG, PNG, JPG) - optional',
+            example: 'image file'
           }
         }
       },
@@ -1001,6 +1063,47 @@ export const swaggerDefinition = {
             type: 'string',
             format: 'password',
             example: 'newPassword123!'
+          }
+        }
+      },
+      ProfileImageFile: {
+        type: 'object',
+        description: 'Profile image file upload validation',
+        properties: {
+          fieldname: {
+            type: 'string',
+            enum: ['profileImage'],
+            description: 'File field name must be profileImage'
+          },
+          originalname: {
+            type: 'string',
+            description: 'Original file name'
+          },
+          encoding: {
+            type: 'string',
+            description: 'File encoding'
+          },
+          mimetype: {
+            type: 'string',
+            enum: ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'],
+            description: 'Allowed image file types'
+          },
+          size: {
+            type: 'number',
+            maximum: 5242880,
+            description: 'File size in bytes (max 5MB)'
+          },
+          destination: {
+            type: 'string',
+            description: 'File destination path'
+          },
+          filename: {
+            type: 'string',
+            description: 'Generated filename'
+          },
+          path: {
+            type: 'string',
+            description: 'Full file path'
           }
         }
       },

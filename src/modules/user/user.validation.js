@@ -32,40 +32,44 @@ const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
 /**
  * Update profile validation schema
  */
-export const updateProfileSchema = joi.object({
-  displayName: joi
-    .string()
-    .min(2)
-    .max(50)
-    .optional()
-    .label('الاسم')
-    .messages(defaultMessages),
-  
-  email: joi
-    .string()
-    .email({ tlds: { allow: false } })
-    .optional()
-    .label('البريد الإلكتروني')
-    .messages(defaultMessages),
-  
-  password: joi
-    .string()
-    .pattern(passwordPattern)
-    .optional()
-    .label('كلمة المرور الجديدة')
-    .messages({
-      ...defaultMessages,
-      'string.pattern.base': 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف واحد ورقم واحد على الأقل'
-    }),
-  
-  profileImage: joi
-    .object({
-      url: joi.string().uri().required().label('رابط الصورة'),
-      publicId: joi.string().required().label('معرف الصورة')
-    })
-    .optional()
-    .label('صورة الملف الشخصي')
-});
+export const updateProfileSchema = {
+  body: joi.object({
+    displayName: joi
+      .string()
+      .min(2)
+      .max(50)
+      .optional()
+      .label('الاسم')
+      .messages(defaultMessages),
+    
+    email: joi
+      .string()
+      .email({ tlds: { allow: false } })
+      .optional()
+      .label('البريد الإلكتروني')
+      .messages(defaultMessages),
+    
+    password: joi
+      .string()
+      .pattern(passwordPattern)
+      .optional()
+      .label('كلمة المرور الجديدة')
+      .messages({
+        ...defaultMessages,
+        'string.pattern.base': 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف واحد ورقم واحد على الأقل'
+      })
+  }),
+  file: joi.object({
+    fieldname: joi.string().valid('profileImage'),
+    originalname: joi.string(),
+    encoding: joi.string(),
+    mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'),
+    size: joi.number().max(5 * 1024 * 1024), // 5MB max
+    destination: joi.string(),
+    filename: joi.string(),
+    path: joi.string()
+  }).optional()
+};
 
 /**
  * Change password validation schema

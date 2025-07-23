@@ -702,12 +702,12 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 50,
-            "example": "أحمد محمد"
+            "example": "أحمد محمد المحدث"
           },
           "email": {
             "type": "string",
             "format": "email",
-            "example": "ahmed.mohamed@example.com"
+            "example": "ahmed.updated@example.com"
           },
           "password": {
             "type": "string",
@@ -719,7 +719,8 @@
           "profileImage": {
             "type": "string",
             "format": "binary",
-            "description": "Profile image file"
+            "description": "Profile image file (JPEG, PNG, JPG, GIF, WebP) - optional",
+            "example": "image file"
           }
         }
       },
@@ -2799,61 +2800,191 @@
         "properties": {
           "artist": {
             "type": "string",
-            "pattern": "^[0-9a-fA-F]{24}$",
-            "description": "معرف الفنان (MongoDB ObjectId)",
-            "example": "507f1f77bcf86cd799439011"
+            "description": "معرف الفنان"
           },
           "requestType": {
             "type": "string",
-            "enum": [
-              "custom_artwork",
-              "portrait",
-              "logo_design",
-              "illustration",
-              "ready_artwork",
-              "digital_art",
-              "traditional_art",
-              "animation",
-              "graphic_design",
-              "character_design",
-              "concept_art",
-              "other"
-            ],
-            "description": "نوع العمل المطلوب"
+            "description": "نوع العمل"
           },
           "description": {
             "type": "string",
-            "minLength": 20,
-            "maxLength": 2000,
-            "description": "وصف تفصيلي للعمل (20-2000 حرف)"
+            "description": "وصف تفصيلي عن العمل"
           },
           "budget": {
             "type": "number",
-            "minimum": 10,
-            "maximum": 100000,
-            "description": "الميزانية المقترحة (10-100,000)"
+            "description": "الميزانية المقترحة"
           },
           "duration": {
             "type": "number",
-            "minimum": 1,
-            "maximum": 365,
-            "description": "المدة المطلوبة بالأيام (1-365)"
+            "description": "المدة المطلوبة بالأيام"
           },
           "technicalDetails": {
             "type": "string",
-            "maxLength": 1000,
-            "description": "تفاصيل فنية إضافية (اختياري، أقل من 1000 حرف)"
+            "description": "مقاسات أو تفاصيل فنية (اختياري)"
           },
-          "currency": {
+          "deadline": {
             "type": "string",
-            "enum": ["SAR", "USD", "EUR", "AED"],
-            "default": "SAR",
-            "description": "العملة (افتراضي: SAR)"
+            "format": "date-time",
+            "description": "الموعد النهائي (اختياري)"
           },
-          "artwork": {
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "روابط ملفات مرفقة (اختياري)"
+          }
+        }
+      },
+      "CreateAdminRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
             "type": "string",
-            "pattern": "^[0-9a-fA-F]{24}$",
-            "description": "معرف العمل الفني (مطلوب فقط إذا كان requestType هو ready_artwork)"
+            "format": "email",
+            "description": "Admin email address (unique)",
+            "example": "newadmin@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d|.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])",
+            "description": "Admin password (must contain uppercase, lowercase, and number/special character)",
+            "example": "AdminPassword123!"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "description": "Admin display name",
+            "example": "أحمد محمد"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "superadmin"
+            ],
+            "default": "admin",
+            "description": "Admin role in the system",
+            "example": "admin"
+          },
+          "profileImage": {
+            "type": "string",
+            "format": "binary",
+            "description": "Profile image file (JPEG, PNG, JPG) - optional",
+            "example": "image file"
+          }
+        }
+      },
+      "UpdateAdminRequest": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "description": "Admin display name",
+            "example": "أحمد محمد المحدث"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Admin email address",
+            "example": "admin.updated@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "pattern": "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d|.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])",
+            "description": "New admin password",
+            "example": "NewAdminPassword123!"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "superadmin"
+            ],
+            "description": "Admin role",
+            "example": "admin"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "banned"
+            ],
+            "description": "Admin status",
+            "example": "active"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Admin active status",
+            "example": true
+          },
+          "profileImage": {
+            "type": "string",
+            "format": "binary",
+            "description": "Profile image file (JPEG, PNG, JPG) - optional",
+            "example": "image file"
+          }
+        }
+      },
+      "ProfileImageFile": {
+        "type": "object",
+        "description": "Profile image file upload validation",
+        "properties": {
+          "fieldname": {
+            "type": "string",
+            "enum": [
+              "profileImage"
+            ],
+            "description": "File field name must be profileImage"
+          },
+          "originalname": {
+            "type": "string",
+            "description": "Original file name"
+          },
+          "encoding": {
+            "type": "string",
+            "description": "File encoding"
+          },
+          "mimetype": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/jpg",
+              "image/gif",
+              "image/webp"
+            ],
+            "description": "Allowed image file types"
+          },
+          "size": {
+            "type": "number",
+            "maximum": 5242880,
+            "description": "File size in bytes (max 5MB)"
+          },
+          "destination": {
+            "type": "string",
+            "description": "File destination path"
+          },
+          "filename": {
+            "type": "string",
+            "description": "Generated filename"
+          },
+          "path": {
+            "type": "string",
+            "description": "Full file path"
           }
         }
       }
@@ -7908,12 +8039,13 @@
       }
     },
     "/api/special-requests/{requestId}": {
-      "get": {
+      "delete": {
         "tags": [
           "Special Requests"
         ],
-        "summary": "تفاصيل طلب خاص",
-        "description": "عرض تفاصيل طلب خاص محدد",
+        "summary": "حذف طلب خاص",
+        "description": "حذف طلب خاص نهائياً من قاعدة البيانات (لصاحب الطلب فقط)",
+        "x-screen": "my_requests_screen",
         "security": [
           {
             "BearerAuth": []
@@ -7925,17 +8057,124 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف الطلب"
           }
         ],
         "responses": {
           "200": {
-            "description": "تم جلب تفاصيل الطلب بنجاح"
+            "description": "تم حذف الطلب بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم حذف الطلب بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deletedRequestId": {
+                          "type": "string",
+                          "description": "معرف الطلب المحذوف",
+                          "example": "64f1a2b3c4d5e6f7g8h9i0j1"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "معرف الطلب غير صالح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "معرف الطلب غير صالح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "غير مصرح لك بحذف هذا الطلب",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بحذف هذا الطلب"
+                    },
+                    "data": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
           },
           "404": {
-            "description": "الطلب غير موجود"
+            "description": "الطلب غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الطلب غير موجود"
+                    },
+                    "data": {
+                      "type": "object",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -8101,147 +8340,6 @@
           },
           "404": {
             "description": "الطلب غير موجود"
-          }
-        }
-      }
-    },
-    "/api/special-requests/{requestId}": {
-      "delete": {
-        "tags": [
-          "Special Requests"
-        ],
-        "summary": "حذف طلب خاص",
-        "description": "حذف طلب خاص نهائياً من قاعدة البيانات (لصاحب الطلب فقط)",
-        "x-screen": "my_requests_screen",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "requestId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "pattern": "^[0-9a-fA-F]{24}$"
-            },
-            "description": "معرف الطلب"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "تم حذف الطلب بنجاح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": true
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "تم حذف الطلب بنجاح"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "deletedRequestId": {
-                          "type": "string",
-                          "description": "معرف الطلب المحذوف",
-                          "example": "64f1a2b3c4d5e6f7g8h9i0j1"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "معرف الطلب غير صالح",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "معرف الطلب غير صالح"
-                    },
-                    "data": {
-                      "type": "object",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "غير مصرح لك بحذف هذا الطلب",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "غير مصرح لك بحذف هذا الطلب"
-                    },
-                    "data": {
-                      "type": "object",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "الطلب غير موجود",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "الطلب غير موجود"
-                    },
-                    "data": {
-                      "type": "object",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "خطأ في الخادم",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
           }
         }
       }

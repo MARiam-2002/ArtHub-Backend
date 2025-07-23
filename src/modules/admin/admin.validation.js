@@ -68,17 +68,15 @@ export const createAdminSchema = {
         'any.only': 'نوع المستخدم يجب أن يكون admin أو superadmin'
       })
   }),
-  files: joi.object({
-    profileImage: joi.object({
-      fieldname: joi.string().valid('profileImage'),
-      originalname: joi.string(),
-      encoding: joi.string(),
-      mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg'),
-      size: joi.number().max(5 * 1024 * 1024), // 5MB max
-      destination: joi.string(),
-      filename: joi.string(),
-      path: joi.string()
-    }).optional()
+  file: joi.object({
+    fieldname: joi.string().valid('profileImage'),
+    originalname: joi.string(),
+    encoding: joi.string(),
+    mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg'),
+    size: joi.number().max(5 * 1024 * 1024), // 5MB max
+    destination: joi.string(),
+    filename: joi.string(),
+    path: joi.string()
   }).optional()
 };
 
@@ -125,7 +123,17 @@ export const updateAdminSchema = {
         'string.min': 'كلمة المرور يجب أن تكون 8 أحرف على الأقل',
         'string.pattern.base': 'كلمة المرور يجب أن تحتوي على حرف كبير وحرف صغير ورقم أو رمز خاص'
       })
-  })
+  }),
+  file: joi.object({
+    fieldname: joi.string().valid('profileImage'),
+    originalname: joi.string(),
+    encoding: joi.string(),
+    mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg'),
+    size: joi.number().max(5 * 1024 * 1024), // 5MB max
+    destination: joi.string(),
+    filename: joi.string(),
+    path: joi.string()
+  }).optional()
 };
 
 // Change admin password validation
