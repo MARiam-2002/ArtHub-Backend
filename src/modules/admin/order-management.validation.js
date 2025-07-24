@@ -13,7 +13,7 @@ export const getAllOrdersSchema = {
       'number.integer': 'رقم الصفحة يجب أن يكون رقماً صحيحاً',
       'number.min': 'رقم الصفحة يجب أن يكون 1 على الأقل'
     }),
-    limit: Joi.number().integer().min(1).max(100).default(20).messages({
+    limit: Joi.number().integer().min(1).max(100).default(10).messages({
       'number.base': 'عدد العناصر يجب أن يكون رقماً',
       'number.integer': 'عدد العناصر يجب أن يكون رقماً صحيحاً',
       'number.min': 'عدد العناصر يجب أن يكون 1 على الأقل',

@@ -7,7 +7,7 @@ import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
 
 /**
- * @desc    جلب جميع الطلبات (بدون فلترة أو بحث، فقط pagination)
+ * @desc    جلب جميع الطلبات الخاصة (Special Requests فقط)
  * @route   GET /api/admin/orders
  * @access  Private (Admin, SuperAdmin)
  */
@@ -15,86 +15,50 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
 
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
+  const limit = parseInt(req.query.limit) || 10; // تغيير الـ default إلى 10
   const skip = (page - 1) * limit;
 
-  // جلب الطلبات الخاصة
+  // جلب الطلبات الخاصة فقط مع pagination
+  const total = await specialRequestModel.countDocuments({ isDeleted: { $ne: true } });
+  
   const specialRequests = await specialRequestModel.find({ isDeleted: { $ne: true } })
     .populate('sender', 'displayName profileImage')
     .populate('artist', 'displayName profileImage')
+    .sort({ createdAt: -1 }) // ترتيب حسب التاريخ الأحدث
+    .skip(skip)
+    .limit(limit)
     .lean();
 
-  // جلب المعاملات (الطلبات العادية)
-  const transactions = await transactionModel.find({ isDeleted: { $ne: true } })
-    .populate('buyer', 'displayName profileImage')
-    .populate('seller', 'displayName profileImage')
-    .lean();
-
-  // دمج وتنسيق البيانات
-  const allOrders = [
-    ...specialRequests.map(order => ({
-      _id: order._id,
-      title: order.title,
-      description: order.description,
-      price: order.finalPrice || order.budget,
-      currency: order.currency || 'SAR',
-      orderDate: order.createdAt,
-      artist: order.artist,
-      customer: order.sender,
-      status: {
-        value: order.status,
-        label: getStatusLabel(order.status),
-        color: getStatusColor(order.status)
-      },
-      requestType: {
-        value: order.requestType,
-        label: getRequestTypeLabel(order.requestType)
-      },
-      priority: {
-        value: order.priority,
-        label: getPriorityLabel(order.priority)
-      },
-      deadline: order.deadline,
-      estimatedDelivery: order.estimatedDelivery,
-      currentProgress: order.currentProgress || 0,
-      attachments: order.attachments || [],
-      deliverables: order.deliverables || [],
-      orderType: 'special_request'
-    })),
-    ...transactions.map(order => ({
-      _id: order._id,
-      title: `طلب ${order.transactionNumber}`,
-      description: order.description || 'طلب عادي',
-      price: order.pricing?.totalAmount || 0,
-      currency: 'SAR',
-      orderDate: order.createdAt,
-      artist: order.seller,
-      customer: order.buyer,
-      status: {
-        value: order.status,
-        label: getStatusLabel(order.status),
-        color: getStatusColor(order.status)
-      },
-      requestType: {
-        value: 'regular_order',
-        label: 'طلب عادي'
-      },
-      priority: {
-        value: 'normal',
-        label: 'عادي'
-      },
-      deadline: null,
-      estimatedDelivery: null,
-      currentProgress: order.status === 'completed' ? 100 : 0,
-      attachments: [],
-      deliverables: [],
-      orderType: 'transaction'
-    }))
-  ];
-
-  // تطبيق pagination
-  const total = allOrders.length;
-  const paginatedOrders = allOrders.slice(skip, skip + limit);
+  // تنسيق البيانات
+  const formattedOrders = specialRequests.map(order => ({
+    _id: order._id,
+    title: order.title,
+    description: order.description,
+    price: order.finalPrice || order.budget,
+    currency: order.currency || 'SAR',
+    orderDate: order.createdAt,
+    artist: order.artist,
+    customer: order.sender,
+    status: {
+      value: order.status,
+      label: getStatusLabel(order.status),
+      color: getStatusColor(order.status)
+    },
+    requestType: {
+      value: order.requestType,
+      label: getRequestTypeLabel(order.requestType)
+    },
+    priority: {
+      value: order.priority,
+      label: getPriorityLabel(order.priority)
+    },
+    deadline: order.deadline,
+    estimatedDelivery: order.estimatedDelivery,
+    currentProgress: order.currentProgress || 0,
+    attachments: order.attachments || [],
+    deliverables: order.deliverables || [],
+    orderType: 'special_request'
+  }));
 
   // جلب الفلاتر المتاحة
   const availableArtists = await userModel.find({ 
@@ -116,9 +80,9 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
 
   res.json({
     success: true,
-    message: 'تم جلب الطلبات بنجاح',
+    message: 'تم جلب الطلبات الخاصة بنجاح',
     data: {
-      orders: paginatedOrders,
+      orders: formattedOrders,
       pagination: {
         page,
         limit,

@@ -18,9 +18,9 @@ const router = Router();
  * @swagger
  * /api/admin/orders:
  *   get:
- *     summary: جلب جميع الطلبات مع الفلترة والبحث
+ *     summary: جلب جميع الطلبات الخاصة (Special Requests)
  *     tags: [Order Management]
- *     description: جلب قائمة الطلبات مع إمكانية الفلترة حسب الفنان، الحالة، التاريخ والبحث النصي
+ *     description: جلب قائمة الطلبات الخاصة مع الـ pagination (limit 10 افتراضياً)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -34,59 +34,11 @@ const router = Router();
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 20
- *         description: عدد العناصر في الصفحة
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: البحث في عنوان الطلب، الوصف، اسم الفنان أو العميل
- *       - in: query
- *         name: artistId
- *         schema:
- *           type: string
- *         description: فلترة حسب الفنان
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [pending, accepted, rejected, in_progress, review, completed, cancelled]
- *         description: فلترة حسب حالة الطلب
- *       - in: query
- *         name: dateFrom
- *         schema:
- *           type: string
- *           format: date
- *         description: تاريخ البداية للفلترة
- *       - in: query
- *         name: dateTo
- *         schema:
- *           type: string
- *           format: date
- *         description: تاريخ النهاية للفلترة
- *       - in: query
- *         name: sortBy
- *         schema:
- *           type: string
- *           enum: [createdAt, title, price, status]
- *           default: createdAt
- *         description: ترتيب النتائج
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *           default: desc
- *         description: اتجاه الترتيب
- *       - in: query
- *         name: export
- *         schema:
- *           type: boolean
- *           default: false
- *         description: تصدير البيانات
+ *           default: 10
+ *         description: عدد العناصر في الصفحة (افتراضي 10)
  *     responses:
  *       200:
- *         description: تم جلب الطلبات بنجاح
+ *         description: تم جلب الطلبات الخاصة بنجاح
  *         content:
  *           application/json:
  *             schema:
@@ -97,7 +49,7 @@ const router = Router();
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "تم جلب الطلبات بنجاح"
+ *                   example: "تم جلب الطلبات الخاصة بنجاح"
  *                 data:
  *                   type: object
  *                   properties:
@@ -130,9 +82,8 @@ const router = Router();
  *                             properties:
  *                               _id:
  *                                 type: string
- *                               name:
+ *                               displayName:
  *                                 type: string
- *                                 example: "أحمد محمد"
  *                               profileImage:
  *                                 type: string
  *                           customer:
@@ -140,9 +91,8 @@ const router = Router();
  *                             properties:
  *                               _id:
  *                                 type: string
- *                               name:
+ *                               displayName:
  *                                 type: string
- *                                 example: "منى سالم"
  *                               profileImage:
  *                                 type: string
  *                           status:
@@ -171,23 +121,32 @@ const router = Router();
  *                             properties:
  *                               value:
  *                                 type: string
- *                                 example: "medium"
+ *                                 example: "high"
  *                               label:
  *                                 type: string
- *                                 example: "متوسطة"
+ *                                 example: "عالي"
  *                           deadline:
  *                             type: string
  *                             format: date-time
+ *                             example: "2025-02-18T10:30:00.000Z"
  *                           estimatedDelivery:
  *                             type: string
  *                             format: date-time
+ *                             example: "2025-02-15T10:30:00.000Z"
  *                           currentProgress:
  *                             type: number
- *                             example: 100
+ *                             example: 75
  *                           attachments:
  *                             type: array
+ *                             items:
+ *                               type: object
  *                           deliverables:
  *                             type: array
+ *                             items:
+ *                               type: object
+ *                           orderType:
+ *                             type: string
+ *                             example: "special_request"
  *                     pagination:
  *                       type: object
  *                       properties:
@@ -196,13 +155,13 @@ const router = Router();
  *                           example: 1
  *                         limit:
  *                           type: integer
- *                           example: 20
+ *                           example: 10
  *                         total:
  *                           type: integer
- *                           example: 150
+ *                           example: 25
  *                         pages:
  *                           type: integer
- *                           example: 8
+ *                           example: 3
  *                     filters:
  *                       type: object
  *                       properties:
@@ -210,30 +169,36 @@ const router = Router();
  *                           type: array
  *                           items:
  *                             type: object
- *                             properties:
- *                               _id:
- *                                 type: string
- *                               name:
- *                                 type: string
- *                               profileImage:
- *                                 type: string
- *                               orderCount:
- *                                 type: integer
  *                         availableStatuses:
  *                           type: array
  *                           items:
  *                             type: object
- *                             properties:
- *                               value:
- *                                 type: string
- *                               label:
- *                                 type: string
- *                               color:
- *                                 type: string
  *       401:
  *         description: غير مصرح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "غير مصرح"
  *       403:
  *         description: ممنوع - للمديرين فقط
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "غير مصرح لك بالوصول لهذا المورد"
  */
 router.get('/orders',
   authenticate,
