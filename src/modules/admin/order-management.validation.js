@@ -52,5 +52,12 @@ export const deleteOrderSchema = {
       'string.pattern.base': 'معرف الطلب غير صالح',
       'any.required': 'معرف الطلب مطلوب'
     })
+  }).required(),
+  body: Joi.object({
+    cancellationReason: Joi.string().min(5).required().messages({
+      'string.empty': 'سبب الإلغاء مطلوب',
+      'string.min': 'سبب الإلغاء يجب أن يكون 5 أحرف على الأقل',
+      'any.required': 'سبب الإلغاء مطلوب'
+    })
   }).required()
 }; 

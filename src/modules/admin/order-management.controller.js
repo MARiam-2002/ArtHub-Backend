@@ -185,11 +185,20 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
+  const { cancellationReason } = req.body;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       success: false,
       message: 'معرف الطلب غير صالح',
+      data: null
+    });
+  }
+
+  if (!cancellationReason || typeof cancellationReason !== 'string' || !cancellationReason.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: 'سبب الإلغاء مطلوب',
       data: null
     });
   }
@@ -203,13 +212,37 @@ export const deleteOrder = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // حذف ناعم
-  order.isDeleted = true;
+  // تحديث الحالة إلى ملغي وتحديث تاريخ الإلغاء وسبب الإلغاء
+  order.status = 'cancelled';
+  order.cancelledAt = new Date();
+  order.cancellationReason = cancellationReason;
   await order.save();
+
+  // إرسال إشعار للعميل
+  try {
+    const { sendNotification } = await import('../../utils/pushNotifications.js');
+    if (order.sender) {
+      await sendNotification({
+        userId: order.sender,
+        title: 'تم إلغاء طلبك من قبل الإدارة',
+        message: `تم إلغاء طلبك بسبب: ${cancellationReason}`,
+        data: {
+          type: 'order_cancelled',
+          orderId: order._id.toString(),
+          platformLogo: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo.png'
+        }
+      });
+    }
+  } catch (err) {
+    // يمكن تسجيل الخطأ لكن لا تمنع الحذف
+  }
+
+  // حذف فعلي من قاعدة البيانات
+  await specialRequestModel.deleteOne({ _id: id });
 
   res.json({
     success: true,
-    message: 'تم حذف الطلب بنجاح',
+    message: 'تم حذف الطلب نهائيًا من قاعدة البيانات وإشعار العميل',
     data: null
   });
 });
