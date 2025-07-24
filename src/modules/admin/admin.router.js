@@ -109,6 +109,95 @@ router.get('/admins',
 
 /**
  * @swagger
+ * /api/admin/admins/{id}:
+ *   get:
+ *     summary: Get admin by ID
+ *     tags: [Admin Dashboard]
+ *     description: Get detailed information about a specific admin (Admin & SuperAdmin only)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Admin ID
+ *         example: "507f1f77bcf86cd799439011"
+ *     responses:
+ *       200:
+ *         description: Admin retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب بيانات الأدمن بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     displayName:
+ *                       type: string
+ *                       example: "أحمد محمد"
+ *                     email:
+ *                       type: string
+ *                       example: "ahmed@example.com"
+ *                     role:
+ *                       type: string
+ *                       example: "admin"
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     isVerified:
+ *                       type: boolean
+ *                       example: true
+ *                     profileImage:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ *                           example: "https://res.cloudinary.com/example/image/upload/v1234567890/admin-profile.jpg"
+ *                         id:
+ *                           type: string
+ *                           example: "arthub/admin-profiles/admin_1234567890_abc123"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
+ *                     lastActive:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
+ *       400:
+ *         description: Bad request - Invalid admin ID
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin & SuperAdmin only
+ *       404:
+ *         description: Admin not found
+ */
+router.get('/admins/:id',
+  authenticate,
+  isAuthorized('admin', 'superadmin'), 
+  adminController.getAdminById
+);
+
+/**
+ * @swagger
  * /api/admin/admins:
  *   post:
  *     summary: Create new admin

@@ -1244,3 +1244,51 @@ export const exportUsers = asyncHandler(async (req, res, next) => {
     });
   }
 }); 
+
+/**
+ * @desc    Get admin by ID
+ * @route   GET /api/admin/admins/:id
+ * @access  Private (SuperAdmin only)
+ */
+export const getAdminById = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الأدمن غير صالح',
+      data: null
+    });
+  }
+
+  const admin = await userModel.findById(id)
+    .select('-password')
+    .lean();
+
+  if (!admin || !['admin', 'superadmin'].includes(admin.role)) {
+    return res.status(404).json({
+      success: false,
+      message: 'الأدمن غير موجود',
+      data: null
+    });
+  }
+
+  res.json({
+    success: true,
+    message: 'تم جلب بيانات الأدمن بنجاح',
+    data: {
+      _id: admin._id,
+      displayName: admin.displayName,
+      email: admin.email,
+      role: admin.role,
+      isActive: admin.isActive,
+      isVerified: admin.isVerified,
+      profileImage: admin.profileImage,
+      createdAt: admin.createdAt,
+      updatedAt: admin.updatedAt,
+      lastActive: admin.lastActive
+    }
+  });
+}); 
