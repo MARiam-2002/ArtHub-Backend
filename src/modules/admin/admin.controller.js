@@ -68,6 +68,7 @@ export const getAdmins = asyncHandler(async (req, res, next) => {
         email: admin.email,
         role: admin.role,
         isActive: admin.isActive,
+        profileImage: admin.profileImage,
         createdAt: admin.createdAt,
         lastActive: admin.lastActive
       })),
@@ -536,6 +537,7 @@ export const updateAdminProfile = asyncHandler(async (req, res, next) => {
       email: admin.email,
       displayName: admin.displayName,
       role: admin.role,
+      profileImage: admin.profileImage,
       updatedAt: admin.updatedAt
     }
   });
@@ -583,6 +585,7 @@ export const changePassword = asyncHandler(async (req, res, next) => {
       _id: admin._id,
       email: admin.email,
       displayName: admin.displayName,
+      profileImage: admin.profileImage,
       updatedAt: admin.updatedAt
     }
   });
