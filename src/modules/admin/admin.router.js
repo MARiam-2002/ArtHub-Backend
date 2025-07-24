@@ -588,7 +588,7 @@ router.put('/change-password',
  *   get:
  *     summary: Get all users (clients and artists)
  *     tags: [Admin Dashboard]
- *     description: Get all users with pagination - 10 users per page by default
+ *     description: Get all users with pagination - 10 users per page by default. Use limit=full to get all users without pagination
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -598,15 +598,19 @@ router.put('/change-password',
  *           type: integer
  *           default: 1
  *           minimum: 1
- *         description: Page number
+ *         description: Page number (ignored when limit=full)
  *       - in: query
  *         name: limit
  *         schema:
- *           type: integer
- *           default: 10
- *           minimum: 1
- *           maximum: 100
- *         description: Number of users per page
+ *           oneOf:
+ *             - type: integer
+ *               minimum: 1
+ *               maximum: 100
+ *               default: 10
+ *             - type: string
+ *               enum: [full]
+ *         description: Number of users per page or 'full' to get all users
+ *         example: 10
  *     responses:
  *       200:
  *         description: Users retrieved successfully

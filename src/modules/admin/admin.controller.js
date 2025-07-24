@@ -651,19 +651,35 @@ export const getUsers = asyncHandler(async (req, res, next) => {
     isDeleted: false 
   };
   
-  // Calculate pagination
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  // Check if limit is 'full' to return all users
+  const isFullRequest = limit === 'full';
   
-  // Get users with pagination
-  const users = await userModel.find(filter)
-    .select('-password')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit))
-    .lean();
+  let users;
+  let totalUsers;
+  
+  if (isFullRequest) {
+    // Get all users without pagination
+    users = await userModel.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    totalUsers = users.length;
+  } else {
+    // Calculate pagination for normal requests
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Get users with pagination
+    users = await userModel.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
 
-  // Get total count for pagination
-  const totalUsers = await userModel.countDocuments(filter);
+    // Get total count for pagination
+    totalUsers = await userModel.countDocuments(filter);
+  }
   
   // Get basic statistics for all users (not just current page)
   const allUsers = await userModel.find(filter).select('isActive role').lean();
@@ -692,7 +708,7 @@ export const getUsers = asyncHandler(async (req, res, next) => {
 
   res.json({
     success: true,
-    message: 'تم جلب قائمة المستخدمين بنجاح',
+    message: isFullRequest ? 'تم جلب جميع المستخدمين بنجاح' : 'تم جلب قائمة المستخدمين بنجاح',
     data: {
       users: formattedUsers,
       statistics: {
@@ -702,7 +718,12 @@ export const getUsers = asyncHandler(async (req, res, next) => {
         clients,
         artists
       },
-      pagination: {
+      pagination: isFullRequest ? {
+        page: 1,
+        limit: 'full',
+        total: totalUsers,
+        pages: 1
+      } : {
         page: parseInt(page),
         limit: parseInt(limit),
         total: totalUsers,
