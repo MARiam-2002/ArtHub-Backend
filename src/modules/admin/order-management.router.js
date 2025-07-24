@@ -96,35 +96,14 @@ const router = Router();
  *                               profileImage:
  *                                 type: string
  *                           status:
- *                             type: object
- *                             properties:
- *                               value:
- *                                 type: string
- *                                 example: "completed"
- *                               label:
- *                                 type: string
- *                                 example: "مكتمل"
- *                               color:
- *                                 type: string
- *                                 example: "#4CAF50"
+ *                             type: string
+ *                             example: "قيد الانتظار"
  *                           requestType:
- *                             type: object
- *                             properties:
- *                               value:
- *                                 type: string
- *                                 example: "custom_artwork"
- *                               label:
- *                                 type: string
- *                                 example: "عمل فني مخصص"
+ *                             type: string
+ *                             example: "عمل فني مخصص"
  *                           priority:
- *                             type: object
- *                             properties:
- *                               value:
- *                                 type: string
- *                                 example: "high"
- *                               label:
- *                                 type: string
- *                                 example: "عالي"
+ *                             type: string
+ *                             example: "متوسطة"
  *                           deadline:
  *                             type: string
  *                             format: date-time

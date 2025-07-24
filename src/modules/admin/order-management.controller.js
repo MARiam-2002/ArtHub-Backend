@@ -39,19 +39,9 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
     orderDate: order.createdAt,
     artist: order.artist,
     customer: order.sender,
-    status: {
-      value: order.status,
-      label: getStatusLabel(order.status),
-      color: getStatusColor(order.status)
-    },
-    requestType: {
-      value: order.requestType,
-      label: getRequestTypeLabel(order.requestType)
-    },
-    priority: {
-      value: order.priority,
-      label: getPriorityLabel(order.priority)
-    },
+    status: getStatusLabel(order.status),
+    requestType: getRequestTypeLabel(order.requestType),
+    priority: getPriorityLabel(order.priority),
     deadline: order.deadline,
     estimatedDelivery: order.estimatedDelivery,
     currentProgress: order.currentProgress || 0,
