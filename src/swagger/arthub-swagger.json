@@ -1121,46 +1121,30 @@
         "type": "object",
         "required": [
           "title",
-          "description",
+          "price",
           "category",
           "images"
         ],
         "properties": {
           "title": {
-            "type": "object",
-            "required": [
-              "ar"
-            ],
-            "properties": {
-              "ar": {
-                "type": "string",
-                "example": "لوحة فنية جميلة"
-              },
-              "en": {
-                "type": "string",
-                "example": "Beautiful Artwork"
-              }
-            }
+            "type": "string",
+            "description": "عنوان العمل الفني",
+            "example": "لوحة فنية زهرية زرقاء مرسومة يدويا",
+            "minLength": 3,
+            "maxLength": 100
           },
-          "description": {
-            "type": "object",
-            "required": [
-              "ar"
-            ],
-            "properties": {
-              "ar": {
-                "type": "string",
-                "example": "وصف اللوحة الفنية"
-              },
-              "en": {
-                "type": "string",
-                "example": "Artwork description"
-              }
-            }
+          "price": {
+            "type": "number",
+            "description": "سعر العمل الفني",
+            "example": 100,
+            "minimum": 1,
+            "maximum": 1000000
           },
           "category": {
             "type": "string",
-            "example": "60d0fe4f5311236168a109ca"
+            "description": "معرف الفئة",
+            "example": "60d0fe4f5311236168a109ca",
+            "pattern": "^[0-9a-fA-F]{24}$"
           },
           "images": {
             "type": "array",
@@ -1168,60 +1152,9 @@
               "type": "string",
               "format": "binary"
             },
+            "description": "صور العمل الفني (1-5 صور)",
             "minItems": 1,
-            "maxItems": 10
-          },
-          "price": {
-            "type": "number",
-            "minimum": 0,
-            "example": 500
-          },
-          "currency": {
-            "type": "string",
-            "enum": [
-              "SAR",
-              "USD",
-              "EUR"
-            ],
-            "default": "SAR",
-            "example": "SAR"
-          },
-          "dimensions": {
-            "type": "object",
-            "properties": {
-              "width": {
-                "type": "number",
-                "minimum": 0,
-                "example": 50
-              },
-              "height": {
-                "type": "number",
-                "minimum": 0,
-                "example": 70
-              },
-              "unit": {
-                "type": "string",
-                "enum": [
-                  "cm",
-                  "inch",
-                  "m"
-                ],
-                "default": "cm",
-                "example": "cm"
-              }
-            }
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 10,
-            "example": [
-              "فن",
-              "لوحة",
-              "زيتي"
-            ]
+            "maxItems": 5
           }
         }
       },
@@ -3667,7 +3600,7 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "$ref": "#/components/schemas/CreateArtworkRequest"
               }
