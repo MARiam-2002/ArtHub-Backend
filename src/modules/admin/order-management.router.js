@@ -165,14 +165,20 @@ const router = Router();
  *                     filters:
  *                       type: object
  *                       properties:
- *                         availableArtists:
- *                           type: array
- *                           items:
- *                             type: object
  *                         availableStatuses:
  *                           type: array
  *                           items:
  *                             type: object
+ *                             properties:
+ *                               value:
+ *                                 type: string
+ *                                 example: "pending"
+ *                               label:
+ *                                 type: string
+ *                                 example: "قيد الانتظار"
+ *                               color:
+ *                                 type: string
+ *                                 example: "#FF9800"
  *       401:
  *         description: غير مصرح
  *         content:

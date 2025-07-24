@@ -60,14 +60,6 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
     orderType: 'special_request'
   }));
 
-  // جلب الفلاتر المتاحة
-  const availableArtists = await userModel.find({ 
-    role: 'artist', 
-    isDeleted: { $ne: true } 
-  })
-  .select('displayName profileImage')
-  .lean();
-
   const availableStatuses = [
     { value: 'pending', label: 'قيد الانتظار', color: '#FF9800' },
     { value: 'accepted', label: 'مقبول', color: '#2196F3' },
@@ -90,7 +82,6 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
         pages: Math.ceil(total / limit)
       },
       filters: {
-        availableArtists,
         availableStatuses
       }
     }
