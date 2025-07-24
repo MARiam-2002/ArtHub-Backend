@@ -7830,7 +7830,7 @@
           "Special Requests"
         ],
         "summary": "عرض طلباتي الخاصة",
-        "description": "عرض الطلبات الخاصة التي أرسلها المستخدم",
+        "description": "عرض الطلبات الخاصة التي أرسلها المستخدم. استخدم limit=full لجلب جميع الطلبات بدون pagination",
         "security": [
           {
             "BearerAuth": []
@@ -7849,9 +7849,20 @@
             "name": "limit",
             "in": "query",
             "schema": {
-              "type": "integer"
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "default": 10
+                },
+                {
+                  "type": "string",
+                  "enum": ["full"]
+                }
+              ]
             },
-            "description": "عدد العناصر في الصفحة"
+            "description": "عدد العناصر في الصفحة. استخدم 'full' لجلب جميع الطلبات بدون pagination"
           },
           {
             "name": "status",
@@ -7901,7 +7912,7 @@
           "Special Requests"
         ],
         "summary": "عرض الطلبات الموجهة للفنان",
-        "description": "عرض الطلبات الخاصة المرسلة إلى الفنان",
+        "description": "عرض الطلبات الخاصة المرسلة إلى الفنان. استخدم limit=full لجلب جميع الطلبات بدون pagination",
         "security": [
           {
             "BearerAuth": []
@@ -7920,9 +7931,20 @@
             "name": "limit",
             "in": "query",
             "schema": {
-              "type": "integer"
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "default": 10
+                },
+                {
+                  "type": "string",
+                  "enum": ["full"]
+                }
+              ]
             },
-            "description": "عدد العناصر في الصفحة"
+            "description": "عدد العناصر في الصفحة. استخدم 'full' لجلب جميع الطلبات بدون pagination"
           },
           {
             "name": "status",

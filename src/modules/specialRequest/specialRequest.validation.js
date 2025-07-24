@@ -288,17 +288,27 @@ export const getSpecialRequestsSchema = {
         'number.integer': 'رقم الصفحة يجب أن يكون رقم صحيح',
         'number.min': 'رقم الصفحة يجب أن يكون 1 أو أكثر'
       }),
-    limit: Joi.number()
-      .integer()
-      .min(1)
-      .max(100)
-      .default(10)
-      .messages({
-        'number.base': 'حد النتائج يجب أن يكون رقم',
-        'number.integer': 'حد النتائج يجب أن يكون رقم صحيح',
-        'number.min': 'حد النتائج يجب أن يكون 1 أو أكثر',
-        'number.max': 'حد النتائج يجب ألا يتجاوز 100'
-      }),
+    limit: Joi.alternatives().try(
+      Joi.number()
+        .integer()
+        .min(1)
+        .max(100)
+        .messages({
+          'number.base': 'حد النتائج يجب أن يكون رقم',
+          'number.integer': 'حد النتائج يجب أن يكون رقم صحيح',
+          'number.min': 'حد النتائج يجب أن يكون 1 أو أكثر',
+          'number.max': 'حد النتائج يجب ألا يتجاوز 100'
+        }),
+      Joi.string()
+        .valid('full')
+        .messages({
+          'any.only': 'قيمة limit غير صالحة. استخدم رقم أو "full"'
+        })
+    )
+    .default(10)
+    .messages({
+      'any.required': 'حد النتائج مطلوب'
+    }),
     status: Joi.string()
       .valid('pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled')
       .messages({

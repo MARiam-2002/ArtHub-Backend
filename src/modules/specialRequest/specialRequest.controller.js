@@ -376,7 +376,12 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     
     const userId = req.user._id;
     const { page = 1, limit = 10, status, requestType, priority, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    const { skip } = getPaginationParams({ page, limit });
+    
+    // التحقق من إذا كان limit=full
+    const isFullRequest = limit === 'full';
+    
+    // إذا كان limit=full، لا نحتاج pagination
+    const { skip } = isFullRequest ? { skip: 0 } : getPaginationParams({ page, limit });
 
     // بناء الاستعلام للطلبات الخاصة
     const specialQuery = { sender: userId };
@@ -404,30 +409,40 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     // ترتيب حسب createdAt
     allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // pagination بعد الدمج
-    const paginated = allRequests.slice(skip, skip + Number(limit));
+    // إذا كان limit=full، نرسل جميع الطلبات بدون pagination
+    const finalRequests = isFullRequest ? allRequests : allRequests.slice(skip, skip + Number(limit));
 
     // pagination meta
-    const paginationMeta = {
+    const paginationMeta = isFullRequest ? {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: allRequests.length,
+      itemsPerPage: allRequests.length,
+      hasNextPage: false,
+      hasPrevPage: false,
+      isFullRequest: true
+    } : {
       currentPage: Number(page),
       totalPages: Math.ceil(allRequests.length / Number(limit)),
       totalItems: allRequests.length,
       itemsPerPage: Number(limit),
-      hasNextPage: skip + paginated.length < allRequests.length,
-      hasPrevPage: Number(page) > 1
+      hasNextPage: skip + finalRequests.length < allRequests.length,
+      hasPrevPage: Number(page) > 1,
+      isFullRequest: false
     };
 
     res.status(200).json({
       success: true,
-      message: 'تم جلب الطلبات بنجاح',
+      message: isFullRequest ? 'تم جلب جميع الطلبات بنجاح' : 'تم جلب الطلبات بنجاح',
       data: {
-        requests: paginated,
+        requests: finalRequests,
         pagination: paginationMeta,
         totalCount: allRequests.length
       },
       meta: {
         userId: userId,
-        filters: { status, requestType, priority, sortBy, sortOrder }
+        filters: { status, requestType, priority, sortBy, sortOrder },
+        isFullRequest
       }
     });
   } catch (error) {
@@ -445,7 +460,12 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
     
     const artistId = req.user._id;
     const { page = 1, limit = 10, status, requestType, priority, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    const { skip } = getPaginationParams({ page, limit });
+    
+    // التحقق من إذا كان limit=full
+    const isFullRequest = limit === 'full';
+    
+    // إذا كان limit=full، لا نحتاج pagination
+    const { skip } = isFullRequest ? { skip: 0 } : getPaginationParams({ page, limit });
 
     // التحقق من أن المستخدم فنان
     if (req.user.role !== 'artist') {
@@ -475,7 +495,7 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
     const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // تنفيذ الاستعلام
+    // تنفيذ الاستعلام - إذا كان limit=full، لا نطبق limit
     const [requests, totalCount] = await Promise.all([
       specialRequestModel
         .find(query)
@@ -483,8 +503,8 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
         .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
         .populate('category', 'name image')
         .sort(sortOptions)
-        .skip(skip)
-        .limit(Number(limit))
+        .skip(isFullRequest ? 0 : skip)
+        .limit(isFullRequest ? 0 : Number(limit)) // 0 means no limit
         .lean(),
       specialRequestModel.countDocuments(query)
     ]);
@@ -493,13 +513,22 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
     const formattedRequests = requests.map(request => formatSpecialRequest(request));
 
     // إعداد معلومات الصفحات
-    const paginationMeta = {
+    const paginationMeta = isFullRequest ? {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: totalCount,
+      itemsPerPage: totalCount,
+      hasNextPage: false,
+      hasPrevPage: false,
+      isFullRequest: true
+    } : {
       currentPage: Number(page),
       totalPages: Math.ceil(totalCount / Number(limit)),
       totalItems: totalCount,
       itemsPerPage: Number(limit),
       hasNextPage: skip + requests.length < totalCount,
-      hasPrevPage: Number(page) > 1
+      hasPrevPage: Number(page) > 1,
+      isFullRequest: false
     };
 
     // Get status counts for filters
@@ -515,7 +544,7 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
 
     const response = {
       success: true,
-      message: 'تم جلب طلبات الفنان بنجاح',
+      message: isFullRequest ? 'تم جلب جميع طلبات الفنان بنجاح' : 'تم جلب طلبات الفنان بنجاح',
       data: {
         requests: formattedRequests,
         pagination: paginationMeta,
@@ -525,7 +554,8 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
       meta: {
         timestamp: new Date().toISOString(),
         userId: artistId,
-        filters: { status, requestType, priority, sortBy, sortOrder }
+        filters: { status, requestType, priority, sortBy, sortOrder },
+        isFullRequest
       }
     };
 
