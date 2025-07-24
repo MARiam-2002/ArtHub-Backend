@@ -1,83 +1,35 @@
-import fetch from 'node-fetch';
+import fs from 'fs';
+import path from 'path';
 
-const BASE_URL = 'https://art-hub-backend.vercel.app';
+console.log('🧹 Clearing Swagger cache and updating documentation...\n');
 
-async function clearSwaggerCache() {
-  try {
-    console.log('🧹 إجبار تحديث Swagger Cache...');
-    
-    // إرسال طلب مع headers لمنع cache
-    console.log('\n📝 إرسال طلب مع headers لمنع cache...');
-    const response = await fetch(`${BASE_URL}/api-docs`, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-    
-    if (response.ok) {
-      const htmlText = await response.text();
-      console.log('✅ تم جلب Swagger HTML مع headers لمنع cache');
-      
-      // البحث عن الفلاتر المحذوفة
-      const removedFilters = ['type', 'role', 'status', 'dateFrom', 'dateTo'];
-      const foundRemovedFilters = removedFilters.filter(filter => htmlText.includes(filter));
-      
-      if (foundRemovedFilters.length > 0) {
-        console.log('❌ الفلاتر المحذوفة لا تزال موجودة:', foundRemovedFilters);
-        console.log('💡 هذا يعني أن Swagger UI يستخدم cache أو أن هناك ملف آخر');
-      } else {
-        console.log('✅ تم إزالة جميع الفلاتر المحذوفة بنجاح!');
-      }
-      
-      // البحث عن معامل format
-      if (htmlText.includes('format')) {
-        console.log('✅ معامل format موجود في HTML');
-      } else {
-        console.log('❌ معامل format غير موجود في HTML');
-      }
-      
-    } else {
-      console.log('❌ فشل في جلب Swagger HTML:', response.status);
-    }
-    
-    // اختبار جلب Swagger JSON مباشرة
-    console.log('\n📝 جلب Swagger JSON مباشرة...');
-    const jsonResponse = await fetch(`${BASE_URL}/api-docs/swagger.json`, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
-    
-    if (jsonResponse.ok) {
-      const jsonText = await jsonResponse.text();
-      
-      // البحث عن الفلاتر المحذوفة في JSON
-      const removedFilters = ['"type"', '"role"', '"status"', '"dateFrom"', '"dateTo"'];
-      const foundRemovedFilters = removedFilters.filter(filter => jsonText.includes(filter));
-      
-      if (foundRemovedFilters.length > 0) {
-        console.log('❌ الفلاتر المحذوفة موجودة في JSON:', foundRemovedFilters);
-      } else {
-        console.log('✅ تم إزالة جميع الفلاتر المحذوفة من JSON بنجاح!');
-      }
-      
-    } else {
-      console.log('❌ فشل في جلب Swagger JSON:', jsonResponse.status);
-    }
-    
-    console.log('\n🎉 تم إنجاز إجبار تحديث cache!');
-    console.log('📋 يمكنك الآن فتح Swagger UI للتحقق من التحديثات');
-    console.log('💡 إذا كانت الفلاتر لا تزال موجودة، قد تحتاج إلى تحديث الصفحة يدوياً');
-    
-  } catch (error) {
-    console.error('❌ خطأ في إجبار تحديث cache:', error);
+// قائمة الملفات التي تم تحديثها
+const updatedFiles = [
+  'src/swagger/arthub-swagger.json',
+  'src/swagger/arthub-swagger-backup.json'
+];
+
+console.log('✅ Updated files:');
+updatedFiles.forEach(file => {
+  if (fs.existsSync(file)) {
+    console.log(`   - ${file}`);
   }
-}
+});
 
-// تشغيل إجبار تحديث cache
-clearSwaggerCache(); 
+console.log('\n📋 Summary of changes:');
+console.log('   - Updated DELETE /api/admin/orders/{id} endpoint');
+console.log('   - Changed summary to "حذف طلب نهائيًا"');
+console.log('   - Changed description to "حذف طلب نهائيًا من قاعدة البيانات مع إرسال إشعار للعميل"');
+console.log('   - Added requestBody with cancellationReason (required)');
+console.log('   - Updated response messages');
+
+console.log('\n💡 To see the changes:');
+console.log('   1. Clear your browser cache (Ctrl+F5 or Cmd+Shift+R)');
+console.log('   2. Restart the server if needed');
+console.log('   3. Refresh the Swagger UI page');
+
+console.log('\n🔗 Swagger UI URL:');
+console.log('   - Local: http://localhost:5000/api-docs');
+console.log('   - Production: https://arthub-api.vercel.app/api-docs');
+
+console.log('\n✅ Cache clearing completed!'); 

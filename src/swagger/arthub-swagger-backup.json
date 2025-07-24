@@ -7691,7 +7691,12 @@
                   },
                   "currency": {
                     "type": "string",
-                    "enum": ["SAR", "USD", "EUR", "AED"],
+                    "enum": [
+                      "SAR",
+                      "USD",
+                      "EUR",
+                      "AED"
+                    ],
                     "default": "SAR",
                     "description": "العملة (افتراضي: SAR)"
                   },
@@ -15235,8 +15240,8 @@
         "tags": [
           "Order Management"
         ],
-        "summary": "حذف طلب",
-        "description": "حذف طلب (حذف ناعم)",
+        "summary": "حذف طلب نهائيًا",
+        "description": "حذف طلب نهائيًا من قاعدة البيانات مع إرسال إشعار للعميل",
         "security": [
           {
             "BearerAuth": []
@@ -15255,7 +15260,7 @@
         ],
         "responses": {
           "200": {
-            "description": "تم حذف الطلب بنجاح",
+            "description": "تم حذف الطلب نهائيًا وإشعار العميل",
             "content": {
               "application/json": {
                 "schema": {
@@ -15267,7 +15272,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "تم حذف الطلب بنجاح"
+                      "example": "تم حذف الطلب نهائيًا من قاعدة البيانات وإشعار العميل"
                     },
                     "data": {
                       "type": "null"
@@ -15278,7 +15283,7 @@
             }
           },
           "400": {
-            "description": "معرف الطلب غير صالح",
+            "description": "بيانات غير صحيحة أو سبب الإلغاء مطلوب",
             "content": {
               "application/json": {
                 "schema": {
@@ -15290,7 +15295,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "معرف الطلب غير صالح"
+                      "example": "سبب الإلغاء مطلوب"
                     }
                   }
                 }
@@ -15352,6 +15357,27 @@
                       "type": "string",
                       "example": "الطلب غير موجود"
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cancellationReason"
+                ],
+                "properties": {
+                  "cancellationReason": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "سبب إلغاء الطلب من قبل الإدارة",
+                    "example": "تم الإلغاء بسبب مخالفة الشروط"
                   }
                 }
               }
