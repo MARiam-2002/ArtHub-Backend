@@ -14396,6 +14396,206 @@
       }
     },
     "/api/admin/admins/{id}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "جلب أدمن بواسطة المعرف",
+        "description": "جلب معلومات مفصلة عن أدمن محدد (الأدمن والسوبر أدمن فقط)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الأدمن",
+            "example": "507f1f77bcf86cd799439011"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب بيانات الأدمن بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بيانات الأدمن بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "example": "أحمد محمد"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "ahmed@example.com"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "admin"
+                        },
+                        "isActive": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "isVerified": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "profileImage": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "example": "https://res.cloudinary.com/example/image/upload/v1234567890/admin-profile.jpg"
+                            },
+                            "id": {
+                              "type": "string",
+                              "example": "arthub/admin-profiles/admin_1234567890_abc123"
+                            }
+                          }
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        },
+                        "lastActive": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-01-18T10:30:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "معرف الأدمن غير صالح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "معرف الأدمن غير صالح"
+                    },
+                    "data": {
+                      "type": "null",
+                      "example": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    },
+                    "data": {
+                      "type": "null",
+                      "example": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "غير مصرح - الأدمن والسوبر أدمن فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بالوصول لهذا المورد"
+                    },
+                    "data": {
+                      "type": "null",
+                      "example": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الأدمن غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الأدمن غير موجود"
+                    },
+                    "data": {
+                      "type": "null",
+                      "example": null
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "Admin"
