@@ -107,9 +107,6 @@ const objectIdPattern = /^[0-9a-fA-F]{24}$/;
  *           enum: ["available", "sold", "reserved"]
  *         tags:
  *           type: array
- *           maxItems: 10
- *           items:
- *             type: string
  *         isFramed:
  *           type: boolean
  *         dimensions:
@@ -159,19 +156,27 @@ const imagesSchema = Joi.array()
     'string.uri': 'رابط الصورة غير صحيح'
   }))
   .min(1)
-  .max(10)
+  .max(5) // تحديث ليطابق الصورة: 5 صور كحد أقصى
   .messages({
     'array.min': 'يجب إضافة صورة واحدة على الأقل',
-    'array.max': 'يمكن إضافة 10 صور على الأكثر'
+    'array.max': 'يمكن إضافة 5 صور على الأكثر'
   });
 
 // Schema for file upload validation (used in controller)
 const fileUploadSchema = Joi.object({
-  files: Joi.array().min(1).max(10).messages({
+  files: Joi.array().min(1).max(5).messages({ // تحديث ليطابق الصورة
     'array.min': 'يجب إضافة صورة واحدة على الأقل',
-    'array.max': 'يمكن إضافة 10 صور على الأكثر'
+    'array.max': 'يمكن إضافة 5 صور على الأكثر'
   })
 });
+
+// إضافة schema للعملة
+const currencySchema = Joi.string()
+  .valid('USD', 'SAR', 'EUR', 'GBP')
+  .default('USD')
+  .messages({
+    'any.only': 'العملة غير مدعومة'
+  });
 
 const tagsSchema = Joi.array()
   .items(Joi.string().trim().min(2).max(30).messages({
@@ -221,21 +226,12 @@ export const createArtworkSchema = {
     title: titleSchema.required().messages({
       'any.required': 'عنوان العمل الفني مطلوب'
     }),
-    description: descriptionSchema,
     price: priceSchema.required().messages({
       'any.required': 'سعر العمل الفني مطلوب'
     }),
     category: categorySchema.required().messages({
       'any.required': 'فئة العمل الفني مطلوبة'
-    }),
-    images: imagesSchema.optional().messages({
-      'any.required': 'صور العمل الفني مطلوبة'
-    }),
-    tags: tagsSchema,
-    status: statusSchema.default('available'),
-    isFramed: Joi.boolean().default(false),
-    dimensions: dimensionsSchema,
-    materials: materialsSchema
+    })
   })
 };
 

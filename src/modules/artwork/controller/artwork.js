@@ -241,7 +241,7 @@ export const getArtworkById = asyncHandler(async (req, res) => {
  * @access Private (Artists only)
  */
 export const createArtwork = asyncHandler(async (req, res) => {
-  const { title, description, images, price, category, tags, status, isFramed, dimensions, materials } = req.body;
+  const { title, price, category } = req.body;
   const artist = req.user._id;
 
   // التحقق من وجود الفئة
@@ -266,11 +266,63 @@ export const createArtwork = asyncHandler(async (req, res) => {
   
   // إذا تم رفع ملفات
   if (req.files && req.files.length > 0) {
-    imagesArr = req.files.map(f => f.path);
-  } 
-  // إذا تم إرسال روابط صور
-  else if (images && Array.isArray(images)) {
-    imagesArr = images;
+    console.log('📁 Processing images:', req.files.length, 'files');
+    
+    // التحقق من عدد الصور (5 صور كحد أقصى)
+    if (req.files.length > 5) {
+      return res.fail(null, 'يمكن إضافة 5 صور على الأكثر', 400);
+    }
+
+    try {
+      const cloudinary = await import('cloudinary');
+      cloudinary.v2.config({
+        cloud_name: process.env.CLOUD_NAME,
+        api_key: process.env.API_KEY,
+        api_secret: process.env.API_SECRET
+      });
+
+      // رفع جميع الصور
+      const uploadPromises = req.files.map(async (file, index) => {
+        try {
+          console.log(`📤 Uploading image ${index + 1}:`, file.originalname);
+          
+          const { secure_url, public_id, format, bytes } = await cloudinary.v2.uploader.upload(
+            file.path,
+            {
+              folder: `arthub/artworks/${artist}/${Date.now()}`,
+              resource_type: 'image',
+              allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'],
+              transformation: [
+                { width: 1920, height: 1080, crop: 'limit' },
+                { quality: 'auto:good' }
+              ]
+            }
+          );
+
+          console.log(`✅ Image ${index + 1} uploaded:`, secure_url);
+          
+          return {
+            originalName: file.originalname,
+            url: secure_url,
+            id: public_id,
+            format: format,
+            size: bytes,
+            type: file.mimetype,
+            uploadedAt: new Date()
+          };
+        } catch (error) {
+          console.error(`❌ Error uploading image ${index + 1}:`, error);
+          throw new Error(`فشل في رفع الصورة: ${file.originalname}`);
+        }
+      });
+
+      imagesArr = await Promise.all(uploadPromises);
+      console.log('✅ All images uploaded successfully');
+      
+    } catch (error) {
+      console.error('❌ Error processing images:', error);
+      return res.fail(null, 'فشل في رفع الصور: ' + error.message, 400);
+    }
   }
   
   // التحقق من وجود صور على الأقل
@@ -278,34 +330,24 @@ export const createArtwork = asyncHandler(async (req, res) => {
     return res.fail(null, 'يجب إضافة صورة واحدة على الأقل للعمل الفني', 400);
   }
 
-  // التحقق من عدد الصور
-  if (imagesArr.length > 10) {
-    return res.fail(null, 'يمكن إضافة 10 صور على الأكثر', 400);
-  }
-
   const artwork = await artworkModel.create({
     title: title.trim(),
-    description: description?.trim() || '',
-    images: imagesArr,
     price,
     category,
     artist,
-    tags: tags || [],
-    status: status || 'available',
-    isFramed: isFramed || false,
-    dimensions,
-    materials: materials || [],
+    images: imagesArr,
+    status: 'available',
     viewCount: 0,
     createdAt: new Date()
   });
 
-  // جلب العمل الفني مع البيانات المرتبطة
-  const populatedArtwork = await artworkModel
-    .findById(artwork._id)
+  // جلب العمل الفني مع معلومات الفنان والفئة
+  const populatedArtwork = await artworkModel.findById(artwork._id)
     .populate('artist', 'displayName profileImage')
-    .populate('category', 'name');
+    .populate('category', 'name')
+    .lean();
 
-  res.success(populatedArtwork, 'تم إضافة العمل الفني بنجاح', 201);
+  res.success(populatedArtwork, 'تم إنشاء العمل الفني بنجاح', 201);
 });
 
 /**

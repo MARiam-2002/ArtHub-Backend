@@ -11,7 +11,7 @@ import {
   addReviewSchema,
   toggleFavoriteSchema
 } from './artwork.validation.js';
-import { fileUpload } from '../../utils/multer.js';
+import { fileUpload, filterObject } from '../../utils/multer.js';
 
 const router = Router();
 
@@ -378,7 +378,10 @@ router.get('/:id', isValidation(artworkIdParamSchema), artworkController.getArtw
  *   post:
  *     tags: [Artwork]
  *     summary: Create new artwork
- *     description: Create a new artwork with image uploads (artists only)
+ *     description: |
+ *       Create a new artwork with image uploads (artists only).
+ *       Supports up to 5 images with parallel upload to Cloudinary.
+ *       Images are automatically optimized and organized in folders.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -395,57 +398,32 @@ router.get('/:id', isValidation(artworkIdParamSchema), artworkController.getArtw
  *               title:
  *                 type: string
  *                 description: عنوان العمل الفني
- *                 example: "لوحة فنية جميلة"
- *               description:
- *                 type: string
- *                 description: وصف العمل الفني
- *                 example: "وصف اللوحة الفنية"
+ *                 example: "لوحة فنية زهرية زرقاء مرسومة يدويا"
+ *                 minLength: 3
+ *                 maxLength: 100
  *               price:
  *                 type: number
  *                 description: سعر العمل الفني
- *                 example: 500.00
+ *                 example: 100.00
+ *                 minimum: 1
+ *                 maximum: 1000000
  *               category:
  *                 type: string
  *                 description: معرف الفئة
  *                 example: "60d0fe4f5311236168a109ca"
+ *                 pattern: '^[0-9a-fA-F]{24}$'
  *               images:
  *                 type: array
  *                 items:
  *                   type: string
  *                   format: binary
- *                 description: صور العمل الفني (1-10 صور)
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: وسوم العمل الفني
- *                 example: ["فن", "لوحة", "زيتي"]
- *               status:
- *                 type: string
- *                 enum: [available, sold, reserved]
- *                 default: available
- *                 description: حالة العمل الفني
- *               isFramed:
- *                 type: boolean
- *                 default: false
- *                 description: هل العمل مؤطر
- *               dimensions:
- *                 type: object
- *                 properties:
- *                   width:
- *                     type: number
- *                     description: العرض
- *                   height:
- *                     type: number
- *                     description: الارتفاع
- *                   depth:
- *                     type: number
- *                     description: العمق
- *               materials:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: المواد المستخدمة
+ *                 description: |
+ *                   صور العمل الفني (1-5 صور).
+ *                   الصيغ المدعومة: jpg, jpeg, png, gif, webp, svg, bmp, tiff.
+ *                   سيتم تحسين الصور تلقائياً إلى 1920x1080.
+ *                   يتم التحقق من نوع الملف تلقائياً.
+ *                 maxItems: 5
+ *                 minItems: 1
  *     responses:
  *       201:
  *         description: Artwork created successfully
@@ -461,19 +439,161 @@ router.get('/:id', isValidation(artworkIdParamSchema), artworkController.getArtw
  *                   type: string
  *                   example: "تم إنشاء العمل الفني بنجاح"
  *                 data:
- *                   $ref: '#/components/schemas/Artwork'
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       description: معرف العمل الفني
+ *                       example: "60d0fe4f5311236168a109ca"
+ *                     title:
+ *                       type: string
+ *                       description: عنوان العمل الفني
+ *                       example: "لوحة فنية زهرية زرقاء مرسومة يدويا"
+ *                     price:
+ *                       type: number
+ *                       description: سعر العمل الفني
+ *                       example: 100
+ *                     images:
+ *                       type: array
+ *                       description: صور العمل الفني
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           originalName:
+ *                             type: string
+ *                             description: اسم الملف الأصلي
+ *                             example: "artwork1.jpg"
+ *                           url:
+ *                             type: string
+ *                             description: رابط الصورة في Cloudinary
+ *                             example: "https://res.cloudinary.com/example/image1.jpg"
+ *                           id:
+ *                             type: string
+ *                             description: معرف الصورة في Cloudinary
+ *                             example: "arthub/artworks/artist_id/timestamp/image1"
+ *                           format:
+ *                             type: string
+ *                             description: صيغة الملف
+ *                             example: "jpg"
+ *                           size:
+ *                             type: number
+ *                             description: حجم الملف بالبايت
+ *                             example: 1024000
+ *                           type:
+ *                             type: string
+ *                             description: نوع MIME
+ *                             example: "image/jpeg"
+ *                           uploadedAt:
+ *                             type: string
+ *                             format: date-time
+ *                             description: تاريخ رفع الصورة
+ *                             example: "2025-01-18T10:30:00.000Z"
+ *                     category:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           description: معرف الفئة
+ *                           example: "60d0fe4f5311236168a109ca"
+ *                         name:
+ *                           type: string
+ *                           description: اسم الفئة
+ *                           example: "رسم"
+ *                     artist:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           description: معرف الفنان
+ *                           example: "60d0fe4f5311236168a109ca"
+ *                         displayName:
+ *                           type: string
+ *                           description: اسم الفنان
+ *                           example: "أحمد محمد"
+ *                         profileImage:
+ *                           type: string
+ *                           description: صورة البروفايل
+ *                           example: "https://res.cloudinary.com/example/profile.jpg"
+ *                     status:
+ *                       type: string
+ *                       description: حالة العمل الفني
+ *                       example: "available"
+ *                       enum: [available, sold, reserved]
+ *                     viewCount:
+ *                       type: number
+ *                       description: عدد المشاهدات
+ *                       example: 0
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: تاريخ الإنشاء
+ *                       example: "2025-01-18T10:30:00.000Z"
  *       400:
- *         $ref: '#/components/responses/BadRequestError'
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "يمكن إضافة 5 صور على الأكثر"
+ *                 data:
+ *                   type: null
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         description: Only artists can create artworks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "فقط الفنانين يمكنهم إنشاء أعمال فنية"
+ *                 data:
+ *                   type: null
+ *       413:
+ *         description: File too large
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "حجم الملف كبير جداً"
+ *                 data:
+ *                   type: null
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "فشل في رفع الصور"
+ *                 data:
+ *                   type: null
  */
 router.post('/',
   isAuthenticated,
-  fileUpload().array('images', 10),
+  fileUpload(filterObject.image).array('images', 5), // تحديث ليطابق الصورة: 5 صور كحد أقصى مع validation للصور
   isValidation(createArtworkSchema),
   artworkController.createArtwork
 );
