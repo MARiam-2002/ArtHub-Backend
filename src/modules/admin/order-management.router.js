@@ -277,9 +277,9 @@ router.patch('/orders/:id/status',
  * @swagger
  * /api/admin/orders/{id}:
  *   delete:
- *     summary: حذف طلب
+ *     summary: حذف طلب نهائيًا
  *     tags: [Order Management]
- *     description: حذف طلب (حذف ناعم)
+ *     description: حذف طلب نهائيًا من قاعدة البيانات مع إرسال إشعار للعميل
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -289,9 +289,23 @@ router.patch('/orders/:id/status',
  *         schema:
  *           type: string
  *         description: معرف الطلب
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cancellationReason
+ *             properties:
+ *               cancellationReason:
+ *                 type: string
+ *                 minLength: 5
+ *                 description: سبب إلغاء الطلب من قبل الإدارة
+ *                 example: "تم الإلغاء بسبب مخالفة الشروط"
  *     responses:
  *       200:
- *         description: تم حذف الطلب بنجاح
+ *         description: تم حذف الطلب نهائيًا وإشعار العميل
  *         content:
  *           application/json:
  *             schema:
@@ -302,11 +316,22 @@ router.patch('/orders/:id/status',
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "تم حذف الطلب بنجاح"
+ *                   example: "تم حذف الطلب نهائيًا من قاعدة البيانات وإشعار العميل"
  *                 data:
  *                   type: null
  *       400:
- *         description: معرف الطلب غير صالح
+ *         description: بيانات غير صحيحة أو سبب الإلغاء مطلوب
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "سبب الإلغاء مطلوب"
  *       401:
  *         description: غير مصرح
  *       403:
