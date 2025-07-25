@@ -13,11 +13,18 @@ export const getAllOrdersSchema = {
       'number.integer': 'رقم الصفحة يجب أن يكون رقماً صحيحاً',
       'number.min': 'رقم الصفحة يجب أن يكون 1 على الأقل'
     }),
-    limit: Joi.number().integer().min(1).max(100).default(10).messages({
-      'number.base': 'عدد العناصر يجب أن يكون رقماً',
-      'number.integer': 'عدد العناصر يجب أن يكون رقماً صحيحاً',
-      'number.min': 'عدد العناصر يجب أن يكون 1 على الأقل',
-      'number.max': 'عدد العناصر يجب أن يكون 100 كحد أقصى'
+    limit: Joi.alternatives().try(
+      Joi.number().integer().min(1).max(100).messages({
+        'number.base': 'عدد العناصر يجب أن يكون رقماً',
+        'number.integer': 'عدد العناصر يجب أن يكون رقماً صحيحاً',
+        'number.min': 'عدد العناصر يجب أن يكون 1 على الأقل',
+        'number.max': 'عدد العناصر يجب أن يكون 100 كحد أقصى'
+      }),
+      Joi.string().valid('full').messages({
+        'any.only': 'قيمة limit غير صالحة. استخدم رقم أو "full"'
+      })
+    ).default(10).messages({
+      'any.required': 'عدد العناصر مطلوب'
     })
   }).optional()
 };
