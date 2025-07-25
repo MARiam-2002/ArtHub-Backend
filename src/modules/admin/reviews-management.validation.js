@@ -9,9 +9,16 @@ export const getAllReviewsValidation = {
     page: joi.number().integer().min(1).default(1).messages({
       'number.min': 'رقم الصفحة يجب أن يكون 1 على الأقل'
     }),
-    limit: joi.number().integer().min(1).max(100).default(20).messages({
-      'number.min': 'عدد العناصر يجب أن يكون 1 على الأقل',
-      'number.max': 'عدد العناصر يجب أن يكون 100 كحد أقصى'
+    limit: joi.alternatives().try(
+      joi.number().integer().min(1).max(100).messages({
+        'number.min': 'عدد العناصر يجب أن يكون 1 على الأقل',
+        'number.max': 'عدد العناصر يجب أن يكون 100 كحد أقصى'
+      }),
+      joi.string().valid('full').messages({
+        'any.only': 'قيمة limit غير صالحة. استخدم رقم أو "full"'
+      })
+    ).default(20).messages({
+      'any.required': 'عدد العناصر مطلوب'
     })
   }).optional()
 };

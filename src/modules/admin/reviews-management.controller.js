@@ -15,8 +15,11 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
   
   const { page = 1, limit = 20 } = req.query;
   
-  // حساب التخطي للصفحة
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  // التحقق من إذا كان limit=full
+  const isFullRequest = limit === 'full';
+  
+  // إذا كان limit=full، لا نحتاج pagination
+  const skip = isFullRequest ? 0 : (parseInt(page) - 1) * parseInt(limit);
   
   // جلب تقييمات الأعمال الفنية فقط (تقييمات اللوحات)
   const reviews = await reviewModel.aggregate([
@@ -72,12 +75,10 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
     {
       $sort: { createdAt: -1 }
     },
-    {
-      $skip: skip
-    },
-    {
-      $limit: parseInt(limit)
-    }
+    ...(isFullRequest ? [] : [
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ])
   ]);
 
   // جلب إجمالي عدد تقييمات الأعمال الفنية فقط
@@ -87,7 +88,7 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
 
   // تنسيق البيانات للعرض
   const formattedReviews = reviews.map((review, index) => ({
-    id: skip + index + 1,
+    id: isFullRequest ? index + 1 : skip + index + 1,
     _id: review._id,
     artworkTitle: review.artworkTitle || 'عمل فني',
     clientName: review.userName || 'مستخدم',
@@ -100,14 +101,21 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'تم جلب التقييمات بنجاح',
+    message: isFullRequest ? 'تم جلب جميع التقييمات بنجاح' : 'تم جلب التقييمات بنجاح',
     data: {
       reviews: formattedReviews,
-      pagination: {
+      pagination: isFullRequest ? {
+        page: 1,
+        limit: formattedReviews.length,
+        total: totalReviews,
+        pages: 1,
+        isFullRequest: true
+      } : {
         page: parseInt(page),
         limit: parseInt(limit),
         total: totalReviews,
-        pages: Math.ceil(totalReviews / parseInt(limit))
+        pages: Math.ceil(totalReviews / parseInt(limit)),
+        isFullRequest: false
       }
     }
   });

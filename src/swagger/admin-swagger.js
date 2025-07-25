@@ -2917,7 +2917,7 @@ export const adminPaths = {
     get: {
       tags: ['Reviews Management'],
       summary: 'جلب تقييمات الأعمال الفنية',
-      description: 'جلب قائمة تقييمات الأعمال الفنية (اللوحات) فقط مع التفاصيل الأساسية للعرض في الجدول. يتم الترتيب والتصفية من الفرونت.',
+      description: 'جلب قائمة تقييمات الأعمال الفنية (اللوحات) فقط مع التفاصيل الأساسية للعرض في الجدول. يمكن استخدام limit=full لجلب جميع التقييمات بدون pagination.',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -2933,10 +2933,20 @@ export const adminPaths = {
           in: 'query',
           name: 'limit',
           schema: {
-            type: 'integer',
-            default: 20
+            oneOf: [
+              {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 20
+              },
+              {
+                type: 'string',
+                enum: ['full']
+              }
+            ]
           },
-          description: 'عدد العناصر في الصفحة'
+          description: 'عدد العناصر في الصفحة أو "full" لجلب جميع العناصر'
         }
       ],
       responses: {
@@ -3025,27 +3035,6 @@ export const adminPaths = {
                               example: 'https://example.com/artwork.jpg',
                               description: 'صورة العمل الفني'
                             }
-                          }
-                        }
-                      },
-                      pagination: {
-                        type: 'object',
-                        properties: {
-                          page: {
-                            type: 'number',
-                            example: 1
-                          },
-                          limit: {
-                            type: 'number',
-                            example: 20
-                          },
-                          total: {
-                            type: 'number',
-                            example: 150
-                          },
-                          pages: {
-                            type: 'number',
-                            example: 8
                           }
                         }
                       }
@@ -3370,7 +3359,7 @@ export const adminPaths = {
     get: {
       tags: ['Reports Management'],
       summary: 'جلب جميع البلاغات',
-      description: 'جلب قائمة جميع البلاغات مع التفاصيل الأساسية للعرض في الجدول. يتم الترتيب والتصفية من الفرونت.',
+      description: 'جلب قائمة جميع البلاغات مع التفاصيل الأساسية للعرض في الجدول. يمكن استخدام limit=full لجلب جميع البلاغات بدون pagination.',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -3386,10 +3375,20 @@ export const adminPaths = {
           in: 'query',
           name: 'limit',
           schema: {
-            type: 'integer',
-            default: 20
+            oneOf: [
+              {
+                type: 'integer',
+                minimum: 1,
+                maximum: 100,
+                default: 20
+              },
+              {
+                type: 'string',
+                enum: ['full']
+              }
+            ]
           },
-          description: 'عدد العناصر في الصفحة'
+          description: 'عدد العناصر في الصفحة أو "full" لجلب جميع العناصر'
         }
       ],
       responses: {

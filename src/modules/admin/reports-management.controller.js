@@ -15,8 +15,11 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
   
   const { page = 1, limit = 20 } = req.query;
   
-  // حساب التخطي للصفحة
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  // التحقق من إذا كان limit=full
+  const isFullRequest = limit === 'full';
+  
+  // إذا كان limit=full، لا نحتاج pagination
+  const skip = isFullRequest ? 0 : (parseInt(page) - 1) * parseInt(limit);
   
   // جلب البلاغات مع تفاصيل المستخدمين
   const reports = await reportModel.aggregate([
@@ -73,12 +76,10 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
     {
       $sort: { createdAt: -1 }
     },
-    {
-      $skip: skip
-    },
-    {
-      $limit: parseInt(limit)
-    }
+    ...(isFullRequest ? [] : [
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ])
   ]);
 
   // جلب إجمالي عدد البلاغات
@@ -86,7 +87,7 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
 
   // تنسيق البيانات للعرض
   const formattedReports = reports.map((report, index) => ({
-    id: skip + index + 1,
+    id: isFullRequest ? index + 1 : skip + index + 1,
     _id: report._id,
     complainant: report.reporterName || 'مستخدم',
     complainantEmail: report.reporterEmail,
@@ -101,14 +102,21 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'تم جلب البلاغات بنجاح',
+    message: isFullRequest ? 'تم جلب جميع البلاغات بنجاح' : 'تم جلب البلاغات بنجاح',
     data: {
       reports: formattedReports,
-      pagination: {
+      pagination: isFullRequest ? {
+        page: 1,
+        limit: formattedReports.length,
+        total: totalReports,
+        pages: 1,
+        isFullRequest: true
+      } : {
         page: parseInt(page),
         limit: parseInt(limit),
         total: totalReports,
-        pages: Math.ceil(totalReports / parseInt(limit))
+        pages: Math.ceil(totalReports / parseInt(limit)),
+        isFullRequest: false
       }
     }
   });
