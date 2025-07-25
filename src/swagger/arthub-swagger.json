@@ -13209,7 +13209,7 @@
           "Order Management"
         ],
         "summary": "جلب جميع الطلبات",
-        "description": "جلب قائمة جميع الطلبات مع التصفية والترتيب والتصفح",
+        "description": "جلب قائمة جميع الطلبات مع التصفية والترتيب والتصفح. استخدم limit=full لجلب جميع الطلبات بدون pagination.",
         "security": [
           {
             "BearerAuth": []
@@ -13229,10 +13229,20 @@
             "in": "query",
             "name": "limit",
             "schema": {
-              "type": "integer",
-              "default": 20
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "default": 20
+                },
+                {
+                  "type": "string",
+                  "enum": ["full"]
+                }
+              ]
             },
-            "description": "عدد العناصر في الصفحة"
+            "description": "عدد العناصر في الصفحة. استخدم 'full' لجلب جميع الطلبات بدون pagination"
           }
         ],
         "responses": {
