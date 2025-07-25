@@ -53,12 +53,12 @@ export const getSalesTrendsValidation = {
 // Validation for top selling artists query parameters
 export const getTopSellingArtistsValidation = {
   query: joi.object({
-    period: joi.string().valid('7days', '30days', '90days', '1year').default('30days').messages({
-      'any.only': 'الفترة الزمنية يجب أن تكون 7days, 30days, 90days, أو 1year'
-    }),
-    limit: joi.number().integer().min(1).max(50).default(10).messages({
+    limit: joi.number().integer().min(1).max(100).default(10).messages({
       'number.min': 'عدد الفنانين يجب أن يكون 1 على الأقل',
-      'number.max': 'عدد الفنانين يجب أن يكون 50 كحد أقصى'
+      'number.max': 'عدد الفنانين يجب أن يكون 100 كحد أقصى'
+    }),
+    page: joi.number().integer().min(1).default(1).messages({
+      'number.min': 'رقم الصفحة يجب أن يكون 1 على الأقل'
     })
   }).optional()
 };

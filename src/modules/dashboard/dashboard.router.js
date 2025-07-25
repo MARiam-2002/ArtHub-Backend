@@ -681,20 +681,20 @@ router.get(
  *       - BearerAuth: []
  *     parameters:
  *       - in: query
- *         name: period
- *         schema:
- *           type: string
- *           enum: [7days, 30days, 90days, 1year]
- *           default: 30days
- *         description: الفترة الزمنية
- *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           minimum: 1
- *           maximum: 50
+ *           maximum: 100
  *           default: 10
  *         description: عدد الفنانين المطلوب عرضهم
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: رقم الصفحة
  *     responses:
  *       200:
  *         description: تم جلب أفضل الفنانين مبيعاً بنجاح
@@ -712,9 +712,6 @@ router.get(
  *                 data:
  *                   type: object
  *                   properties:
- *                     period:
- *                       type: string
- *                       example: "30days"
  *                     artists:
  *                       type: array
  *                       items:
@@ -732,33 +729,54 @@ router.get(
  *                           job:
  *                             type: string
  *                             example: "فنان تشكيلي"
- *                           orderCount:
+ *                           rating:
+ *                             type: number
+ *                             example: 4.5
+ *                           reviewsCount:
  *                             type: number
  *                             example: 25
+ *                           isVerified:
+ *                             type: boolean
+ *                             example: true
  *                           sales:
  *                             type: number
  *                             example: 125000
+ *                           orders:
+ *                             type: number
+ *                             example: 25
  *                           growth:
  *                             type: object
  *                             properties:
- *                               percentage:
+ *                               sales:
  *                                 type: number
  *                                 example: 12
+ *                               orders:
+ *                                 type: number
+ *                                 example: 8
  *                               isPositive:
  *                                 type: boolean
  *                                 example: true
- *                     summary:
+ *                     pagination:
  *                       type: object
  *                       properties:
- *                         totalArtists:
- *                           type: number
+ *                         page:
+ *                           type: integer
+ *                           example: 1
+ *                         limit:
+ *                           type: integer
  *                           example: 10
- *                         totalSales:
- *                           type: number
- *                           example: 847392
- *                         averageGrowth:
- *                           type: number
- *                           example: 8
+ *                         total:
+ *                           type: integer
+ *                           example: 50
+ *                         pages:
+ *                           type: integer
+ *                           example: 5
+ *                         hasNext:
+ *                           type: boolean
+ *                           example: true
+ *                         hasPrev:
+ *                           type: boolean
+ *                           example: false
  *       401:
  *         description: غير مصرح
  *       403:

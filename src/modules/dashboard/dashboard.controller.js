@@ -887,36 +887,19 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
 export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const { period = '30days', limit = 10 } = req.query;
+  const { limit = 10, page = 1 } = req.query;
   
-  let startDate = new Date();
-  let previousPeriodStart = new Date();
-  
-  // تحديد الفترة الزمنية
-  switch (period) {
-    case '7days':
-      startDate.setDate(startDate.getDate() - 7);
-      previousPeriodStart.setDate(previousPeriodStart.getDate() - 14);
-      break;
-    case '30days':
-      startDate.setDate(startDate.getDate() - 30);
-      previousPeriodStart.setDate(previousPeriodStart.getDate() - 60);
-      break;
-    case '90days':
-      startDate.setDate(startDate.getDate() - 90);
-      previousPeriodStart.setDate(previousPeriodStart.getDate() - 180);
-      break;
-    case '1year':
-      startDate.setFullYear(startDate.getFullYear() - 1);
-      previousPeriodStart.setFullYear(previousPeriodStart.getFullYear() - 2);
-      break;
-  }
+  // استيراد نموذج الطلبات الخاصة
+  const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
 
-  // جلب أفضل الفنانين مبيعاً
-  const topArtists = await transactionModel.aggregate([
+  const parsedLimit = parseInt(limit);
+  const parsedPage = parseInt(page);
+  const skip = (parsedPage - 1) * parsedLimit;
+
+  // جلب أفضل الفنانين (جميع البيانات)
+  const currentPeriodArtists = await specialRequestModel.aggregate([
     { 
       $match: { 
-        createdAt: { $gte: startDate },
         status: 'completed',
         isDeleted: { $ne: true }
       } 
@@ -932,26 +915,35 @@ export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
     {
       $group: {
         _id: '$artist',
-        totalSales: { $sum: '$pricing.totalAmount' },
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
         orderCount: { $sum: 1 },
         artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
-        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage', 0] } },
-        job: { $first: { $arrayElemAt: ['$artistData.job', 0] } }
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage.url', 0] } },
+        artistJob: { $first: { $arrayElemAt: ['$artistData.job', 0] } },
+        artistRating: { $first: { $arrayElemAt: ['$artistData.averageRating', 0] } },
+        artistReviewsCount: { $first: { $arrayElemAt: ['$artistData.reviewsCount', 0] } },
+        artistIsVerified: { $first: { $arrayElemAt: ['$artistData.isVerified', 0] } }
       }
     },
     {
       $sort: { totalSales: -1 }
     },
     {
-      $limit: parseInt(limit)
+      $skip: skip
+    },
+    {
+      $limit: parsedLimit
     }
   ]);
 
-  // جلب بيانات الفترة السابقة لحساب النمو
-  const previousPeriodData = await transactionModel.aggregate([
+  // حساب النمو مقارنة بالشهر السابق
+  const lastMonth = new Date();
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  
+  const previousMonthArtists = await specialRequestModel.aggregate([
     { 
       $match: { 
-        createdAt: { $gte: previousPeriodStart, $lt: startDate },
+        createdAt: { $gte: lastMonth },
         status: 'completed',
         isDeleted: { $ne: true }
       } 
@@ -959,45 +951,83 @@ export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
     {
       $group: {
         _id: '$artist',
-        totalSales: { $sum: '$pricing.totalAmount' }
+        previousSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+        previousOrders: { $sum: 1 }
       }
     }
   ]);
 
-  // حساب النمو لكل فنان
-  const artistsWithGrowth = topArtists.map(artist => {
-    const previousSales = previousPeriodData.find(item => 
-      item._id.toString() === artist._id.toString()
-    )?.totalSales || 0;
+  // تحويل البيانات السابقة إلى كائن للبحث السريع
+  const previousData = {};
+  previousMonthArtists.forEach(artist => {
+    previousData[artist._id.toString()] = {
+      sales: artist.previousSales,
+      orders: artist.previousOrders
+    };
+  });
+
+  // حساب النمو وإضافة البيانات الإضافية
+  const artistsWithGrowth = currentPeriodArtists.map(artist => {
+    const previous = previousData[artist._id.toString()] || { sales: 0, orders: 0 };
     
-    const growthPercentage = previousSales > 0 
-      ? Math.round(((artist.totalSales - previousSales) / previousSales) * 100)
+    const salesGrowth = previous.sales > 0 
+      ? Math.round(((artist.totalSales - previous.sales) / previous.sales) * 100)
+      : 0;
+    
+    const ordersGrowth = previous.orders > 0
+      ? Math.round(((artist.orderCount - previous.orders) / previous.orders) * 100)
       : 0;
 
     return {
       _id: artist._id,
       name: artist.artistName,
       image: artist.artistImage,
-      job: artist.job || 'فنان',
-      orderCount: artist.orderCount,
+      job: artist.artistJob || 'فنان',
+      rating: artist.artistRating || 0,
+      reviewsCount: artist.artistReviewsCount || 0,
+      isVerified: artist.artistIsVerified || false,
       sales: artist.totalSales,
+      orders: artist.orderCount,
       growth: {
-        percentage: growthPercentage,
-        isPositive: growthPercentage >= 0
+        sales: salesGrowth,
+        orders: ordersGrowth,
+        isPositive: salesGrowth >= 0
       }
     };
   });
+
+  // حساب إجمالي عدد الفنانين للـ pagination
+  const totalArtists = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: '$artist'
+      }
+    },
+    {
+      $count: 'total'
+    }
+  ]);
+
+  const total = totalArtists[0]?.total || 0;
 
   res.status(200).json({
     success: true,
     message: 'تم جلب أفضل الفنانين مبيعاً بنجاح',
     data: {
-      period,
       artists: artistsWithGrowth,
-      summary: {
-        totalArtists: artistsWithGrowth.length,
-        totalSales: artistsWithGrowth.reduce((sum, artist) => sum + artist.sales, 0),
-        averageGrowth: Math.round(artistsWithGrowth.reduce((sum, artist) => sum + artist.growth.percentage, 0) / artistsWithGrowth.length)
+      pagination: {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        pages: Math.ceil(total / parsedLimit),
+        hasNext: parsedPage < Math.ceil(total / parsedLimit),
+        hasPrev: parsedPage > 1
       }
     }
   });
