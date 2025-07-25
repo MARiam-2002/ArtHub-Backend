@@ -14,19 +14,21 @@ import mongoose from 'mongoose';
 export const getAllOrders = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
 
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10; // تغيير الـ default إلى 10
-  const skip = (page - 1) * limit;
+  const { page = 1, limit = 10 } = req.query;
+  const isFullRequest = limit === 'full';
+  const parsedLimit = isFullRequest ? 0 : parseInt(limit) || 10;
+  const parsedPage = parseInt(page) || 1;
+  const skip = (parsedPage - 1) * parsedLimit;
 
-  // جلب الطلبات الخاصة فقط مع pagination
+  // جلب الطلبات الخاصة فقط
   const total = await specialRequestModel.countDocuments({ isDeleted: { $ne: true } });
   
   const specialRequests = await specialRequestModel.find({ isDeleted: { $ne: true } })
     .populate('sender', 'displayName profileImage')
     .populate('artist', 'displayName profileImage')
-    .sort({ createdAt: -1 }) // ترتيب حسب التاريخ الأحدث
-    .skip(skip)
-    .limit(limit)
+    .sort({ createdAt: -1 })
+    .skip(isFullRequest ? 0 : skip)
+    .limit(parsedLimit) // 0 = no limit
     .lean();
 
   // تنسيق البيانات
@@ -62,14 +64,21 @@ export const getAllOrders = asyncHandler(async (req, res, next) => {
 
   res.json({
     success: true,
-    message: 'تم جلب الطلبات الخاصة بنجاح',
+    message: isFullRequest ? 'تم جلب جميع الطلبات الخاصة بنجاح' : 'تم جلب الطلبات الخاصة بنجاح',
     data: {
       orders: formattedOrders,
-      pagination: {
-        page,
-        limit,
+      pagination: isFullRequest ? {
+        page: 1,
+        limit: formattedOrders.length,
         total,
-        pages: Math.ceil(total / limit)
+        pages: 1,
+        isFullRequest: true
+      } : {
+        page: parsedPage,
+        limit: parsedLimit,
+        total,
+        pages: Math.ceil(total / parsedLimit),
+        isFullRequest: false
       },
       filters: {
         availableStatuses
