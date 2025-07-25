@@ -1,40 +1,17 @@
 import mongoose from 'mongoose';
-import transactionModel from '../DB/models/transaction.model.js';
+import { connectDB } from '../DB/connection.js';
 import userModel from '../DB/models/user.model.js';
-import artworkModel from '../DB/models/artwork.model.js';
-import dotenv from 'dotenv';
+import specialRequestModel from '../DB/models/specialRequest.model.js';
+import categoryModel from '../DB/models/category.model.js';
 
-dotenv.config();
-
-const connectDB = async () => {
-  try {
-    // استخدام نفس إعدادات الاتصال التي يستخدمها المشروع
-    const connectionUrl = process.env.CONNECTION_URL || 'mongodb://localhost:27017/arthub';
-    console.log('🔄 Connecting to MongoDB...');
-    console.log('📡 Connection URL pattern:', connectionUrl.split('@')[1]?.split('/')[0] || 'local');
-    
-    await mongoose.connect(connectionUrl, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 20000,
-      socketTimeoutMS: 60000,
-      connectTimeoutMS: 20000
-    });
-    console.log('✅ Connected to MongoDB');
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    console.log('💡 Make sure MongoDB is running and CONNECTION_URL is set correctly');
-    process.exit(1);
-  }
-};
-
-async function addMockTransactions() {
+async function addMockSpecialRequests() {
   try {
     await connectDB();
 
     // جلب المستخدمين والفنانين
     const users = await userModel.find({ role: 'user', isDeleted: false }).limit(20);
     const artists = await userModel.find({ role: 'artist', isDeleted: false }).limit(10);
+    const categories = await categoryModel.find({}).limit(5);
     
     if (users.length === 0 || artists.length === 0) {
       console.log('❌ No users or artists found. Please add users first.');
@@ -43,91 +20,73 @@ async function addMockTransactions() {
 
     console.log(`📊 Found ${users.length} users and ${artists.length} artists`);
 
-    // إنشاء أعمال فنية للفنانين
-    const artworks = [];
-    for (const artist of artists) {
-      const artistArtworks = [];
-      for (let i = 0; i < 3; i++) {
-        const artwork = new artworkModel({
-          title: `عمل فني ${i + 1} - ${artist.displayName}`,
-          description: `وصف العمل الفني ${i + 1}`,
-          artist: artist._id,
-          category: new mongoose.Types.ObjectId(), // إنشاء ObjectId جديد
-          price: Math.floor(Math.random() * 1000) + 500,
-          image: 'https://example.com/artwork.jpg',
-          images: ['https://example.com/artwork1.jpg', 'https://example.com/artwork2.jpg'],
-          isAvailable: true
-        });
-        const savedArtwork = await artwork.save();
-        artistArtworks.push(savedArtwork);
-      }
-      artworks.push(...artistArtworks);
-    }
-
-    console.log(`🎨 Created ${artworks.length} artworks`);
-
-    // إنشاء معاملات للشهور الـ 12 الماضية
-    const transactions = [];
-    const statuses = ['pending', 'processing', 'confirmed', 'completed', 'cancelled'];
+    // إنشاء طلبات خاصة للشهور الـ 12 الماضية
+    const specialRequests = [];
+    const requestTypes = [
+      'custom_artwork', 'portrait', 'logo_design', 'illustration', 
+      'digital_art', 'traditional_art', 'animation', 'graphic_design'
+    ];
     const currentDate = new Date();
 
     for (let month = 11; month >= 0; month--) {
       const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - month, 1);
       const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
       
-      // عدد المعاملات لكل شهر (متغير)
-      const transactionsPerMonth = Math.floor(Math.random() * 50) + 20; // 20-70 معاملة
+      // عدد الطلبات لكل شهر (متغير)
+      const requestsPerMonth = Math.floor(Math.random() * 30) + 15; // 15-45 طلب
       
-      for (let i = 0; i < transactionsPerMonth; i++) {
+      for (let i = 0; i < requestsPerMonth; i++) {
         const randomDay = Math.floor(Math.random() * daysInMonth) + 1;
-        const transactionDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), randomDay);
+        const requestDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), randomDay);
         
         const randomUser = users[Math.floor(Math.random() * users.length)];
-        const randomArtwork = artworks[Math.floor(Math.random() * artworks.length)];
-        const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+        const randomArtist = artists[Math.floor(Math.random() * artists.length)];
+        const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+        const randomRequestType = requestTypes[Math.floor(Math.random() * requestTypes.length)];
         
-        const basePrice = randomArtwork.price;
-        const quantity = Math.floor(Math.random() * 3) + 1;
-        const subtotal = basePrice * quantity;
-        const netAmount = subtotal; // بدون خصم
-        const totalAmount = subtotal; // بدون ضريبة
-        const transactionNumber = `TRX-${Date.now()}-${Math.floor(Math.random()*10000)}`;
+        const budget = Math.floor(Math.random() * 2000) + 500; // 500-2500 ريال
+        const quotedPrice = budget + Math.floor(Math.random() * 500); // سعر مقتبس أعلى قليلاً
+        const finalPrice = quotedPrice; // السعر النهائي
         
-        const transaction = new transactionModel({
-          user: randomUser._id,
-          artwork: randomArtwork._id,
-          artist: randomArtwork.artist,
-          seller: randomArtwork.artist,
-          buyer: randomUser._id,
-          status: randomStatus,
-          transactionNumber,
-          pricing: {
-            basePrice: basePrice,
-            quantity: quantity,
-            subtotal: subtotal,
-            netAmount: netAmount,
-            totalAmount: totalAmount
-          },
-          description: `طلب ${i + 1} للشهر ${month + 1}`,
-          createdAt: transactionDate,
-          updatedAt: transactionDate
+        const specialRequest = new specialRequestModel({
+          sender: randomUser._id,
+          artist: randomArtist._id,
+          requestType: randomRequestType,
+          title: `طلب ${randomRequestType} ${i + 1}`,
+          description: `وصف تفصيلي للطلب ${i + 1} في الشهر ${month + 1}`,
+          budget: budget,
+          currency: 'SAR',
+          quotedPrice: quotedPrice,
+          finalPrice: finalPrice,
+          status: 'completed', // جميع الطلبات مكتملة
+          priority: Math.random() > 0.7 ? 'high' : 'medium',
+          category: randomCategory._id,
+          duration: Math.floor(Math.random() * 14) + 7, // 7-21 يوم
+          currentProgress: 100,
+          completedAt: new Date(requestDate.getTime() + Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000), // إكمال خلال 30 يوم
+          acceptedAt: new Date(requestDate.getTime() + Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000), // قبول خلال أسبوع
+          createdAt: requestDate,
+          updatedAt: requestDate
         });
         
-        transactions.push(transaction);
+        specialRequests.push(specialRequest);
       }
     }
 
-    // حفظ المعاملات
-    const savedTransactions = await transactionModel.insertMany(transactions);
-    console.log(`💰 Created ${savedTransactions.length} transactions`);
+    // حفظ الطلبات الخاصة
+    const savedRequests = await specialRequestModel.insertMany(specialRequests);
+    console.log(`💰 Created ${savedRequests.length} completed special requests`);
 
     // عرض إحصائيات سريعة
-    const totalRevenue = await transactionModel.aggregate([
+    const totalRevenue = await specialRequestModel.aggregate([
       { $match: { status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$pricing.totalAmount' } } }
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } }
     ]);
 
-    const monthlyStats = await transactionModel.aggregate([
+    const monthlyStats = await specialRequestModel.aggregate([
+      {
+        $match: { status: 'completed' }
+      },
       {
         $group: {
           _id: {
@@ -135,25 +94,58 @@ async function addMockTransactions() {
             month: { $month: '$createdAt' }
           },
           count: { $sum: 1 },
-          revenue: { $sum: '$pricing.totalAmount' }
+          revenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
         }
       },
       { $sort: { '_id.year': 1, '_id.month': 1 } }
     ]);
 
+    const topArtists = await specialRequestModel.aggregate([
+      {
+        $match: { status: 'completed' }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'artist',
+          foreignField: '_id',
+          as: 'artistData'
+        }
+      },
+      {
+        $group: {
+          _id: '$artist',
+          totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+          orderCount: { $sum: 1 },
+          artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } }
+        }
+      },
+      {
+        $sort: { totalSales: -1 }
+      },
+      {
+        $limit: 5
+      }
+    ]);
+
     console.log('\n📈 Quick Statistics:');
     console.log(`Total Revenue: ${totalRevenue[0]?.total || 0} SAR`);
-    console.log(`Total Transactions: ${savedTransactions.length}`);
+    console.log(`Total Completed Requests: ${savedRequests.length}`);
     console.log('\nMonthly Breakdown:');
     monthlyStats.forEach(stat => {
-      console.log(`${stat._id.year}-${stat._id.month}: ${stat.count} orders, ${stat.revenue} SAR`);
+      console.log(`${stat._id.year}-${stat._id.month}: ${stat.count} requests, ${stat.revenue} SAR`);
     });
 
-    console.log('\n✅ Mock transactions added successfully!');
-    console.log('🎯 You can now test the dashboard charts with real data.');
+    console.log('\n🏆 Top Artists:');
+    topArtists.forEach((artist, index) => {
+      console.log(`${index + 1}. ${artist.artistName}: ${artist.totalSales} SAR (${artist.orderCount} requests)`);
+    });
+
+    console.log('\n✅ Mock special requests added successfully!');
+    console.log('🎯 You can now test the dashboard sales analytics with real data.');
 
   } catch (error) {
-    console.error('❌ Error adding mock transactions:', error);
+    console.error('❌ Error adding mock special requests:', error);
   } finally {
     await mongoose.disconnect();
     console.log('🔌 Disconnected from MongoDB');
@@ -161,4 +153,4 @@ async function addMockTransactions() {
 }
 
 // تشغيل السكريبت
-addMockTransactions(); 
+addMockSpecialRequests(); 

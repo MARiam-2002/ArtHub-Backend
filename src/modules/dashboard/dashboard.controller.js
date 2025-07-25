@@ -587,8 +587,11 @@ export const getSalesAnalytics = asyncHandler(async (req, res, next) => {
       break;
   }
 
-  // إحصائيات الفترة الحالية
-  const currentPeriodStats = await transactionModel.aggregate([
+  // استيراد نموذج الطلبات الخاصة
+  const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
+
+  // إحصائيات الفترة الحالية - الطلبات المكتملة
+  const currentPeriodStats = await specialRequestModel.aggregate([
     { 
       $match: { 
         createdAt: { $gte: startDate },
@@ -599,15 +602,15 @@ export const getSalesAnalytics = asyncHandler(async (req, res, next) => {
     {
       $group: {
         _id: null,
-        totalSales: { $sum: '$pricing.totalAmount' },
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
         totalOrders: { $sum: 1 },
-        averageOrderValue: { $avg: '$pricing.totalAmount' }
+        averageOrderValue: { $avg: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
       }
     }
   ]);
 
   // إحصائيات الفترة السابقة للمقارنة
-  const previousPeriodStats = await transactionModel.aggregate([
+  const previousPeriodStats = await specialRequestModel.aggregate([
     { 
       $match: { 
         createdAt: { $gte: previousPeriodStart, $lt: startDate },
@@ -618,15 +621,15 @@ export const getSalesAnalytics = asyncHandler(async (req, res, next) => {
     {
       $group: {
         _id: null,
-        totalSales: { $sum: '$pricing.totalAmount' },
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
         totalOrders: { $sum: 1 },
-        averageOrderValue: { $avg: '$pricing.totalAmount' }
+        averageOrderValue: { $avg: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
       }
     }
   ]);
 
   // أفضل فنان مبيعاً
-  const topSellingArtist = await transactionModel.aggregate([
+  const topSellingArtist = await specialRequestModel.aggregate([
     { 
       $match: { 
         createdAt: { $gte: startDate },
@@ -645,10 +648,10 @@ export const getSalesAnalytics = asyncHandler(async (req, res, next) => {
     {
       $group: {
         _id: '$artist',
-        totalSales: { $sum: '$pricing.totalAmount' },
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
         orderCount: { $sum: 1 },
         artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
-        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage', 0] } }
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage.url', 0] } }
       }
     },
     {
@@ -729,8 +732,11 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
       break;
   }
 
+  // استيراد نموذج الطلبات الخاصة
+  const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
+
   // تجميع البيانات الشهرية
-  const monthlySales = await transactionModel.aggregate([
+  const monthlySales = await specialRequestModel.aggregate([
     { 
       $match: { 
         createdAt: { $gte: startDate },
@@ -744,7 +750,7 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
           year: { $year: '$createdAt' },
           month: { $month: '$createdAt' }
         },
-        totalSales: { $sum: '$pricing.totalAmount' },
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
         orderCount: { $sum: 1 }
       }
     },
@@ -780,26 +786,46 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
       monthsToShow = 12;
       break;
   }
-  
+
+  // إنشاء بيانات الرسم البياني
   const chartData = [];
+  const salesData = {};
   
+  // تحويل البيانات إلى كائن للبحث السريع
+  monthlySales.forEach(item => {
+    const key = `${item._id.year}-${item._id.month}`;
+    salesData[key] = {
+      sales: item.totalSales,
+      orders: item.orderCount
+    };
+  });
+
+  // ملء البيانات للشهور المطلوبة
   for (let i = monthsToShow - 1; i >= 0; i--) {
-    const targetMonth = currentMonth - i;
-    const targetYear = currentYear;
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() - i);
     
-    const monthData = monthlySales.find(item => 
-      item._id.year === targetYear && item._id.month === targetMonth
-    ) || { totalSales: 0, orderCount: 0 };
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth() + 1;
+    const monthName = months[month - 1];
+    
+    const key = `${year}-${month}`;
+    const data = salesData[key] || { sales: 0, orders: 0 };
     
     chartData.push({
-      month: months[11 - (monthsToShow - 1 - i)], // ترتيب صحيح للشهور
-      sales: monthData.totalSales,
-      orders: monthData.orderCount
+      month: monthName,
+      sales: data.sales,
+      orders: data.orders
     });
   }
 
-  // جلب أفضل فنان مبيعاً للفترة المحددة
-  const topSellingArtist = await transactionModel.aggregate([
+  // حساب الإحصائيات الإجمالية
+  const totalSales = monthlySales.reduce((sum, item) => sum + item.totalSales, 0);
+  const totalOrders = monthlySales.reduce((sum, item) => sum + item.orderCount, 0);
+  const averageMonthlySales = monthlySales.length > 0 ? totalSales / monthlySales.length : 0;
+
+  // أفضل فنان مبيعاً للفترة المحددة
+  const topSellingArtist = await specialRequestModel.aggregate([
     { 
       $match: { 
         createdAt: { $gte: startDate },
@@ -818,10 +844,10 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
     {
       $group: {
         _id: '$artist',
-        totalSales: { $sum: '$pricing.totalAmount' },
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
         orderCount: { $sum: 1 },
         artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
-        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage', 0] } }
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage.url', 0] } }
       }
     },
     {
@@ -831,10 +857,6 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
       $limit: 1
     }
   ]);
-
-  const totalSales = chartData.reduce((sum, item) => sum + item.sales, 0);
-  const totalOrders = chartData.reduce((sum, item) => sum + item.orders, 0);
-  const averageMonthlySales = Math.round(totalSales / chartData.length);
 
   res.status(200).json({
     success: true,
@@ -1009,10 +1031,13 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
       break;
   }
 
+  // استيراد نموذج الطلبات الخاصة
+  const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
+
   // جلب جميع البيانات المطلوبة للتقرير
   const [salesData, topArtists, monthlyTrends] = await Promise.all([
     // إحصائيات المبيعات العامة
-    transactionModel.aggregate([
+    specialRequestModel.aggregate([
       { 
         $match: { 
           createdAt: { $gte: startDate },
@@ -1023,15 +1048,15 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
       {
         $group: {
           _id: null,
-          totalSales: { $sum: '$pricing.totalAmount' },
+          totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
           totalOrders: { $sum: 1 },
-          averageOrderValue: { $avg: '$pricing.totalAmount' }
+          averageOrderValue: { $avg: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
         }
       }
     ]),
     
     // أفضل الفنانين
-    transactionModel.aggregate([
+    specialRequestModel.aggregate([
       { 
         $match: { 
           createdAt: { $gte: startDate },
@@ -1050,7 +1075,7 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
       {
         $group: {
           _id: '$artist',
-          totalSales: { $sum: '$pricing.totalAmount' },
+          totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
           orderCount: { $sum: 1 },
           artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } }
         }
@@ -1064,7 +1089,7 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
     ]),
     
     // الاتجاهات الشهرية
-    transactionModel.aggregate([
+    specialRequestModel.aggregate([
       { 
         $match: { 
           createdAt: { $gte: startDate },
@@ -1078,7 +1103,7 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
             year: { $year: '$createdAt' },
             month: { $month: '$createdAt' }
           },
-          totalSales: { $sum: '$pricing.totalAmount' },
+          totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
           orderCount: { $sum: 1 }
         }
       },
@@ -1086,17 +1111,24 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
     ])
   ]);
 
+  const summary = salesData[0] || { totalSales: 0, totalOrders: 0, averageOrderValue: 0 };
+
+  // تنسيق البيانات للتقرير
   const reportData = {
     period,
-    generatedAt: new Date(),
-    summary: salesData[0] || { totalSales: 0, totalOrders: 0, averageOrderValue: 0 },
+    generatedAt: new Date().toISOString(),
+    summary: {
+      totalSales: summary.totalSales,
+      totalOrders: summary.totalOrders,
+      averageOrderValue: summary.averageOrderValue
+    },
     topArtists: topArtists.map(artist => ({
       name: artist.artistName,
       sales: artist.totalSales,
       orders: artist.orderCount
     })),
     monthlyTrends: monthlyTrends.map(trend => ({
-      month: `${trend._id.year}-${trend._id.month}`,
+      month: `${trend._id.year}-${String(trend._id.month).padStart(2, '0')}`,
       sales: trend.totalSales,
       orders: trend.orderCount
     }))
@@ -1105,18 +1137,32 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
   if (format === 'csv') {
     // تحويل البيانات إلى CSV
     const csvData = [
-      ['الفنان', 'المبيعات', 'عدد الطلبات'],
-      ...topArtists.map(artist => [
-        artist.artistName,
-        artist.totalSales,
-        artist.orderCount
+      ['الفترة', period],
+      ['تاريخ التقرير', new Date().toISOString()],
+      ['إجمالي المبيعات', summary.totalSales],
+      ['إجمالي الطلبات', summary.totalOrders],
+      ['متوسط قيمة الطلب', summary.averageOrderValue],
+      [],
+      ['أفضل الفنانين'],
+      ['الاسم', 'المبيعات', 'عدد الطلبات'],
+      ...topArtists.map(artist => [artist.artistName, artist.totalSales, artist.orderCount]),
+      [],
+      ['الاتجاهات الشهرية'],
+      ['الشهر', 'المبيعات', 'عدد الطلبات'],
+      ...monthlyTrends.map(trend => [
+        `${trend._id.year}-${String(trend._id.month).padStart(2, '0')}`,
+        trend.totalSales,
+        trend.orderCount
       ])
-    ].map(row => row.join(',')).join('\n');
+    ];
 
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="sales-report-${period}.csv"`);
-    res.send(csvData);
+    res.setHeader('Content-Disposition', `attachment; filename=sales-report-${period}.csv`);
+    res.send(csvContent);
   } else {
+    // إرجاع البيانات بصيغة JSON
     res.status(200).json({
       success: true,
       message: 'تم إنشاء تقرير المبيعات بنجاح',
