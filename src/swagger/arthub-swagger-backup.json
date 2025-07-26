@@ -2920,6 +2920,78 @@
             "description": "Full file path"
           }
         }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Current page number",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of items",
+            "example": 50
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total number of pages",
+            "example": 5
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "hasPrev": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": false
+          }
+        }
+      },
+      "PaginationInfo": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 50
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0,
+            "example": 5
+          },
+          "hasNext": {
+            "type": "boolean",
+            "example": true
+          },
+          "hasPrev": {
+            "type": "boolean",
+            "example": false
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -3392,6 +3464,11 @@
       "name": "Profile",
       "description": "واجهات API لإدارة الملفات الشخصية",
       "x-displayName": "الملف الشخصي"
+    },
+    {
+      "name": "Artist Management",
+      "description": "واجهات API لإدارة الفنانين في الداشبورد الإداري",
+      "x-displayName": "إدارة الفنانين"
     }
   ],
   "x-tagGroups": [
@@ -3430,7 +3507,8 @@
     {
       "name": "الإدارة",
       "tags": [
-        "Profile"
+        "Profile",
+        "Artist Management"
       ]
     }
   ],
@@ -7858,7 +7936,9 @@
                 },
                 {
                   "type": "string",
-                  "enum": ["full"]
+                  "enum": [
+                    "full"
+                  ]
                 }
               ]
             },
@@ -7940,7 +8020,9 @@
                 },
                 {
                   "type": "string",
-                  "enum": ["full"]
+                  "enum": [
+                    "full"
+                  ]
                 }
               ]
             },
@@ -13053,7 +13135,9 @@
                 },
                 {
                   "type": "string",
-                  "enum": ["full"],
+                  "enum": [
+                    "full"
+                  ],
                   "description": "استخدم 'full' لجلب جميع العناصر بدون pagination"
                 }
               ]
@@ -13250,7 +13334,9 @@
                 },
                 {
                   "type": "string",
-                  "enum": ["full"]
+                  "enum": [
+                    "full"
+                  ]
                 }
               ]
             },
@@ -15563,7 +15649,9 @@
                 },
                 {
                   "type": "string",
-                  "enum": ["full"],
+                  "enum": [
+                    "full"
+                  ],
                   "description": "استخدم 'full' لجلب جميع العناصر بدون pagination"
                 }
               ]
@@ -16593,10 +16681,16 @@
     },
     "/api/admin/artists": {
       "get": {
-        "tags": ["Artist Management"],
+        "tags": [
+          "Artist Management"
+        ],
         "summary": "جلب قائمة الفنانين",
         "description": "جلب قائمة جميع الفنانين مع إحصائياتهم الأساسية للداشبورد الإداري",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "query",
@@ -16634,7 +16728,11 @@
             "name": "status",
             "schema": {
               "type": "string",
-              "enum": ["active", "inactive", "banned"]
+              "enum": [
+                "active",
+                "inactive",
+                "banned"
+              ]
             },
             "description": "تصفية بالحالة"
           },
@@ -16643,7 +16741,12 @@
             "name": "sortBy",
             "schema": {
               "type": "string",
-              "enum": ["createdAt", "displayName", "artworksCount", "totalSales"],
+              "enum": [
+                "createdAt",
+                "displayName",
+                "artworksCount",
+                "totalSales"
+              ],
               "default": "createdAt"
             },
             "description": "ترتيب حسب"
@@ -16653,7 +16756,10 @@
             "name": "sortOrder",
             "schema": {
               "type": "string",
-              "enum": ["asc", "desc"],
+              "enum": [
+                "asc",
+                "desc"
+              ],
               "default": "desc"
             },
             "description": "اتجاه الترتيب"
@@ -16755,10 +16861,16 @@
     },
     "/api/admin/artists/{artistId}": {
       "get": {
-        "tags": ["Artist Management"],
+        "tags": [
+          "Artist Management"
+        ],
         "summary": "جلب تفاصيل الفنان",
         "description": "جلب تفاصيل شاملة لفنان محدد تشمل الإحصائيات والأعمال والبلاغات والتقييمات وسجل النشاط",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
@@ -17053,10 +17165,16 @@
     },
     "/api/admin/artists/{artistId}/status": {
       "patch": {
-        "tags": ["Artist Management"],
+        "tags": [
+          "Artist Management"
+        ],
         "summary": "تحديث حالة الفنان",
         "description": "تحديث حالة الفنان (تفعيل/إلغاء تفعيل/حظر)",
-        "security": [{ "BearerAuth": [] }],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "in": "path",
@@ -17075,11 +17193,17 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["status"],
+                "required": [
+                  "status"
+                ],
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": ["active", "inactive", "banned"],
+                    "enum": [
+                      "active",
+                      "inactive",
+                      "banned"
+                    ],
                     "description": "الحالة الجديدة للفنان"
                   },
                   "reason": {
