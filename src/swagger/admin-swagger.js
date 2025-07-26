@@ -4291,6 +4291,606 @@ export const adminPaths = {
         }
       }
     }
+  },
+
+  // Artist Management Endpoints
+  '/api/admin/artists': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب قائمة الفنانين',
+      description: 'جلب قائمة جميع الفنانين مع إحصائياتهم الأساسية',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+            default: 1
+          },
+          description: 'رقم الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 100,
+            default: 10
+          },
+          description: 'عدد العناصر في الصفحة'
+        },
+        {
+          in: 'query',
+          name: 'search',
+          schema: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 100
+          },
+          description: 'البحث بالاسم أو البريد الإلكتروني أو الهاتف'
+        },
+        {
+          in: 'query',
+          name: 'status',
+          schema: {
+            type: 'string',
+            enum: ['active', 'inactive', 'banned']
+          },
+          description: 'تصفية بالحالة'
+        },
+        {
+          in: 'query',
+          name: 'sortBy',
+          schema: {
+            type: 'string',
+            enum: ['createdAt', 'displayName', 'artworksCount', 'totalSales'],
+            default: 'createdAt'
+          },
+          description: 'ترتيب حسب'
+        },
+        {
+          in: 'query',
+          name: 'sortOrder',
+          schema: {
+            type: 'string',
+            enum: ['asc', 'desc'],
+            default: 'desc'
+          },
+          description: 'اتجاه الترتيب'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب قائمة الفنانين بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب قائمة الفنانين بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      artists: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            displayName: {
+                              type: 'string'
+                            },
+                            email: {
+                              type: 'string'
+                            },
+                            phone: {
+                              type: 'string'
+                            },
+                            profileImage: {
+                              type: 'string'
+                            },
+                            location: {
+                              type: 'string'
+                            },
+                            isActive: {
+                              type: 'boolean'
+                            },
+                            isVerified: {
+                              type: 'boolean'
+                            },
+                            joinDate: {
+                              type: 'string',
+                              format: 'date-time'
+                            },
+                            stats: {
+                              type: 'object',
+                              properties: {
+                                artworksCount: {
+                                  type: 'number'
+                                },
+                                totalSales: {
+                                  type: 'number'
+                                },
+                                avgRating: {
+                                  type: 'number'
+                                },
+                                reviewsCount: {
+                                  type: 'number'
+                                },
+                                reportsCount: {
+                                  type: 'number'
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      pagination: {
+                        $ref: '#/components/schemas/PaginationMeta'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          $ref: '#/components/responses/UnauthorizedError'
+        },
+        403: {
+          $ref: '#/components/responses/ForbiddenError'
+        }
+      }
+    }
+  },
+
+  '/api/admin/artists/{artistId}': {
+    get: {
+      tags: ['Admin'],
+      summary: 'جلب تفاصيل الفنان',
+      description: 'جلب تفاصيل شاملة لفنان محدد تشمل الإحصائيات والأعمال والبلاغات والتقييمات وسجل النشاط',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'artistId',
+          required: true,
+          schema: {
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$'
+          },
+          description: 'معرف الفنان'
+        },
+        {
+          in: 'query',
+          name: 'page',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+            default: 1
+          },
+          description: 'رقم الصفحة للأعمال الفنية'
+        },
+        {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 100,
+            default: 10
+          },
+          description: 'عدد الأعمال في الصفحة'
+        }
+      ],
+      responses: {
+        200: {
+          description: 'تم جلب تفاصيل الفنان بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب تفاصيل الفنان بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      artist: {
+                        type: 'object',
+                        properties: {
+                          _id: {
+                            type: 'string'
+                          },
+                          displayName: {
+                            type: 'string'
+                          },
+                          email: {
+                            type: 'string'
+                          },
+                          phone: {
+                            type: 'string'
+                          },
+                          bio: {
+                            type: 'string'
+                          },
+                          profileImage: {
+                            type: 'string'
+                          },
+                          location: {
+                            type: 'string'
+                          },
+                          joinDate: {
+                            type: 'string',
+                            format: 'date-time'
+                          },
+                          isActive: {
+                            type: 'boolean'
+                          },
+                          isVerified: {
+                            type: 'boolean'
+                          },
+                          socialMedia: {
+                            type: 'object'
+                          }
+                        }
+                      },
+                      stats: {
+                        type: 'object',
+                        properties: {
+                          artworksCount: {
+                            type: 'number'
+                          },
+                          totalSales: {
+                            type: 'number'
+                          },
+                          completedOrders: {
+                            type: 'number'
+                          },
+                          avgRating: {
+                            type: 'number'
+                          },
+                          reviewsCount: {
+                            type: 'number'
+                          },
+                          reportsCount: {
+                            type: 'number'
+                          },
+                          followersCount: {
+                            type: 'number'
+                          }
+                        }
+                      },
+                      artworks: {
+                        type: 'object',
+                        properties: {
+                          items: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                _id: {
+                                  type: 'string'
+                                },
+                                title: {
+                                  type: 'string'
+                                },
+                                price: {
+                                  type: 'number'
+                                },
+                                status: {
+                                  type: 'string'
+                                },
+                                images: {
+                                  type: 'array'
+                                },
+                                category: {
+                                  type: 'object'
+                                },
+                                createdAt: {
+                                  type: 'string',
+                                  format: 'date-time'
+                                }
+                              }
+                            }
+                          },
+                          pagination: {
+                            $ref: '#/components/schemas/PaginationMeta'
+                          }
+                        }
+                      },
+                      reports: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            reporter: {
+                              type: 'object'
+                            },
+                            type: {
+                              type: 'string'
+                            },
+                            description: {
+                              type: 'string'
+                            },
+                            status: {
+                              type: 'string'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      reviews: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            reviewer: {
+                              type: 'object'
+                            },
+                            artwork: {
+                              type: 'object'
+                            },
+                            rating: {
+                              type: 'number'
+                            },
+                            comment: {
+                              type: 'string'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      activities: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            type: {
+                              type: 'string'
+                            },
+                            icon: {
+                              type: 'string'
+                            },
+                            title: {
+                              type: 'string'
+                            },
+                            description: {
+                              type: 'string'
+                            },
+                            date: {
+                              type: 'string',
+                              format: 'date-time'
+                            },
+                            status: {
+                              type: 'string'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'معرف الفنان غير صالح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'معرف الفنان غير صالح'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          $ref: '#/components/responses/UnauthorizedError'
+        },
+        403: {
+          $ref: '#/components/responses/ForbiddenError'
+        },
+        404: {
+          description: 'الفنان غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الفنان غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  '/api/admin/artists/{artistId}/status': {
+    patch: {
+      tags: ['Admin'],
+      summary: 'تحديث حالة الفنان',
+      description: 'تحديث حالة الفنان (تفعيل/إلغاء تفعيل/حظر)',
+      security: [{ BearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'artistId',
+          required: true,
+          schema: {
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$'
+          },
+          description: 'معرف الفنان'
+        }
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['status'],
+              properties: {
+                status: {
+                  type: 'string',
+                  enum: ['active', 'inactive', 'banned'],
+                  description: 'الحالة الجديدة للفنان'
+                },
+                reason: {
+                  type: 'string',
+                  minLength: 1,
+                  maxLength: 500,
+                  description: 'سبب الحظر (مطلوب إذا كانت الحالة banned)'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'تم تحديث حالة الفنان بنجاح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم تحديث حالة الفنان بنجاح إلى active'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      _id: {
+                        type: 'string'
+                      },
+                      displayName: {
+                        type: 'string'
+                      },
+                      isActive: {
+                        type: 'boolean'
+                      },
+                      isBanned: {
+                        type: 'boolean'
+                      },
+                      banReason: {
+                        type: 'string'
+                      },
+                      updatedAt: {
+                        type: 'string',
+                        format: 'date-time'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        400: {
+          description: 'حالة غير صالحة أو معرف فنان غير صالح',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'سبب الحظر مطلوب عند حظر الفنان'
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          $ref: '#/components/responses/UnauthorizedError'
+        },
+        403: {
+          $ref: '#/components/responses/ForbiddenError'
+        },
+        404: {
+          description: 'الفنان غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الفنان غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
 

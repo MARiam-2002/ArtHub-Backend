@@ -284,4 +284,56 @@ export const getUserActivitySchema = {
 // Export users validation
 export const exportUsersSchema = {
   query: joi.object({})
+};
+
+// Get all artists validation
+export const getAllArtistsSchema = {
+  query: joi.object({
+    page: joi.number().integer().min(1).optional().default(1),
+    limit: joi.number().integer().min(1).max(100).optional().default(10),
+    search: joi.string().min(1).max(100).optional(),
+    status: joi.string().valid('active', 'inactive', 'banned').optional(),
+    sortBy: joi.string().valid('createdAt', 'displayName', 'artworksCount', 'totalSales').default('createdAt'),
+    sortOrder: joi.string().valid('asc', 'desc').default('desc')
+  })
+};
+
+// Get artist details validation
+export const getArtistDetailsSchema = {
+  params: joi.object({
+    artistId: joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+      'string.pattern.base': 'معرف الفنان غير صالح',
+      'any.required': 'معرف الفنان مطلوب'
+    })
+  }),
+  query: joi.object({
+    page: joi.number().integer().min(1).optional().default(1),
+    limit: joi.number().integer().min(1).max(100).optional().default(10)
+  })
+};
+
+// Update artist status validation
+export const updateArtistStatusSchema = {
+  params: joi.object({
+    artistId: joi.string().pattern(/^[0-9a-fA-F]{24}$/).required().messages({
+      'string.pattern.base': 'معرف الفنان غير صالح',
+      'any.required': 'معرف الفنان مطلوب'
+    })
+  }),
+  body: joi.object({
+    status: joi.string().valid('active', 'inactive', 'banned').required().messages({
+      'any.only': 'الحالة يجب أن تكون active أو inactive أو banned',
+      'any.required': 'الحالة مطلوبة'
+    }),
+    reason: joi.string().min(1).max(500).optional().messages({
+      'string.min': 'سبب الحظر يجب أن يكون حرف واحد على الأقل',
+      'string.max': 'سبب الحظر يجب أن يكون أقل من 500 حرف'
+    })
+  }).custom((value, helpers) => {
+    // إذا كانت الحالة banned، يجب إرسال سبب
+    if (value.status === 'banned' && !value.reason) {
+      return helpers.error('any.invalid', { message: 'سبب الحظر مطلوب عند حظر الفنان' });
+    }
+    return value;
+  })
 }; 

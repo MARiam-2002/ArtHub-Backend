@@ -1322,6 +1322,384 @@ router.get('/users/:id/activity',
   adminController.getUserActivity
 );
 
+/**
+ * @swagger
+ * /api/admin/artists:
+ *   get:
+ *     summary: Get all artists for admin dashboard
+ *     tags: [Admin Dashboard]
+ *     description: Get list of all artists with their statistics
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by name, email, or phone
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, banned]
+ *         description: Filter by status
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           enum: [createdAt, displayName, artworksCount, totalSales]
+ *           default: createdAt
+ *         description: Sort field
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *     responses:
+ *       200:
+ *         description: Artists retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب قائمة الفنانين بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artists:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           displayName:
+ *                             type: string
+ *                           email:
+ *                             type: string
+ *                           phone:
+ *                             type: string
+ *                           profileImage:
+ *                             type: string
+ *                           location:
+ *                             type: string
+ *                           isActive:
+ *                             type: boolean
+ *                           isVerified:
+ *                             type: boolean
+ *                           joinDate:
+ *                             type: string
+ *                             format: date-time
+ *                           stats:
+ *                             type: object
+ *                             properties:
+ *                               artworksCount:
+ *                                 type: number
+ *                               totalSales:
+ *                                 type: number
+ *                               avgRating:
+ *                                 type: number
+ *                               reviewsCount:
+ *                                 type: number
+ *                               reportsCount:
+ *                                 type: number
+ *                     pagination:
+ *                       $ref: '#/components/schemas/PaginationMeta'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ */
+router.get('/artists', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getAllArtistsSchema),
+  adminController.getAllArtists
+);
+
+/**
+ * @swagger
+ * /api/admin/artists/{artistId}:
+ *   get:
+ *     summary: Get artist details for admin dashboard
+ *     tags: [Admin Dashboard]
+ *     description: Get detailed information about a specific artist including statistics, artworks, reports, reviews, and activity
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for artworks
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page for artworks
+ *     responses:
+ *       200:
+ *         description: Artist details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب تفاصيل الفنان بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artist:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         displayName:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         phone:
+ *                           type: string
+ *                         bio:
+ *                           type: string
+ *                         profileImage:
+ *                           type: string
+ *                         location:
+ *                           type: string
+ *                         joinDate:
+ *                           type: string
+ *                           format: date-time
+ *                         isActive:
+ *                           type: boolean
+ *                         isVerified:
+ *                           type: boolean
+ *                         socialMedia:
+ *                           type: object
+ *                     stats:
+ *                       type: object
+ *                       properties:
+ *                         artworksCount:
+ *                           type: number
+ *                         totalSales:
+ *                           type: number
+ *                         completedOrders:
+ *                           type: number
+ *                         avgRating:
+ *                           type: number
+ *                         reviewsCount:
+ *                           type: number
+ *                         reportsCount:
+ *                           type: number
+ *                         followersCount:
+ *                           type: number
+ *                     artworks:
+ *                       type: object
+ *                       properties:
+ *                         items:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                               title:
+ *                                 type: string
+ *                               price:
+ *                                 type: number
+ *                               status:
+ *                                 type: string
+ *                               images:
+ *                                 type: array
+ *                               category:
+ *                                 type: object
+ *                               createdAt:
+ *                                 type: string
+ *                                 format: date-time
+ *                         pagination:
+ *                           $ref: '#/components/schemas/PaginationMeta'
+ *                     reports:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           reporter:
+ *                             type: object
+ *                           type:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                     reviews:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           reviewer:
+ *                             type: object
+ *                           artwork:
+ *                             type: object
+ *                           rating:
+ *                             type: number
+ *                           comment:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                     activities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           type:
+ *                             type: string
+ *                           icon:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                           status:
+ *                             type: string
+ *       400:
+ *         description: Invalid artist ID
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Artist not found
+ */
+router.get('/artists/:artistId', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.getArtistDetailsSchema),
+  adminController.getArtistDetails
+);
+
+/**
+ * @swagger
+ * /api/admin/artists/{artistId}/status:
+ *   patch:
+ *     summary: Update artist status
+ *     tags: [Admin Dashboard]
+ *     description: Update artist status (activate/deactivate/ban)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive, banned]
+ *                 description: New status for the artist
+ *               reason:
+ *                 type: string
+ *                 description: Reason for ban (required if status is banned)
+ *     responses:
+ *       200:
+ *         description: Artist status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث حالة الفنان بنجاح إلى active"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     displayName:
+ *                       type: string
+ *                     isActive:
+ *                       type: boolean
+ *                     isBanned:
+ *                       type: boolean
+ *                     banReason:
+ *                       type: string
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Invalid status or artist ID
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Artist not found
+ */
+router.patch('/artists/:artistId/status', 
+  authenticate, 
+  isAuthorized('admin', 'superadmin'), 
+  isValidation(Validators.updateArtistStatusSchema),
+  adminController.updateArtistStatus
+);
+
 // إضافة مسارات إدارة الطلبات
 router.use('/', orderManagementRouter);
 
