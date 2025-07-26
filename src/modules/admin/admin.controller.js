@@ -1428,7 +1428,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
   const reviews = await reviewModel.find({ 
     artist: artistId 
   })
-    .populate('reviewer', 'displayName')
+    .populate('user', 'displayName')
     .populate('artwork', 'title')
     .sort({ createdAt: -1 })
     .limit(10)
