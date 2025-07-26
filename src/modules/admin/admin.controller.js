@@ -1369,7 +1369,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     followersCount
   ] = await Promise.all([
     // عدد الأعمال الفنية
-    artworkModel.countDocuments({ artist: artistId, isDeleted: false }),
+    artworkModel.countDocuments({ artist: new mongoose.Types.ObjectId(artistId) }),
     
     // إجمالي المبيعات
     transactionModel.aggregate([
@@ -1379,7 +1379,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     
     // عدد الطلبات المكتملة
     transactionModel.countDocuments({ 
-      artist: artistId, 
+      artist: new mongoose.Types.ObjectId(artistId), 
       status: 'completed' 
     }),
     
@@ -1390,25 +1390,24 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     ]),
     
     // عدد التقييمات
-    reviewModel.countDocuments({ artist: artistId }),
+    reviewModel.countDocuments({ artist: new mongoose.Types.ObjectId(artistId) }),
     
     // عدد البلاغات
     reportModel.countDocuments({ 
-      reportedUser: artistId,
+      reportedUser: new mongoose.Types.ObjectId(artistId),
       status: { $ne: 'resolved' }
     }),
     
     // عدد المتابعين
-    followModel.countDocuments({ following: artistId })
+    followModel.countDocuments({ following: new mongoose.Types.ObjectId(artistId) })
   ]);
 
   // جلب الأعمال الفنية مع pagination
   const skip = (parseInt(page) - 1) * parseInt(limit);
   const artworks = await artworkModel.find({ 
-    artist: artistId, 
-    isDeleted: false 
+    artist: new mongoose.Types.ObjectId(artistId) 
   })
-    .select('title price status images category createdAt')
+    .select('title price status images category createdAt isAvailable')
     .populate('category', 'name')
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -1417,7 +1416,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
 
   // جلب البلاغات
   const reports = await reportModel.find({ 
-    reportedUser: artistId 
+    reportedUser: new mongoose.Types.ObjectId(artistId) 
   })
     .populate('reporter', 'displayName email')
     .sort({ createdAt: -1 })
@@ -1426,7 +1425,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
 
   // جلب التقييمات
   const reviews = await reviewModel.find({ 
-    artist: artistId 
+    artist: new mongoose.Types.ObjectId(artistId) 
   })
     .populate('user', 'displayName')
     .populate('artwork', 'title')
@@ -1438,7 +1437,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
   const activities = await Promise.all([
     // تسجيلات الدخول
     tokenModel.find({ 
-      user: artistId,
+      user: new mongoose.Types.ObjectId(artistId),
       type: 'access'
     })
       .sort({ createdAt: -1 })
@@ -1447,7 +1446,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     
     // المعاملات
     transactionModel.find({ 
-      artist: artistId 
+      artist: new mongoose.Types.ObjectId(artistId) 
     })
       .sort({ createdAt: -1 })
       .limit(5)
@@ -1455,7 +1454,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     
     // التقييمات
     reviewModel.find({ 
-      artist: artistId 
+      artist: new mongoose.Types.ObjectId(artistId) 
     })
       .sort({ createdAt: -1 })
       .limit(5)
@@ -1522,7 +1521,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
           _id: artwork._id,
           title: artwork.title,
           price: artwork.price,
-          status: artwork.status,
+          isAvailable: artwork.isAvailable,
           images: artwork.images,
           category: artwork.category,
           createdAt: artwork.createdAt
@@ -1530,7 +1529,8 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total: artworksCount
+          total: artworksCount,
+          pages: Math.ceil(artworksCount / parseInt(limit))
         }
       },
       reports: reports.map(report => ({
@@ -1543,7 +1543,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
       })),
       reviews: reviews.map(review => ({
         _id: review._id,
-        reviewer: review.reviewer,
+        user: review.user,
         artwork: review.artwork,
         rating: review.rating,
         comment: review.comment,
@@ -1604,8 +1604,7 @@ export const getAllArtists = asyncHandler(async (req, res, next) => {
         reportsCount
       ] = await Promise.all([
         artworkModel.countDocuments({ 
-          artist: artist._id, 
-          isDeleted: false 
+          artist: artist._id 
         }),
         transactionModel.aggregate([
           { $match: { artist: artist._id, status: 'completed' } },
