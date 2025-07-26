@@ -1373,7 +1373,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     
     // إجمالي المبيعات
     transactionModel.aggregate([
-      { $match: { artist: mongoose.Types.ObjectId(artistId), status: 'completed' } },
+      { $match: { artist: new mongoose.Types.ObjectId(artistId), status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]),
     
@@ -1385,7 +1385,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     
     // متوسط التقييم
     reviewModel.aggregate([
-      { $match: { artist: mongoose.Types.ObjectId(artistId) } },
+      { $match: { artist: new mongoose.Types.ObjectId(artistId) } },
       { $group: { _id: null, avgRating: { $avg: '$rating' } } }
     ]),
     
