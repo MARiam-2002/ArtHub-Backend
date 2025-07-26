@@ -2673,6 +2673,11 @@ export const swaggerDefinition = {
       name: 'Order Management',
       description: 'واجهات API لإدارة الطلبات',
       'x-displayName': 'إدارة الطلبات'
+    },
+    {
+      name: 'Artist Management',
+      description: 'واجهات API لإدارة الفنانين في الداشبورد الإداري',
+      'x-displayName': 'إدارة الفنانين'
     }
   ],
   'x-tagGroups': [
@@ -2694,7 +2699,7 @@ export const swaggerDefinition = {
     },
     {
       name: 'الإدارة',
-      tags: ['Profile', 'Dashboard', 'Admin', 'Order Management']
+      tags: ['Profile', 'Dashboard', 'Admin', 'Order Management', 'Artist Management']
     }
   ]
 };

@@ -16593,9 +16593,9 @@
     },
     "/api/admin/artists": {
       "get": {
-        "tags": ["Admin"],
+        "tags": ["Artist Management"],
         "summary": "جلب قائمة الفنانين",
-        "description": "جلب قائمة جميع الفنانين مع إحصائياتهم الأساسية",
+        "description": "جلب قائمة جميع الفنانين مع إحصائياتهم الأساسية للداشبورد الإداري",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
           {
@@ -16755,7 +16755,7 @@
     },
     "/api/admin/artists/{artistId}": {
       "get": {
-        "tags": ["Admin"],
+        "tags": ["Artist Management"],
         "summary": "جلب تفاصيل الفنان",
         "description": "جلب تفاصيل شاملة لفنان محدد تشمل الإحصائيات والأعمال والبلاغات والتقييمات وسجل النشاط",
         "security": [{ "BearerAuth": [] }],
@@ -17053,7 +17053,7 @@
     },
     "/api/admin/artists/{artistId}/status": {
       "patch": {
-        "tags": ["Admin"],
+        "tags": ["Artist Management"],
         "summary": "تحديث حالة الفنان",
         "description": "تحديث حالة الفنان (تفعيل/إلغاء تفعيل/حظر)",
         "security": [{ "BearerAuth": [] }],
