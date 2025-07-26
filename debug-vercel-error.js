@@ -1,142 +1,125 @@
+// Debug script for Vercel deployment issues
 import express from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Basic error handling
-app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-    error: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  });
+// Basic middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
 });
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'Health check passed',
+    message: 'Server is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    nodeVersion: process.version
+    nodeVersion: process.version,
+    platform: process.platform,
+    memory: process.memoryUsage(),
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT,
+      CONNECTION_URL: process.env.CONNECTION_URL ? 'SET' : 'NOT_SET',
+      TOKEN_KEY: process.env.TOKEN_KEY ? 'SET' : 'NOT_SET',
+      CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ? 'SET' : 'NOT_SET'
+    }
   });
 });
 
-// Database connection test
+// Database test endpoint
 app.get('/api/db-test', async (req, res) => {
   try {
-    console.log('🔍 Testing database connection...');
+    const connectionState = mongoose.connection.readyState;
+    const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
     
-    // Check environment variables
-    const envCheck = {
-      CONNECTION_URL: process.env.CONNECTION_URL ? 'Set' : 'Missing',
-      NODE_ENV: process.env.NODE_ENV || 'Not set',
-      TOKEN_KEY: process.env.TOKEN_KEY ? 'Set' : 'Missing'
-    };
-    
-    console.log('📊 Environment check:', envCheck);
-    
-    // Try to connect to MongoDB
-    if (process.env.CONNECTION_URL) {
-      try {
-        await mongoose.connect(process.env.CONNECTION_URL, {
-          serverSelectionTimeoutMS: 10000,
-          socketTimeoutMS: 45000,
-          connectTimeoutMS: 10000,
-          maxPoolSize: 1,
-          minPoolSize: 0,
-          bufferCommands: false,
-          autoIndex: false
-        });
-        
-        console.log('✅ Database connection successful');
-        
-        res.json({
-          success: true,
-          message: 'Database connection successful',
-          environment: envCheck,
-          dbState: mongoose.connection.readyState,
-          timestamp: new Date().toISOString()
-        });
-      } catch (dbError) {
-        console.error('❌ Database connection failed:', dbError.message);
-        
-        res.status(500).json({
-          success: false,
-          message: 'Database connection failed',
-          error: dbError.message,
-          environment: envCheck,
-          timestamp: new Date().toISOString()
-        });
+    res.json({
+      success: true,
+      database: {
+        state: states[connectionState] || 'unknown',
+        readyState: connectionState,
+        connectionUrl: process.env.CONNECTION_URL ? 'SET' : 'NOT_SET'
       }
-    } else {
-      res.status(500).json({
-        success: false,
-        message: 'CONNECTION_URL environment variable is missing',
-        environment: envCheck,
-        timestamp: new Date().toISOString()
-      });
-    }
+    });
   } catch (error) {
-    console.error('❌ General error:', error);
     res.status(500).json({
       success: false,
-      message: 'General error occurred',
       error: error.message,
-      timestamp: new Date().toISOString()
+      stack: error.stack
     });
   }
 });
 
-// Test basic imports
-app.get('/api/import-test', (req, res) => {
+// Test import endpoint
+app.get('/api/test-imports', (req, res) => {
   try {
-    // Test importing key modules
-    const modules = {
-      express: '✅',
-      mongoose: '✅',
-      dotenv: '✅'
+    // Test basic imports
+    const testImports = {
+      express: typeof express,
+      mongoose: typeof mongoose,
+      path: typeof path,
+      dotenv: typeof dotenv
     };
-    
-    // Test if we can import our modules
-    try {
-      import('./src/utils/asyncHandler.js').then(() => {
-        modules.asyncHandler = '✅';
-      }).catch(() => {
-        modules.asyncHandler = '❌';
-      });
-    } catch (e) {
-      modules.asyncHandler = '❌';
-    }
     
     res.json({
       success: true,
-      message: 'Import test completed',
-      modules,
-      timestamp: new Date().toISOString()
+      imports: testImports
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Import test failed',
       error: error.message,
-      timestamp: new Date().toISOString()
+      stack: error.stack
     });
   }
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.originalUrl
+  });
 });
 
 // Start server
 app.listen(port, () => {
   console.log(`🚀 Debug server running on port ${port}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${port}/api/health`);
+  console.log(`📊 Health check: http://localhost:${port}/api/health`);
   console.log(`🗄️ DB test: http://localhost:${port}/api/db-test`);
-  console.log(`📦 Import test: http://localhost:${port}/api/import-test`);
-}); 
+  console.log(`📦 Import test: http://localhost:${port}/api/test-imports`);
+});
+
+export default app; 
