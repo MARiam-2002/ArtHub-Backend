@@ -270,7 +270,11 @@ export const bootstrap = (app, express) => {
   });
 
   // 404 handler
-  app.all('*', (req, res, next) => next(new Error('not found page', { cause: 404 })));
+  app.all('*', (req, res, next) => {
+    const error = new Error('not found page');
+    error.status = 404;
+    next(error);
+  });
 
   // Global error handler
   app.use(globalErrorHandling);

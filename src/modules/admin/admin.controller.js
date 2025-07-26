@@ -15,6 +15,13 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 
+// تسجيل الـ models في Mongoose
+import '../../../DB/models/artwork.model.js';
+import '../../../DB/models/transaction.model.js';
+import '../../../DB/models/review.model.js';
+import '../../../DB/models/report.model.js';
+import '../../../DB/models/follow.model.js';
+
 /**
  * @desc    Get all admins
  * @route   GET /api/admin/admins
