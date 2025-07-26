@@ -3,6 +3,11 @@
 // CLOUDINARY ORGANIZED FOLDERS SYSTEM - UPDATED 2025-07-19
 import userModel from '../../../DB/models/user.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
+import artworkModel from '../../../DB/models/artwork.model.js';
+import transactionModel from '../../../DB/models/transaction.model.js';
+import reviewModel from '../../../DB/models/review.model.js';
+import reportModel from '../../../DB/models/report.model.js';
+import followModel from '../../../DB/models/follow.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 
@@ -1357,42 +1362,42 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     followersCount
   ] = await Promise.all([
     // عدد الأعمال الفنية
-    mongoose.model('Artwork').countDocuments({ artist: artistId, isDeleted: false }),
+    artworkModel.countDocuments({ artist: artistId, isDeleted: false }),
     
     // إجمالي المبيعات
-    mongoose.model('Transaction').aggregate([
+    transactionModel.aggregate([
       { $match: { artist: mongoose.Types.ObjectId(artistId), status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]),
     
     // عدد الطلبات المكتملة
-    mongoose.model('Transaction').countDocuments({ 
+    transactionModel.countDocuments({ 
       artist: artistId, 
       status: 'completed' 
     }),
     
     // متوسط التقييم
-    mongoose.model('Review').aggregate([
+    reviewModel.aggregate([
       { $match: { artist: mongoose.Types.ObjectId(artistId) } },
       { $group: { _id: null, avgRating: { $avg: '$rating' } } }
     ]),
     
     // عدد التقييمات
-    mongoose.model('Review').countDocuments({ artist: artistId }),
+    reviewModel.countDocuments({ artist: artistId }),
     
     // عدد البلاغات
-    mongoose.model('Report').countDocuments({ 
+    reportModel.countDocuments({ 
       reportedUser: artistId,
       status: { $ne: 'resolved' }
     }),
     
     // عدد المتابعين
-    mongoose.model('Follow').countDocuments({ following: artistId })
+    followModel.countDocuments({ following: artistId })
   ]);
 
   // جلب الأعمال الفنية مع pagination
   const skip = (parseInt(page) - 1) * parseInt(limit);
-  const artworks = await mongoose.model('Artwork').find({ 
+  const artworks = await artworkModel.find({ 
     artist: artistId, 
     isDeleted: false 
   })
@@ -1404,7 +1409,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     .lean();
 
   // جلب البلاغات
-  const reports = await mongoose.model('Report').find({ 
+  const reports = await reportModel.find({ 
     reportedUser: artistId 
   })
     .populate('reporter', 'displayName email')
@@ -1413,7 +1418,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     .lean();
 
   // جلب التقييمات
-  const reviews = await mongoose.model('Review').find({ 
+  const reviews = await reviewModel.find({ 
     artist: artistId 
   })
     .populate('reviewer', 'displayName')
@@ -1425,7 +1430,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
   // جلب سجل النشاط
   const activities = await Promise.all([
     // تسجيلات الدخول
-    mongoose.model('Token').find({ 
+    tokenModel.find({ 
       user: artistId,
       type: 'access'
     })
@@ -1434,7 +1439,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
       .lean(),
     
     // المعاملات
-    mongoose.model('Transaction').find({ 
+    transactionModel.find({ 
       artist: artistId 
     })
       .sort({ createdAt: -1 })
@@ -1442,7 +1447,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
       .lean(),
     
     // التقييمات
-    mongoose.model('Review').find({ 
+    reviewModel.find({ 
       artist: artistId 
     })
       .sort({ createdAt: -1 })
@@ -1591,20 +1596,20 @@ export const getAllArtists = asyncHandler(async (req, res, next) => {
         reviewsCount,
         reportsCount
       ] = await Promise.all([
-        mongoose.model('Artwork').countDocuments({ 
+        artworkModel.countDocuments({ 
           artist: artist._id, 
           isDeleted: false 
         }),
-        mongoose.model('Transaction').aggregate([
+        transactionModel.aggregate([
           { $match: { artist: artist._id, status: 'completed' } },
           { $group: { _id: null, total: { $sum: '$amount' } } }
         ]),
-        mongoose.model('Review').aggregate([
+        reviewModel.aggregate([
           { $match: { artist: artist._id } },
           { $group: { _id: null, avgRating: { $avg: '$rating' } } }
         ]),
-        mongoose.model('Review').countDocuments({ artist: artist._id }),
-        mongoose.model('Report').countDocuments({ 
+        reviewModel.countDocuments({ artist: artist._id }),
+        reportModel.countDocuments({ 
           reportedUser: artist._id,
           status: { $ne: 'resolved' }
         })
