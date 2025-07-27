@@ -86,6 +86,80 @@ router.put('/profile',
 
 /**
  * @swagger
+ * /user/cover-image:
+ *   put:
+ *     summary: Update user cover image
+ *     tags: [Profile]
+ *     description: Update the authenticated user's cover image. If a cover image exists, it will be updated. Otherwise, a new cover image will be uploaded.
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               coverImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Cover image file (JPG, PNG, GIF, WEBP)
+ *     responses:
+ *       200:
+ *         description: Cover image updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث صورة الغلاف بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     displayName:
+ *                       type: string
+ *                       example: "أحمد محمد"
+ *                     coverImages:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           url:
+ *                             type: string
+ *                             example: "https://res.cloudinary.com/example/image/upload/v123/cover.jpg"
+ *                           id:
+ *                             type: string
+ *                             example: "arthub/user-covers/507f1f77bcf86cd799439011/cover"
+ *                           type:
+ *                             type: string
+ *                             example: "cover"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-07-27T00:30:00.000Z"
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
+router.put('/cover-image',
+  isAuthenticated,
+  fileUpload(filterObject.image).single('coverImage'),
+  userController.updateCoverImage
+);
+
+/**
+ * @swagger
  * /user/change-password:
  *   put:
  *     summary: Change user password

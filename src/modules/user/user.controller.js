@@ -15,6 +15,102 @@ import cloudinary from '../../utils/cloudinary.js';
 // Removed errorHandler import - using direct error handling instead
 
 /**
+ * تحديث صورة الغلاف للمستخدم
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ */
+export const updateCoverImage = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const userId = req.user._id;
+    
+    // التحقق من وجود المستخدم
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
+    }
+
+    // التحقق من وجود ملف الصورة
+    if (!req.file) {
+      return res.fail(null, 'يرجى رفع صورة غلاف', 400);
+    }
+
+    console.log('🔄 تحديث صورة الغلاف للمستخدم:', userId);
+    console.log('📁 الملف المرفوع:', req.file.originalname);
+
+    try {
+      // التحقق من وجود صورة غلاف سابقة
+      if (user.coverImages && user.coverImages.length > 0) {
+        console.log('📁 يوجد صورة غلاف سابقة، سيتم تحديثها...');
+        
+        // رفع الصورة مع public_id الموجود
+        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+          req.file.path,
+          {
+            public_id: user.coverImages[0].id, // استخدام الـ public_id الموجود
+            overwrite: true
+          }
+        );
+        
+        console.log('✅ تم تحديث صورة الغلاف بنجاح');
+        console.log('🔗 الرابط الجديد:', secure_url);
+        console.log('🆔 Public ID المحدث:', public_id);
+        
+        // تحديث بيانات الصورة
+        user.coverImages[0].url = secure_url;
+        
+      } else {
+        console.log('📁 لا يوجد صورة غلاف سابقة، سيتم إنشاء واحدة جديدة...');
+        
+        // إنشاء صورة غلاف جديدة
+        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+          req.file.path,
+          {
+            folder: `arthub/user-covers/${user._id}`,
+            transformation: [
+              { width: 1200, height: 400, crop: 'fill', gravity: 'center' },
+              { quality: 'auto', fetch_format: 'auto' }
+            ]
+          }
+        );
+        
+        console.log('✅ تم رفع صورة الغلاف الجديدة بنجاح');
+        console.log('🔗 الرابط:', secure_url);
+        console.log('🆔 Public ID:', public_id);
+        
+        // إنشاء بيانات الصورة الجديدة
+        user.coverImages = [{
+          url: secure_url,
+          id: public_id,
+          type: 'cover'
+        }];
+      }
+      
+      console.log('✅ تم معالجة صورة الغلاف بنجاح');
+      
+      await user.save();
+      
+      res.success({
+        _id: user._id,
+        displayName: user.displayName,
+        coverImages: user.coverImages,
+        updatedAt: user.updatedAt
+      }, 'تم تحديث صورة الغلاف بنجاح');
+      
+    } catch (error) {
+      console.error('❌ خطأ في رفع صورة الغلاف:', error);
+      
+      return res.fail(null, 'فشل في رفع صورة الغلاف: ' + error.message, 400);
+    }
+    
+  } catch (error) {
+    console.error('Update cover image error:', error);
+    next(new Error('حدث خطأ أثناء تحديث صورة الغلاف', { cause: 500 }));
+  }
+});
+
+/**
  * تبديل العمل الفني في قائمة المفضلة
  * @param {Object} req - كائن الطلب
  * @param {Object} res - كائن الاستجابة
