@@ -18304,6 +18304,16 @@
           },
           {
             "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة للتصفح"
+          },
+          {
+            "in": "query",
             "name": "limit",
             "schema": {
               "type": "integer",
