@@ -17599,6 +17599,818 @@
         }
       }
     },
+    "/api/admin/artists/{artistId}/info": {
+      "get": {
+        "tags": [
+          "Artist Management"
+        ],
+        "summary": "جلب معلومات الفنان والإحصائيات",
+        "description": "جلب المعلومات الأساسية للفنان والإحصائيات المهمة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب معلومات الفنان بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب معلومات الفنان بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artist": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "example": "أحمد محمد"
+                            },
+                            "email": {
+                              "type": "string",
+                              "example": "ahmed@example.com"
+                            },
+                            "phone": {
+                              "type": "string",
+                              "example": "+966501234567"
+                            },
+                            "bio": {
+                              "type": "string",
+                              "example": "فنان تشكيلي متخصص في الرسم الزيتي"
+                            },
+                            "profileImage": {
+                              "type": "object",
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "location": {
+                              "type": "string",
+                              "example": "الرياض، السعودية"
+                            },
+                            "joinDate": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "isActive": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "isVerified": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "socialMedia": {
+                              "type": "object",
+                              "properties": {
+                                "instagram": {
+                                  "type": "string"
+                                },
+                                "twitter": {
+                                  "type": "string"
+                                },
+                                "facebook": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "artworksCount": {
+                              "type": "integer",
+                              "example": 15
+                            },
+                            "totalSales": {
+                              "type": "number",
+                              "example": 2500.50
+                            },
+                            "completedOrders": {
+                              "type": "integer",
+                              "example": 8
+                            },
+                            "avgRating": {
+                              "type": "number",
+                              "example": 4.5
+                            },
+                            "reviewsCount": {
+                              "type": "integer",
+                              "example": 12
+                            },
+                            "reportsCount": {
+                              "type": "integer",
+                              "example": 2
+                            },
+                            "followersCount": {
+                              "type": "integer",
+                              "example": 150
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/admin/artists/{artistId}/artworks": {
+      "get": {
+        "tags": [
+          "Artist Management"
+        ],
+        "summary": "جلب أعمال الفنان",
+        "description": "جلب أعمال الفنان مع دعم التصفح (pagination)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد الأعمال في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب أعمال الفنان بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب أعمال الفنان بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artist": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "example": "أحمد محمد"
+                            }
+                          }
+                        },
+                        "artworks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "example": "507f1f77bcf86cd799439012"
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "لوحة زيتية"
+                              },
+                              "price": {
+                                "type": "number",
+                                "example": 500.00
+                              },
+                              "isAvailable": {
+                                "type": "boolean",
+                                "example": true
+                              },
+                              "isFeatured": {
+                                "type": "boolean",
+                                "example": false
+                              },
+                              "viewCount": {
+                                "type": "integer",
+                                "example": 25
+                              },
+                              "images": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "url": {
+                                      "type": "string",
+                                      "format": "uri"
+                                    },
+                                    "id": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              },
+                              "category": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "example": "رسم زيتي"
+                                  }
+                                }
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "example": 10
+                            },
+                            "total": {
+                              "type": "integer",
+                              "example": 15
+                            },
+                            "pages": {
+                              "type": "integer",
+                              "example": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/admin/artists/{artistId}/reports": {
+      "get": {
+        "tags": [
+          "Artist Management"
+        ],
+        "summary": "جلب بلاغات الفنان",
+        "description": "جلب البلاغات المقدمة ضد الفنان مع دعم التصفح",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد البلاغات في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب بلاغات الفنان بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بلاغات الفنان بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artist": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "example": "أحمد محمد"
+                            }
+                          }
+                        },
+                        "reports": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "example": "507f1f77bcf86cd799439013"
+                              },
+                              "reporter": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "displayName": {
+                                    "type": "string",
+                                    "example": "محمد علي"
+                                  },
+                                  "email": {
+                                    "type": "string",
+                                    "example": "mohamed@example.com"
+                                  }
+                                }
+                              },
+                              "type": {
+                                "type": "string",
+                                "example": "inappropriate_content"
+                              },
+                              "description": {
+                                "type": "string",
+                                "example": "المحتوى غير مناسب"
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "pending"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "example": 10
+                            },
+                            "total": {
+                              "type": "integer",
+                              "example": 5
+                            },
+                            "pages": {
+                              "type": "integer",
+                              "example": 1
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/admin/artists/{artistId}/reviews": {
+      "get": {
+        "tags": [
+          "Artist Management"
+        ],
+        "summary": "جلب تقييمات الفنان",
+        "description": "جلب تقييمات الفنان مع دعم التصفح",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد التقييمات في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب تقييمات الفنان بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب تقييمات الفنان بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artist": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "example": "أحمد محمد"
+                            }
+                          }
+                        },
+                        "reviews": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
+                                "example": "507f1f77bcf86cd799439014"
+                              },
+                              "user": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "displayName": {
+                                    "type": "string",
+                                    "example": "سارة أحمد"
+                                  }
+                                }
+                              },
+                              "artwork": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string",
+                                    "example": "لوحة زيتية"
+                                  }
+                                }
+                              },
+                              "rating": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 5,
+                                "example": 5
+                              },
+                              "comment": {
+                                "type": "string",
+                                "example": "عمل رائع ومميز"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "example": 10
+                            },
+                            "total": {
+                              "type": "integer",
+                              "example": 12
+                            },
+                            "pages": {
+                              "type": "integer",
+                              "example": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/admin/artists/{artistId}/activity": {
+      "get": {
+        "tags": [
+          "Artist Management"
+        ],
+        "summary": "جلب سجل نشاط الفنان",
+        "description": "جلب سجل نشاط الفنان (تسجيلات دخول، طلبات، تقييمات)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "عدد الأنشطة المراد جلبها"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب سجل نشاط الفنان بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب سجل نشاط الفنان بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artist": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "example": "أحمد محمد"
+                            }
+                          }
+                        },
+                        "activities": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "login",
+                                  "request",
+                                  "review"
+                                ],
+                                "example": "login"
+                              },
+                              "icon": {
+                                "type": "string",
+                                "example": "🔐"
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "تسجيل دخول"
+                              },
+                              "description": {
+                                "type": "string",
+                                "example": "تم تسجيل الدخول من 192.168.1.1"
+                              },
+                              "date": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "status": {
+                                "type": "string",
+                                "example": "info"
+                              }
+                            }
+                          }
+                        },
+                        "totalActivities": {
+                          "type": "integer",
+                          "example": 15
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
     "/api/admin/artists/{artistId}/status": {
       "patch": {
         "tags": [
