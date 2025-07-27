@@ -1936,6 +1936,12 @@ router.get('/artists/:artistId/reviews',
  *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: Artist ID
  *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
@@ -1984,8 +1990,21 @@ router.get('/artists/:artistId/reviews',
  *                             format: date-time
  *                           status:
  *                             type: string
- *                     totalActivities:
- *                       type: integer
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                           description: Current page number
+ *                         limit:
+ *                           type: integer
+ *                           description: Number of items per page
+ *                         total:
+ *                           type: integer
+ *                           description: Total number of activities
+ *                         pages:
+ *                           type: integer
+ *                           description: Total number of pages
  *       400:
  *         description: Invalid artist ID
  *       401:

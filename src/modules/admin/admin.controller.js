@@ -1474,7 +1474,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     })),
     ...activities[1].map(request => ({
       type: 'request',
-      icon: request.requestType === 'custom_artwork' ? '🎨' : '🖼️',
+      icon: request.requestType === 'custom_artwork' ? '🎨' : '🛒',
       title: request.requestType === 'custom_artwork' 
         ? `طلب خاص #${request._id.toString().slice(-4)}`
         : `طلب عادي #${request._id.toString().slice(-4)}`,
@@ -2066,7 +2066,7 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { artistId } = req.params;
-  const { limit = 20 } = req.query;
+  const { page = 1, limit = 20 } = req.query;
 
   if (!mongoose.Types.ObjectId.isValid(artistId)) {
     return res.status(400).json({
@@ -2086,7 +2086,10 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // جلب سجل النشاط
+  // حساب الـ skip للـ pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // جلب سجل النشاط مع pagination
   const activities = await Promise.all([
     // تسجيلات الدخول
     tokenModel.find({ 
@@ -2094,7 +2097,6 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
       type: 'access'
     })
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit) / 3)
       .lean(),
     
     // الطلبات الخاصة
@@ -2102,7 +2104,6 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
       artist: new mongoose.Types.ObjectId(artistId) 
     })
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit) / 3)
       .lean(),
     
     // التقييمات
@@ -2110,7 +2111,6 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
       artist: new mongoose.Types.ObjectId(artistId) 
     })
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit) / 3)
       .lean()
   ]);
 
@@ -2126,7 +2126,7 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
     })),
     ...activities[1].map(request => ({
       type: 'request',
-      icon: request.requestType === 'custom_artwork' ? '🎨' : '🖼️',
+      icon: request.requestType === 'custom_artwork' ? '🎨' : '🛒',
       title: request.requestType === 'custom_artwork' 
         ? `طلب خاص #${request._id.toString().slice(-4)}`
         : `طلب عادي #${request._id.toString().slice(-4)}`,
@@ -2142,8 +2142,11 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
       date: review.createdAt,
       status: 'new'
     }))
-  ].sort((a, b) => new Date(b.date) - new Date(a.date))
-   .slice(0, parseInt(limit));
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // تطبيق pagination على النتائج المدمجة
+  const totalActivities = formattedActivities.length;
+  const paginatedActivities = formattedActivities.slice(skip, skip + parseInt(limit));
 
   res.json({
     success: true,
@@ -2153,8 +2156,13 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
         _id: artist._id,
         displayName: artist.displayName
       },
-      activities: formattedActivities,
-      totalActivities: formattedActivities.length
+      activities: paginatedActivities,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalActivities,
+        pages: Math.ceil(totalActivities / parseInt(limit))
+      }
     }
   });
 }); 
