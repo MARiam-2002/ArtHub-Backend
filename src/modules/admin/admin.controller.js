@@ -5,6 +5,7 @@ import userModel from '../../../DB/models/user.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
 import transactionModel from '../../../DB/models/transaction.model.js';
+import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import reviewModel from '../../../DB/models/review.model.js';
 import reportModel from '../../../DB/models/report.model.js';
 import followModel from '../../../DB/models/follow.model.js';
