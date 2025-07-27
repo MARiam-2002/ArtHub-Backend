@@ -1308,7 +1308,55 @@ export const getNotificationSettings = asyncHandler(async (req, res, next) => {
   }
 });
 
+/**
+ * تحديث bio (الوصف) للمستخدم
+ * @param {Object} req - كائن الطلب
+ * @param {Object} res - كائن الاستجابة
+ */
+export const updateBio = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const userId = req.user._id;
+    const { bio } = req.body;
+    
+    // التحقق من وجود المستخدم
+    const user = await userModel.findById(userId);
+    if (!user) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
+    }
 
+    // التحقق من وجود bio
+    if (!bio || bio.trim().length === 0) {
+      return res.fail(null, 'يرجى إدخال وصف صحيح', 400);
+    }
+
+    // التحقق من طول bio (حد أقصى 500 حرف)
+    if (bio.length > 500) {
+      return res.fail(null, 'الوصف طويل جداً، الحد الأقصى 500 حرف', 400);
+    }
+
+    console.log('🔄 تحديث bio للمستخدم:', userId);
+    console.log('📝 Bio الجديد:', bio);
+
+    // تحديث bio
+    user.bio = bio.trim();
+    await user.save();
+    
+    console.log('✅ تم تحديث bio بنجاح');
+    
+    res.success({
+      _id: user._id,
+      displayName: user.displayName,
+      bio: user.bio,
+      updatedAt: user.updatedAt
+    }, 'تم تحديث الوصف بنجاح');
+    
+  } catch (error) {
+    console.error('Update bio error:', error);
+    next(new Error('حدث خطأ أثناء تحديث الوصف', { cause: 500 }));
+  }
+});
 
 /**
  * Get top artists

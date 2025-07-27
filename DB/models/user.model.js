@@ -20,6 +20,9 @@ const userSchema = new Schema(
       type: String,
       default: 'مستخدم'
     },
+    bio: {
+      type: String,
+    },
 
     forgetCode: {
       type: String

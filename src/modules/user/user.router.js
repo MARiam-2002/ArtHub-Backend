@@ -160,6 +160,70 @@ router.put('/cover-image',
 
 /**
  * @swagger
+ * /user/bio:
+ *   put:
+ *     summary: Update user bio
+ *     tags: [Profile]
+ *     description: Update the authenticated user's bio (description)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               bio:
+ *                 type: string
+ *                 description: User bio/description (max 500 characters)
+ *                 example: "فنان تشكيلي متخصص في الرسم الزيتي والتصوير الفوتوغرافي"
+ *             required:
+ *               - bio
+ *     responses:
+ *       200:
+ *         description: Bio updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث الوصف بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     displayName:
+ *                       type: string
+ *                       example: "أحمد محمد"
+ *                     bio:
+ *                       type: string
+ *                       example: "فنان تشكيلي متخصص في الرسم الزيتي"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-07-27T00:30:00.000Z"
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/ServerError'
+ */
+router.put('/bio',
+  isAuthenticated,
+  userController.updateBio
+);
+
+/**
+ * @swagger
  * /user/change-password:
  *   put:
  *     summary: Change user password
