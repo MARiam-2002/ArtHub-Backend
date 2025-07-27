@@ -1623,6 +1623,386 @@ router.get('/artists/:artistId',
 
 /**
  * @swagger
+ * /api/admin/artists/{artistId}/info:
+ *   get:
+ *     summary: Get artist basic info and stats
+ *     tags: [Admin Dashboard]
+ *     description: Get artist basic information and statistics
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *     responses:
+ *       200:
+ *         description: Artist info retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب معلومات الفنان بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artist:
+ *                       $ref: '#/components/schemas/Artist'
+ *                     stats:
+ *                       type: object
+ *                       properties:
+ *                         artworksCount:
+ *                           type: integer
+ *                           example: 15
+ *                         totalSales:
+ *                           type: number
+ *                           example: 2500.50
+ *                         completedOrders:
+ *                           type: integer
+ *                           example: 8
+ *                         avgRating:
+ *                           type: number
+ *                           example: 4.5
+ *                         reviewsCount:
+ *                           type: integer
+ *                           example: 12
+ *                         reportsCount:
+ *                           type: integer
+ *                           example: 2
+ *                         followersCount:
+ *                           type: integer
+ *                           example: 150
+ *       400:
+ *         description: Invalid artist ID
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Artist not found
+ */
+router.get('/artists/:artistId/info',
+  authenticate,
+  isAuthorized('admin', 'superadmin'),
+  adminController.getArtistInfo
+);
+
+/**
+ * @swagger
+ * /api/admin/artists/{artistId}/artworks:
+ *   get:
+ *     summary: Get artist artworks
+ *     tags: [Admin Dashboard]
+ *     description: Get artist artworks with pagination
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Artist artworks retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب أعمال الفنان بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artist:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         displayName:
+ *                           type: string
+ *                     artworks:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Artwork'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Invalid artist ID
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Artist not found
+ */
+router.get('/artists/:artistId/artworks',
+  authenticate,
+  isAuthorized('admin', 'superadmin'),
+  adminController.getArtistArtworks
+);
+
+/**
+ * @swagger
+ * /api/admin/artists/{artistId}/reports:
+ *   get:
+ *     summary: Get artist reports
+ *     tags: [Admin Dashboard]
+ *     description: Get reports filed against the artist
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Artist reports retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب بلاغات الفنان بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artist:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         displayName:
+ *                           type: string
+ *                     reports:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Report'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Invalid artist ID
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Artist not found
+ */
+router.get('/artists/:artistId/reports',
+  authenticate,
+  isAuthorized('admin', 'superadmin'),
+  adminController.getArtistReports
+);
+
+/**
+ * @swagger
+ * /api/admin/artists/{artistId}/reviews:
+ *   get:
+ *     summary: Get artist reviews
+ *     tags: [Admin Dashboard]
+ *     description: Get reviews for the artist
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: Artist reviews retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب تقييمات الفنان بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artist:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         displayName:
+ *                           type: string
+ *                     reviews:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Review'
+ *                     pagination:
+ *                       $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Invalid artist ID
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Artist not found
+ */
+router.get('/artists/:artistId/reviews',
+  authenticate,
+  isAuthorized('admin', 'superadmin'),
+  adminController.getArtistReviews
+);
+
+/**
+ * @swagger
+ * /api/admin/artists/{artistId}/activity:
+ *   get:
+ *     summary: Get artist activity log
+ *     tags: [Admin Dashboard]
+ *     description: Get artist activity log (logins, requests, reviews)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: artistId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Artist ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of activities to return
+ *     responses:
+ *       200:
+ *         description: Artist activity retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب سجل نشاط الفنان بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     artist:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         displayName:
+ *                           type: string
+ *                     activities:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           type:
+ *                             type: string
+ *                             enum: [login, request, review]
+ *                           icon:
+ *                             type: string
+ *                           title:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           date:
+ *                             type: string
+ *                             format: date-time
+ *                           status:
+ *                             type: string
+ *                     totalActivities:
+ *                       type: integer
+ *       400:
+ *         description: Invalid artist ID
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         $ref: '#/components/responses/ForbiddenError'
+ *       404:
+ *         description: Artist not found
+ */
+router.get('/artists/:artistId/activity',
+  authenticate,
+  isAuthorized('admin', 'superadmin'),
+  adminController.getArtistActivity
+);
+
+/**
+ * @swagger
  * /api/admin/artists/{artistId}/status:
  *   patch:
  *     summary: Update artist status

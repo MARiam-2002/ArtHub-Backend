@@ -1726,3 +1726,415 @@ export const updateArtistStatus = asyncHandler(async (req, res, next) => {
     }
   });
 }); 
+
+/**
+ * @desc    Get artist basic info and stats
+ * @route   GET /api/admin/artists/:artistId/info
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getArtistInfo = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { artistId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(artistId)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الفنان غير صالح',
+      data: null
+    });
+  }
+
+  // جلب بيانات الفنان
+  const artist = await userModel.findById(artistId)
+    .select('-password')
+    .lean();
+
+  if (!artist || artist.role !== 'artist') {
+    return res.status(404).json({
+      success: false,
+      message: 'الفنان غير موجود',
+      data: null
+    });
+  }
+
+  // جلب إحصائيات الفنان
+  const [
+    artworksCount,
+    totalSales,
+    completedOrders,
+    avgRating,
+    reviewsCount,
+    reportsCount,
+    followersCount
+  ] = await Promise.all([
+    artworkModel.countDocuments({ artist: new mongoose.Types.ObjectId(artistId) }),
+    specialRequestModel.aggregate([
+      { $match: { artist: new mongoose.Types.ObjectId(artistId), status: 'completed' } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$finalPrice', '$budget'] } } } }
+    ]),
+    specialRequestModel.countDocuments({ 
+      artist: new mongoose.Types.ObjectId(artistId), 
+      status: 'completed' 
+    }),
+    reviewModel.aggregate([
+      { $match: { artist: new mongoose.Types.ObjectId(artistId) } },
+      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+    ]),
+    reviewModel.countDocuments({ artist: new mongoose.Types.ObjectId(artistId) }),
+    reportModel.countDocuments({ 
+      targetUser: new mongoose.Types.ObjectId(artistId),
+      status: { $ne: 'resolved' }
+    }),
+    followModel.countDocuments({ following: new mongoose.Types.ObjectId(artistId) })
+  ]);
+
+  res.json({
+    success: true,
+    message: 'تم جلب معلومات الفنان بنجاح',
+    data: {
+      artist: {
+        _id: artist._id,
+        displayName: artist.displayName,
+        email: artist.email,
+        phone: artist.phone,
+        bio: artist.bio,
+        profileImage: artist.profileImage,
+        location: artist.location,
+        joinDate: artist.createdAt,
+        isActive: artist.isActive,
+        isVerified: artist.isVerified,
+        socialMedia: artist.socialMedia
+      },
+      stats: {
+        artworksCount,
+        totalSales: totalSales[0]?.total || 0,
+        completedOrders,
+        avgRating: avgRating[0]?.avgRating || 0,
+        reviewsCount,
+        reportsCount,
+        followersCount
+      }
+    }
+  });
+});
+
+/**
+ * @desc    Get artist artworks with pagination
+ * @route   GET /api/admin/artists/:artistId/artworks
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getArtistArtworks = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { artistId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  if (!mongoose.Types.ObjectId.isValid(artistId)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الفنان غير صالح',
+      data: null
+    });
+  }
+
+  // التحقق من وجود الفنان
+  const artist = await userModel.findById(artistId).select('displayName');
+  if (!artist || artist.role !== 'artist') {
+    return res.status(404).json({
+      success: false,
+      message: 'الفنان غير موجود',
+      data: null
+    });
+  }
+
+  // جلب الأعمال الفنية مع pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const artworks = await artworkModel.find({ 
+    artist: new mongoose.Types.ObjectId(artistId) 
+  })
+    .select('title price isAvailable images category createdAt isFeatured viewCount')
+    .populate('category', 'name')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .lean();
+
+  // إجمالي عدد الأعمال
+  const totalArtworks = await artworkModel.countDocuments({ 
+    artist: new mongoose.Types.ObjectId(artistId) 
+  });
+
+  res.json({
+    success: true,
+    message: 'تم جلب أعمال الفنان بنجاح',
+    data: {
+      artist: {
+        _id: artist._id,
+        displayName: artist.displayName
+      },
+      artworks: artworks.map(artwork => ({
+        _id: artwork._id,
+        title: artwork.title,
+        price: artwork.price,
+        isAvailable: artwork.isAvailable,
+        isFeatured: artwork.isFeatured,
+        viewCount: artwork.viewCount,
+        images: artwork.images,
+        category: artwork.category,
+        createdAt: artwork.createdAt
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalArtworks,
+        pages: Math.ceil(totalArtworks / parseInt(limit))
+      }
+    }
+  });
+});
+
+/**
+ * @desc    Get artist reports
+ * @route   GET /api/admin/artists/:artistId/reports
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getArtistReports = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { artistId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  if (!mongoose.Types.ObjectId.isValid(artistId)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الفنان غير صالح',
+      data: null
+    });
+  }
+
+  // التحقق من وجود الفنان
+  const artist = await userModel.findById(artistId).select('displayName');
+  if (!artist || artist.role !== 'artist') {
+    return res.status(404).json({
+      success: false,
+      message: 'الفنان غير موجود',
+      data: null
+    });
+  }
+
+  // جلب البلاغات مع pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const reports = await reportModel.find({ 
+    targetUser: new mongoose.Types.ObjectId(artistId) 
+  })
+    .populate('reporter', 'displayName email')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .lean();
+
+  // إجمالي عدد البلاغات
+  const totalReports = await reportModel.countDocuments({ 
+    targetUser: new mongoose.Types.ObjectId(artistId) 
+  });
+
+  res.json({
+    success: true,
+    message: 'تم جلب بلاغات الفنان بنجاح',
+    data: {
+      artist: {
+        _id: artist._id,
+        displayName: artist.displayName
+      },
+      reports: reports.map(report => ({
+        _id: report._id,
+        reporter: report.reporter,
+        type: report.type,
+        description: report.description,
+        status: report.status,
+        createdAt: report.createdAt
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalReports,
+        pages: Math.ceil(totalReports / parseInt(limit))
+      }
+    }
+  });
+});
+
+/**
+ * @desc    Get artist reviews
+ * @route   GET /api/admin/artists/:artistId/reviews
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getArtistReviews = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { artistId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  if (!mongoose.Types.ObjectId.isValid(artistId)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الفنان غير صالح',
+      data: null
+    });
+  }
+
+  // التحقق من وجود الفنان
+  const artist = await userModel.findById(artistId).select('displayName');
+  if (!artist || artist.role !== 'artist') {
+    return res.status(404).json({
+      success: false,
+      message: 'الفنان غير موجود',
+      data: null
+    });
+  }
+
+  // جلب التقييمات مع pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const reviews = await reviewModel.find({ 
+    artist: new mongoose.Types.ObjectId(artistId) 
+  })
+    .populate('user', 'displayName')
+    .populate('artwork', 'title')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(parseInt(limit))
+    .lean();
+
+  // إجمالي عدد التقييمات
+  const totalReviews = await reviewModel.countDocuments({ 
+    artist: new mongoose.Types.ObjectId(artistId) 
+  });
+
+  res.json({
+    success: true,
+    message: 'تم جلب تقييمات الفنان بنجاح',
+    data: {
+      artist: {
+        _id: artist._id,
+        displayName: artist.displayName
+      },
+      reviews: reviews.map(review => ({
+        _id: review._id,
+        user: review.user,
+        artwork: review.artwork,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: review.createdAt
+      })),
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalReviews,
+        pages: Math.ceil(totalReviews / parseInt(limit))
+      }
+    }
+  });
+});
+
+/**
+ * @desc    Get artist activity log
+ * @route   GET /api/admin/artists/:artistId/activity
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getArtistActivity = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { artistId } = req.params;
+  const { limit = 20 } = req.query;
+
+  if (!mongoose.Types.ObjectId.isValid(artistId)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف الفنان غير صالح',
+      data: null
+    });
+  }
+
+  // التحقق من وجود الفنان
+  const artist = await userModel.findById(artistId).select('displayName');
+  if (!artist || artist.role !== 'artist') {
+    return res.status(404).json({
+      success: false,
+      message: 'الفنان غير موجود',
+      data: null
+    });
+  }
+
+  // جلب سجل النشاط
+  const activities = await Promise.all([
+    // تسجيلات الدخول
+    tokenModel.find({ 
+      user: new mongoose.Types.ObjectId(artistId),
+      type: 'access'
+    })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit) / 3)
+      .lean(),
+    
+    // الطلبات الخاصة
+    specialRequestModel.find({ 
+      artist: new mongoose.Types.ObjectId(artistId) 
+    })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit) / 3)
+      .lean(),
+    
+    // التقييمات
+    reviewModel.find({ 
+      artist: new mongoose.Types.ObjectId(artistId) 
+    })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit) / 3)
+      .lean()
+  ]);
+
+  // تنسيق سجل النشاط
+  const formattedActivities = [
+    ...activities[0].map(token => ({
+      type: 'login',
+      icon: '🔐',
+      title: 'تسجيل دخول',
+      description: `تم تسجيل الدخول من ${token.ip || 'جهاز غير معروف'}`,
+      date: token.createdAt,
+      status: 'info'
+    })),
+    ...activities[1].map(request => ({
+      type: 'request',
+      icon: request.requestType === 'custom_artwork' ? '🎨' : '🖼️',
+      title: request.requestType === 'custom_artwork' 
+        ? `طلب خاص #${request._id.toString().slice(-4)}`
+        : `طلب عادي #${request._id.toString().slice(-4)}`,
+      description: `طلب ${request.requestType === 'custom_artwork' ? 'خاص' : 'عادي'} بقيمة ${request.finalPrice || request.budget} ${request.currency}`,
+      date: request.createdAt,
+      status: request.status
+    })),
+    ...activities[2].map(review => ({
+      type: 'review',
+      icon: '⭐',
+      title: 'تقييم جديد',
+      description: `تم إرسال تقييم ${review.rating} نجوم للمنتج`,
+      date: review.createdAt,
+      status: 'new'
+    }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date))
+   .slice(0, parseInt(limit));
+
+  res.json({
+    success: true,
+    message: 'تم جلب سجل نشاط الفنان بنجاح',
+    data: {
+      artist: {
+        _id: artist._id,
+        displayName: artist.displayName
+      },
+      activities: formattedActivities,
+      totalActivities: formattedActivities.length
+    }
+  });
+}); 
