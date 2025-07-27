@@ -1894,7 +1894,8 @@ export const getArtistArtworks = asyncHandler(async (req, res, next) => {
       artworks: artworks.map(artwork => ({
         _id: artwork._id,
         title: artwork.title,
-        price: artwork.price,
+        price: parseFloat(artwork.price?.toFixed(2) || 0),
+        currency: artwork.currency || 'SAR',
         isAvailable: artwork.isAvailable,
         isFeatured: artwork.isFeatured,
         viewCount: artwork.viewCount,
