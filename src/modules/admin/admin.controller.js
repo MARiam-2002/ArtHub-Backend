@@ -1375,7 +1375,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     // إجمالي المبيعات من الطلبات الخاصة
     specialRequestModel.aggregate([
       { $match: { artist: new mongoose.Types.ObjectId(artistId), status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$finalPrice' } } }
+      { $group: { _id: null, total: { $sum: { $coalesce: ['$finalPrice', '$budget', 0] } } } }
     ]),
     
     // عدد الطلبات المكتملة
@@ -1613,7 +1613,7 @@ export const getAllArtists = asyncHandler(async (req, res, next) => {
         }),
         specialRequestModel.aggregate([
           { $match: { artist: artist._id, status: 'completed' } },
-          { $group: { _id: null, total: { $sum: '$finalPrice' } } }
+          { $group: { _id: null, total: { $sum: { $coalesce: ['$finalPrice', '$budget', 0] } } } }
         ]),
         reviewModel.aggregate([
           { $match: { artist: artist._id } },
