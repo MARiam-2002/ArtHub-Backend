@@ -779,12 +779,13 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
   // Get user statistics and latest orders
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
+  const tokenModel = (await import('../../../DB/models/token.model.js')).default;
 
-  const [totalOrders, totalSpent, totalReviews, averageRating, latestOrders] = await Promise.all([
+  const [totalOrders, totalSpent, totalReviews, averageRating, latestOrders, recentActivity] = await Promise.all([
     specialRequestModel.countDocuments({ user: id }),
     specialRequestModel.aggregate([
       { $match: { user: new mongoose.Types.ObjectId(id), status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$price' } } }
+      { $group: { _id: null, total: { $sum: '$finalPrice' } } }
     ]),
     reviewModel.countDocuments({ user: id }),
     reviewModel.aggregate([
@@ -796,8 +797,54 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
       .populate('artist', 'displayName profileImage')
       .sort({ createdAt: -1 })
       .limit(5)
-      .lean()
+      .lean(),
+    // Get recent activity (last 10 activities)
+    Promise.all([
+      tokenModel.find({ user: new mongoose.Types.ObjectId(id), type: 'access' })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .lean(),
+      specialRequestModel.find({ user: new mongoose.Types.ObjectId(id) })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .lean(),
+      reviewModel.find({ user: new mongoose.Types.ObjectId(id) })
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .lean()
+    ])
   ]);
+
+  // Format recent activity
+  const formattedActivity = [
+    ...recentActivity[0].map(token => ({
+      type: 'login',
+      icon: '🔐',
+      title: 'تسجيل دخول',
+      description: `تم تسجيل الدخول من ${token.ip || 'جهاز غير معروف'}`,
+      date: token.createdAt,
+      status: 'info'
+    })),
+    ...recentActivity[1].map(request => ({
+      type: 'request',
+      icon: request.requestType === 'custom_artwork' ? '🎨' : '🛒',
+      title: request.requestType === 'custom_artwork' 
+        ? `طلب خاص #${request._id.toString().slice(-4)}`
+        : `طلب عادي #${request._id.toString().slice(-4)}`,
+      description: `طلب ${request.requestType === 'custom_artwork' ? 'خاص' : 'عادي'} بقيمة ${request.finalPrice || request.budget} ${request.currency}`,
+      date: request.createdAt,
+      status: request.status
+    })),
+    ...recentActivity[2].map(review => ({
+      type: 'review',
+      icon: '⭐',
+      title: 'تقييم جديد',
+      description: `تم إرسال تقييم ${review.rating} نجوم للمنتج`,
+      date: review.createdAt,
+      status: 'new'
+    }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date))
+   .slice(0, 10);
 
   const userDetails = {
     _id: user._id,
@@ -820,19 +867,22 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
       totalOrders: totalOrders,
       totalSpent: totalSpent[0]?.total || 0,
       totalReviews: totalReviews,
-      averageRating: averageRating[0]?.avg || 0
+      averageRating: parseFloat((averageRating[0]?.avg || 0).toFixed(1))
     },
     // Latest orders for overview
     latestOrders: latestOrders.map(order => ({
       _id: order._id,
       title: order.title,
       description: order.description,
-      price: order.price,
+      price: parseFloat(order.finalPrice?.toFixed(2) || order.budget?.toFixed(2) || 0),
+      currency: order.currency || 'SAR',
       status: order.status,
       artist: order.artist,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt
-    }))
+    })),
+    // Recent activity
+    recentActivity: formattedActivity
   };
 
   res.json({
@@ -1093,13 +1143,14 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Get user orders
- * @route   GET /api/v1/users/:id/orders
+ * @route   GET /api/admin/users/:id/orders
  * @access  Private (Admin, SuperAdmin)
  */
 export const getUserOrders = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
+  const { page = 1, limit = 10, status } = req.query;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -1111,25 +1162,57 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
 
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
   
-  const orders = await specialRequestModel.find({ user: id })
-    .populate('artist', 'displayName profileImage')
-    .sort({ createdAt: -1 })
-    .lean();
+  // Build query
+  const query = { user: id };
+  if (status) {
+    query.status = status;
+  }
+
+  // Calculate skip for pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // Get orders with pagination
+  const [orders, totalOrders] = await Promise.all([
+    specialRequestModel.find(query)
+      .populate('artist', 'displayName profileImage')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean(),
+    specialRequestModel.countDocuments(query)
+  ]);
+
+  const formattedOrders = orders.map(order => ({
+    _id: order._id,
+    title: order.title,
+    description: order.description,
+    price: parseFloat(order.finalPrice?.toFixed(2) || order.budget?.toFixed(2) || 0),
+    currency: order.currency || 'SAR',
+    status: order.status,
+    requestType: order.requestType,
+    artist: order.artist,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    // Additional details
+    budget: order.budget,
+    finalPrice: order.finalPrice,
+    duration: order.duration,
+    deadline: order.deadline,
+    requirements: order.requirements,
+    attachments: order.attachments
+  }));
 
   res.json({
     success: true,
     message: 'تم جلب طلبات المستخدم بنجاح',
     data: {
-      orders: orders.map(order => ({
-        _id: order._id,
-        title: order.title,
-        description: order.description,
-        price: order.price,
-        status: order.status,
-        artist: order.artist,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      }))
+      orders: formattedOrders,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalOrders,
+        pages: Math.ceil(totalOrders / parseInt(limit))
+      }
     }
   });
 });
@@ -1143,6 +1226,7 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
+  const { page = 1, limit = 10 } = req.query;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -1154,37 +1238,63 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
 
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
   
-  const reviews = await reviewModel.find({ user: id })
-    .populate('artist', 'displayName profileImage')
-    .populate('artwork', 'title image')
-    .sort({ createdAt: -1 })
-    .lean();
+  // Calculate skip for pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  // Get reviews with pagination
+  const [reviews, totalReviews] = await Promise.all([
+    reviewModel.find({ user: id })
+      .populate('artist', 'displayName profileImage')
+      .populate('artwork', 'title image')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean(),
+    reviewModel.countDocuments({ user: id })
+  ]);
+
+  const formattedReviews = reviews.map(review => ({
+    _id: review._id,
+    rating: review.rating,
+    title: review.title,
+    comment: review.comment,
+    artist: review.artist,
+    artwork: review.artwork,
+    createdAt: review.createdAt,
+    // Additional details
+    pros: review.pros,
+    cons: review.cons,
+    isRecommended: review.isRecommended,
+    subRatings: review.subRatings,
+    workingExperience: review.workingExperience,
+    anonymous: review.anonymous
+  }));
 
   res.json({
     success: true,
     message: 'تم جلب تقييمات المستخدم بنجاح',
     data: {
-      reviews: reviews.map(review => ({
-        _id: review._id,
-        rating: review.rating,
-        comment: review.comment,
-        artist: review.artist,
-        artwork: review.artwork,
-        createdAt: review.createdAt
-      }))
+      reviews: formattedReviews,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalReviews,
+        pages: Math.ceil(totalReviews / parseInt(limit))
+      }
     }
   });
 });
 
 /**
  * @desc    Get user activity
- * @route   GET /api/v1/users/:id/activity
+ * @route   GET /api/admin/users/:id/activity
  * @access  Private (Admin, SuperAdmin)
  */
 export const getUserActivity = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
+  const { page = 1, limit = 20 } = req.query;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -1194,47 +1304,71 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
     });
   }
 
+  // Calculate skip for pagination
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
   // Get users recent activity from various collections
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
-  const artworkModel = (await import('../../../DB/models/artwork.model.js')).default;
+  const tokenModel = (await import('../../../DB/models/token.model.js')).default;
 
-  const [recentOrders, recentReviews, recentArtworks] = await Promise.all([
-    specialRequestModel.find({ user: id })
+  const [recentLogins, recentOrders, recentReviews] = await Promise.all([
+    tokenModel.find({ user: new mongoose.Types.ObjectId(id), type: 'access' })
       .sort({ createdAt: -1 })
-      .limit(5)      .lean(),
-    reviewModel.find({ user: id })
+      .lean(),
+    specialRequestModel.find({ user: new mongoose.Types.ObjectId(id) })
       .sort({ createdAt: -1 })
-      .limit(5)      .lean(),
-    artworkModel.find({ artist: id })
+      .lean(),
+    reviewModel.find({ user: new mongoose.Types.ObjectId(id) })
       .sort({ createdAt: -1 })
-      .limit(5)   .lean()
+      .lean()
   ]);
 
-  const activity = [
+  // Format activities
+  const formattedActivities = [
+    ...recentLogins.map(token => ({
+      type: 'login',
+      icon: '🔐',
+      title: 'تسجيل دخول',
+      description: `تم تسجيل الدخول من ${token.ip || 'جهاز غير معروف'}`,
+      date: token.createdAt,
+      status: 'info'
+    })),
     ...recentOrders.map(order => ({
-      type: 'order',  action: 'created',
-      item: order,
-      date: order.createdAt
+      type: 'request',
+      icon: order.requestType === 'custom_artwork' ? '🎨' : '🛒',
+      title: order.requestType === 'custom_artwork' 
+        ? `طلب خاص #${order._id.toString().slice(-4)}`
+        : `طلب عادي #${order._id.toString().slice(-4)}`,
+      description: `طلب ${order.requestType === 'custom_artwork' ? 'خاص' : 'عادي'} بقيمة ${order.finalPrice || order.budget} ${order.currency}`,
+      date: order.createdAt,
+      status: order.status
     })),
     ...recentReviews.map(review => ({
-      type: 'review',  action: 'created',
-      item: review,
-      date: review.createdAt
-    })),
-    ...recentArtworks.map(artwork => ({
-      type: 'artwork',  action: 'created',
-      item: artwork,
-      date: artwork.createdAt
+      type: 'review',
+      icon: '⭐',
+      title: 'تقييم جديد',
+      description: `تم إرسال تقييم ${review.rating} نجوم للمنتج`,
+      date: review.createdAt,
+      status: 'new'
     }))
-  ].sort((a, b) => new Date(b.date) - new Date(a.date))
-   .slice(0, 10);
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Apply pagination
+  const totalActivities = formattedActivities.length;
+  const paginatedActivities = formattedActivities.slice(skip, skip + parseInt(limit));
 
   res.json({
     success: true,
     message: 'تم جلب نشاط المستخدم بنجاح',
     data: {
-      activity
+      activities: paginatedActivities,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalActivities,
+        pages: Math.ceil(totalActivities / parseInt(limit))
+      }
     }
   });
 });

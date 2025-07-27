@@ -910,10 +910,6 @@ export const adminPaths = {
                   message: {
                     type: 'string',
                     example: 'الأدمن غير موجود'
-                  },
-                  data: {
-                    type: 'null',
-                    example: null
                   }
                 }
               }
@@ -1610,7 +1606,7 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'جلب تفاصيل المستخدم',
-      description: 'جلب معلومات مفصلة عن مستخدم محدد',
+      description: 'جلب معلومات مفصلة عن مستخدم محدد مع الإحصائيات والنشاط الأخير',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -1618,7 +1614,8 @@ export const adminPaths = {
           name: 'id',
           required: true,
           schema: {
-            type: 'string'
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$'
           },
           description: 'معرف المستخدم'
         }
@@ -1643,24 +1640,147 @@ export const adminPaths = {
                     type: 'object',
                     properties: {
                       _id: {
-                        type: 'string'
+                        type: 'string',
+                        example: '507f1f77bcf86cd799439011'
                       },
                       displayName: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'عمر خالد محمد'
                       },
                       email: {
-                        type: 'string'
+                        type: 'string',
+                        example: 'omar.2004@gmail.com'
+                      },
+                      phoneNumber: {
+                        type: 'string',
+                        example: '+96620140067845'
                       },
                       role: {
                         type: 'string',
-                        enum: ['user', 'artist']
+                        enum: ['user', 'artist'],
+                        example: 'user'
                       },
                       isActive: {
-                        type: 'boolean'
+                        type: 'boolean',
+                        example: true
+                      },
+                      isVerified: {
+                        type: 'boolean',
+                        example: true
+                      },
+                      profileImage: {
+                        type: 'object'
+                      },
+                      coverImages: {
+                        type: 'array',
+                        items: {
+                          type: 'object'
+                        }
+                      },
+                      bio: {
+                        type: 'string'
+                      },
+                      job: {
+                        type: 'string'
+                      },
+                      location: {
+                        type: 'string',
+                        example: 'القاهرة, مصر'
+                      },
+                      lastActive: {
+                        type: 'string',
+                        format: 'date-time'
                       },
                       createdAt: {
                         type: 'string',
                         format: 'date-time'
+                      },
+                      updatedAt: {
+                        type: 'string',
+                        format: 'date-time'
+                      },
+                      statistics: {
+                        type: 'object',
+                        properties: {
+                          totalOrders: {
+                            type: 'integer',
+                            example: 12
+                          },
+                          totalSpent: {
+                            type: 'number',
+                            example: 2450
+                          },
+                          totalReviews: {
+                            type: 'integer',
+                            example: 8
+                          },
+                          averageRating: {
+                            type: 'number',
+                            example: 4.8
+                          }
+                        }
+                      },
+                      latestOrders: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            _id: {
+                              type: 'string'
+                            },
+                            title: {
+                              type: 'string'
+                            },
+                            description: {
+                              type: 'string'
+                            },
+                            price: {
+                              type: 'number'
+                            },
+                            currency: {
+                              type: 'string',
+                              example: 'SAR'
+                            },
+                            status: {
+                              type: 'string'
+                            },
+                            artist: {
+                              type: 'object'
+                            },
+                            createdAt: {
+                              type: 'string',
+                              format: 'date-time'
+                            }
+                          }
+                        }
+                      },
+                      recentActivity: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            type: {
+                              type: 'string',
+                              enum: ['login', 'request', 'review']
+                            },
+                            icon: {
+                              type: 'string'
+                            },
+                            title: {
+                              type: 'string'
+                            },
+                            description: {
+                              type: 'string'
+                            },
+                            date: {
+                              type: 'string',
+                              format: 'date-time'
+                            },
+                            status: {
+                              type: 'string'
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -1669,8 +1789,8 @@ export const adminPaths = {
             }
           }
         },
-        401: {
-          description: 'غير مصرح',
+        400: {
+          description: 'معرف مستخدم غير صالح',
           content: {
             'application/json': {
               schema: {
@@ -1682,32 +1802,18 @@ export const adminPaths = {
                   },
                   message: {
                     type: 'string',
-                    example: 'غير مصرح'
+                    example: 'معرف المستخدم غير صالح'
                   }
                 }
               }
             }
           }
         },
+        401: {
+          $ref: '#/components/responses/UnauthorizedError'
+        },
         403: {
-          description: 'ممنوع - الأدمن فقط',
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  success: {
-                    type: 'boolean',
-                    example: false
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'غير مصرح لك بالوصول لهذا المورد'
-                  }
-                }
-              }
-            }
-          }
+          $ref: '#/components/responses/ForbiddenError'
         },
         404: {
           description: 'المستخدم غير موجود',
@@ -2109,7 +2215,7 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'جلب طلبات المستخدم',
-      description: 'جلب جميع طلبات مستخدم محدد',
+      description: 'جلب جميع طلبات المستخدم مع إمكانية التصفية والتصفح',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -2117,7 +2223,8 @@ export const adminPaths = {
           name: 'id',
           required: true,
           schema: {
-            type: 'string'
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$'
           },
           description: 'معرف المستخدم'
         },
@@ -2126,47 +2233,30 @@ export const adminPaths = {
           name: 'page',
           schema: {
             type: 'integer',
+            minimum: 1,
             default: 1
           },
-          description: 'رقم الصفحة'
+          description: 'رقم الصفحة للتصفح'
         },
         {
           in: 'query',
           name: 'limit',
           schema: {
             type: 'integer',
-            default: 20
+            minimum: 1,
+            maximum: 100,
+            default: 10
           },
-          description: 'عدد العناصر في الصفحة'
+          description: 'عدد الطلبات في الصفحة'
         },
         {
           in: 'query',
           name: 'status',
           schema: {
             type: 'string',
-            enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled']
+            enum: ['pending', 'accepted', 'in_progress', 'completed', 'rejected', 'cancelled']
           },
           description: 'تصفية حسب حالة الطلب'
-        },
-        {
-          in: 'query',
-          name: 'sortBy',
-          schema: {
-            type: 'string',
-            enum: ['createdAt', 'updatedAt', 'price'],
-            default: 'createdAt'
-          },
-          description: 'حقل الترتيب'
-        },
-        {
-          in: 'query',
-          name: 'sortOrder',
-          schema: {
-            type: 'string',
-            enum: ['asc', 'desc'],
-            default: 'desc'
-          },
-          description: 'ترتيب النتائج'
         }
       ],
       responses: {
@@ -2194,15 +2284,97 @@ export const adminPaths = {
                           type: 'object',
                           properties: {
                             _id: {
+                              type: 'string',
+                              example: '507f1f77bcf86cd799439011'
+                            },
+                            title: {
+                              type: 'string',
+                              example: 'لوحة زيتية مخصصة'
+                            },
+                            description: {
                               type: 'string'
                             },
+                            price: {
+                              type: 'number',
+                              example: 850
+                            },
+                            currency: {
+                              type: 'string',
+                              example: 'SAR'
+                            },
                             status: {
+                              type: 'string',
+                              example: 'completed'
+                            },
+                            requestType: {
+                              type: 'string',
+                              example: 'custom_artwork'
+                            },
+                            artist: {
+                              type: 'object',
+                              properties: {
+                                _id: {
+                                  type: 'string'
+                                },
+                                displayName: {
+                                  type: 'string'
+                                },
+                                profileImage: {
+                                  type: 'object'
+                                }
+                              }
+                            },
+                            budget: {
+                              type: 'number'
+                            },
+                            finalPrice: {
+                              type: 'number'
+                            },
+                            duration: {
                               type: 'string'
+                            },
+                            deadline: {
+                              type: 'string',
+                              format: 'date-time'
+                            },
+                            requirements: {
+                              type: 'string'
+                            },
+                            attachments: {
+                              type: 'array',
+                              items: {
+                                type: 'object'
+                              }
                             },
                             createdAt: {
                               type: 'string',
                               format: 'date-time'
+                            },
+                            updatedAt: {
+                              type: 'string',
+                              format: 'date-time'
                             }
+                          }
+                        }
+                      },
+                      pagination: {
+                        type: 'object',
+                        properties: {
+                          page: {
+                            type: 'integer',
+                            description: 'رقم الصفحة الحالية'
+                          },
+                          limit: {
+                            type: 'integer',
+                            description: 'عدد العناصر في الصفحة'
+                          },
+                          total: {
+                            type: 'integer',
+                            description: 'إجمالي عدد الطلبات'
+                          },
+                          pages: {
+                            type: 'integer',
+                            description: 'إجمالي عدد الصفحات'
                           }
                         }
                       },
@@ -2298,7 +2470,7 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'جلب تقييمات المستخدم',
-      description: 'جلب جميع تقييمات مستخدم محدد',
+      description: 'جلب جميع تقييمات المستخدم مع إمكانية التصفح',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -2306,7 +2478,8 @@ export const adminPaths = {
           name: 'id',
           required: true,
           schema: {
-            type: 'string'
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$'
           },
           description: 'معرف المستخدم'
         },
@@ -2315,48 +2488,21 @@ export const adminPaths = {
           name: 'page',
           schema: {
             type: 'integer',
+            minimum: 1,
             default: 1
           },
-          description: 'رقم الصفحة'
+          description: 'رقم الصفحة للتصفح'
         },
         {
           in: 'query',
           name: 'limit',
           schema: {
             type: 'integer',
-            default: 20
-          },
-          description: 'عدد العناصر في الصفحة'
-        },
-        {
-          in: 'query',
-          name: 'rating',
-          schema: {
-            type: 'integer',
             minimum: 1,
-            maximum: 5
+            maximum: 100,
+            default: 10
           },
-          description: 'تصفية حسب التقييم'
-        },
-        {
-          in: 'query',
-          name: 'sortBy',
-          schema: {
-            type: 'string',
-            enum: ['createdAt', 'rating'],
-            default: 'createdAt'
-          },
-          description: 'حقل الترتيب'
-        },
-        {
-          in: 'query',
-          name: 'sortOrder',
-          schema: {
-            type: 'string',
-            enum: ['asc', 'desc'],
-            default: 'desc'
-          },
-          description: 'ترتيب النتائج'
+          description: 'عدد التقييمات في الصفحة'
         }
       ],
       responses: {
@@ -2491,7 +2637,7 @@ export const adminPaths = {
     get: {
       tags: ['Admin'],
       summary: 'جلب نشاط المستخدم',
-      description: 'جلب سجل النشاط لمستخدم محدد',
+      description: 'جلب سجل النشاط لمستخدم محدد (تسجيلات دخول، طلبات، تقييمات)',
       security: [{ BearerAuth: [] }],
       parameters: [
         {
@@ -2499,7 +2645,8 @@ export const adminPaths = {
           name: 'id',
           required: true,
           schema: {
-            type: 'string'
+            type: 'string',
+            pattern: '^[0-9a-fA-F]{24}$'
           },
           description: 'معرف المستخدم'
         },
@@ -2508,45 +2655,21 @@ export const adminPaths = {
           name: 'page',
           schema: {
             type: 'integer',
+            minimum: 1,
             default: 1
           },
-          description: 'رقم الصفحة'
+          description: 'رقم الصفحة للتصفح'
         },
         {
           in: 'query',
           name: 'limit',
           schema: {
             type: 'integer',
+            minimum: 1,
+            maximum: 100,
             default: 20
           },
-          description: 'عدد العناصر في الصفحة'
-        },
-        {
-          in: 'query',
-          name: 'activityType',
-          schema: {
-            type: 'string',
-            enum: ['login', 'order', 'review', 'profile_update', 'artwork_view']
-          },
-          description: 'تصفية حسب نوع النشاط'
-        },
-        {
-          in: 'query',
-          name: 'dateFrom',
-          schema: {
-            type: 'string',
-            format: 'date'
-          },
-          description: 'تاريخ البداية'
-        },
-        {
-          in: 'query',
-          name: 'dateTo',
-          schema: {
-            type: 'string',
-            format: 'date'
-          },
-          description: 'تاريخ النهاية'
+          description: 'عدد الأنشطة في الصفحة'
         }
       ],
       responses: {
