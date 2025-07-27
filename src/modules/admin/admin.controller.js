@@ -1394,7 +1394,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     
     // عدد البلاغات
     reportModel.countDocuments({ 
-      reportedUser: new mongoose.Types.ObjectId(artistId),
+      targetUser: new mongoose.Types.ObjectId(artistId),
       status: { $ne: 'resolved' }
     }),
     
@@ -1416,7 +1416,7 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
 
   // جلب البلاغات
   const reports = await reportModel.find({ 
-    reportedUser: new mongoose.Types.ObjectId(artistId) 
+    targetUser: new mongoose.Types.ObjectId(artistId) 
   })
     .populate('reporter', 'displayName email')
     .sort({ createdAt: -1 })
@@ -1618,7 +1618,7 @@ export const getAllArtists = asyncHandler(async (req, res, next) => {
         ]),
         reviewModel.countDocuments({ artist: artist._id }),
         reportModel.countDocuments({ 
-          reportedUser: artist._id,
+          targetUser: artist._id,
           status: { $ne: 'resolved' }
         })
       ]);
