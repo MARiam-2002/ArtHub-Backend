@@ -1871,7 +1871,7 @@ export const getArtistArtworks = asyncHandler(async (req, res, next) => {
   const artworks = await artworkModel.find({ 
     artist: new mongoose.Types.ObjectId(artistId) 
   })
-    .select('title price isAvailable images category createdAt isFeatured viewCount')
+    .select('title price isAvailable image images category createdAt isFeatured viewCount')
     .populate('category', 'name')
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -1898,7 +1898,8 @@ export const getArtistArtworks = asyncHandler(async (req, res, next) => {
         isAvailable: artwork.isAvailable,
         isFeatured: artwork.isFeatured,
         viewCount: artwork.viewCount,
-        images: artwork.images,
+        image: artwork.image,
+        images: artwork.images || [],
         category: artwork.category,
         createdAt: artwork.createdAt
       })),
