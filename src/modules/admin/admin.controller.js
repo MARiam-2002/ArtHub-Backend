@@ -1840,13 +1840,30 @@ export const getArtistArtworks = asyncHandler(async (req, res, next) => {
   }
 
   // التحقق من وجود الفنان
-  const artist = await userModel.findById(artistId).select('displayName');
-  if (!artist || artist.role !== 'artist') {
+  const artist = await userModel.findById(artistId).select('displayName role');
+  if (!artist) {
     return res.status(404).json({
       success: false,
       message: 'الفنان غير موجود',
       data: null
     });
+  }
+  
+  // إذا كان الدور ليس 'artist'، نتحقق من وجود أعمال فنية
+  if (artist.role !== 'artist') {
+    const artworksCount = await artworkModel.countDocuments({ 
+      artist: new mongoose.Types.ObjectId(artistId) 
+    });
+    
+    if (artworksCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'الفنان غير موجود أو لا توجد له أعمال فنية',
+        data: null
+      });
+    }
+    
+    console.log(`⚠️ المستخدم ${artist.displayName} له دور ${artist.role} ولكن لديه ${artworksCount} أعمال فنية`);
   }
 
   // جلب الأعمال الفنية مع pagination
