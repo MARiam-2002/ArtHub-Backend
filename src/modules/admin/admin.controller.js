@@ -1934,8 +1934,8 @@ export const getArtistReports = asyncHandler(async (req, res, next) => {
   }
 
   // التحقق من وجود الفنان
-  const artist = await userModel.findById(artistId).select('displayName');
-  if (!artist || artist.role !== 'artist') {
+  const artist = await userModel.findById(artistId).select('displayName role');
+  if (!artist) {
     return res.status(404).json({
       success: false,
       message: 'الفنان غير موجود',
@@ -2005,8 +2005,8 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
   }
 
   // التحقق من وجود الفنان
-  const artist = await userModel.findById(artistId).select('displayName');
-  if (!artist || artist.role !== 'artist') {
+  const artist = await userModel.findById(artistId).select('displayName role');
+  if (!artist) {
     return res.status(404).json({
       success: false,
       message: 'الفنان غير موجود',
@@ -2077,8 +2077,8 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
   }
 
   // التحقق من وجود الفنان
-  const artist = await userModel.findById(artistId).select('displayName');
-  if (!artist || artist.role !== 'artist') {
+  const artist = await userModel.findById(artistId).select('displayName role');
+  if (!artist) {
     return res.status(404).json({
       success: false,
       message: 'الفنان غير موجود',
