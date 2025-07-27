@@ -17666,16 +17666,14 @@
                               "example": "فنان تشكيلي متخصص في الرسم الزيتي"
                             },
                             "profileImage": {
-                              "type": "object",
-                              "properties": {
-                                "url": {
-                                  "type": "string",
-                                  "format": "uri"
-                                },
-                                "id": {
-                                  "type": "string"
-                                }
-                              }
+                              "type": "string",
+                              "format": "uri",
+                              "example": "https://res.cloudinary.com/example/image/upload/v123/profile.jpg"
+                            },
+                            "coverImage": {
+                              "type": "string",
+                              "format": "uri",
+                              "example": "https://res.cloudinary.com/example/image/upload/v123/cover.jpg"
                             },
                             "location": {
                               "type": "string",
