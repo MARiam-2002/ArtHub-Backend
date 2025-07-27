@@ -1474,9 +1474,11 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     })),
     ...activities[1].map(request => ({
       type: 'request',
-      icon: '🎨',
-      title: `طلب خاص #${request._id.toString().slice(-4)}`,
-      description: `طلب ${request.requestType} بقيمة ${request.finalPrice || request.budget} ${request.currency}`,
+      icon: request.requestType === 'custom_artwork' ? '🎨' : '🖼️',
+      title: request.requestType === 'custom_artwork' 
+        ? `طلب خاص #${request._id.toString().slice(-4)}`
+        : `طلب عادي #${request._id.toString().slice(-4)}`,
+      description: `طلب ${request.requestType === 'custom_artwork' ? 'خاص' : 'عادي'} بقيمة ${request.finalPrice || request.budget} ${request.currency}`,
       date: request.createdAt,
       status: request.status
     })),
