@@ -1121,30 +1121,46 @@
         "type": "object",
         "required": [
           "title",
-          "price",
+          "description",
           "category",
           "images"
         ],
         "properties": {
           "title": {
-            "type": "string",
-            "description": "عنوان العمل الفني",
-            "example": "لوحة فنية زهرية زرقاء مرسومة يدويا",
-            "minLength": 3,
-            "maxLength": 100
+            "type": "object",
+            "required": [
+              "ar"
+            ],
+            "properties": {
+              "ar": {
+                "type": "string",
+                "example": "لوحة فنية جميلة"
+              },
+              "en": {
+                "type": "string",
+                "example": "Beautiful Artwork"
+              }
+            }
           },
-          "price": {
-            "type": "number",
-            "description": "سعر العمل الفني",
-            "example": 100,
-            "minimum": 1,
-            "maximum": 1000000
+          "description": {
+            "type": "object",
+            "required": [
+              "ar"
+            ],
+            "properties": {
+              "ar": {
+                "type": "string",
+                "example": "وصف اللوحة الفنية"
+              },
+              "en": {
+                "type": "string",
+                "example": "Artwork description"
+              }
+            }
           },
           "category": {
             "type": "string",
-            "description": "معرف الفئة",
-            "example": "60d0fe4f5311236168a109ca",
-            "pattern": "^[0-9a-fA-F]{24}$"
+            "example": "60d0fe4f5311236168a109ca"
           },
           "images": {
             "type": "array",
@@ -1152,9 +1168,60 @@
               "type": "string",
               "format": "binary"
             },
-            "description": "صور العمل الفني (1-5 صور)",
             "minItems": 1,
-            "maxItems": 5
+            "maxItems": 10
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0,
+            "example": 500
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "SAR",
+              "USD",
+              "EUR"
+            ],
+            "default": "SAR",
+            "example": "SAR"
+          },
+          "dimensions": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number",
+                "minimum": 0,
+                "example": 50
+              },
+              "height": {
+                "type": "number",
+                "minimum": 0,
+                "example": 70
+              },
+              "unit": {
+                "type": "string",
+                "enum": [
+                  "cm",
+                  "inch",
+                  "m"
+                ],
+                "default": "cm",
+                "example": "cm"
+              }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "example": [
+              "فن",
+              "لوحة",
+              "زيتي"
+            ]
           }
         }
       },
@@ -13566,19 +13633,17 @@
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 100,
-                  "default": 20,
-                  "description": "عدد العناصر في الصفحة"
+                  "default": 20
                 },
                 {
                   "type": "string",
                   "enum": [
                     "full"
-                  ],
-                  "description": "استخدم 'full' لجلب جميع العناصر بدون pagination"
+                  ]
                 }
               ]
             },
-            "description": "عدد العناصر في الصفحة أو 'full' لجلب جميع العناصر"
+            "description": "عدد العناصر في الصفحة أو \"full\" لجلب جميع العناصر"
           }
         ],
         "responses": {
@@ -13741,7 +13806,7 @@
           "Order Management"
         ],
         "summary": "جلب جميع الطلبات",
-        "description": "جلب قائمة جميع الطلبات مع التصفية والترتيب والتصفح. استخدم limit=full لجلب جميع الطلبات بدون pagination.",
+        "description": "جلب قائمة جميع الطلبات مع التصفية والترتيب والتصفح",
         "security": [
           {
             "BearerAuth": []
@@ -13761,22 +13826,10 @@
             "in": "query",
             "name": "limit",
             "schema": {
-              "oneOf": [
-                {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 100,
-                  "default": 20
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "full"
-                  ]
-                }
-              ]
+              "type": "integer",
+              "default": 20
             },
-            "description": "عدد العناصر في الصفحة. استخدم 'full' لجلب جميع الطلبات بدون pagination"
+            "description": "عدد العناصر في الصفحة"
           }
         ],
         "responses": {
@@ -13963,8 +14016,8 @@
         "tags": [
           "Order Management"
         ],
-        "summary": "حذف طلب نهائيًا",
-        "description": "حذف طلب نهائيًا من قاعدة البيانات مع إرسال إشعار للعميل",
+        "summary": "حذف طلب",
+        "description": "حذف طلب (حذف ناعم)",
         "security": [
           {
             "BearerAuth": []
@@ -13981,30 +14034,9 @@
             "description": "معرف الطلب"
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "cancellationReason"
-                ],
-                "properties": {
-                  "cancellationReason": {
-                    "type": "string",
-                    "minLength": 5,
-                    "description": "سبب إلغاء الطلب من قبل الإدارة",
-                    "example": "تم الإلغاء بسبب مخالفة الشروط"
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "تم حذف الطلب نهائيًا وإشعار العميل",
+            "description": "تم حذف الطلب بنجاح",
             "content": {
               "application/json": {
                 "schema": {
@@ -14016,7 +14048,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "تم حذف الطلب نهائيًا من قاعدة البيانات وإشعار العميل"
+                      "example": "تم حذف الطلب بنجاح"
                     },
                     "data": {
                       "type": "null"
@@ -14027,7 +14059,7 @@
             }
           },
           "400": {
-            "description": "بيانات غير صحيحة أو سبب الإلغاء مطلوب",
+            "description": "معرف الطلب غير صالح",
             "content": {
               "application/json": {
                 "schema": {
@@ -14039,7 +14071,7 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "سبب الإلغاء مطلوب"
+                      "example": "معرف الطلب غير صالح"
                     }
                   }
                 }
@@ -16080,19 +16112,17 @@
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 100,
-                  "default": 20,
-                  "description": "عدد العناصر في الصفحة"
+                  "default": 20
                 },
                 {
                   "type": "string",
                   "enum": [
                     "full"
-                  ],
-                  "description": "استخدم 'full' لجلب جميع العناصر بدون pagination"
+                  ]
                 }
               ]
             },
-            "description": "عدد العناصر في الصفحة أو 'full' لجلب جميع العناصر"
+            "description": "عدد العناصر في الصفحة أو \"full\" لجلب جميع العناصر"
           }
         ],
         "responses": {
@@ -16181,27 +16211,6 @@
                                 "example": "https://example.com/artwork.jpg",
                                 "description": "صورة العمل الفني"
                               }
-                            }
-                          }
-                        },
-                        "pagination": {
-                          "type": "object",
-                          "properties": {
-                            "page": {
-                              "type": "number",
-                              "example": 1
-                            },
-                            "limit": {
-                              "type": "number",
-                              "example": 20
-                            },
-                            "total": {
-                              "type": "number",
-                              "example": 150
-                            },
-                            "pages": {
-                              "type": "number",
-                              "example": 8
                             }
                           }
                         }
@@ -17118,10 +17127,10 @@
     "/api/admin/artists": {
       "get": {
         "tags": [
-          "Artist Management"
+          "Admin"
         ],
         "summary": "جلب قائمة الفنانين",
-        "description": "جلب قائمة جميع الفنانين مع إحصائياتهم الأساسية للداشبورد الإداري",
+        "description": "جلب قائمة جميع الفنانين مع إحصائياتهم الأساسية",
         "security": [
           {
             "BearerAuth": []
@@ -17298,7 +17307,7 @@
     "/api/admin/artists/{artistId}": {
       "get": {
         "tags": [
-          "Artist Management"
+          "Admin"
         ],
         "summary": "جلب تفاصيل الفنان",
         "description": "جلب تفاصيل شاملة لفنان محدد تشمل الإحصائيات والأعمال والبلاغات والتقييمات وسجل النشاط",
@@ -17716,7 +17725,7 @@
                             },
                             "totalSales": {
                               "type": "number",
-                              "example": 2500.50
+                              "example": 2500.5
                             },
                             "completedOrders": {
                               "type": "integer",
@@ -17854,7 +17863,7 @@
                               },
                               "price": {
                                 "type": "number",
-                                "example": 500.00
+                                "example": 500
                               },
                               "isAvailable": {
                                 "type": "boolean",
@@ -18282,7 +18291,7 @@
     "/api/admin/artists/{artistId}/activity": {
       "get": {
         "tags": [
-          "Artist Management"
+          "Admin"
         ],
         "summary": "جلب سجل نشاط الفنان",
         "description": "جلب سجل نشاط الفنان (تسجيلات دخول، طلبات، تقييمات)",
@@ -18393,9 +18402,26 @@
                             }
                           }
                         },
-                        "totalActivities": {
-                          "type": "integer",
-                          "example": 15
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer",
+                              "description": "رقم الصفحة الحالية"
+                            },
+                            "limit": {
+                              "type": "integer",
+                              "description": "عدد العناصر في الصفحة"
+                            },
+                            "total": {
+                              "type": "integer",
+                              "description": "إجمالي عدد الأنشطة"
+                            },
+                            "pages": {
+                              "type": "integer",
+                              "description": "إجمالي عدد الصفحات"
+                            }
+                          }
                         }
                       }
                     }
@@ -18405,7 +18431,24 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/BadRequestError"
+            "description": "معرف فنان غير صالح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "معرف الفنان غير صالح"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
@@ -18414,7 +18457,24 @@
             "$ref": "#/components/responses/ForbiddenError"
           },
           "404": {
-            "description": "الفنان غير موجود"
+            "description": "الفنان غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الفنان غير موجود"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -18422,7 +18482,7 @@
     "/api/admin/artists/{artistId}/status": {
       "patch": {
         "tags": [
-          "Artist Management"
+          "Admin"
         ],
         "summary": "تحديث حالة الفنان",
         "description": "تحديث حالة الفنان (تفعيل/إلغاء تفعيل/حظر)",
