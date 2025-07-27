@@ -45,7 +45,7 @@ export const updateCoverImage = asyncHandler(async (req, res, next) => {
         console.log('📁 يوجد صورة غلاف سابقة، سيتم تحديثها...');
         
         // رفع الصورة مع public_id الموجود
-        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+        const { secure_url, public_id } = await cloudinary.uploader.upload(
           req.file.path,
           {
             public_id: user.coverImages[0].id, // استخدام الـ public_id الموجود
@@ -64,7 +64,7 @@ export const updateCoverImage = asyncHandler(async (req, res, next) => {
         console.log('📁 لا يوجد صورة غلاف سابقة، سيتم إنشاء واحدة جديدة...');
         
         // إنشاء صورة غلاف جديدة
-        const { secure_url, public_id } = await cloudinary.v2.uploader.upload(
+        const { secure_url, public_id } = await cloudinary.uploader.upload(
           req.file.path,
           {
             folder: `arthub/user-covers/${user._id}`,
