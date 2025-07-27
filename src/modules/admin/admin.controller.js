@@ -1371,14 +1371,14 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
     // عدد الأعمال الفنية
     artworkModel.countDocuments({ artist: new mongoose.Types.ObjectId(artistId) }),
     
-    // إجمالي المبيعات
-    transactionModel.aggregate([
+    // إجمالي المبيعات من الطلبات الخاصة
+    specialRequestModel.aggregate([
       { $match: { artist: new mongoose.Types.ObjectId(artistId), status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
+      { $group: { _id: null, total: { $sum: '$finalPrice' } } }
     ]),
     
     // عدد الطلبات المكتملة
-    transactionModel.countDocuments({ 
+    specialRequestModel.countDocuments({ 
       artist: new mongoose.Types.ObjectId(artistId), 
       status: 'completed' 
     }),
@@ -1444,8 +1444,8 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
       .limit(5)
       .lean(),
     
-    // المعاملات
-    transactionModel.find({ 
+    // الطلبات الخاصة
+    specialRequestModel.find({ 
       artist: new mongoose.Types.ObjectId(artistId) 
     })
       .sort({ createdAt: -1 })
@@ -1471,13 +1471,13 @@ export const getArtistDetails = asyncHandler(async (req, res, next) => {
       date: token.createdAt,
       status: 'info'
     })),
-    ...activities[1].map(tx => ({
-      type: 'order',
-      icon: '🛒',
-      title: `طلب جديد #${tx._id.toString().slice(-4)}`,
-      description: `تم إنشاء طلب جديد بقيمة ${tx.amount} ريال`,
-      date: tx.createdAt,
-      status: tx.status
+    ...activities[1].map(request => ({
+      type: 'request',
+      icon: '🎨',
+      title: `طلب خاص #${request._id.toString().slice(-4)}`,
+      description: `طلب ${request.requestType} بقيمة ${request.finalPrice || request.budget} ${request.currency}`,
+      date: request.createdAt,
+      status: request.status
     })),
     ...activities[2].map(review => ({
       type: 'review',
@@ -1608,9 +1608,9 @@ export const getAllArtists = asyncHandler(async (req, res, next) => {
         artworkModel.countDocuments({ 
           artist: artist._id 
         }),
-        transactionModel.aggregate([
+        specialRequestModel.aggregate([
           { $match: { artist: artist._id, status: 'completed' } },
-          { $group: { _id: null, total: { $sum: '$amount' } } }
+          { $group: { _id: null, total: { $sum: '$finalPrice' } } }
         ]),
         reviewModel.aggregate([
           { $match: { artist: artist._id } },
