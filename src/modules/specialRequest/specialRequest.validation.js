@@ -421,5 +421,15 @@ export const deleteRequestSchema = {
         'string.pattern.base': 'معرف الطلب غير صالح',
         'any.required': 'معرف الطلب مطلوب'
       })
+  }),
+  body: Joi.object({
+    cancellationReason: Joi.string()
+      .valid('ordered_by_mistake', 'service_delayed', 'other_reasons')
+      .required()
+      .messages({
+        'string.empty': 'سبب الإلغاء مطلوب',
+        'any.only': 'سبب الإلغاء غير صالح',
+        'any.required': 'سبب الإلغاء مطلوب'
+      })
   })
 };

@@ -1038,6 +1038,7 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
     
     const { requestId } = req.params;
+    const { cancellationReason } = req.body;
     const userId = req.user._id;
 
     if (!mongoose.Types.ObjectId.isValid(requestId)) {
@@ -1068,6 +1069,14 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
+    // تحديث سبب الإلغاء قبل الحذف
+    if (cancellationReason) {
+      request.cancellationReason = getCancellationReasonLabel(cancellationReason);
+      request.cancelledAt = new Date();
+      request.cancelledBy = userId;
+      await request.save();
+    }
+
     // حذف الطلب من قاعدة البيانات
     await specialRequestModel.findByIdAndDelete(requestId);
 
@@ -1075,7 +1084,8 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم حذف الطلب بنجاح',
       data: {
-        deletedRequestId: requestId
+        deletedRequestId: requestId,
+        cancellationReason: cancellationReason
       }
     };
 
@@ -1086,6 +1096,18 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
     next(new Error('حدث خطأ أثناء حذف الطلب', { cause: 500 }));
   }
 });
+
+/**
+ * Helper function to get cancellation reason label
+ */
+function getCancellationReasonLabel(reason) {
+  const reasons = {
+    'ordered_by_mistake': 'طلبت بالخطأ',
+    'service_delayed': 'الخدمة تأخرت',
+    'other_reasons': 'أسباب أخرى'
+  };
+  return reasons[reason] || reason;
+}
 
 /**
  * إلغاء طلب خاص - Enhanced for Flutter
@@ -1231,6 +1253,33 @@ export const getRequestTypes = asyncHandler(async (req, res, next) => {
   } catch (error) {
     console.error('Get request types error:', error);
     next(new Error('حدث خطأ أثناء جلب أنواع الطلبات', { cause: 500 }));
+  }
+});
+
+/**
+ * Get cancellation reasons for dropdown
+ */
+export const getCancellationReasons = asyncHandler(async (req, res, next) => {
+  try {
+    const cancellationReasons = [
+      { value: 'ordered_by_mistake', label: 'طلبت بالخطأ' },
+      { value: 'service_delayed', label: 'الخدمة تأخرت' },
+      { value: 'other_reasons', label: 'أسباب أخرى' }
+    ];
+
+    const response = {
+      success: true,
+      message: 'تم جلب أسباب الإلغاء بنجاح',
+      data: {
+        cancellationReasons
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Get cancellation reasons error:', error);
+    next(new Error('حدث خطأ أثناء جلب أسباب الإلغاء', { cause: 500 }));
   }
 });
 

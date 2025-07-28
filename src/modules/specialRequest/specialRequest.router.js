@@ -274,6 +274,44 @@ router.get('/artist', isAuthenticated, controller.getArtistRequests);
 
 /**
  * @swagger
+ * /special-requests/cancellation-reasons:
+ *   get:
+ *     summary: Get cancellation reasons
+ *     tags: [Special Requests]
+ *     description: Get all available cancellation reasons for dropdown selection
+ *     responses:
+ *       200:
+ *         description: Cancellation reasons retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب أسباب الإلغاء بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     cancellationReasons:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           value:
+ *                             type: string
+ *                           label:
+ *                             type: string
+ *       500:
+ *         description: Server error
+ */
+router.get('/cancellation-reasons', controller.getCancellationReasons);
+
+/**
+ * @swagger
  * /special-requests/{requestId}:
  *   get:
  *     tags:
@@ -659,7 +697,7 @@ router.post(
  *     tags:
  *       - Special Requests
  *     summary: حذف طلب خاص
- *     description: حذف طلب خاص نهائياً من قاعدة البيانات
+ *     description: حذف طلب خاص نهائياً من قاعدة البيانات مع سبب الإلغاء
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -670,6 +708,20 @@ router.post(
  *           type: string
  *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: معرف الطلب
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cancellationReason
+ *             properties:
+ *               cancellationReason:
+ *                 type: string
+ *                 enum: [ordered_by_mistake, service_delayed, other_reasons]
+ *                 description: سبب الإلغاء
+ *                 example: "ordered_by_mistake"
  *     responses:
  *       200:
  *         description: تم حذف الطلب بنجاح
@@ -690,8 +742,11 @@ router.post(
  *                     deletedRequestId:
  *                       type: string
  *                       description: معرف الطلب المحذوف
+ *                     cancellationReason:
+ *                       type: string
+ *                       description: سبب الإلغاء المستخدم
  *       400:
- *         description: معرف الطلب غير صالح
+ *         description: معرف الطلب غير صالح أو سبب الإلغاء غير صالح
  *       403:
  *         description: غير مصرح لك بحذف هذا الطلب
  *       404:
