@@ -526,7 +526,10 @@ router.post(
  *         description: الرمز مطلوب
  *     x-screen: "SettingsScreen"
  */
-// FCM token endpoints temporarily disabled - functions not implemented
+// FCM token endpoints
+router.post('/token', isAuthenticated, isValidation(fcmTokenSchema), notificationController.registerFCMToken);
+router.delete('/token', isAuthenticated, isValidation(fcmTokenSchema), notificationController.unregisterFCMToken);
+router.get('/token', isAuthenticated, notificationController.getUserFCMTokens);
 
 /**
  * @swagger

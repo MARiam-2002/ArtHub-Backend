@@ -20,12 +20,12 @@ import notificationModel from '../../DB/models/notification.model.js';
  */
 export const sendPushNotificationToUser = async (userId, notification, data = {}, options = {}) => {
   try {
-    // Get user's FCM token and language preference
-    const user = await userModel.findById(userId).select('fcmToken preferredLanguage');
+    // Get user's FCM tokens and language preference
+    const user = await userModel.findById(userId).select('fcmTokens preferredLanguage');
 
-    if (!user || !user.fcmToken) {
-      console.log(`User ${userId} doesn't have an FCM token`);
-      return { success: false, message: 'No FCM token found for user' };
+    if (!user || !user.fcmTokens || user.fcmTokens.length === 0) {
+      console.log(`User ${userId} doesn't have any FCM tokens`);
+      return { success: false, message: 'No FCM tokens found for user' };
     }
 
     const preferredLanguage = user.preferredLanguage || 'ar';
@@ -41,9 +41,9 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
         ? notification.body[preferredLanguage] || notification.body.ar
         : notification.body;
 
-    // Send notification to the device
+    // Send notification to all user's devices
     const message = {
-      token: user.fcmToken,
+      tokens: user.fcmTokens,
       notification: {
         title: notificationTitle,
         body: notificationBody
@@ -107,9 +107,33 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
       }
     }
 
-    const response = await admin.messaging().send(message);
+    const response = await admin.messaging().sendMulticast(message);
     console.log('Notification sent successfully:', response);
-    return { success: true, messageId: response };
+    
+    // Handle failed tokens
+    if (response.failureCount > 0) {
+      const failedTokens = [];
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          failedTokens.push(user.fcmTokens[idx]);
+        }
+      });
+      
+      // Remove failed tokens from user
+      if (failedTokens.length > 0) {
+        await userModel.findByIdAndUpdate(userId, {
+          $pull: { fcmTokens: { $in: failedTokens } }
+        });
+        console.log(`Removed ${failedTokens.length} failed FCM tokens for user ${userId}`);
+      }
+    }
+    
+    return { 
+      success: true, 
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+      messageIds: response.responses.map(r => r.messageId).filter(Boolean)
+    };
   } catch (error) {
     console.error('Error sending push notification:', error);
     return { success: false, error: error.message };
@@ -359,10 +383,36 @@ export const updateUserFCMToken = async (userId, fcmToken) => {
       return false;
     }
 
-    await userModel.findByIdAndUpdate(userId, { fcmToken });
+    // Add token to user's fcmTokens array if not already present
+    await userModel.findByIdAndUpdate(userId, {
+      $addToSet: { fcmTokens: fcmToken }
+    });
     return true;
   } catch (error) {
     console.error('Error updating FCM token:', error);
+    return false;
+  }
+};
+
+/**
+ * Remove FCM token for a user
+ * @param {string} userId - MongoDB user ID
+ * @param {string} fcmToken - FCM token to remove
+ * @returns {Promise<boolean>} - Success status
+ */
+export const removeUserFCMToken = async (userId, fcmToken) => {
+  try {
+    if (!userId || !fcmToken) {
+      return false;
+    }
+
+    // Remove token from user's fcmTokens array
+    await userModel.findByIdAndUpdate(userId, {
+      $pull: { fcmTokens: fcmToken }
+    });
+    return true;
+  } catch (error) {
+    console.error('Error removing FCM token:', error);
     return false;
   }
 };

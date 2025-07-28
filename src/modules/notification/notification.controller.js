@@ -2,7 +2,7 @@ import notificationModel from '../../../DB/models/notification.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
-import { sendPushNotificationToUser } from '../../utils/pushNotifications.js';
+import { sendPushNotificationToUser, updateUserFCMToken, removeUserFCMToken } from '../../utils/pushNotifications.js';
 
 /**
  * Get user notifications with pagination
@@ -267,3 +267,91 @@ export const createNotification = async (data) => {
     throw error;
   }
 };
+
+/**
+ * Register FCM token for user
+ */
+export const registerFCMToken = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { token, deviceType } = req.body;
+    const userId = req.user._id;
+
+    if (!token) {
+      return res.fail(null, 'رمز FCM مطلوب', 400);
+    }
+
+    // Add FCM token to user
+    const success = await updateUserFCMToken(userId, token);
+    
+    if (!success) {
+      return res.fail(null, 'فشل في تسجيل رمز الإشعارات', 500);
+    }
+
+    res.success({
+      token,
+      deviceType: deviceType || 'unknown',
+      registered: true
+    }, 'تم تسجيل رمز الإشعارات بنجاح');
+  } catch (error) {
+    console.error('Register FCM token error:', error);
+    next(new Error('حدث خطأ أثناء تسجيل رمز الإشعارات', { cause: 500 }));
+  }
+});
+
+/**
+ * Unregister FCM token for user
+ */
+export const unregisterFCMToken = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const { token } = req.body;
+    const userId = req.user._id;
+
+    if (!token) {
+      return res.fail(null, 'رمز FCM مطلوب', 400);
+    }
+
+    // Remove FCM token from user
+    const success = await removeUserFCMToken(userId, token);
+    
+    if (!success) {
+      return res.fail(null, 'فشل في إلغاء تسجيل رمز الإشعارات', 500);
+    }
+
+    res.success({
+      token,
+      unregistered: true
+    }, 'تم إلغاء تسجيل رمز الإشعارات بنجاح');
+  } catch (error) {
+    console.error('Unregister FCM token error:', error);
+    next(new Error('حدث خطأ أثناء إلغاء تسجيل رمز الإشعارات', { cause: 500 }));
+  }
+});
+
+/**
+ * Get user's FCM tokens (for debugging)
+ */
+export const getUserFCMTokens = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const userId = req.user._id;
+
+    const user = await userModel.findById(userId).select('fcmTokens');
+    
+    if (!user) {
+      return res.fail(null, 'المستخدم غير موجود', 404);
+    }
+
+    res.success({
+      tokens: user.fcmTokens || [],
+      count: user.fcmTokens ? user.fcmTokens.length : 0
+    }, 'تم جلب رموز الإشعارات بنجاح');
+  } catch (error) {
+    console.error('Get FCM tokens error:', error);
+    next(new Error('حدث خطأ أثناء جلب رموز الإشعارات', { cause: 500 }));
+  }
+});
