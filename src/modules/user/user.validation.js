@@ -49,6 +49,13 @@ export const updateProfileSchema = {
       .label('البريد الإلكتروني')
       .messages(defaultMessages),
     
+    bio: joi
+      .string()
+      .max(500)
+      .optional()
+      .label('الوصف')
+      .messages(defaultMessages),
+    
     password: joi
       .string()
       .pattern(passwordPattern)

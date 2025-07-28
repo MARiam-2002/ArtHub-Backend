@@ -224,7 +224,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     const updateData = {};
 
     // Only update provided fields
-    const allowedFields = ['displayName', 'email'];
+    const allowedFields = ['displayName', 'email', 'bio'];
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updateData[field] = req.body[field];
@@ -247,6 +247,11 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
       if (existingUser) {
         return res.fail(null, 'البريد الإلكتروني مستخدم بالفعل', 400);
       }
+    }
+
+    // التحقق من طول bio إذا تم توفيره
+    if (req.body.bio && req.body.bio.length > 500) {
+      return res.fail(null, 'الوصف طويل جداً، الحد الأقصى 500 حرف', 400);
     }
 
     // جلب المستخدم الحالي
