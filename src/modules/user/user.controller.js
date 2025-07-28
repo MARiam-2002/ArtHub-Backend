@@ -1214,6 +1214,7 @@ export const getProfile = asyncHandler(async (req, res, next) => {
       email: user.email,
       role: user.role,
       profileImage: user.profileImage?.url,
+      coverImage: user.coverImages && user.coverImages.length > 0 ? user.coverImages[0].url : null,
       bio: user.bio,
       job: user.job,
       location: user.location,

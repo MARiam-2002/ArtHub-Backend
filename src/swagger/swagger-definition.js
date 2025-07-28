@@ -1710,6 +1710,13 @@ export const swaggerDefinition = {
               }
             }
           },
+          coverImage: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/cover.jpg',
+            description: 'Cover image URL (first cover image if multiple exist)'
+          },
           bio: {
             type: 'string',
             example: 'فنان تشكيلي متخصص في الرسم الزيتي'
