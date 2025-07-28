@@ -8393,7 +8393,7 @@
           "Special Requests"
         ],
         "summary": "حذف طلب خاص",
-        "description": "حذف طلب خاص نهائياً من قاعدة البيانات (لصاحب الطلب فقط)",
+        "description": "حذف طلب خاص نهائياً من قاعدة البيانات مع سبب الإلغاء (اختياري) (لصاحب الطلب فقط)",
         "x-screen": "my_requests_screen",
         "security": [
           {
@@ -8412,6 +8412,28 @@
             "description": "معرف الطلب"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cancellationReason": {
+                    "type": "string",
+                    "enum": [
+                      "ordered_by_mistake",
+                      "service_delayed",
+                      "other_reasons"
+                    ],
+                    "description": "سبب الإلغاء (اختياري)",
+                    "example": "ordered_by_mistake"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "تم حذف الطلب بنجاح",
@@ -8435,6 +8457,12 @@
                           "type": "string",
                           "description": "معرف الطلب المحذوف",
                           "example": "64f1a2b3c4d5e6f7g8h9i0j1"
+                        },
+                        "cancellationReason": {
+                          "type": "string",
+                          "description": "سبب الإلغاء المستخدم (إذا تم توفيره)",
+                          "example": "ordered_by_mistake",
+                          "nullable": true
                         }
                       }
                     }
