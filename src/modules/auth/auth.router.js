@@ -485,8 +485,31 @@ router.post('/update-fingerprint', isAuthenticated, isValidation(Validators.upda
  *       Authenticate user with Firebase ID token.
  *       This endpoint allows clients to login using a Firebase ID token.
  *       If the user doesn't exist, a new account will be created automatically.
+ *       
+ *       **Important:** Send the Firebase ID token in the Authorization header:
+ *       ```
+ *       Authorization: Bearer FIREBASE_ID_TOKEN
+ *       ```
+ *       
+ *       **Flutter Example:**
+ *       ```dart
+ *       // Get Firebase ID token
+ *       String? idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+ *       
+ *       // Send to backend
+ *       final response = await http.post(
+ *         Uri.parse('$baseUrl/api/auth/firebase'),
+ *         headers: {
+ *           'Authorization': 'Bearer $idToken',
+ *           'Content-Type': 'application/json',
+ *         },
+ *       );
+ *       ```
  *     security:
  *       - FirebaseAuth: []
+ *     requestBody:
+ *       required: false
+ *       description: No request body needed. Firebase ID token should be sent in Authorization header.
  *     responses:
  *       200:
  *         description: Login successful
