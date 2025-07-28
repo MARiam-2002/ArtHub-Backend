@@ -697,7 +697,7 @@ router.post(
  *     tags:
  *       - Special Requests
  *     summary: حذف طلب خاص
- *     description: حذف طلب خاص نهائياً من قاعدة البيانات مع سبب الإلغاء
+ *     description: حذف طلب خاص نهائياً من قاعدة البيانات مع سبب الإلغاء (لصاحب الطلب فقط)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -738,21 +738,61 @@ router.post(
  *                   example: "تم حذف الطلب بنجاح"
  *                 data:
  *                   type: object
- *                   properties:
- *                     deletedRequestId:
- *                       type: string
- *                       description: معرف الطلب المحذوف
- *                     cancellationReason:
- *                       type: string
- *                       description: سبب الإلغاء المستخدم
+ *                   nullable: true
  *       400:
- *         description: معرف الطلب غير صالح أو سبب الإلغاء غير صالح
+ *         description: معرف الطلب غير صالح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "معرف الطلب غير صالح"
+ *                 data:
+ *                   type: object
+ *                   nullable: true
  *       403:
  *         description: غير مصرح لك بحذف هذا الطلب
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "غير مصرح لك بحذف هذا الطلب"
+ *                 data:
+ *                   type: object
+ *                   nullable: true
  *       404:
  *         description: الطلب غير موجود
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "الطلب غير موجود"
+ *                 data:
+ *                   type: object
+ *                   nullable: true
  *       500:
  *         description: خطأ في الخادم
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete('/:requestId', 
   isAuthenticated, 
