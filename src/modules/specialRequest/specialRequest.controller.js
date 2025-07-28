@@ -1069,7 +1069,7 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // تحديث سبب الإلغاء قبل الحذف
+    // تحديث سبب الإلغاء قبل الحذف (اختياري)
     if (cancellationReason) {
       request.cancellationReason = getCancellationReasonLabel(cancellationReason);
       request.cancelledAt = new Date();
@@ -1085,7 +1085,7 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       message: 'تم حذف الطلب بنجاح',
       data: {
         deletedRequestId: requestId,
-        cancellationReason: cancellationReason
+        cancellationReason: cancellationReason || null
       }
     };
 

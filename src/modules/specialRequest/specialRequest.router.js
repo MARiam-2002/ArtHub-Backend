@@ -697,7 +697,7 @@ router.post(
  *     tags:
  *       - Special Requests
  *     summary: حذف طلب خاص
- *     description: حذف طلب خاص نهائياً من قاعدة البيانات مع سبب الإلغاء (لصاحب الطلب فقط)
+ *     description: حذف طلب خاص نهائياً من قاعدة البيانات مع سبب الإلغاء (اختياري) (لصاحب الطلب فقط)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -709,18 +709,16 @@ router.post(
  *           pattern: '^[0-9a-fA-F]{24}$'
  *         description: معرف الطلب
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - cancellationReason
  *             properties:
  *               cancellationReason:
  *                 type: string
  *                 enum: [ordered_by_mistake, service_delayed, other_reasons]
- *                 description: سبب الإلغاء
+ *                 description: سبب الإلغاء (اختياري)
  *                 example: "ordered_by_mistake"
  *     responses:
  *       200:
