@@ -60,7 +60,8 @@
     "rebuild:swagger-notifications": "node scripts/rebuild-swagger-notifications.js",
     "fix:swagger-json": "node scripts/fix-swagger-json.js",
     "debug:swagger-json": "node scripts/debug-swagger-json.js",
-    "validate:json": "node scripts/validate-json.js"
+    "validate:json": "node scripts/validate-json.js",
+    "test:firebase": "node scripts/test-firebase-config.js"
   },
   "engines": {
     "node": "18.x || >= 16"
