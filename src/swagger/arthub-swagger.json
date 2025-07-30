@@ -12475,27 +12475,109 @@
                       "type": "object",
                       "properties": {
                         "_id": {
-                          "type": "string"
+                          "type": "string",
+                          "example": "6872c6eb501ee86cc3c5b77c"
                         },
                         "displayName": {
-                          "type": "string"
+                          "type": "string",
+                          "example": "أحمد محمد"
                         },
                         "email": {
-                          "type": "string"
+                          "type": "string",
+                          "example": "khaldmrym769@gmail.com"
+                        },
+                        "phoneNumber": {
+                          "type": "string",
+                          "example": "+966501234567"
                         },
                         "role": {
                           "type": "string",
                           "enum": [
                             "user",
                             "artist"
-                          ]
+                          ],
+                          "example": "user"
                         },
                         "isActive": {
-                          "type": "boolean"
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "isVerified": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "profileImage": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "coverImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string"
+                              },
+                              "id": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "bio": {
+                          "type": "string",
+                          "example": "مستخدم نشط في منصة ArtHub"
+                        },
+                        "job": {
+                          "type": "string",
+                          "example": "مستخدم"
+                        },
+                        "location": {
+                          "type": "string",
+                          "example": "الرياض، المملكة العربية السعودية"
+                        },
+                        "lastActive": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-07-28T10:35:28.937Z"
                         },
                         "createdAt": {
                           "type": "string",
-                          "format": "date-time"
+                          "format": "date-time",
+                          "example": "2025-07-12T20:34:51.009Z"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-07-28T10:37:06.569Z"
+                        },
+                        "statistics": {
+                          "type": "object",
+                          "properties": {
+                            "totalOrders": {
+                              "type": "integer",
+                              "example": 2
+                            },
+                            "totalSpent": {
+                              "type": "number",
+                              "example": 600
+                            },
+                            "totalReviews": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "averageRating": {
+                              "type": "number",
+                              "example": 5
+                            }
+                          }
                         }
                       }
                     }
@@ -15704,51 +15786,9 @@
             "name": "limit",
             "schema": {
               "type": "integer",
-              "default": 20
+              "default": 10
             },
             "description": "عدد العناصر في الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "pending",
-                "accepted",
-                "rejected",
-                "completed",
-                "cancelled"
-              ]
-            },
-            "description": "تصفية حسب حالة الطلب"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "createdAt",
-                "updatedAt",
-                "price"
-              ],
-              "default": "createdAt"
-            },
-            "description": "حقل الترتيب"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "default": "desc"
-            },
-            "description": "ترتيب النتائج"
           }
         ],
         "responses": {
@@ -15776,14 +15816,87 @@
                             "type": "object",
                             "properties": {
                               "_id": {
-                                "type": "string"
+                                "type": "string",
+                                "example": "6880ad3b7dea0b1b2f4b4a4a"
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "طلب عمل فني مخصص"
+                              },
+                              "description": {
+                                "type": "string",
+                                "example": "this is the request i wanna get by the weekend"
+                              },
+                              "price": {
+                                "type": "number",
+                                "example": 300
+                              },
+                              "currency": {
+                                "type": "string",
+                                "example": "SAR"
                               },
                               "status": {
-                                "type": "string"
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "in_progress",
+                                  "completed",
+                                  "cancelled"
+                                ],
+                                "example": "pending"
+                              },
+                              "requestType": {
+                                "type": "string",
+                                "enum": [
+                                  "custom_artwork",
+                                  "logo_design",
+                                  "illustration",
+                                  "digital_art",
+                                  "traditional_art"
+                                ],
+                                "example": "custom_artwork"
+                              },
+                              "artist": {
+                                "type": "string",
+                                "example": "6872b83044e2488629f74e8a"
                               },
                               "createdAt": {
                                 "type": "string",
-                                "format": "date-time"
+                                "format": "date-time",
+                                "example": "2025-07-23T09:36:59.850Z"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": "2025-07-23T09:36:59.850Z"
+                              },
+                              "budget": {
+                                "type": "number",
+                                "example": 300
+                              },
+                              "finalPrice": {
+                                "type": "number",
+                                "example": null
+                              },
+                              "duration": {
+                                "type": "integer",
+                                "example": 5
+                              },
+                              "deadline": {
+                                "type": "string",
+                                "format": "date-time",
+                                "example": null
+                              },
+                              "requirements": {
+                                "type": "string",
+                                "example": null
+                              },
+                              "attachments": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object"
+                                },
+                                "example": []
                               }
                             }
                           }
@@ -15792,16 +15905,20 @@
                           "type": "object",
                           "properties": {
                             "page": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 1
                             },
                             "limit": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 10
                             },
                             "total": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 2
                             },
                             "pages": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 1
                             }
                           }
                         }

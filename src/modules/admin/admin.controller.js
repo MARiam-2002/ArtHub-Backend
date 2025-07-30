@@ -1104,7 +1104,7 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
   
   // Build query
-  const query = { user: id };
+  const query = { sender: id };
   if (status) {
     query.status = status;
   }
@@ -1115,7 +1115,6 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
   // Get orders with pagination
   const [orders, totalOrders] = await Promise.all([
     specialRequestModel.find(query)
-      .populate('artist', 'displayName profileImage')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
