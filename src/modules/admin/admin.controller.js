@@ -786,11 +786,10 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
       { 
         $match: { 
           user: new mongoose.Types.ObjectId(id), 
-          status: { $in: ['completed', 'pending', 'in_progress', 'approved'] },
-          finalPrice: { $exists: true, $ne: null, $gt: 0 }
+          status: { $in: ['completed', 'pending', 'in_progress', 'approved'] }
         } 
       },
-      { $group: { _id: null, total: { $sum: '$finalPrice' } } }
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$finalPrice', '$budget', 0] } } } }
     ]),
     reviewModel.countDocuments({ user: id }),
     reviewModel.aggregate([
