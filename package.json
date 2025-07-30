@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node railway-start-simple.js",
+    "start": "node index.js",
     "dev": "nodemon railway-start.js",
     "build": "echo 'Building ArtHub Backend...'",
     "vercel-build": "echo 'Building ArtHub Backend...'",
