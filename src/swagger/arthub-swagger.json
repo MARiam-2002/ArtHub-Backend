@@ -13172,6 +13172,18 @@
                               "anonymous": {
                                 "type": "boolean",
                                 "example": false
+                              },
+                              "artworkTitle": {
+                                "type": "string",
+                                "example": "غروب الشمس فوق النيل"
+                              },
+                              "artistName": {
+                                "type": "string",
+                                "example": "ليلى محمد الخطاطة"
+                              },
+                              "reviewDate": {
+                                "type": "string",
+                                "example": "١٧‏/١‏/١٤٤٧ هـ"
                               }
                             }
                           }

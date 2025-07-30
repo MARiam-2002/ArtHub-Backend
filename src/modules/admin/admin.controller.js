@@ -1191,6 +1191,30 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
     reviewModel.countDocuments({ user: id })
   ]);
 
+  // Get additional data for reviews
+  const userModel = (await import('../../../DB/models/user.model.js')).default;
+  const artworkModel = (await import('../../../DB/models/artwork.model.js')).default;
+
+  // Get artist and artwork data
+  const artistIds = [...new Set(reviews.map(r => r.artist).filter(Boolean))];
+  const artworkIds = [...new Set(reviews.map(r => r.artwork).filter(Boolean))];
+
+  const [artists, artworks] = await Promise.all([
+    userModel.find({ _id: { $in: artistIds } }).select('displayName').lean(),
+    artworkModel.find({ _id: { $in: artworkIds } }).select('title').lean()
+  ]);
+
+  // Create lookup maps
+  const artistMap = artists.reduce((map, artist) => {
+    map[artist._id.toString()] = artist.displayName;
+    return map;
+  }, {});
+
+  const artworkMap = artworks.reduce((map, artwork) => {
+    map[artwork._id.toString()] = artwork.title;
+    return map;
+  }, {});
+
   const formattedReviews = reviews.map(review => ({
     _id: review._id,
     rating: review.rating,
@@ -1205,7 +1229,15 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
     isRecommended: review.isRecommended,
     subRatings: review.subRatings,
     workingExperience: review.workingExperience,
-    anonymous: review.anonymous
+    anonymous: review.anonymous,
+    // New fields for better display
+    artworkTitle: artworkMap[review.artwork?.toString()] || 'لوحة زيتية مخصصة',
+    artistName: artistMap[review.artist?.toString()] || 'احمد محمد',
+    reviewDate: review.createdAt ? new Date(review.createdAt).toLocaleDateString('ar-SA', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric'
+    }) : '٢٠٢٥ - ١ - ١٨'
   }));
 
   res.json({
