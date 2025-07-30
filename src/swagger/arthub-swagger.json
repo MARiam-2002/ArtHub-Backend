@@ -13073,45 +13073,9 @@
             "name": "limit",
             "schema": {
               "type": "integer",
-              "default": 20
+              "default": 10
             },
             "description": "عدد العناصر في الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "rating",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 5
-            },
-            "description": "تصفية حسب التقييم"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "createdAt",
-                "rating"
-              ],
-              "default": "createdAt"
-            },
-            "description": "حقل الترتيب"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
-              "default": "desc"
-            },
-            "description": "ترتيب النتائج"
           }
         ],
         "responses": {
@@ -13139,17 +13103,75 @@
                             "type": "object",
                             "properties": {
                               "_id": {
-                                "type": "string"
+                                "type": "string",
+                                "example": "6880080945c3fc04c35b4b1b"
                               },
                               "rating": {
-                                "type": "integer"
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 5,
+                                "example": 5
+                              },
+                              "title": {
+                                "type": "string",
+                                "example": "تقييم ممتاز"
                               },
                               "comment": {
-                                "type": "string"
+                                "type": "string",
+                                "example": "عمل رائع ومهني عالي"
+                              },
+                              "artist": {
+                                "type": "string",
+                                "example": "6872b83044e2488629f74e8a"
+                              },
+                              "artwork": {
+                                "type": "string",
+                                "example": "6872b84944e2488629f74f0f"
                               },
                               "createdAt": {
                                 "type": "string",
-                                "format": "date-time"
+                                "format": "date-time",
+                                "example": "2025-07-12T19:32:26.837Z"
+                              },
+                              "pros": {
+                                "type": "string",
+                                "example": "جودة عالية، تسليم في الوقت المحدد"
+                              },
+                              "cons": {
+                                "type": "string",
+                                "example": null
+                              },
+                              "isRecommended": {
+                                "type": "boolean",
+                                "example": true
+                              },
+                              "subRatings": {
+                                "type": "object",
+                                "properties": {
+                                  "quality": {
+                                    "type": "integer"
+                                  },
+                                  "communication": {
+                                    "type": "integer"
+                                  },
+                                  "timeliness": {
+                                    "type": "integer"
+                                  }
+                                }
+                              },
+                              "workingExperience": {
+                                "type": "string",
+                                "enum": [
+                                  "excellent",
+                                  "good",
+                                  "average",
+                                  "poor"
+                                ],
+                                "example": "excellent"
+                              },
+                              "anonymous": {
+                                "type": "boolean",
+                                "example": false
                               }
                             }
                           }
@@ -13158,16 +13180,20 @@
                           "type": "object",
                           "properties": {
                             "page": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 1
                             },
                             "limit": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 10
                             },
                             "total": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 1
                             },
                             "pages": {
-                              "type": "integer"
+                              "type": "integer",
+                              "example": 1
                             }
                           }
                         }

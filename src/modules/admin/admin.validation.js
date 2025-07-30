@@ -258,10 +258,7 @@ export const getUserReviewsSchema = {
   }),
   query: joi.object({
     page: joi.number().integer().min(1).optional(),
-    limit: joi.number().integer().min(1).max(100).default(20),
-    rating: joi.number().integer().min(1).max(5).optional(),
-    sortBy: joi.string().valid('createdAt', 'rating').default('createdAt'),
-    sortOrder: joi.string().valid('asc', 'desc').default('desc')
+    limit: joi.number().integer().min(1).max(100).default(10)
   })
 };
 

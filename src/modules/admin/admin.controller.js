@@ -1184,8 +1184,6 @@ export const getUserReviews = asyncHandler(async (req, res, next) => {
   // Get reviews with pagination
   const [reviews, totalReviews] = await Promise.all([
     reviewModel.find({ user: id })
-      .populate('artist', 'displayName profileImage')
-      .populate('artwork', 'title image')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
