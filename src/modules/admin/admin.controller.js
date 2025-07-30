@@ -781,11 +781,11 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
 
   const [totalSpecialRequests, totalSpentFromRequests, totalReviews, averageRating] = await Promise.all([
-    specialRequestModel.countDocuments({ user: id }),
+    specialRequestModel.countDocuments({ sender: id }),
     specialRequestModel.aggregate([
       { 
         $match: { 
-          user: new mongoose.Types.ObjectId(id), 
+          sender: new mongoose.Types.ObjectId(id), 
           status: { $in: ['completed', 'pending', 'in_progress', 'approved'] }
         } 
       },
