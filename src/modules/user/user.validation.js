@@ -68,7 +68,13 @@ export const updateProfileSchema = {
       .messages({
         ...defaultMessages,
         'string.pattern.base': 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، حرف واحد ورقم واحد على الأقل'
-      })
+      }),
+    
+    profileImage: joi
+      .any()
+      .optional()
+      .label('صورة البروفايل')
+      .messages(defaultMessages)
   }),
   file: joi.object({
     fieldname: joi.string().valid('profileImage').optional(),
