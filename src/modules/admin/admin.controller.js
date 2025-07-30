@@ -780,7 +780,7 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
 
-  const [totalOrders, totalSpent, totalReviews, averageRating] = await Promise.all([
+  const [totalSpecialRequests, totalSpentFromRequests, totalReviews, averageRating] = await Promise.all([
     specialRequestModel.countDocuments({ user: id }),
     specialRequestModel.aggregate([
       { 
@@ -797,6 +797,9 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
       { $group: { _id: null, avg: { $avg: '$rating' } } }
     ])
   ]);
+
+  const totalOrders = totalSpecialRequests;
+  const totalSpent = totalSpentFromRequests[0]?.total || 0;
 
   const userDetails = {
     _id: user._id,
