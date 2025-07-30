@@ -698,49 +698,73 @@
       },
       "UpdateProfileRequest": {
         "type": "object",
+        "description": "All fields are optional. You can update any combination of fields. Empty strings and null values will be ignored.",
         "properties": {
           "displayName": {
             "type": "string",
             "minLength": 2,
             "maxLength": 50,
+            "description": "User display name (optional)",
             "example": "أحمد محمد المحدث"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address (optional)",
+            "example": "ahmed.updated@example.com"
           },
           "bio": {
             "type": "string",
             "maxLength": 500,
+            "description": "User bio/description (optional)",
             "example": "فنان تشكيلي متخصص في الرسم الزيتي والألوان المائية"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "pattern": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{8,}$",
+            "description": "New password (optional)",
+            "example": "newPassword123!"
           },
           "job": {
             "type": "string",
             "maxLength": 100,
+            "description": "User job/profession (optional)",
             "example": "رسام ومصمم جرافيك"
           },
           "location": {
             "type": "string",
             "maxLength": 100,
+            "description": "User location (optional)",
             "example": "جدة، السعودية"
           },
           "website": {
             "type": "string",
             "format": "uri",
+            "description": "User website (optional)",
             "example": "https://www.my-new-portfolio.com"
           },
           "socialMedia": {
             "type": "object",
+            "description": "User social media links (optional)",
             "properties": {
               "instagram": {
                 "type": "string",
                 "maxLength": 100,
+                "description": "Instagram username (optional)",
                 "example": "@my_new_instagram"
               },
               "twitter": {
                 "type": "string",
                 "maxLength": 100,
+                "description": "Twitter username (optional)",
                 "example": "@my_new_twitter"
               },
               "facebook": {
                 "type": "string",
                 "maxLength": 100,
+                "description": "Facebook username (optional)",
                 "example": "my.new.facebook"
               }
             }
@@ -748,7 +772,7 @@
           "profileImage": {
             "type": "string",
             "format": "binary",
-            "description": "Profile image file"
+            "description": "Profile image file (JPEG, PNG, JPG, GIF, WebP) - optional"
           }
         }
       },

@@ -38,6 +38,7 @@ export const updateProfileSchema = {
       .string()
       .min(2)
       .max(50)
+      .allow('', null)
       .optional()
       .label('الاسم')
       .messages(defaultMessages),
@@ -45,6 +46,7 @@ export const updateProfileSchema = {
     email: joi
       .string()
       .email({ tlds: { allow: false } })
+      .allow('', null)
       .optional()
       .label('البريد الإلكتروني')
       .messages(defaultMessages),
@@ -52,6 +54,7 @@ export const updateProfileSchema = {
     bio: joi
       .string()
       .max(500)
+      .allow('', null)
       .optional()
       .label('الوصف')
       .messages(defaultMessages),
@@ -59,6 +62,7 @@ export const updateProfileSchema = {
     password: joi
       .string()
       .pattern(passwordPattern)
+      .allow('', null)
       .optional()
       .label('كلمة المرور الجديدة')
       .messages({

@@ -223,22 +223,22 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
     const updateData = {};
 
-    // Only update provided fields
+    // Only update provided fields (excluding empty strings and null values)
     const allowedFields = ['displayName', 'email', 'bio'];
     allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) {
+      if (req.body[field] !== undefined && req.body[field] !== null && req.body[field] !== '') {
         updateData[field] = req.body[field];
       }
     });
 
-    // Handle password update if provided
-    if (req.body.password) {
+    // Handle password update if provided (and not empty)
+    if (req.body.password && req.body.password.trim() !== '') {
       const hashedPassword = await bcryptjs.hash(req.body.password, 12);
       updateData.password = hashedPassword;
     }
 
     // التحقق من أن البريد الإلكتروني فريد إذا تم تحديثه
-    if (req.body.email) {
+    if (req.body.email && req.body.email.trim() !== '') {
       const existingUser = await userModel.findOne({ 
         email: req.body.email, 
         _id: { $ne: userId } 
@@ -250,7 +250,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     }
 
     // التحقق من طول bio إذا تم توفيره
-    if (req.body.bio && req.body.bio.length > 500) {
+    if (req.body.bio && req.body.bio.trim() !== '' && req.body.bio.length > 500) {
       return res.fail(null, 'الوصف طويل جداً، الحد الأقصى 500 حرف', 400);
     }
 
@@ -258,6 +258,12 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     const currentUser = await userModel.findById(userId);
     if (!currentUser) {
       return res.fail(null, 'المستخدم غير موجود', 404);
+    }
+
+    // Check if any field is being updated
+    const hasUpdates = Object.keys(updateData).length > 0 || req.file;
+    if (!hasUpdates) {
+      return res.fail(null, 'يرجى توفير حقل واحد على الأقل للتحديث', 400);
     }
 
     // Handle profile image if provided
