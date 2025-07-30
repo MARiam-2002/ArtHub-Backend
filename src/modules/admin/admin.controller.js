@@ -776,75 +776,28 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // Get user statistics and latest orders
+  // Get user statistics only
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
   const reviewModel = (await import('../../../DB/models/review.model.js')).default;
-  const tokenModel = (await import('../../../DB/models/token.model.js')).default;
 
-  const [totalOrders, totalSpent, totalReviews, averageRating, latestOrders, recentActivity] = await Promise.all([
+  const [totalOrders, totalSpent, totalReviews, averageRating] = await Promise.all([
     specialRequestModel.countDocuments({ user: id }),
     specialRequestModel.aggregate([
-      { $match: { user: new mongoose.Types.ObjectId(id), status: 'completed' } },
+      { 
+        $match: { 
+          user: new mongoose.Types.ObjectId(id), 
+          status: { $in: ['completed', 'pending', 'in_progress', 'approved'] },
+          finalPrice: { $exists: true, $ne: null, $gt: 0 }
+        } 
+      },
       { $group: { _id: null, total: { $sum: '$finalPrice' } } }
     ]),
     reviewModel.countDocuments({ user: id }),
     reviewModel.aggregate([
       { $match: { user: new mongoose.Types.ObjectId(id) } },
       { $group: { _id: null, avg: { $avg: '$rating' } } }
-    ]),
-    // Get latest 5 orders for overview
-    specialRequestModel.find({ user: id })
-      .populate('artist', 'displayName profileImage')
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .lean(),
-    // Get recent activity (last 10 activities)
-    Promise.all([
-      tokenModel.find({ user: new mongoose.Types.ObjectId(id), type: 'access' })
-        .sort({ createdAt: -1 })
-        .limit(3)
-        .lean(),
-      specialRequestModel.find({ user: new mongoose.Types.ObjectId(id) })
-        .sort({ createdAt: -1 })
-        .limit(3)
-        .lean(),
-      reviewModel.find({ user: new mongoose.Types.ObjectId(id) })
-        .sort({ createdAt: -1 })
-        .limit(3)
-        .lean()
     ])
   ]);
-
-  // Format recent activity
-  const formattedActivity = [
-    ...recentActivity[0].map(token => ({
-      type: 'login',
-      icon: '🔐',
-      title: 'تسجيل دخول',
-      description: `تم تسجيل الدخول من ${token.ip || 'جهاز غير معروف'}`,
-      date: token.createdAt,
-      status: 'info'
-    })),
-    ...recentActivity[1].map(request => ({
-      type: 'request',
-      icon: request.requestType === 'custom_artwork' ? '🎨' : '🛒',
-      title: request.requestType === 'custom_artwork' 
-        ? `طلب خاص #${request._id.toString().slice(-4)}`
-        : `طلب عادي #${request._id.toString().slice(-4)}`,
-      description: `طلب ${request.requestType === 'custom_artwork' ? 'خاص' : 'عادي'} بقيمة ${request.finalPrice || request.budget} ${request.currency}`,
-      date: request.createdAt,
-      status: request.status
-    })),
-    ...recentActivity[2].map(review => ({
-      type: 'review',
-      icon: '⭐',
-      title: 'تقييم جديد',
-      description: `تم إرسال تقييم ${review.rating} نجوم للمنتج`,
-      date: review.createdAt,
-      status: 'new'
-    }))
-  ].sort((a, b) => new Date(b.date) - new Date(a.date))
-   .slice(0, 10);
 
   const userDetails = {
     _id: user._id,
@@ -862,27 +815,13 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
     lastActive: user.lastActive,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
-    // Statistics
+    // Statistics only
     statistics: {
       totalOrders: totalOrders,
       totalSpent: totalSpent[0]?.total || 0,
       totalReviews: totalReviews,
       averageRating: parseFloat((averageRating[0]?.avg || 0).toFixed(1))
-    },
-    // Latest orders for overview
-    latestOrders: latestOrders.map(order => ({
-      _id: order._id,
-      title: order.title,
-      description: order.description,
-      price: parseFloat(order.finalPrice?.toFixed(2) || order.budget?.toFixed(2) || 0),
-      currency: order.currency || 'SAR',
-      status: order.status,
-      artist: order.artist,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    })),
-    // Recent activity
-    recentActivity: formattedActivity
+    }
   };
 
   res.json({
