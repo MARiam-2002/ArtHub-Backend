@@ -1213,25 +1213,45 @@ export const getProfile = asyncHandler(async (req, res, next) => {
       user.wishlist ? user.wishlist.length : 0
     ]);
 
+    // Default values for null fields
+    const defaultProfileImage = {
+      url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1753201276/WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c.jpg',
+      id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
+    };
+
+    const defaultSocialMedia = {
+      instagram: null,
+      twitter: null,
+      facebook: null
+    };
+
     const profileData = {
       _id: user._id,
-      displayName: user.displayName,
+      displayName: user.displayName || 'مستخدم جديد',
       email: user.email,
-      role: user.role,
-      profileImage: user.profileImage?.url || null,
+      role: user.role || 'user',
+      profileImage: user.profileImage?.url || defaultProfileImage.url,
       coverImage: user.coverImages && user.coverImages.length > 0 ? user.coverImages[0].url : null,
-      bio: user.bio || null,
-      job: user.job || null,
-      location: user.location || null,
+      bio: user.bio || 'لم يتم إضافة نبذة شخصية بعد',
+      job: user.job || 'مستخدم',
+      location: user.location || 'غير محدد',
       website: user.website || null,
-      socialMedia: user.socialMedia || null,
-      isActive: user.isActive,
+      socialMedia: user.socialMedia || defaultSocialMedia,
+      isActive: user.isActive !== undefined ? user.isActive : true,
+      isVerified: user.isVerified !== undefined ? user.isVerified : false,
+      preferredLanguage: user.preferredLanguage || 'ar',
+      notificationSettings: user.notificationSettings || {
+        enablePush: true,
+        enableEmail: true,
+        muteChat: false
+      },
+      lastActive: user.lastActive || user.createdAt,
       createdAt: user.createdAt,
       stats: {
-        artworksCount,
-        followersCount,
-        followingCount,
-        wishlistCount
+        artworksCount: artworksCount || 0,
+        followersCount: followersCount || 0,
+        followingCount: followingCount || 0,
+        wishlistCount: wishlistCount || 0
       }
     };
 

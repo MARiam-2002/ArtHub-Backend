@@ -1684,7 +1684,8 @@ export const swaggerDefinition = {
           },
           displayName: {
             type: 'string',
-            example: 'أحمد محمد'
+            example: 'أحمد محمد',
+            description: 'اسم المستخدم المعروض (قيمة افتراضية: "مستخدم جديد")'
           },
           email: {
             type: 'string',
@@ -1693,67 +1694,104 @@ export const swaggerDefinition = {
           },
           role: {
             type: 'string',
-            enum: ['user', 'artist'],
-            example: 'artist'
+            enum: ['user', 'artist', 'admin', 'superadmin'],
+            example: 'artist',
+            description: 'دور المستخدم (قيمة افتراضية: "user")'
           },
           profileImage: {
-            type: 'object',
-            properties: {
-              url: {
-                type: 'string',
-                format: 'uri',
-                example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg'
-              },
-              publicId: {
-                type: 'string',
-                example: 'demo/profile_id'
-              }
-            }
+            type: 'string',
+            format: 'uri',
+            example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg',
+            description: 'رابط صورة الملف الشخصي (قيمة افتراضية: صورة افتراضية)'
           },
           coverImage: {
             type: 'string',
             format: 'uri',
             nullable: true,
             example: 'https://res.cloudinary.com/demo/image/upload/v1612345678/cover.jpg',
-            description: 'Cover image URL (first cover image if multiple exist)'
+            description: 'رابط صورة الغلاف (قيمة افتراضية: null)'
           },
           bio: {
             type: 'string',
-            example: 'فنان تشكيلي متخصص في الرسم الزيتي'
+            example: 'فنان تشكيلي متخصص في الرسم الزيتي',
+            description: 'نبذة شخصية (قيمة افتراضية: "لم يتم إضافة نبذة شخصية بعد")'
           },
           job: {
             type: 'string',
-            example: 'رسام'
+            example: 'رسام',
+            description: 'المهنة (قيمة افتراضية: "مستخدم")'
           },
           location: {
             type: 'string',
-            example: 'الرياض، السعودية'
+            example: 'الرياض، السعودية',
+            description: 'الموقع (قيمة افتراضية: "غير محدد")'
           },
           website: {
             type: 'string',
             format: 'uri',
-            example: 'https://www.artist-portfolio.com'
+            nullable: true,
+            example: 'https://www.artist-portfolio.com',
+            description: 'الموقع الإلكتروني (قيمة افتراضية: null)'
           },
           socialMedia: {
             type: 'object',
             properties: {
               instagram: {
                 type: 'string',
+                nullable: true,
                 example: '@artist_instagram'
               },
               twitter: {
                 type: 'string',
+                nullable: true,
                 example: '@artist_twitter'
               },
               facebook: {
                 type: 'string',
+                nullable: true,
                 example: 'artist.facebook'
               }
-            }
+            },
+            description: 'وسائل التواصل الاجتماعي (قيم افتراضية: null)'
           },
           isActive: {
             type: 'boolean',
-            example: true
+            example: true,
+            description: 'حالة النشاط (قيمة افتراضية: true)'
+          },
+          isVerified: {
+            type: 'boolean',
+            example: false,
+            description: 'حالة التحقق (قيمة افتراضية: false)'
+          },
+          preferredLanguage: {
+            type: 'string',
+            enum: ['ar', 'en'],
+            example: 'ar',
+            description: 'اللغة المفضلة (قيمة افتراضية: "ar")'
+          },
+          notificationSettings: {
+            type: 'object',
+            properties: {
+              enablePush: {
+                type: 'boolean',
+                example: true
+              },
+              enableEmail: {
+                type: 'boolean',
+                example: true
+              },
+              muteChat: {
+                type: 'boolean',
+                example: false
+              }
+            },
+            description: 'إعدادات الإشعارات (قيم افتراضية: enablePush=true, enableEmail=true, muteChat=false)'
+          },
+          lastActive: {
+            type: 'string',
+            format: 'date-time',
+            description: 'آخر نشاط للمستخدم'
           },
           createdAt: {
             type: 'string',
@@ -1764,23 +1802,29 @@ export const swaggerDefinition = {
             properties: {
               artworksCount: {
                 type: 'integer',
-                example: 15
+                example: 15,
+                description: 'عدد الأعمال الفنية (قيمة افتراضية: 0)'
               },
               followersCount: {
                 type: 'integer',
-                example: 250
+                example: 250,
+                description: 'عدد المتابعين (قيمة افتراضية: 0)'
               },
               followingCount: {
                 type: 'integer',
-                example: 50
+                example: 50,
+                description: 'عدد المتابَعين (قيمة افتراضية: 0)'
               },
               wishlistCount: {
                 type: 'integer',
-                example: 8
+                example: 8,
+                description: 'عدد العناصر في المفضلة (قيمة افتراضية: 0)'
               }
-            }
+            },
+            description: 'إحصائيات المستخدم (جميع القيم الافتراضية: 0)'
           }
-        }
+        },
+        description: 'ملف المستخدم الشخصي مع القيم الافتراضية لجميع الحقول الفارغة'
       },
       // Artist Profile Schemas
       ArtistProfile: {
