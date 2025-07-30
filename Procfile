@@ -1,1 +1,1 @@
-web: node railway-start.js 
+web: node railway-start-simple.js 

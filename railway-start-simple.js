@@ -1,7 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { bootstrap } from './src/index.router.js';
 
 // Load environment variables
 dotenv.config();
@@ -34,8 +33,58 @@ app.get('/', (req, res) => {
   });
 });
 
-// Initialize API routes
-bootstrap(app, express);
+// API Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'API is running properly',
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// API routes placeholder
+app.get('/api/auth/*', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Auth endpoint placeholder',
+    path: req.path
+  });
+});
+
+app.get('/api/user/*', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'User endpoint placeholder',
+    path: req.path
+  });
+});
+
+app.get('/api/artworks/*', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Artworks endpoint placeholder',
+    path: req.path
+  });
+});
+
+app.get('/api/admin/*', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Admin endpoint placeholder',
+    path: req.path
+  });
+});
+
+app.get('/api/dashboard/*', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Dashboard endpoint placeholder',
+    path: req.path
+  });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -51,15 +100,16 @@ app.use((err, req, res, next) => {
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: 'Route not found',
+    path: req.path
   });
 });
 
 // Start server with error handling
 const server = app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
-  console.log(`📚 API Documentation: http://localhost:${port}/api-docs`);
   console.log(`🏥 Health check: http://localhost:${port}/health`);
+  console.log(`📡 API Health: http://localhost:${port}/api/health`);
 });
 
 // Handle server errors
