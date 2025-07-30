@@ -15,7 +15,7 @@
       "description": "خادم API الرئيسي"
     },
     {
-      "url": "https://arthub-api.vercel.app/api",
+      "url": "https://arthub-backend.up.railway.app/api",
       "description": "خادم الإنتاج"
     },
     {
