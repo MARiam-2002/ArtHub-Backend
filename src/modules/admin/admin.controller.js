@@ -1862,35 +1862,33 @@ export const getArtistInfo = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // جلب إحصائيات الفنان
+  // جلب إحصائيات الفنان - الإحصائيات المطلوبة فقط
   const [
     artworksCount,
     totalSales,
     completedOrders,
-    avgRating,
-    reviewsCount,
-    reportsCount,
-    followersCount
+    avgRating
   ] = await Promise.all([
+    // إجمالي الأعمال
     artworkModel.countDocuments({ artist: new mongoose.Types.ObjectId(artistId) }),
+    
+    // إجمالي المبيعات من الطلبات المكتملة
     specialRequestModel.aggregate([
       { $match: { artist: new mongoose.Types.ObjectId(artistId), status: 'completed' } },
       { $group: { _id: null, total: { $sum: { $ifNull: ['$finalPrice', '$budget'] } } } }
     ]),
+    
+    // الطلبات المكتملة
     specialRequestModel.countDocuments({ 
       artist: new mongoose.Types.ObjectId(artistId), 
       status: 'completed' 
     }),
+    
+    // متوسط التقييم
     reviewModel.aggregate([
       { $match: { artist: new mongoose.Types.ObjectId(artistId) } },
       { $group: { _id: null, avgRating: { $avg: '$rating' } } }
-    ]),
-    reviewModel.countDocuments({ artist: new mongoose.Types.ObjectId(artistId) }),
-    reportModel.countDocuments({ 
-      targetUser: new mongoose.Types.ObjectId(artistId),
-      status: { $ne: 'resolved' }
-    }),
-    followModel.countDocuments({ following: new mongoose.Types.ObjectId(artistId) })
+    ])
   ]);
 
   res.json({
@@ -1915,10 +1913,7 @@ export const getArtistInfo = asyncHandler(async (req, res, next) => {
         artworksCount,
         totalSales: totalSales[0]?.total || 0,
         completedOrders,
-        avgRating: avgRating[0]?.avgRating || 0,
-        reviewsCount,
-        reportsCount,
-        followersCount
+        avgRating: avgRating[0]?.avgRating || 0
       }
     }
   });
