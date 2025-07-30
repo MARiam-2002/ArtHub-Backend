@@ -1,8 +1,19 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
 dotenv.config();
+
+// Conditional import for development/testing only
+let MongoMemoryServer;
+if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+  try {
+    const { MongoMemoryServer: MMS } = await import('mongodb-memory-server');
+    MongoMemoryServer = MMS;
+  } catch (error) {
+    console.warn('⚠️ mongodb-memory-server not available, skipping in-memory database setup');
+    MongoMemoryServer = null;
+  }
+}
 
 // Variables for connection management
 let mongoServer;
@@ -180,29 +191,10 @@ export const connectDB = async (retryCount = 0) => {
       } else {
         // Development environment: use in-memory MongoDB if no CONNECTION_URL
         if (!process.env.CONNECTION_URL) {
-          console.log('🧪 No CONNECTION_URL provided, using in-memory MongoDB instance');
+          if (MongoMemoryServer) {
+            console.log('🧪 No CONNECTION_URL provided, using in-memory MongoDB instance');
 
-          // Create in-memory database if not exists
-          if (!mongoServer) {
-            mongoServer = await MongoMemoryServer.create();
-            const mongoUri = mongoServer.getUri();
-            console.log(`🧪 In-memory MongoDB server started at ${mongoUri}`);
-            process.env.CONNECTION_URL = mongoUri;
-          }
-
-          // Connect to in-memory database with appropriate options
-          await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
-        } else {
-          // Try to connect with the provided URL
-          try {
-            console.log('🔄 Connecting to development MongoDB with provided URL...');
-            await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
-          } catch (connectionError) {
-            // If connection fails, fall back to in-memory database
-            console.log(
-              '⚠️ Connection to provided MongoDB URL failed, falling back to in-memory database'
-            );
-
+            // Create in-memory database if not exists
             if (!mongoServer) {
               mongoServer = await MongoMemoryServer.create();
               const mongoUri = mongoServer.getUri();
@@ -210,8 +202,38 @@ export const connectDB = async (retryCount = 0) => {
               process.env.CONNECTION_URL = mongoUri;
             }
 
-            // Connect to in-memory database
+            // Connect to in-memory database with appropriate options
             await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
+          } else {
+            console.error('❌ No CONNECTION_URL provided and mongodb-memory-server not available');
+            console.error('Please set CONNECTION_URL environment variable or install mongodb-memory-server for development');
+            throw new Error('Database connection failed: No CONNECTION_URL and no in-memory server available');
+          }
+        } else {
+          // Try to connect with the provided URL
+          try {
+            console.log('🔄 Connecting to development MongoDB with provided URL...');
+            await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
+          } catch (connectionError) {
+            // If connection fails, fall back to in-memory database (if available)
+            if (MongoMemoryServer) {
+              console.log(
+                '⚠️ Connection to provided MongoDB URL failed, falling back to in-memory database'
+              );
+
+              if (!mongoServer) {
+                mongoServer = await MongoMemoryServer.create();
+                const mongoUri = mongoServer.getUri();
+                console.log(`🧪 In-memory MongoDB server started at ${mongoUri}`);
+                process.env.CONNECTION_URL = mongoUri;
+              }
+
+              // Connect to in-memory database
+              await mongoose.connect(process.env.CONNECTION_URL, getConnectionOptions(false));
+            } else {
+              console.error('❌ Connection to provided MongoDB URL failed and no fallback available');
+              throw connectionError;
+            }
           }
         }
       }
@@ -396,12 +418,18 @@ export const closeDatabase = async () => {
   try {
     if (mongoose.connection.readyState !== 0) {
       // Check if connection is active
-      if (mongoServer) {
-        await mongoose.connection.dropDatabase();
-        await mongoose.connection.close();
-        await mongoServer.stop();
-        mongoServer = null;
-        console.log('✅ In-memory MongoDB server stopped successfully');
+      if (mongoServer && MongoMemoryServer) {
+        try {
+          await mongoose.connection.dropDatabase();
+          await mongoose.connection.close();
+          await mongoServer.stop();
+          mongoServer = null;
+          console.log('✅ In-memory MongoDB server stopped successfully');
+        } catch (mongoError) {
+          console.warn('⚠️ Error stopping in-memory MongoDB server:', mongoError.message);
+          // Still try to close the mongoose connection
+          await mongoose.connection.close();
+        }
       } else {
         await mongoose.connection.close();
         console.log('✅ MongoDB connection closed successfully');
