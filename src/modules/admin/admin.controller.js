@@ -820,7 +820,7 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
     // Statistics only
     statistics: {
       totalOrders: totalOrders,
-      totalSpent: totalSpent[0]?.total || 0,
+      totalSpent: totalSpent,
       totalReviews: totalReviews,
       averageRating: parseFloat((averageRating[0]?.avg || 0).toFixed(1))
     }
