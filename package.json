@@ -62,7 +62,8 @@
     "fix:swagger-json": "node scripts/fix-swagger-json.js",
     "debug:swagger-json": "node scripts/debug-swagger-json.js",
     "validate:json": "node scripts/validate-json.js",
-    "test:firebase": "node scripts/test-firebase-config.js"
+    "test:firebase": "node scripts/test-firebase-config.js",
+    "test:local": "node scripts/test-local-server.js"
   },
   "engines": {
     "node": "18.x"

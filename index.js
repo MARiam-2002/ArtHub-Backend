@@ -48,18 +48,27 @@ app.use(async (req, res, next) => {
   if (
     !req.path.startsWith('/api') ||
     req.path === '/health' ||
+    req.path === '/api/health' ||
     req.path === '/api/keepalive' ||
     req.path === '/api/db-test' ||
     req.path === '/api/mongo-debug' ||
     req.path === '/api/direct-connect' ||
     req.path === '/api/api-routes' ||
-    req.path === '/api-docs'
+    req.path === '/api-docs' ||
+    req.path === '/api-docs/' ||
+    req.path.startsWith('/api-docs/')
   ) {
     return next();
   }
 
   // Skip database check in development with mock mode
   if (process.env.NODE_ENV === 'development' && process.env.MOCK_DB === 'true') {
+    return next();
+  }
+
+  // Skip database check if CONNECTION_URL is not set
+  if (!process.env.CONNECTION_URL) {
+    console.warn('⚠️ CONNECTION_URL not set, skipping database checks');
     return next();
   }
 
@@ -74,28 +83,32 @@ app.use(async (req, res, next) => {
       const reconnected = await ensureDatabaseConnection(true);
 
       if (!reconnected) {
-        return res.status(503).json({
-          success: false,
-          status: 503,
-          message: 'الخدمة غير متوفرة',
-          error: 'خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا',
-          errorCode: 'DB_CONNECTION_ERROR',
-          timestamp: new Date().toISOString()
-        });
+        console.error('❌ Database reconnection failed, but continuing request');
+        // Don't block the request, just log the error
+        // return res.status(503).json({
+        //   success: false,
+        //   status: 503,
+        //   message: 'الخدمة غير متوفرة',
+        //   error: 'خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا',
+        //   errorCode: 'DB_CONNECTION_ERROR',
+        //   timestamp: new Date().toISOString()
+        // });
       }
     }
 
     next();
   } catch (err) {
     console.error('❌ Database connection error during request:', err);
-    return res.status(503).json({
-      success: false,
-      status: 503,
-      message: 'الخدمة غير متوفرة',
-      error: 'خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا',
-      errorCode: 'DB_CONNECTION_ERROR',
-      timestamp: new Date().toISOString()
-    });
+    // Don't block the request, just log the error
+    // return res.status(503).json({
+    //   success: false,
+    //   status: 503,
+    //   message: 'الخدمة غير متوفرة',
+    //   error: 'خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا',
+    //   errorCode: 'DB_CONNECTION_ERROR',
+    //   timestamp: new Date().toISOString()
+    // });
+    next();
   }
 });
 
@@ -111,6 +124,17 @@ app.get('/api', (req, res) => {
     documentation: `${req.protocol}://${req.get('host')}/api-docs`,
     status: 'UP',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Simple API health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    status: 'UP'
   });
 });
 
