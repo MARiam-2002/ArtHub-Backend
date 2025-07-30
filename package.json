@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node railway-start.js",
+    "dev": "nodemon railway-start.js",
     "build": "echo 'Building ArtHub Backend...'",
     "vercel-build": "echo 'Building ArtHub Backend...'",
     "test-db": "node -e \"import('mongoose').then(mongoose => mongoose.connect(process.env.CONNECTION_URL).then(() => console.log('✅ Database connection successful')).catch(err => console.error('❌ Database connection failed:', err.message)))\"",
