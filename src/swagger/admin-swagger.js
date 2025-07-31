@@ -2665,7 +2665,6 @@ export const adminPaths = {
           name: 'limit',
           schema: {
             type: 'integer',
-            enum: [10],
             default: 10
           },
           description: 'عدد الأنشطة في الصفحة (محدد بـ 10)'

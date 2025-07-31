@@ -1264,8 +1264,8 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { page = 1, limit = 10 } = req.query;
-
+    const { page = 1, limit = 10 } = req.query;
+  
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
       success: false,
@@ -1274,8 +1274,11 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
     });
   }
 
+  // Force limit to be 10 regardless of what user sends
+  const actualLimit = 10;
+  
   // Calculate skip for pagination
-  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const skip = (parseInt(page) - 1) * actualLimit;
 
   // Get users recent activity from various collections
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
@@ -1324,10 +1327,10 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
     }))
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // Apply pagination
+    // Apply pagination
   const totalActivities = formattedActivities.length;
-  const paginatedActivities = formattedActivities.slice(skip, skip + parseInt(limit));
-
+  const paginatedActivities = formattedActivities.slice(skip, skip + actualLimit);
+  
   res.json({
     success: true,
     message: 'تم جلب نشاط المستخدم بنجاح',
@@ -1335,9 +1338,9 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
       activities: paginatedActivities,
       pagination: {
         page: parseInt(page),
-        limit: parseInt(limit),
+        limit: actualLimit,
         total: totalActivities,
-        pages: Math.ceil(totalActivities / parseInt(limit))
+        pages: Math.ceil(totalActivities / actualLimit)
       }
     }
   });

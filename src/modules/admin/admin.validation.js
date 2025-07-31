@@ -269,12 +269,10 @@ export const getUserActivitySchema = {
       'any.required': 'معرف المستخدم مطلوب'
     })
   }),
-  query: joi.object({
-    page: joi.number().integer().min(1).optional().default(1),
-    limit: joi.number().integer().valid(10).default(10).messages({
-      'any.only': 'الحد الأقصى يجب أن يكون 10'
-    })
-  })
+                query: joi.object({
+                page: joi.number().integer().min(1).optional().default(1),
+                limit: joi.number().integer().default(10)
+              })
 };
 
 // Export users validation
