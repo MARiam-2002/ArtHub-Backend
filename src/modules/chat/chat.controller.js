@@ -177,7 +177,11 @@ export const getChats = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Get chats error:', error);
-    next(new Error('حدث خطأ أثناء جلب المحادثات', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء جلب المحادثات',
+      error: error.message
+    });
   }
 });
 
@@ -266,7 +270,11 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Get or create chat error:', error);
-    next(new Error('حدث خطأ أثناء إنشاء المحادثة', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء إنشاء المحادثة',
+      error: error.message
+    });
   }
 });
 
@@ -625,7 +633,11 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Send message error:', error);
-    next(new Error('حدث خطأ أثناء إرسال الرسالة', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء إرسال الرسالة',
+      error: error.message
+    });
   }
 });
 
@@ -702,7 +714,11 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Mark as read error:', error);
-    next(new Error('حدث خطأ أثناء تمييز الرسائل كمقروءة', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء تمييز الرسائل كمقروءة',
+      error: error.message
+    });
   }
 });
 
@@ -813,7 +829,11 @@ export const deleteMessage = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Delete message error:', error);
-    next(new Error('حدث خطأ أثناء حذف الرسالة', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء حذف الرسالة',
+      error: error.message
+    });
   }
 });
 
@@ -858,7 +878,11 @@ export const getUnreadCount = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Get unread count error:', error);
-    next(new Error('حدث خطأ أثناء جلب عدد الرسائل غير المقروءة', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء جلب عدد الرسائل غير المقروءة',
+      error: error.message
+    });
   }
 });
 
@@ -892,7 +916,11 @@ export const deleteChat = asyncHandler(async (req, res, next) => {
     res.success(null, 'تم حذف المحادثة بنجاح');
   } catch (error) {
     console.error('Delete chat error:', error);
-    next(new Error('حدث خطأ أثناء حذف المحادثة', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء حذف المحادثة',
+      error: error.message
+    });
   }
 });
 
