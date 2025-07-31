@@ -5194,6 +5194,160 @@ export const adminPaths = {
         }
       }
     }
+  },
+  '/api/admin/overview': {
+    get: {
+      tags: ['Admin Dashboard'],
+      summary: 'Get admin dashboard overview with latest orders',
+      description: 'Get overview of admin dashboard with latest orders and statistics',
+      security: [
+        {
+          BearerAuth: []
+        }
+      ],
+      responses: {
+        200: {
+          description: 'Overview retrieved successfully',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: true
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'تم جلب نظرة عامة للوحة التحكم بنجاح'
+                  },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      overview: {
+                        type: 'object',
+                        properties: {
+                          latestOrders: {
+                            type: 'array',
+                            items: {
+                              type: 'object',
+                              properties: {
+                                _id: {
+                                  type: 'string',
+                                  example: '507f1f77bcf86cd799439011'
+                                },
+                                title: {
+                                  type: 'string',
+                                  example: 'لوحة زيتية مخصصة'
+                                },
+                                artist: {
+                                  type: 'object',
+                                  properties: {
+                                    name: {
+                                      type: 'string',
+                                      example: 'احمد محمد'
+                                    },
+                                    id: {
+                                      type: 'string',
+                                      example: '507f1f77bcf86cd799439012'
+                                    }
+                                  }
+                                },
+                                date: {
+                                  type: 'string',
+                                  example: '١٨ - ١ - ٢٠٢٥'
+                                },
+                                price: {
+                                  type: 'string',
+                                  example: '٨٥٠'
+                                },
+                                currency: {
+                                  type: 'string',
+                                  example: 'SAR'
+                                },
+                                status: {
+                                  type: 'object',
+                                  properties: {
+                                    en: {
+                                      type: 'string',
+                                      example: 'completed'
+                                    },
+                                    ar: {
+                                      type: 'string',
+                                      example: 'مكتمل'
+                                    },
+                                    color: {
+                                      type: 'string',
+                                      example: 'green'
+                                    }
+                                  }
+                                },
+                                requestType: {
+                                  type: 'string',
+                                  example: 'custom_artwork'
+                                },
+                                description: {
+                                  type: 'string',
+                                  example: 'طلب لوحة زيتية مخصصة'
+                                }
+                              }
+                            }
+                          },
+                          statistics: {
+                            type: 'object',
+                            properties: {
+                              totalUsers: {
+                                type: 'number',
+                                example: 12847
+                              },
+                              totalArtists: {
+                                type: 'number',
+                                example: 3429
+                              },
+                              totalOrders: {
+                                type: 'number',
+                                example: 1243
+                              },
+                              totalRevenue: {
+                                type: 'number',
+                                example: 1545118
+                              },
+                              activeUsers: {
+                                type: 'number',
+                                example: 10234
+                              },
+                              completedOrders: {
+                                type: 'number',
+                                example: 891
+                              }
+                            }
+                          }
+                        }
+                      },
+                      currency: {
+                        type: 'string',
+                        example: 'SAR'
+                      },
+                      lastUpdated: {
+                        type: 'string',
+                        format: 'date-time',
+                        example: '2025-01-18T10:30:45.123Z'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          $ref: '#/components/responses/UnauthorizedError'
+        },
+        403: {
+          $ref: '#/components/responses/ForbiddenError'
+        }
+      }
+    }
   }
 
 
