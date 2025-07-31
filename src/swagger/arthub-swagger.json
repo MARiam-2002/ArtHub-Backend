@@ -23,7 +23,7 @@
       "description": "خادم الإنتاج (Railway)"
     },
     {
-      "url": "http://localhost:5000",
+      "url": "http://localhost:3000",
       "description": "خادم التطوير المحلي"
     }
   ],
