@@ -270,7 +270,10 @@ export const getUserActivitySchema = {
     })
   }),
   query: joi.object({
-    page: joi.number().integer().min(1).optional()
+    page: joi.number().integer().min(1).optional().default(1),
+    limit: joi.number().integer().valid(10).default(10).messages({
+      'any.only': 'الحد الأقصى يجب أن يكون 10'
+    })
   })
 };
 

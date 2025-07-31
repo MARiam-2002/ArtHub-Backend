@@ -1264,8 +1264,7 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { page = 1 } = req.query;
-  const limit = 10; // Fixed limit of 10
+  const { page = 1, limit = 10 } = req.query;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
@@ -1276,7 +1275,7 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
   }
 
   // Calculate skip for pagination
-  const skip = (parseInt(page) - 1) * limit;
+  const skip = (parseInt(page) - 1) * parseInt(limit);
 
   // Get users recent activity from various collections
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
@@ -1327,7 +1326,7 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
 
   // Apply pagination
   const totalActivities = formattedActivities.length;
-  const paginatedActivities = formattedActivities.slice(skip, skip + limit);
+  const paginatedActivities = formattedActivities.slice(skip, skip + parseInt(limit));
 
   res.json({
     success: true,
@@ -1336,9 +1335,9 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
       activities: paginatedActivities,
       pagination: {
         page: parseInt(page),
-        limit: limit,
+        limit: parseInt(limit),
         total: totalActivities,
-        pages: Math.ceil(totalActivities / limit)
+        pages: Math.ceil(totalActivities / parseInt(limit))
       }
     }
   });

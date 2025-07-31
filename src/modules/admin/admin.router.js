@@ -1273,7 +1273,7 @@ router.get('/users/:id/reviews',
  *   get:
  *     summary: Get user activity log
  *     tags: [Admin Dashboard]
- *     description: Get activity log for a specific user
+ *     description: Get activity log for a specific user (limit fixed at 10 items per page)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -1294,7 +1294,8 @@ router.get('/users/:id/reviews',
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of items per page
+ *           enum: [10]
+ *         description: Number of items per page (fixed at 10)
  *     responses:
  *       200:
  *         description: User activity log retrieved successfully
