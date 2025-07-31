@@ -399,7 +399,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     }
 
     // Validate message content
-    if (!content?.trim() && (!attachments || attachments.length === 0) && (!images || images.length === 0)) {
+    if (!content?.trim() && (!attachments || attachments.length === 0) && (!images || images.length === 0) && (!req.files || req.files.length === 0)) {
       return res.status(400).json({
         success: false,
         message: 'محتوى الرسالة أو المرفقات مطلوبة',
@@ -434,13 +434,96 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       }).lean();
     }
 
+    // معالجة الملفات المرفوعة (صور، صوت، فيديو)
+    let uploadedAttachments = [];
+    if (req.files && req.files.length > 0) {
+      try {
+        console.log('📎 Processing chat attachments:', req.files.length, 'files');
+        
+        const cloudinary = await import('cloudinary');
+        cloudinary.v2.config({
+          cloud_name: process.env.CLOUD_NAME,
+          api_key: process.env.API_KEY,
+          api_secret: process.env.API_SECRET
+        });
+
+        // رفع جميع الملفات
+        const uploadPromises = req.files.map(async (file, index) => {
+          try {
+            console.log(`📤 Uploading file ${index + 1}:`, file.originalname);
+            
+            // تحديد نوع الملف
+            let fileType = 'file';
+            if (file.mimetype.startsWith('image/')) {
+              fileType = 'image';
+            } else if (file.mimetype.startsWith('audio/')) {
+              fileType = 'voice';
+            } else if (file.mimetype.startsWith('video/')) {
+              fileType = 'video';
+            }
+            
+            const { secure_url, public_id, format, bytes } = await cloudinary.v2.uploader.upload(
+              file.path,
+              {
+                folder: `arthub/chat-messages/${chatId}/${Date.now()}`,
+                resource_type: 'auto', // يدعم جميع أنواع الملفات
+                allowed_formats: [
+                  // صور
+                  'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff',
+                  // صوت
+                  'mp3', 'wav', 'aac', 'flac', 'ogg',
+                  // فيديو
+                  'mp4', 'mpeg', 'mov', 'avi', 'wmv', 'webm', '3gp', 'flv',
+                  // مستندات
+                  'pdf', 'doc', 'docx', 'txt'
+                ],
+                transformation: fileType === 'image' ? [
+                  { width: 1920, height: 1080, crop: 'limit' },
+                  { quality: 'auto:good' }
+                ] : undefined
+              }
+            );
+
+            console.log(`✅ File ${index + 1} uploaded:`, secure_url);
+            
+            return {
+              url: secure_url,
+              type: fileType,
+              name: file.originalname,
+              size: bytes,
+              mimeType: file.mimetype,
+              duration: fileType === 'voice' ? undefined : undefined, // سيتم إضافة duration للصوت لاحقاً
+              dimensions: fileType === 'image' ? { width: 0, height: 0 } : undefined
+            };
+          } catch (error) {
+            console.error(`❌ Error uploading file ${index + 1}:`, error);
+            throw new Error(`فشل في رفع الملف: ${file.originalname}`);
+          }
+        });
+
+        uploadedAttachments = await Promise.all(uploadPromises);
+        console.log('✅ All chat files uploaded successfully');
+        
+      } catch (error) {
+        console.error('❌ Error processing chat files:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'فشل في رفع الملفات المرفقة: ' + error.message,
+          data: null
+        });
+      }
+    }
+
+    // دمج المرفقات المرفوعة مع المرفقات الموجودة
+    const allAttachments = [...(attachments || []), ...uploadedAttachments];
+
     // Create message
     const messageData = {
       chat: chatId,
       sender: userId,
       content: content?.trim() || '',
-      messageType,
-      attachments: attachments || [],
+      messageType: uploadedAttachments.length > 0 ? uploadedAttachments[0].type : messageType,
+      attachments: allAttachments,
       images: images || [],
       isRead: false,
       sentAt: new Date()

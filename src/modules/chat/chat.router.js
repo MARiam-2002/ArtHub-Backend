@@ -3,6 +3,7 @@ import * as chatController from './chat.controller.js';
 import { authenticate } from '../../middleware/auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './chat.validation.js';
+import { fileUpload, filterObject } from '../../utils/multer.js';
 
 const router = Router();
 
@@ -278,6 +279,33 @@ router.get('/:chatId/messages', authenticate, chatController.getMessages);
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 description: Message content (optional if files are attached)
+ *               messageType:
+ *                 type: string
+ *                 enum: [text, image, file, voice, location, contact]
+ *                 default: text
+ *                 description: Type of message (auto-detected from uploaded files)
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Files to upload (images, audio, video, documents) - max 10 files
+ *               attachments:
+ *                 type: string
+ *                 description: JSON string of existing attachments
+ *               images:
+ *                 type: string
+ *                 description: JSON string of existing image URLs
+ *               replyTo:
+ *                 type: string
+ *                 description: Message ID to reply to
  *         application/json:
  *           schema:
  *             type: object
@@ -338,7 +366,15 @@ router.get('/:chatId/messages', authenticate, chatController.getMessages);
  *       500:
  *         description: Server error
  */
-router.post('/:chatId/send', authenticate, chatController.sendMessage);
+// Create combined filter for chat files (images, audio, video, documents)
+const chatFileFilter = [
+  ...filterObject.image,
+  ...filterObject.audio,
+  ...filterObject.video,
+  ...filterObject.document
+];
+
+router.post('/:chatId/send', authenticate, fileUpload(chatFileFilter).array('files', 10), chatController.sendMessage);
 
 /**
  * @swagger

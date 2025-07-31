@@ -5868,11 +5868,11 @@
     },
     "/api/chat/{chatId}/send": {
       "post": {
-        "summary": "Send message",
+        "summary": "Send message with file support",
         "tags": [
           "Chat"
         ],
-        "description": "Send a message in a chat",
+        "description": "Send a message in a chat with optional file attachments (images, audio, video, documents)",
         "security": [
           {
             "BearerAuth": []
@@ -5884,7 +5884,8 @@
             "name": "chatId",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "Chat ID"
           }
@@ -5892,18 +5893,118 @@
         "requestBody": {
           "required": true,
           "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "Message content (required for text messages, optional for file messages)",
+                    "maxLength": 1000,
+                    "example": "مرحبا كيف حالك؟"
+                  },
+                  "messageType": {
+                    "type": "string",
+                    "enum": ["text", "image", "file", "voice", "video"],
+                    "default": "text",
+                    "description": "Type of message",
+                    "example": "text"
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Files to upload (max 10 files)",
+                    "maxItems": 10
+                  },
+                  "replyTo": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "description": "Message ID to reply to (optional)",
+                    "example": "507f1f77bcf86cd799439011"
+                  }
+                }
+              },
+              "examples": {
+                "text-message": {
+                  "summary": "رسالة نصية",
+                  "description": "إرسال رسالة نصية عادية",
+                  "value": {
+                    "content": "مرحبا، كيف يمكنني مساعدتك؟",
+                    "messageType": "text"
+                  }
+                },
+                "image-message": {
+                  "summary": "رسالة صورة",
+                  "description": "إرسال صورة مع تعليق",
+                  "value": {
+                    "content": "شاهد هذا التصميم الجديد",
+                    "messageType": "image",
+                    "files": ["image.jpg"]
+                  }
+                },
+                "voice-message": {
+                  "summary": "رسالة صوتية",
+                  "description": "إرسال رسالة صوتية",
+                  "value": {
+                    "messageType": "voice",
+                    "files": ["voice_message.mp3"]
+                  }
+                },
+                "document-message": {
+                  "summary": "رسالة مستند",
+                  "description": "إرسال مستند أو ملف",
+                  "value": {
+                    "content": "هذا هو العقد المطلوب",
+                    "messageType": "file",
+                    "files": ["contract.pdf"]
+                  }
+                }
+              }
+            },
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "content"
-                ],
                 "properties": {
                   "content": {
                     "type": "string",
                     "description": "Message content",
                     "minLength": 1,
-                    "maxLength": 1000
+                    "maxLength": 1000,
+                    "example": "مرحبا كيف حالك؟"
+                  },
+                  "messageType": {
+                    "type": "string",
+                    "enum": ["text"],
+                    "default": "text",
+                    "description": "Type of message (text only for JSON)",
+                    "example": "text"
+                  },
+                  "replyTo": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "description": "Message ID to reply to (optional)",
+                    "example": "507f1f77bcf86cd799439011"
+                  }
+                },
+                "required": ["content"]
+              },
+              "examples": {
+                "simple-text": {
+                  "summary": "رسالة نصية بسيطة",
+                  "description": "إرسال رسالة نصية بدون ملفات",
+                  "value": {
+                    "content": "مرحبا، أتمنى أن تكون بخير"
+                  }
+                },
+                "reply-message": {
+                  "summary": "رد على رسالة",
+                  "description": "الرد على رسالة سابقة",
+                  "value": {
+                    "content": "شكرا لك على هذه المعلومات",
+                    "replyTo": "507f1f77bcf86cd799439011"
                   }
                 }
               }
@@ -5912,16 +6013,189 @@
         },
         "responses": {
           "200": {
-            "description": "Message sent successfully"
+            "description": "Message sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إرسال الرسالة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439012"
+                        },
+                        "chat": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "sender": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439010"
+                        },
+                        "content": {
+                          "type": "string",
+                          "example": "مرحبا كيف حالك؟"
+                        },
+                        "messageType": {
+                          "type": "string",
+                          "example": "text"
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": ["image", "file", "voice", "video"]
+                              },
+                              "url": {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "number"
+                              },
+                              "mimeType": {
+                                "type": "string"
+                              },
+                              "duration": {
+                                "type": "number",
+                                "description": "Duration in seconds (for audio/video)"
+                              }
+                            }
+                          }
+                        },
+                        "sentAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "isRead": {
+                          "type": "boolean",
+                          "example": false
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
-            "description": "Bad request"
+            "description": "Bad request - Invalid chat ID or message data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "معرف المحادثة غير صالح أو بيانات الرسالة مفقودة"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "description": "Forbidden - Not a member of this chat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بإرسال رسائل في هذه المحادثة"
+                    }
+                  }
+                }
+              }
+            }
           },
           "404": {
-            "description": "Chat not found"
+            "description": "Chat not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "المحادثة غير موجودة"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "حجم الملف كبير جداً - الحد الأقصى 10MB"
+                    }
+                  }
+                }
+              }
+            }
           },
           "500": {
-            "description": "Server error"
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "حدث خطأ في الخادم"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
