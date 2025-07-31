@@ -2267,3 +2267,148 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
     }
   });
 }); 
+
+/**
+ * @desc    Get admin dashboard overview with latest orders
+ * @route   GET /api/admin/overview
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getAdminOverview = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  // جلب آخر الطلبات (4 طلبات فقط كما في الصورة)
+  const latestOrders = await specialRequestModel.find({ 
+    isDeleted: { $ne: true } 
+  })
+    .populate('sender', 'displayName')
+    .populate('artist', 'displayName')
+    .sort({ createdAt: -1 })
+    .limit(4)
+    .lean();
+
+  // تنسيق الطلبات كما في الصورة
+  const formattedOrders = latestOrders.map(order => {
+    // تحديد حالة الطلب باللغة العربية
+    let statusAr = '';
+    let statusColor = '';
+    
+    switch (order.status) {
+      case 'completed':
+        statusAr = 'مكتمل';
+        statusColor = 'green';
+        break;
+      case 'rejected':
+      case 'cancelled':
+        statusAr = 'مرفوض';
+        statusColor = 'red';
+        break;
+      case 'in_progress':
+      case 'pending':
+        statusAr = 'قيد التنفيذ';
+        statusColor = 'yellow';
+        break;
+      case 'accepted':
+        statusAr = 'مقبول';
+        statusColor = 'blue';
+        break;
+      default:
+        statusAr = 'قيد المراجعة';
+        statusColor = 'gray';
+    }
+
+    // تنسيق التاريخ باللغة العربية
+    const orderDate = new Date(order.createdAt);
+    const formattedDate = orderDate.toLocaleDateString('ar-SA', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric'
+    });
+
+    // تنسيق السعر
+    const price = order.finalPrice || order.budget || 0;
+    const formattedPrice = price.toLocaleString('ar-SA');
+
+    return {
+      _id: order._id,
+      title: order.title,
+      artist: {
+        name: order.artist?.displayName || 'فنان غير محدد',
+        id: order.artist?._id
+      },
+      date: formattedDate,
+      price: formattedPrice,
+      currency: order.currency || 'SAR',
+      status: {
+        en: order.status,
+        ar: statusAr,
+        color: statusColor
+      },
+      requestType: order.requestType,
+      description: order.description
+    };
+  });
+
+  // جلب إحصائيات سريعة
+  const [
+    totalUsers,
+    totalArtists,
+    totalOrders,
+    totalRevenue,
+    activeUsers,
+    completedOrders
+  ] = await Promise.all([
+    userModel.countDocuments({ 
+      role: { $in: ['user', 'artist'] }, 
+      isDeleted: false 
+    }),
+    userModel.countDocuments({ 
+      role: 'artist', 
+      isDeleted: false 
+    }),
+    specialRequestModel.countDocuments({ 
+      isDeleted: { $ne: true } 
+    }),
+    specialRequestModel.aggregate([
+      { 
+        $match: { 
+          status: 'completed',
+          isDeleted: { $ne: true }
+        } 
+      },
+      { 
+        $group: { 
+          _id: null, 
+          total: { $sum: { $ifNull: ['$finalPrice', '$budget', 0] } } 
+        } 
+      }
+    ]),
+    userModel.countDocuments({ 
+      isActive: true, 
+      isDeleted: false 
+    }),
+    specialRequestModel.countDocuments({ 
+      status: 'completed',
+      isDeleted: { $ne: true }
+    })
+  ]);
+
+  res.json({
+    success: true,
+    message: 'تم جلب نظرة عامة للوحة التحكم بنجاح',
+    data: {
+      overview: {
+        latestOrders: formattedOrders,
+        statistics: {
+          totalUsers,
+          totalArtists,
+          totalOrders,
+          totalRevenue: totalRevenue[0]?.total || 0,
+          activeUsers,
+          completedOrders
+        }
+      },
+      currency: 'SAR',
+      lastUpdated: new Date().toISOString()
+    }
+  });
+});
