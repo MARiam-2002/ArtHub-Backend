@@ -13,6 +13,11 @@ dependencies:
   image_picker: ^1.0.4
   permission_handler: ^11.0.1
   path: ^1.8.3
+  record: ^4.4.4  # للتسجيل الصوتي
+  audioplayers: ^5.2.1  # لتشغيل الصوت
+  shared_preferences: ^2.2.2  # لحفظ البيانات محلياً
+  video_player: ^2.8.1  # لتشغيل الفيديو
+  path_provider: ^2.1.1  # للوصول لمجلدات النظام
 ```
 
 ### 2️⃣ **Server Configuration**
@@ -364,12 +369,14 @@ class ChatApiService {
 
 ## 🎨 **UI Implementation Example**
 
-### **Chat Screen with File Upload:**
+### **Chat Screen with File Upload & Voice Recording:**
 ```dart
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -391,10 +398,20 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
+  final Record _audioRecorder = Record();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  
   List<dynamic> messages = [];
   bool isLoading = true;
   bool isSending = false;
   List<File> selectedFiles = [];
+  
+  // Voice Recording State
+  bool isRecording = false;
+  bool isPlaying = false;
+  String? recordingPath;
+  Duration recordingDuration = Duration.zero;
+  Timer? recordingTimer;
 
   @override
   void initState() {
@@ -590,6 +607,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
               ListTile(
+                leading: Icon(Icons.mic, color: Colors.red),
+                title: Text('تسجيل صوتي'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showVoiceRecordingDialog();
+                },
+              ),
+              ListTile(
                 leading: Icon(Icons.attach_file, color: Colors.orange),
                 title: Text('اختيار ملف'),
                 onTap: () {
@@ -602,6 +627,130 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       },
     );
+  }
+
+  // Voice Recording Methods
+  Future<void> _startRecording() async {
+    try {
+      final permission = await Permission.microphone.request();
+      if (permission.isGranted) {
+        final directory = await getTemporaryDirectory();
+        final fileName = 'voice_message_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        recordingPath = '${directory.path}/$fileName';
+        
+        await _audioRecorder.start(
+          path: recordingPath!,
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          samplingRate: 44100,
+        );
+        
+        setState(() {
+          isRecording = true;
+          recordingDuration = Duration.zero;
+        });
+        
+        // Start timer
+        recordingTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+          setState(() {
+            recordingDuration = Duration(seconds: timer.tick);
+          });
+        });
+      }
+    } catch (e) {
+      print('Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      await _audioRecorder.stop();
+      recordingTimer?.cancel();
+      
+      setState(() {
+        isRecording = false;
+      });
+      
+      if (recordingPath != null) {
+        final file = File(recordingPath!);
+        if (await file.exists()) {
+          setState(() {
+            selectedFiles.add(file);
+          });
+        }
+      }
+    } catch (e) {
+      print('Error stopping recording: $e');
+    }
+  }
+
+  void _showVoiceRecordingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('تسجيل رسالة صوتية'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isRecording ? Icons.mic : Icons.mic_none,
+                    size: 64,
+                    color: isRecording ? Colors.red : Colors.grey,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    isRecording 
+                        ? '${recordingDuration.inMinutes}:${(recordingDuration.inSeconds % 60).toString().padLeft(2, '0')}'
+                        : 'اضغط لبدء التسجيل',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                  SizedBox(height: 16),
+                  if (isRecording)
+                    LinearProgressIndicator(
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                    ),
+                ],
+              ),
+              actions: [
+                if (!isRecording)
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('إلغاء'),
+                  ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (isRecording) {
+                      await _stopRecording();
+                      Navigator.pop(context);
+                    } else {
+                      await _startRecording();
+                      setDialogState(() {});
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isRecording ? Colors.red : Colors.blue,
+                  ),
+                  child: Text(isRecording ? 'إيقاف التسجيل' : 'بدء التسجيل'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
+    recordingTimer?.cancel();
+    super.dispose();
   }
 
   void _scrollToBottom() {
@@ -889,9 +1038,12 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.play_arrow,
-                color: isMe ? Colors.white : Colors.black,
+              GestureDetector(
+                onTap: () => _playVoiceMessage(url),
+                child: Icon(
+                  isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: isMe ? Colors.white : Colors.black,
+                ),
               ),
               SizedBox(width: 8),
               Text(
@@ -900,6 +1052,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: isMe ? Colors.white : Colors.black,
                 ),
               ),
+              SizedBox(width: 8),
+              if (attachment['duration'] != null)
+                Text(
+                  '${(attachment['duration'] ~/ 60)}:${(attachment['duration'] % 60).toString().padLeft(2, '0')}',
+                  style: TextStyle(
+                    color: isMe ? Colors.white70 : Colors.black54,
+                    fontSize: 12,
+                  ),
+                ),
             ],
           ),
         );
@@ -988,6 +1149,32 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // Voice Message Playback
+  Future<void> _playVoiceMessage(String url) async {
+    try {
+      if (isPlaying) {
+        await _audioPlayer.stop();
+        setState(() {
+          isPlaying = false;
+        });
+      } else {
+        await _audioPlayer.play(UrlSource(url));
+        setState(() {
+          isPlaying = true;
+        });
+        
+        // Listen for completion
+        _audioPlayer.onPlayerComplete.listen((_) {
+          setState(() {
+            isPlaying = false;
+          });
+        });
+      }
+    } catch (e) {
+      print('Error playing voice message: $e');
+    }
+  }
+
   String _formatTime(String? timestamp) {
     if (timestamp == null) return '';
     final date = DateTime.parse(timestamp);
@@ -1001,16 +1188,41 @@ class _ChatScreenState extends State<ChatScreen> {
 ## 🔐 **Authentication Helper**
 
 ```dart
+import 'package:shared_preferences/shared_preferences.dart';
+
 // Token storage helper
 Future<String?> getTokenFromStorage() async {
-  // Implement your token storage logic
-  // Example: SharedPreferences, Secure Storage, etc.
-  return 'your_jwt_token_here';
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
+  } catch (e) {
+    print('Error getting token: $e');
+    return null;
+  }
 }
 
-String? getCurrentUserId() {
-  // Return current user ID
-  return 'current_user_id';
+Future<String?> getCurrentUserId() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_id');
+  } catch (e) {
+    print('Error getting user ID: $e');
+    return null;
+  }
+}
+
+// Save user data after login
+Future<void> saveUserData(String token, String userId) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('auth_token', token);
+  await prefs.setString('user_id', userId);
+}
+
+// Clear user data on logout
+Future<void> clearUserData() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('auth_token');
+  await prefs.remove('user_id');
 }
 ```
 
@@ -1024,6 +1236,8 @@ String? getCurrentUserId() {
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.MICROPHONE" />
 ```
 
 ### **iOS (ios/Runner/Info.plist):**
@@ -1032,6 +1246,8 @@ String? getCurrentUserId() {
 <string>يحتاج التطبيق للوصول للكاميرا لالتقاط الصور</string>
 <key>NSPhotoLibraryUsageDescription</key>
 <string>يحتاج التطبيق للوصول لمعرض الصور لاختيار الصور</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>يحتاج التطبيق للوصول للميكروفون لتسجيل الرسائل الصوتية</string>
 ```
 
 ---
@@ -1101,6 +1317,599 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
 ---
 
+## 🎬 **Video Player Screen**
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+
+class VideoPlayerScreen extends StatefulWidget {
+  final String videoUrl;
+
+  const VideoPlayerScreen({Key? key, required this.videoUrl}) : super(key: key);
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  void _initializeVideo() async {
+    _controller = VideoPlayerController.network(widget.videoUrl);
+    try {
+      await _controller.initialize();
+      setState(() {
+        _isInitialized = true;
+      });
+      _controller.play();
+    } catch (e) {
+      print('Error initializing video: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text('تشغيل الفيديو', style: TextStyle(color: Colors.white)),
+      ),
+      body: Center(
+        child: _isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: Stack(
+                  children: [
+                    VideoPlayer(_controller),
+                    Positioned(
+                      bottom: 20,
+                      left: 20,
+                      right: 20,
+                      child: VideoProgressIndicator(
+                        _controller,
+                        allowScrubbing: true,
+                        colors: VideoProgressColors(
+                          playedColor: Colors.blue,
+                          backgroundColor: Colors.grey,
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _controller.value.isPlaying
+                                ? _controller.pause()
+                                : _controller.play();
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _controller.value.isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow,
+                            color: Colors.white,
+                            size: 50,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 🔄 **Auto-Scroll & Typing Indicator**
+
+```dart
+// إضافة للـ ChatScreen class
+class _ChatScreenState extends State<ChatScreen> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isTyping = false;
+  bool _otherUserTyping = false;
+  Timer? _typingTimer;
+
+  // Auto-scroll عند وصول رسالة جديدة
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  // مؤشر الكتابة
+  void _handleTyping() {
+    if (!_isTyping) {
+      setState(() => _isTyping = true);
+      socket.emit('typing', {'chatId': widget.chatId, 'userId': currentUserId});
+    }
+    
+    // إلغاء المؤشر بعد 3 ثوانٍ من التوقف عن الكتابة
+    _typingTimer?.cancel();
+    _typingTimer = Timer(Duration(seconds: 3), () {
+      if (_isTyping) {
+        setState(() => _isTyping = false);
+        socket.emit('stop_typing', {'chatId': widget.chatId, 'userId': currentUserId});
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // إضافة مستمع للكتابة
+    socket.on('user_typing', (data) {
+      if (data['userId'] != currentUserId) {
+        setState(() {
+          _otherUserTyping = true;
+        });
+        
+        // إخفاء مؤشر الكتابة بعد 5 ثوانٍ
+        Timer(Duration(seconds: 5), () {
+          setState(() {
+            _otherUserTyping = false;
+          });
+        });
+      }
+    });
+
+    socket.on('user_stopped_typing', (data) {
+      if (data['userId'] != currentUserId) {
+        setState(() {
+          _otherUserTyping = false;
+        });
+      }
+    });
+
+    // Auto-scroll عند وصول رسالة جديدة
+    socket.on('newMessage', (data) {
+      setState(() {
+        messages.add(data);
+        _otherUserTyping = false; // إخفاء مؤشر الكتابة عند وصول رسالة
+      });
+      
+      // Auto-scroll بعد تأخير قصير للسماح للـ UI بالتحديث
+      Future.delayed(Duration(milliseconds: 100), () {
+        _scrollToBottom();
+      });
+    });
+  }
+
+  // تحديث TextField لإرسال مؤشر الكتابة
+  Widget _buildMessageInput() {
+    return TextField(
+      controller: messageController,
+      onChanged: (text) {
+        if (text.isNotEmpty) {
+          _handleTyping(); // إرسال مؤشر الكتابة
+        }
+      },
+      decoration: InputDecoration(
+        hintText: 'اكتب رسالتك...',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25),
+          borderSide: BorderSide.none,
+        ),
+        filled: true,
+        fillColor: Colors.grey[100],
+      ),
+    );
+  }
+
+  // مؤشر الكتابة في قائمة الرسائل
+  Widget _buildTypingIndicator() {
+    if (!_otherUserTyping) return SizedBox.shrink();
+    
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.grey),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'يكتب الآن...',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // تحديث قائمة الرسائل لإضافة مؤشر الكتابة
+  Widget _buildMessagesList() {
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            reverse: true,
+            itemCount: messages.length,
+            itemBuilder: (context, index) {
+              final message = messages[messages.length - 1 - index];
+              final isMe = message['sender']['_id'] == currentUserId;
+              return _buildMessageBubble(message, isMe);
+            },
+          ),
+        ),
+        _buildTypingIndicator(), // مؤشر الكتابة في الأسفل
+      ],
+    );
+  }
+}
+```
+
+---
+
+## 🛡️ **Security & Performance Tips**
+
+### **أمان الملفات:**
+```dart
+// فحص نوع الملف قبل الرفع
+bool _isValidFileType(File file) {
+  final allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'mp4', 'mp3', 'wav', 'doc', 'docx'];
+  final extension = path.extension(file.path).toLowerCase().substring(1);
+  return allowedExtensions.contains(extension);
+}
+
+// فحص حجم الملف
+bool _isValidFileSize(File file) {
+  final maxSize = 10 * 1024 * 1024; // 10MB
+  return file.lengthSync() <= maxSize;
+}
+
+// فحص نوع MIME للملف
+bool _isValidMimeType(File file) {
+  // يمكن استخدام mime package لفحص نوع الملف الحقيقي
+  final allowedMimes = [
+    'image/jpeg', 'image/png', 'image/gif',
+    'audio/mpeg', 'audio/wav', 'audio/aac',
+    'video/mp4', 'video/quicktime',
+    'application/pdf', 'application/msword'
+  ];
+  
+  // يجب فحص نوع الملف الحقيقي وليس فقط الامتداد
+  return true; // مؤقتاً - يحتاج تطبيق حقيقي
+}
+
+// تشفير بسيط للرسائل الحساسة (اختياري)
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
+
+String hashMessage(String message) {
+  var bytes = utf8.encode(message);
+  var digest = sha256.convert(bytes);
+  return digest.toString();
+}
+```
+
+### **تحسين الأداء:**
+```dart
+// استخدام ListView.builder مع pagination للرسائل الكثيرة
+class _ChatScreenState extends State<ChatScreen> {
+  int currentPage = 1;
+  bool isLoadingMore = false;
+  bool hasMoreMessages = true;
+
+  // تحميل الرسائل بالتدريج
+  void _loadMoreMessages() async {
+    if (isLoadingMore || !hasMoreMessages) return;
+    
+    setState(() => isLoadingMore = true);
+    
+    try {
+      final olderMessages = await ChatApiService.getChatMessages(
+        widget.chatId,
+        await getTokenFromStorage(),
+        page: currentPage + 1,
+      );
+      
+      if (olderMessages.isEmpty) {
+        setState(() => hasMoreMessages = false);
+      } else {
+        setState(() {
+          messages.insertAll(0, olderMessages);
+          currentPage++;
+        });
+      }
+    } catch (e) {
+      print('Error loading more messages: $e');
+    } finally {
+      setState(() => isLoadingMore = false);
+    }
+  }
+
+  // تحسين ListView مع lazy loading
+  Widget _buildOptimizedMessagesList() {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification scrollInfo) {
+        // تحميل رسائل إضافية عند الوصول لأعلى القائمة
+        if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
+          _loadMoreMessages();
+        }
+        return false;
+      },
+      child: ListView.builder(
+        controller: _scrollController,
+        reverse: true,
+        itemCount: messages.length + (isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          // مؤشر التحميل في الأعلى
+          if (index == messages.length) {
+            return Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          
+          final message = messages[messages.length - 1 - index];
+          final isMe = message['sender']['_id'] == currentUserId;
+          return _buildMessageBubble(message, isMe);
+        },
+      ),
+    );
+  }
+
+  // تحسين الذاكرة بحذف الرسائل القديمة
+  void _cleanupOldMessages() {
+    const maxMessages = 500; // الحد الأقصى للرسائل في الذاكرة
+    
+    if (messages.length > maxMessages) {
+      setState(() {
+        messages = messages.sublist(messages.length - maxMessages);
+      });
+    }
+  }
+}
+```
+
+---
+
+## 🎨 **Enhanced Reply UI**
+
+```dart
+// تحسين واجهة الرد على الرسائل
+class _ChatScreenState extends State<ChatScreen> {
+  Map<String, dynamic>? replyToMessage;
+
+  Widget _buildReplyPreview() {
+    if (replyToMessage == null) return SizedBox.shrink();
+    
+    return Container(
+      padding: EdgeInsets.all(12),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: Colors.blue, width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'رد على ${replyToMessage!['sender']['displayName']}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  replyToMessage!['content'] ?? 'ملف مرفق',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close, size: 20, color: Colors.grey),
+            onPressed: () {
+              setState(() {
+                replyToMessage = null;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // تحديث بناء الرسالة لإضافة خيار الرد
+  Widget _buildMessageBubble(dynamic message, bool isMe) {
+    return GestureDetector(
+      onLongPress: () => _showMessageOptions(message),
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        child: Column(
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            // عرض الرسالة المردود عليها
+            if (message['replyTo'] != null)
+              _buildReplyReference(message['replyTo']),
+            
+            // الرسالة الأساسية
+            Container(
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isMe ? Colors.blue : Colors.grey[200],
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                  bottomLeft: isMe ? Radius.circular(16) : Radius.circular(4),
+                  bottomRight: isMe ? Radius.circular(4) : Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (message['content'] != null && message['content'].isNotEmpty)
+                    Text(
+                      message['content'],
+                      style: TextStyle(
+                        color: isMe ? Colors.white : Colors.black87,
+                        fontSize: 16,
+                      ),
+                    ),
+                  
+                  // المرفقات
+                  if (message['attachments'] != null && message['attachments'].isNotEmpty)
+                    ...message['attachments'].map<Widget>((attachment) => 
+                      Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: _buildAttachmentWidget(attachment),
+                      )).toList(),
+                  
+                  // وقت الإرسال
+                  SizedBox(height: 4),
+                  Text(
+                    _formatMessageTime(message['sentAt']),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isMe ? Colors.white70 : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReplyReference(dynamic replyMessage) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: Colors.grey, width: 2),
+        ),
+      ),
+      child: Text(
+        replyMessage['content'] ?? 'ملف مرفق',
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.grey[600],
+          fontStyle: FontStyle.italic,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  void _showMessageOptions(dynamic message) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.reply),
+              title: Text('رد على الرسالة'),
+              onTap: () {
+                Navigator.pop(context);
+                setState(() {
+                  replyToMessage = message;
+                });
+              },
+            ),
+            if (message['sender']['_id'] == currentUserId)
+              ListTile(
+                leading: Icon(Icons.delete, color: Colors.red),
+                title: Text('حذف الرسالة', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteMessage(message['_id']);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteMessage(String messageId) {
+    // تطبيق حذف الرسالة
+    print('Delete message: $messageId');
+  }
+}
+```
+
+---
+
 ## 🚀 **Important Notes**
 
 ### ✅ **Socket Events:**
@@ -1125,7 +1934,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
 ### ✅ **File Upload Features:**
 - 📸 **Image Upload**: Camera + Gallery
-- 🎵 **Voice Messages**: Audio recording support
+- 🎵 **Voice Recording**: Real-time audio recording with timer
+- 🔊 **Voice Playback**: Play received voice messages
 - 📁 **File Upload**: Documents, PDFs, etc.
 - 🎬 **Video Upload**: Video files support
 - 📎 **Multiple Files**: Up to 10 files per message
@@ -1146,6 +1956,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
 **✨ Features included:**
 - 💬 Real-time messaging
 - 📎 File upload (Images, Audio, Video, Documents)
+- 🎤 Voice recording with real-time timer
+- 🔊 Voice message playback
 - 🔄 Socket.IO integration
 - 📱 Mobile-optimized UI
 - 🔐 JWT Authentication

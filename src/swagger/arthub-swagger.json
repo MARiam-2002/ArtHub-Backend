@@ -16224,66 +16224,135 @@
                             "properties": {
                               "_id": {
                                 "type": "string",
-                                "example": "507f1f77bcf86cd799439011"
-                              },
-                              "title": {
-                                "type": "string",
-                                "example": "لوحة زيتية مخصصة"
+                                "example": "6880ad3b7dea0b1b2f4b4a4a"
                               },
                               "description": {
-                                "type": "string"
+                                "type": "string",
+                                "example": "مجموعة من 3 لوحات فنية جدارية من قماش قطني بتصميم عصري."
                               },
                               "price": {
                                 "type": "number",
-                                "example": 850
+                                "example": 100
                               },
                               "currency": {
                                 "type": "string",
                                 "example": "SAR"
                               },
-                              "status": {
+                              "orderDate": {
                                 "type": "string",
-                                "example": "completed"
-                              },
-                              "requestType": {
-                                "type": "string",
-                                "example": "custom_artwork"
+                                "format": "date-time",
+                                "example": "2025-07-22T23:19:44.539Z"
                               },
                               "artist": {
                                 "type": "object",
                                 "properties": {
                                   "_id": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "example": "6872b82a44e2488629f74e6c"
                                   },
                                   "displayName": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "example": "أحمد محمد الفنان"
                                   },
                                   "profileImage": {
-                                    "type": "object"
+                                    "type": "object",
+                                    "properties": {
+                                      "url": {
+                                        "type": "string",
+                                        "example": "https://cdn.jsdelivr.net/gh/faker-js/assets-person-portrait/female/512/9.jpg"
+                                      },
+                                      "id": {
+                                        "type": "string",
+                                        "example": "QMAuhsH1pv"
+                                      }
+                                    }
                                   }
                                 }
                               },
-                              "budget": {
-                                "type": "number"
+                              "customer": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string",
+                                    "example": "687fb7d4784941a78f07dced"
+                                  },
+                                  "displayName": {
+                                    "type": "string",
+                                    "example": "therealone"
+                                  },
+                                  "profileImage": {
+                                    "type": "object",
+                                    "properties": {
+                                      "url": {
+                                        "type": "string",
+                                        "example": "https://res.cloudinary.com/dgzucjqgi/image/upload/v1753201276/WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c.jpg"
+                                      },
+                                      "id": {
+                                        "type": "string",
+                                        "example": "WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c"
+                                      }
+                                    }
+                                  }
+                                }
                               },
-                              "finalPrice": {
-                                "type": "number"
-                              },
-                              "duration": {
-                                "type": "string"
-                              },
-                              "deadline": {
+                              "status": {
                                 "type": "string",
-                                "format": "date-time"
+                                "example": "قيد الانتظار"
                               },
-                              "requirements": {
-                                "type": "string"
+                              "requestType": {
+                                "type": "string",
+                                "example": "عمل فني مخصص"
+                              },
+                              "priority": {
+                                "type": "string",
+                                "example": "متوسطة"
+                              },
+                              "currentProgress": {
+                                "type": "number",
+                                "example": 0
                               },
                               "attachments": {
                                 "type": "array",
                                 "items": {
                                   "type": "object"
-                                }
+                                },
+                                "example": []
+                              },
+                              "deliverables": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object"
+                                },
+                                "example": []
+                              },
+                              "orderType": {
+                                "type": "string",
+                                "example": "special_request"
+                              },
+                              "budget": {
+                                "type": "number",
+                                "example": 300
+                              },
+                              "finalPrice": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "duration": {
+                                "type": "number",
+                                "example": 5
+                              },
+                              "deadline": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                              },
+                              "requirements": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "technicalDetails": {
+                                "type": "string",
+                                "nullable": true
                               },
                               "createdAt": {
                                 "type": "string",

@@ -1083,6 +1083,80 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * Helper functions for Arabic translations
+ */
+function getRequestTypeLabel(type) {
+  const labels = {
+    'custom_artwork': 'عمل فني مخصص',
+    'portrait': 'بورتريه',
+    'logo_design': 'تصميم شعار',
+    'illustration': 'رسم توضيحي',
+    'digital_art': 'فن رقمي',
+    'traditional_art': 'فن تقليدي',
+    'animation': 'رسوم متحركة',
+    'graphic_design': 'تصميم جرافيك',
+    'character_design': 'تصميم شخصيات',
+    'concept_art': 'فن تصوري',
+    'other': 'أخرى'
+  };
+  return labels[type] || 'نوع غير محدد';
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    'pending': 'قيد الانتظار',
+    'accepted': 'مقبول',
+    'rejected': 'مرفوض',
+    'in_progress': 'قيد التنفيذ',
+    'review': 'قيد المراجعة',
+    'completed': 'مكتمل',
+    'cancelled': 'ملغي'
+  };
+  return labels[status] || 'حالة غير محددة';
+}
+
+function getPriorityLabel(priority) {
+  const labels = {
+    'low': 'منخفضة',
+    'medium': 'متوسطة',
+    'high': 'عالية',
+    'urgent': 'عاجلة'
+  };
+  return labels[priority] || 'أولوية غير محددة';
+}
+
+/**
+ * Helper function to safely format image URLs
+ */
+function getImageUrl(imageField, defaultUrl = null) {
+  if (!imageField) return defaultUrl;
+  
+  if (typeof imageField === 'string') return imageField;
+  if (imageField.url) return imageField.url;
+  if (Array.isArray(imageField) && imageField.length > 0) {
+    return imageField[0].url || imageField[0];
+  }
+  
+  return defaultUrl;
+}
+
+/**
+ * Helper function to format user data for orders
+ */
+function formatUserForOrder(user) {
+  if (!user) return null;
+  
+  return {
+    _id: user._id,
+    displayName: user.displayName || 'مستخدم',
+    profileImage: {
+      url: getImageUrl(user.profileImage, user.photoURL),
+      id: user.profileImage?.id || 'default'
+    }
+  };
+}
+
+/**
  * @desc    Get user orders
  * @route   GET /api/admin/users/:id/orders
  * @access  Private (Admin, SuperAdmin)
@@ -1112,9 +1186,11 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
   // Calculate skip for pagination
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  // Get orders with pagination
+  // Get orders with pagination and populate artist and customer data
   const [orders, totalOrders] = await Promise.all([
     specialRequestModel.find(query)
+      .populate('artist', 'displayName profileImage photoURL')
+      .populate('sender', 'displayName profileImage photoURL')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -1124,22 +1200,28 @@ export const getUserOrders = asyncHandler(async (req, res, next) => {
 
   const formattedOrders = orders.map(order => ({
     _id: order._id,
-    title: order.title,
-    description: order.description,
+    description: order.description || 'لا يوجد وصف',
     price: parseFloat(order.finalPrice?.toFixed(2) || order.budget?.toFixed(2) || 0),
     currency: order.currency || 'SAR',
-    status: order.status,
-    requestType: order.requestType,
-    artist: order.artist,
-    createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
-    // Additional details
+    orderDate: order.createdAt,
+    artist: formatUserForOrder(order.artist),
+    customer: formatUserForOrder(order.sender),
+    status: getStatusLabel(order.status),
+    requestType: getRequestTypeLabel(order.requestType),
+    priority: getPriorityLabel(order.priority || 'medium'),
+    currentProgress: order.progress || 0,
+    attachments: order.attachments || [],
+    deliverables: order.deliverables || [],
+    orderType: 'special_request',
+    // Additional technical details
     budget: order.budget,
     finalPrice: order.finalPrice,
     duration: order.duration,
     deadline: order.deadline,
     requirements: order.requirements,
-    attachments: order.attachments
+    technicalDetails: order.specifications?.technicalDetails || null,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt
   }));
 
   res.json({
