@@ -789,9 +789,9 @@ router.get('/users/export',
  * @swagger
  * /api/admin/users/{id}:
  *   get:
- *     summary: Get user details with overview
+ *     summary: Get regular user details (not artists)
  *     tags: [Admin Dashboard]
- *     description: Get detailed information about a specific user including latest orders, statistics, and overview
+ *     description: Get detailed information about a specific regular user (role: user) including statistics and overview. This endpoint is for regular users only, not artists.
  *     security:
  *       - BearerAuth: []
  *     parameters:

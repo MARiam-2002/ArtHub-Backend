@@ -747,7 +747,7 @@ export const getUsers = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    Get user details
+ * @desc    Get regular user details (not artists)
  * @route   GET /api/admin/users/:id
  * @access  Private (Admin, SuperAdmin)
  */
@@ -768,10 +768,10 @@ export const getUserDetails = asyncHandler(async (req, res, next) => {
     .select('-password')
     .lean();
 
-  if (!user || ['admin', 'superadmin'].includes(user.role)) {
+  if (!user || user.role !== 'user') {
     return res.status(404).json({
       success: false,
-      message: 'المستخدم غير موجود',
+      message: 'المستخدم غير موجود أو ليس مستخدم عادي',
       data: null
     });
   }
