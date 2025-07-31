@@ -375,7 +375,11 @@ export const getMessages = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Get messages error:', error);
-    next(new Error('حدث خطأ أثناء جلب الرسائل', { cause: 500 }));
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء جلب الرسائل',
+      error: error.message
+    });
   }
 });
 
