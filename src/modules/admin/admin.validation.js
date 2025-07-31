@@ -271,10 +271,7 @@ export const getUserActivitySchema = {
   }),
   query: joi.object({
     page: joi.number().integer().min(1).optional(),
-    limit: joi.number().integer().min(1).max(100).default(20),
-    activityType: joi.string().valid('login', 'order', 'review', 'profile_update', 'artwork_view').optional(),
-    dateFrom: joi.date().iso().optional(),
-    dateTo: joi.date().iso().optional()
+    limit: joi.number().integer().min(1).max(100).default(10)
   })
 };
 

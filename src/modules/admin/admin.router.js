@@ -1288,30 +1288,22 @@ router.get('/users/:id/reviews',
  *         schema:
  *           type: integer
  *           default: 1
+ *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
- *           default:20       - in: query
- *         name: activityType
- *         schema:
- *           type: string
- *           enum: [login, order, review, profile_update, artwork_view]
- *       - in: query
- *         name: dateFrom
- *         schema:
- *           type: string
- *           format: date
- *       - in: query
- *         name: dateTo
- *         schema:
- *           type: string
- *           format: date
+ *           default: 10
+ *         description: Number of items per page
  *     responses:
- *    200       description: User activity log retrieved successfully
- *    401       description: Unauthorized
- *    403       description: Forbidden - Admin only
- *    404       description: User not found
+ *       200:
+ *         description: User activity log retrieved successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Admin only
+ *       404:
+ *         description: User not found
  */
 
 

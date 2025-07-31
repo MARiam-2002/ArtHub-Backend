@@ -1264,7 +1264,7 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
   const { id } = req.params;
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({
