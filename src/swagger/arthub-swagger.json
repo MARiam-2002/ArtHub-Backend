@@ -4586,6 +4586,46 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "examples": {
+                "user-registration": {
+                  "summary": "تسجيل مستخدم عادي",
+                  "description": "مثال لتسجيل مستخدم عادي",
+                  "value": {
+                    "email": "user@example.com",
+                    "password": "Password123!",
+                    "confirmPassword": "Password123!",
+                    "displayName": "أحمد محمد",
+                    "job": "مهندس برمجيات",
+                    "role": "user",
+                    "fingerprint": "fp_1234567890abcdef_browser_chrome_os_windows"
+                  }
+                },
+                "artist-registration": {
+                  "summary": "تسجيل فنان",
+                  "description": "مثال لتسجيل فنان",
+                  "value": {
+                    "email": "artist@example.com",
+                    "password": "Artist123!",
+                    "confirmPassword": "Artist123!",
+                    "displayName": "سارة أحمد",
+                    "job": "فنانة تشكيلية",
+                    "role": "artist",
+                    "fingerprint": "fp_9876543210fedcba_browser_safari_os_ios"
+                  }
+                },
+                "user-registration-without-fingerprint": {
+                  "summary": "تسجيل مستخدم بدون fingerprint",
+                  "description": "مثال لتسجيل مستخدم بدون device fingerprint",
+                  "value": {
+                    "email": "user2@example.com",
+                    "password": "Password123!",
+                    "confirmPassword": "Password123!",
+                    "displayName": "محمد علي",
+                    "job": "طالب جامعي",
+                    "role": "user"
+                  }
+                }
               }
             }
           }
@@ -4665,6 +4705,24 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LoginRequest"
+              },
+              "examples": {
+                "user-login": {
+                  "summary": "تسجيل دخول مستخدم",
+                  "description": "مثال لتسجيل دخول مستخدم",
+                  "value": {
+                    "email": "user@example.com",
+                    "password": "Password123!"
+                  }
+                },
+                "artist-login": {
+                  "summary": "تسجيل دخول فنان",
+                  "description": "مثال لتسجيل دخول فنان",
+                  "value": {
+                    "email": "artist@example.com",
+                    "password": "Artist123!"
+                  }
+                }
               }
             }
           }
@@ -5048,6 +5106,15 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ForgotPasswordRequest"
+              },
+              "examples": {
+                "forgot-password": {
+                  "summary": "طلب إعادة تعيين كلمة المرور",
+                  "description": "مثال لطلب إعادة تعيين كلمة المرور",
+                  "value": {
+                    "email": "user@example.com"
+                  }
+                }
               }
             }
           }
@@ -5113,6 +5180,16 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VerifyCodeRequest"
+              },
+              "examples": {
+                "verify-code": {
+                  "summary": "التحقق من رمز إعادة تعيين كلمة المرور",
+                  "description": "مثال للتحقق من رمز إعادة تعيين كلمة المرور",
+                  "value": {
+                    "email": "user@example.com",
+                    "forgetCode": "1234"
+                  }
+                }
               }
             }
           }
@@ -5178,6 +5255,18 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ResetPasswordRequest"
+              },
+              "examples": {
+                "reset-password": {
+                  "summary": "إعادة تعيين كلمة المرور",
+                  "description": "مثال لإعادة تعيين كلمة المرور",
+                  "value": {
+                    "email": "user@example.com",
+                    "forgetCode": "1234",
+                    "newPassword": "NewPassword123!",
+                    "confirmPassword": "NewPassword123!"
+                  }
+                }
               }
             }
           }
@@ -5243,6 +5332,15 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/RefreshTokenRequest"
+              },
+              "examples": {
+                "refresh-token": {
+                  "summary": "تحديث رمز الوصول",
+                  "description": "مثال لتحديث رمز الوصول",
+                  "value": {
+                    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
               }
             }
           }
