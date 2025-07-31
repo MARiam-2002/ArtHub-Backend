@@ -1286,7 +1286,7 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
     tokenModel.find({ user: new mongoose.Types.ObjectId(id), type: 'access' })
       .sort({ createdAt: -1 })
       .lean(),
-    specialRequestModel.find({ user: new mongoose.Types.ObjectId(id) })
+    specialRequestModel.find({ sender: new mongoose.Types.ObjectId(id) })
       .sort({ createdAt: -1 })
       .lean(),
     reviewModel.find({ user: new mongoose.Types.ObjectId(id) })
