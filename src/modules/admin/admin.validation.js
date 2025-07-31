@@ -270,8 +270,7 @@ export const getUserActivitySchema = {
     })
   }),
   query: joi.object({
-    page: joi.number().integer().min(1).optional(),
-    limit: joi.number().integer().min(1).max(100).default(10)
+    page: joi.number().integer().min(1).optional()
   })
 };
 

@@ -13313,48 +13313,6 @@
               "default": 1
             },
             "description": "رقم الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            },
-            "description": "عدد العناصر في الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "activityType",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "login",
-                "order",
-                "review",
-                "profile_update",
-                "artwork_view"
-              ]
-            },
-            "description": "تصفية حسب نوع النشاط"
-          },
-          {
-            "in": "query",
-            "name": "dateFrom",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "description": "تاريخ البداية"
-          },
-          {
-            "in": "query",
-            "name": "dateTo",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            },
-            "description": "تاريخ النهاية"
           }
         ],
         "responses": {
