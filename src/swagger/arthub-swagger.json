@@ -697,33 +697,23 @@
       },
       "UpdateProfileRequest": {
         "type": "object",
-        "description": "All fields are optional. You can update any combination of fields. Empty strings and null values will be ignored.",
         "properties": {
           "displayName": {
             "type": "string",
             "minLength": 2,
             "maxLength": 50,
-            "description": "User display name (optional)",
             "example": "أحمد محمد المحدث"
           },
           "email": {
             "type": "string",
             "format": "email",
-            "description": "User email address (optional)",
             "example": "ahmed.updated@example.com"
-          },
-          "bio": {
-            "type": "string",
-            "maxLength": 500,
-            "description": "User bio/description (optional)",
-            "example": "فنان تشكيلي متخصص في الرسم الزيتي"
           },
           "password": {
             "type": "string",
             "format": "password",
             "minLength": 8,
             "pattern": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*#?&]{8,}$",
-            "description": "New password (optional)",
             "example": "newPassword123!"
           },
           "profileImage": {
@@ -1407,7 +1397,8 @@
           },
           "displayName": {
             "type": "string",
-            "example": "أحمد محمد"
+            "example": "أحمد محمد",
+            "description": "اسم المستخدم المعروض (قيمة افتراضية: \"مستخدم جديد\")"
           },
           "email": {
             "type": "string",
@@ -1418,61 +1409,110 @@
             "type": "string",
             "enum": [
               "user",
-              "artist"
+              "artist",
+              "admin",
+              "superadmin"
             ],
-            "example": "artist"
+            "example": "artist",
+            "description": "دور المستخدم (قيمة افتراضية: \"user\")"
           },
           "profileImage": {
-            "type": "object",
-            "properties": {
-              "url": {
-                "type": "string",
-                "format": "uri",
-                "example": "https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg"
-              },
-              "publicId": {
-                "type": "string",
-                "example": "demo/profile_id"
-              }
-            }
+            "type": "string",
+            "format": "uri",
+            "example": "https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg",
+            "description": "رابط صورة الملف الشخصي (قيمة افتراضية: صورة افتراضية)"
+          },
+          "coverImage": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "example": "https://res.cloudinary.com/demo/image/upload/v1612345678/cover.jpg",
+            "description": "رابط صورة الغلاف (قيمة افتراضية: null)"
           },
           "bio": {
             "type": "string",
-            "example": "فنان تشكيلي متخصص في الرسم الزيتي"
+            "example": "فنان تشكيلي متخصص في الرسم الزيتي",
+            "description": "نبذة شخصية (قيمة افتراضية: \"لم يتم إضافة نبذة شخصية بعد\")"
           },
           "job": {
             "type": "string",
-            "example": "رسام"
+            "example": "رسام",
+            "description": "المهنة (قيمة افتراضية: \"مستخدم\")"
           },
           "location": {
             "type": "string",
-            "example": "الرياض، السعودية"
+            "example": "الرياض، السعودية",
+            "description": "الموقع (قيمة افتراضية: \"غير محدد\")"
           },
           "website": {
             "type": "string",
             "format": "uri",
-            "example": "https://www.artist-portfolio.com"
+            "nullable": true,
+            "example": "https://www.artist-portfolio.com",
+            "description": "الموقع الإلكتروني (قيمة افتراضية: null)"
           },
           "socialMedia": {
             "type": "object",
             "properties": {
               "instagram": {
                 "type": "string",
+                "nullable": true,
                 "example": "@artist_instagram"
               },
               "twitter": {
                 "type": "string",
+                "nullable": true,
                 "example": "@artist_twitter"
               },
               "facebook": {
                 "type": "string",
+                "nullable": true,
                 "example": "artist.facebook"
               }
-            }
+            },
+            "description": "وسائل التواصل الاجتماعي (قيم افتراضية: null)"
           },
           "isActive": {
             "type": "boolean",
-            "example": true
+            "example": true,
+            "description": "حالة النشاط (قيمة افتراضية: true)"
+          },
+          "isVerified": {
+            "type": "boolean",
+            "example": false,
+            "description": "حالة التحقق (قيمة افتراضية: false)"
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": [
+              "ar",
+              "en"
+            ],
+            "example": "ar",
+            "description": "اللغة المفضلة (قيمة افتراضية: \"ar\")"
+          },
+          "notificationSettings": {
+            "type": "object",
+            "properties": {
+              "enablePush": {
+                "type": "boolean",
+                "example": true
+              },
+              "enableEmail": {
+                "type": "boolean",
+                "example": true
+              },
+              "muteChat": {
+                "type": "boolean",
+                "example": false
+              }
+            },
+            "description": "إعدادات الإشعارات (قيم افتراضية: enablePush=true, enableEmail=true, muteChat=false)"
+          },
+          "lastActive": {
+            "type": "string",
+            "format": "date-time",
+            "description": "آخر نشاط للمستخدم"
           },
           "createdAt": {
             "type": "string",
@@ -1483,23 +1523,29 @@
             "properties": {
               "artworksCount": {
                 "type": "integer",
-                "example": 15
+                "example": 15,
+                "description": "عدد الأعمال الفنية (قيمة افتراضية: 0)"
               },
               "followersCount": {
                 "type": "integer",
-                "example": 250
+                "example": 250,
+                "description": "عدد المتابعين (قيمة افتراضية: 0)"
               },
               "followingCount": {
                 "type": "integer",
-                "example": 50
+                "example": 50,
+                "description": "عدد المتابَعين (قيمة افتراضية: 0)"
               },
               "wishlistCount": {
                 "type": "integer",
-                "example": 8
+                "example": 8,
+                "description": "عدد العناصر في المفضلة (قيمة افتراضية: 0)"
               }
-            }
+            },
+            "description": "إحصائيات المستخدم (جميع القيم الافتراضية: 0)"
           }
-        }
+        },
+        "description": "ملف المستخدم الشخصي مع القيم الافتراضية لجميع الحقول الفارغة"
       },
       "ArtistProfile": {
         "type": "object",
@@ -12442,7 +12488,7 @@
           "Admin"
         ],
         "summary": "جلب تفاصيل المستخدم",
-        "description": "جلب معلومات مفصلة عن مستخدم محدد",
+        "description": "جلب معلومات مفصلة عن مستخدم محدد مع الإحصائيات والنشاط الأخير",
         "security": [
           {
             "BearerAuth": []
@@ -12454,7 +12500,8 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف المستخدم"
           }
@@ -12480,19 +12527,19 @@
                       "properties": {
                         "_id": {
                           "type": "string",
-                          "example": "6872c6eb501ee86cc3c5b77c"
+                          "example": "507f1f77bcf86cd799439011"
                         },
                         "displayName": {
                           "type": "string",
-                          "example": "أحمد محمد"
+                          "example": "عمر خالد محمد"
                         },
                         "email": {
                           "type": "string",
-                          "example": "khaldmrym769@gmail.com"
+                          "example": "omar.2004@gmail.com"
                         },
                         "phoneNumber": {
                           "type": "string",
-                          "example": "+966501234567"
+                          "example": "+96620140067845"
                         },
                         "role": {
                           "type": "string",
@@ -12508,78 +12555,123 @@
                         },
                         "isVerified": {
                           "type": "boolean",
-                          "example": false
+                          "example": true
                         },
                         "profileImage": {
-                          "type": "object",
-                          "properties": {
-                            "url": {
-                              "type": "string"
-                            },
-                            "id": {
-                              "type": "string"
-                            }
-                          }
+                          "type": "object"
                         },
                         "coverImages": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "properties": {
-                              "url": {
-                                "type": "string"
-                              },
-                              "id": {
-                                "type": "string"
-                              }
-                            }
+                            "type": "object"
                           }
                         },
                         "bio": {
-                          "type": "string",
-                          "example": "مستخدم نشط في منصة ArtHub"
+                          "type": "string"
                         },
                         "job": {
-                          "type": "string",
-                          "example": "مستخدم"
+                          "type": "string"
                         },
                         "location": {
                           "type": "string",
-                          "example": "الرياض، المملكة العربية السعودية"
+                          "example": "القاهرة, مصر"
                         },
                         "lastActive": {
                           "type": "string",
-                          "format": "date-time",
-                          "example": "2025-07-28T10:35:28.937Z"
+                          "format": "date-time"
                         },
                         "createdAt": {
                           "type": "string",
-                          "format": "date-time",
-                          "example": "2025-07-12T20:34:51.009Z"
+                          "format": "date-time"
                         },
                         "updatedAt": {
                           "type": "string",
-                          "format": "date-time",
-                          "example": "2025-07-28T10:37:06.569Z"
+                          "format": "date-time"
                         },
                         "statistics": {
                           "type": "object",
                           "properties": {
                             "totalOrders": {
                               "type": "integer",
-                              "example": 2
+                              "example": 12
                             },
                             "totalSpent": {
                               "type": "number",
-                              "example": 600
+                              "example": 2450
                             },
                             "totalReviews": {
                               "type": "integer",
-                              "example": 1
+                              "example": 8
                             },
                             "averageRating": {
                               "type": "number",
-                              "example": 5
+                              "example": 4.8
+                            }
+                          }
+                        },
+                        "latestOrders": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "price": {
+                                "type": "number"
+                              },
+                              "currency": {
+                                "type": "string",
+                                "example": "SAR"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "artist": {
+                                "type": "object"
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "recentActivity": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "login",
+                                  "request",
+                                  "review"
+                                ]
+                              },
+                              "icon": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "date": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "status": {
+                                "type": "string"
+                              }
                             }
                           }
                         }
@@ -12590,8 +12682,8 @@
               }
             }
           },
-          "401": {
-            "description": "غير مصرح",
+          "400": {
+            "description": "معرف مستخدم غير صالح",
             "content": {
               "application/json": {
                 "schema": {
@@ -12603,32 +12695,18 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "غير مصرح"
+                      "example": "معرف المستخدم غير صالح"
                     }
                   }
                 }
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
           "403": {
-            "description": "ممنوع - الأدمن فقط",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "غير مصرح لك بالوصول لهذا المورد"
-                    }
-                  }
-                }
-              }
-            }
+            "$ref": "#/components/responses/ForbiddenError"
           },
           "404": {
             "description": "المستخدم غير موجود",
@@ -13047,7 +13125,7 @@
           "Admin"
         ],
         "summary": "جلب تقييمات المستخدم",
-        "description": "جلب جميع تقييمات مستخدم محدد",
+        "description": "جلب جميع تقييمات المستخدم مع إمكانية التصفح",
         "security": [
           {
             "BearerAuth": []
@@ -13059,7 +13137,8 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف المستخدم"
           },
@@ -13068,18 +13147,21 @@
             "name": "page",
             "schema": {
               "type": "integer",
+              "minimum": 1,
               "default": 1
             },
-            "description": "رقم الصفحة"
+            "description": "رقم الصفحة للتصفح"
           },
           {
             "in": "query",
             "name": "limit",
             "schema": {
               "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
               "default": 10
             },
-            "description": "عدد العناصر في الصفحة"
+            "description": "عدد التقييمات في الصفحة"
           }
         ],
         "responses": {
@@ -13107,87 +13189,17 @@
                             "type": "object",
                             "properties": {
                               "_id": {
-                                "type": "string",
-                                "example": "6880080945c3fc04c35b4b1b"
+                                "type": "string"
                               },
                               "rating": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "maximum": 5,
-                                "example": 5
-                              },
-                              "title": {
-                                "type": "string",
-                                "example": "تقييم ممتاز"
+                                "type": "integer"
                               },
                               "comment": {
-                                "type": "string",
-                                "example": "عمل رائع ومهني عالي"
-                              },
-                              "artist": {
-                                "type": "string",
-                                "example": "6872b83044e2488629f74e8a"
-                              },
-                              "artwork": {
-                                "type": "string",
-                                "example": "6872b84944e2488629f74f0f"
+                                "type": "string"
                               },
                               "createdAt": {
                                 "type": "string",
-                                "format": "date-time",
-                                "example": "2025-07-12T19:32:26.837Z"
-                              },
-                              "pros": {
-                                "type": "string",
-                                "example": "جودة عالية، تسليم في الوقت المحدد"
-                              },
-                              "cons": {
-                                "type": "string",
-                                "example": null
-                              },
-                              "isRecommended": {
-                                "type": "boolean",
-                                "example": true
-                              },
-                              "subRatings": {
-                                "type": "object",
-                                "properties": {
-                                  "quality": {
-                                    "type": "integer"
-                                  },
-                                  "communication": {
-                                    "type": "integer"
-                                  },
-                                  "timeliness": {
-                                    "type": "integer"
-                                  }
-                                }
-                              },
-                              "workingExperience": {
-                                "type": "string",
-                                "enum": [
-                                  "excellent",
-                                  "good",
-                                  "average",
-                                  "poor"
-                                ],
-                                "example": "excellent"
-                              },
-                              "anonymous": {
-                                "type": "boolean",
-                                "example": false
-                              },
-                              "artworkTitle": {
-                                "type": "string",
-                                "example": "غروب الشمس فوق النيل"
-                              },
-                              "artistName": {
-                                "type": "string",
-                                "example": "ليلى محمد الخطاطة"
-                              },
-                              "reviewDate": {
-                                "type": "string",
-                                "example": "١٧‏/١‏/١٤٤٧ هـ"
+                                "format": "date-time"
                               }
                             }
                           }
@@ -13196,20 +13208,16 @@
                           "type": "object",
                           "properties": {
                             "page": {
-                              "type": "integer",
-                              "example": 1
+                              "type": "integer"
                             },
                             "limit": {
-                              "type": "integer",
-                              "example": 10
+                              "type": "integer"
                             },
                             "total": {
-                              "type": "integer",
-                              "example": 1
+                              "type": "integer"
                             },
                             "pages": {
-                              "type": "integer",
-                              "example": 1
+                              "type": "integer"
                             }
                           }
                         }
@@ -13289,7 +13297,7 @@
           "Admin"
         ],
         "summary": "جلب نشاط المستخدم",
-        "description": "جلب سجل النشاط لمستخدم محدد",
+        "description": "جلب سجل النشاط لمستخدم محدد (تسجيلات دخول، طلبات، تقييمات)",
         "security": [
           {
             "BearerAuth": []
@@ -13301,7 +13309,8 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف المستخدم"
           },
@@ -13310,9 +13319,20 @@
             "name": "page",
             "schema": {
               "type": "integer",
+              "minimum": 1,
               "default": 1
             },
-            "description": "رقم الصفحة"
+            "description": "رقم الصفحة للتصفح"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "enum": [10],
+              "default": 10
+            },
+            "description": "عدد الأنشطة في الصفحة (محدد بـ 10)"
           }
         ],
         "responses": {
@@ -15252,10 +15272,6 @@
                     "message": {
                       "type": "string",
                       "example": "الأدمن غير موجود"
-                    },
-                    "data": {
-                      "type": "null",
-                      "example": null
                     }
                   }
                 }
@@ -15756,7 +15772,7 @@
           "Admin"
         ],
         "summary": "جلب طلبات المستخدم",
-        "description": "جلب جميع طلبات مستخدم محدد",
+        "description": "جلب جميع طلبات المستخدم مع إمكانية التصفية والتصفح",
         "security": [
           {
             "BearerAuth": []
@@ -15768,7 +15784,8 @@
             "name": "id",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف المستخدم"
           },
@@ -15777,18 +15794,37 @@
             "name": "page",
             "schema": {
               "type": "integer",
+              "minimum": 1,
               "default": 1
             },
-            "description": "رقم الصفحة"
+            "description": "رقم الصفحة للتصفح"
           },
           {
             "in": "query",
             "name": "limit",
             "schema": {
               "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
               "default": 10
             },
-            "description": "عدد العناصر في الصفحة"
+            "description": "عدد الطلبات في الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "accepted",
+                "in_progress",
+                "completed",
+                "rejected",
+                "cancelled"
+              ]
+            },
+            "description": "تصفية حسب حالة الطلب"
           }
         ],
         "responses": {
@@ -15817,19 +15853,18 @@
                             "properties": {
                               "_id": {
                                 "type": "string",
-                                "example": "6880ad3b7dea0b1b2f4b4a4a"
+                                "example": "507f1f77bcf86cd799439011"
                               },
                               "title": {
                                 "type": "string",
-                                "example": "طلب عمل فني مخصص"
+                                "example": "لوحة زيتية مخصصة"
                               },
                               "description": {
-                                "type": "string",
-                                "example": "this is the request i wanna get by the weekend"
+                                "type": "string"
                               },
                               "price": {
                                 "type": "number",
-                                "example": 300
+                                "example": 850
                               },
                               "currency": {
                                 "type": "string",
@@ -15837,66 +15872,55 @@
                               },
                               "status": {
                                 "type": "string",
-                                "enum": [
-                                  "pending",
-                                  "in_progress",
-                                  "completed",
-                                  "cancelled"
-                                ],
-                                "example": "pending"
+                                "example": "completed"
                               },
                               "requestType": {
                                 "type": "string",
-                                "enum": [
-                                  "custom_artwork",
-                                  "logo_design",
-                                  "illustration",
-                                  "digital_art",
-                                  "traditional_art"
-                                ],
                                 "example": "custom_artwork"
                               },
                               "artist": {
-                                "type": "string",
-                                "example": "6872b83044e2488629f74e8a"
-                              },
-                              "createdAt": {
-                                "type": "string",
-                                "format": "date-time",
-                                "example": "2025-07-23T09:36:59.850Z"
-                              },
-                              "updatedAt": {
-                                "type": "string",
-                                "format": "date-time",
-                                "example": "2025-07-23T09:36:59.850Z"
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "displayName": {
+                                    "type": "string"
+                                  },
+                                  "profileImage": {
+                                    "type": "object"
+                                  }
+                                }
                               },
                               "budget": {
-                                "type": "number",
-                                "example": 300
+                                "type": "number"
                               },
                               "finalPrice": {
-                                "type": "number",
-                                "example": null
+                                "type": "number"
                               },
                               "duration": {
-                                "type": "integer",
-                                "example": 5
+                                "type": "string"
                               },
                               "deadline": {
                                 "type": "string",
-                                "format": "date-time",
-                                "example": null
+                                "format": "date-time"
                               },
                               "requirements": {
-                                "type": "string",
-                                "example": null
+                                "type": "string"
                               },
                               "attachments": {
                                 "type": "array",
                                 "items": {
                                   "type": "object"
-                                },
-                                "example": []
+                                }
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
                               }
                             }
                           }
@@ -15905,20 +15929,16 @@
                           "type": "object",
                           "properties": {
                             "page": {
-                              "type": "integer",
-                              "example": 1
+                              "type": "integer"
                             },
                             "limit": {
-                              "type": "integer",
-                              "example": 10
+                              "type": "integer"
                             },
                             "total": {
-                              "type": "integer",
-                              "example": 2
+                              "type": "integer"
                             },
                             "pages": {
-                              "type": "integer",
-                              "example": 1
+                              "type": "integer"
                             }
                           }
                         }
@@ -17313,17 +17333,17 @@
             "in": "query",
             "name": "search",
             "schema": {
-            "type": "string",
+              "type": "string",
               "minLength": 1,
               "maxLength": 100
-          },
+            },
             "description": "البحث بالاسم أو البريد الإلكتروني أو الهاتف"
           },
           {
             "in": "query",
             "name": "status",
             "schema": {
-            "type": "string",
+              "type": "string",
               "enum": [
                 "active",
                 "inactive",
@@ -17351,7 +17371,7 @@
             "in": "query",
             "name": "sortOrder",
             "schema": {
-            "type": "string",
+              "type": "string",
               "enum": [
                 "asc",
                 "desc"
@@ -17367,14 +17387,14 @@
             "content": {
               "application/json": {
                 "schema": {
-        "type": "object",
-        "properties": {
+                  "type": "object",
+                  "properties": {
                     "success": {
                       "type": "boolean",
                       "example": true
                     },
                     "message": {
-            "type": "string",
+                      "type": "string",
                       "example": "تم جلب قائمة الفنانين بنجاح"
                     },
                     "data": {
@@ -17383,59 +17403,59 @@
                         "artists": {
                           "type": "array",
                           "items": {
-        "type": "object",
-        "properties": {
-          "_id": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
                                 "type": "string"
-          },
-          "displayName": {
+                              },
+                              "displayName": {
                                 "type": "string"
-          },
-          "email": {
+                              },
+                              "email": {
                                 "type": "string"
-          },
-          "phone": {
+                              },
+                              "phone": {
                                 "type": "string"
-          },
-          "profileImage": {
+                              },
+                              "profileImage": {
                                 "type": "string"
-          },
-          "location": {
+                              },
+                              "location": {
                                 "type": "string"
-          },
-          "isActive": {
+                              },
+                              "isActive": {
                                 "type": "boolean"
-          },
-          "isVerified": {
+                              },
+                              "isVerified": {
                                 "type": "boolean"
-          },
-          "joinDate": {
-            "type": "string",
+                              },
+                              "joinDate": {
+                                "type": "string",
                                 "format": "date-time"
-          },
-          "stats": {
-            "type": "object",
-            "properties": {
-              "artworksCount": {
+                              },
+                              "stats": {
+                                "type": "object",
+                                "properties": {
+                                  "artworksCount": {
                                     "type": "number"
-              },
-              "totalSales": {
+                                  },
+                                  "totalSales": {
                                     "type": "number"
-              },
-              "avgRating": {
+                                  },
+                                  "avgRating": {
                                     "type": "number"
-              },
-              "reviewsCount": {
+                                  },
+                                  "reviewsCount": {
                                     "type": "number"
-              },
-              "reportsCount": {
+                                  },
+                                  "reportsCount": {
                                     "type": "number"
                                   }
-              }
-            }
-          }
-        }
-      },
+                                }
+                              }
+                            }
+                          }
+                        },
                         "pagination": {
                           "$ref": "#/components/schemas/PaginationMeta"
                         }
@@ -17482,7 +17502,7 @@
             "in": "query",
             "name": "page",
             "schema": {
-            "type": "integer",
+              "type": "integer",
               "minimum": 1,
               "default": 1
             },
@@ -17492,7 +17512,7 @@
             "in": "query",
             "name": "limit",
             "schema": {
-            "type": "integer",
+              "type": "integer",
               "minimum": 1,
               "maximum": 100,
               "default": 10
@@ -17509,16 +17529,16 @@
                   "type": "object",
                   "properties": {
                     "success": {
-            "type": "boolean",
-            "example": true
-          },
+                      "type": "boolean",
+                      "example": true
+                    },
                     "message": {
                       "type": "string",
                       "example": "تم جلب تفاصيل الفنان بنجاح"
                     },
                     "data": {
-        "type": "object",
-        "properties": {
+                      "type": "object",
+                      "properties": {
                         "artist": {
                           "type": "object",
                           "properties": {
@@ -17528,7 +17548,7 @@
                             "displayName": {
                               "type": "string"
                             },
-          "email": {
+                            "email": {
                               "type": "string"
                             },
                             "phone": {
@@ -17544,7 +17564,7 @@
                               "type": "string"
                             },
                             "joinDate": {
-            "type": "string",
+                              "type": "string",
                               "format": "date-time"
                             },
                             "isActive": {
@@ -17559,8 +17579,8 @@
                           }
                         },
                         "stats": {
-        "type": "object",
-        "properties": {
+                          "type": "object",
+                          "properties": {
                             "artworksCount": {
                               "type": "number"
                             },
@@ -17585,8 +17605,8 @@
                           }
                         },
                         "artworks": {
-            "type": "object",
-            "properties": {
+                          "type": "object",
+                          "properties": {
                             "items": {
                               "type": "array",
                               "items": {
@@ -17611,22 +17631,22 @@
                                     "type": "object"
                                   },
                                   "createdAt": {
-                "type": "string",
+                                    "type": "string",
                                     "format": "date-time"
-              }
-            }
+                                  }
+                                }
                               }
                             },
                             "pagination": {
                               "$ref": "#/components/schemas/PaginationMeta"
-          }
-        }
-      },
+                            }
+                          }
+                        },
                         "reports": {
                           "type": "array",
                           "items": {
-        "type": "object",
-        "properties": {
+                            "type": "object",
+                            "properties": {
                               "_id": {
                                 "type": "string"
                               },
@@ -17643,7 +17663,7 @@
                                 "type": "string"
                               },
                               "createdAt": {
-            "type": "string",
+                                "type": "string",
                                 "format": "date-time"
                               }
                             }
@@ -17670,7 +17690,7 @@
                                 "type": "string"
                               },
                               "createdAt": {
-            "type": "string",
+                                "type": "string",
                                 "format": "date-time"
                               }
                             }
@@ -17694,7 +17714,7 @@
                                 "type": "string"
                               },
                               "date": {
-            "type": "string",
+                                "type": "string",
                                 "format": "date-time"
                               },
                               "status": {
@@ -17715,14 +17735,14 @@
             "content": {
               "application/json": {
                 "schema": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
                       "example": false
-          },
-          "message": {
-            "type": "string",
+                    },
+                    "message": {
+                      "type": "string",
                       "example": "معرف الفنان غير صالح"
                     }
                   }
@@ -17741,24 +17761,24 @@
             "content": {
               "application/json": {
                 "schema": {
-            "type": "object",
-            "properties": {
+                  "type": "object",
+                  "properties": {
                     "success": {
                       "type": "boolean",
                       "example": false
-              },
+                    },
                     "message": {
-                "type": "string",
+                      "type": "string",
                       "example": "الفنان غير موجود"
                     }
                   }
                 }
               }
-              }
             }
           }
         }
-      },
+      }
+    },
     "/api/admin/artists/{artistId}/info": {
       "get": {
         "tags": [
@@ -17803,54 +17823,54 @@
                       "type": "object",
                       "properties": {
                         "artist": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
-            "example": "507f1f77bcf86cd799439011"
-          },
-          "displayName": {
-            "type": "string",
-            "example": "أحمد محمد"
-          },
-          "email": {
-            "type": "string",
-            "example": "ahmed@example.com"
-          },
-          "phone": {
-            "type": "string",
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "example": "أحمد محمد"
+                            },
+                            "email": {
+                              "type": "string",
+                              "example": "ahmed@example.com"
+                            },
+                            "phone": {
+                              "type": "string",
                               "example": "+966501234567"
                             },
                             "bio": {
                               "type": "string",
                               "example": "فنان تشكيلي متخصص في الرسم الزيتي"
-          },
-          "profileImage": {
-            "type": "string",
-            "format": "uri",
+                            },
+                            "profileImage": {
+                              "type": "string",
+                              "format": "uri",
                               "example": "https://res.cloudinary.com/example/image/upload/v123/profile.jpg"
                             },
                             "coverImage": {
                               "type": "string",
                               "format": "uri",
                               "example": "https://res.cloudinary.com/example/image/upload/v123/cover.jpg"
-          },
-          "location": {
-            "type": "string",
+                            },
+                            "location": {
+                              "type": "string",
                               "example": "الرياض، السعودية"
                             },
                             "joinDate": {
                               "type": "string",
                               "format": "date-time"
-          },
-          "isActive": {
-            "type": "boolean",
-            "example": true
-          },
-          "isVerified": {
-            "type": "boolean",
-            "example": true
-          },
+                            },
+                            "isActive": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "isVerified": {
+                              "type": "boolean",
+                              "example": true
+                            },
                             "socialMedia": {
                               "type": "object",
                               "properties": {
@@ -17866,33 +17886,33 @@
                               }
                             }
                           }
-          },
-          "stats": {
-            "type": "object",
-            "properties": {
-              "artworksCount": {
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "artworksCount": {
                               "type": "integer",
                               "example": 15
-              },
-              "totalSales": {
-                "type": "number",
+                            },
+                            "totalSales": {
+                              "type": "number",
                               "example": 2500.5
                             },
                             "completedOrders": {
                               "type": "integer",
                               "example": 8
-              },
-              "avgRating": {
-                "type": "number",
-                "example": 4.5
-              },
-              "reviewsCount": {
+                            },
+                            "avgRating": {
+                              "type": "number",
+                              "example": 4.5
+                            },
+                            "reviewsCount": {
                               "type": "integer",
                               "example": 12
-              },
-              "reportsCount": {
+                            },
+                            "reportsCount": {
                               "type": "integer",
-                "example": 2
+                              "example": 2
                             },
                             "followersCount": {
                               "type": "integer",
@@ -17902,11 +17922,11 @@
                         }
                       }
                     }
+                  }
+                }
               }
             }
-          }
-        }
-      },
+          },
           "400": {
             "$ref": "#/components/responses/BadRequestError"
           },
@@ -17973,8 +17993,8 @@
             "content": {
               "application/json": {
                 "schema": {
-        "type": "object",
-        "properties": {
+                  "type": "object",
+                  "properties": {
                     "success": {
                       "type": "boolean",
                       "example": true
@@ -17993,8 +18013,8 @@
                               "type": "string",
                               "example": "507f1f77bcf86cd799439011"
                             },
-          "displayName": {
-            "type": "string",
+                            "displayName": {
+                              "type": "string",
                               "example": "أحمد محمد"
                             }
                           }
@@ -18005,11 +18025,11 @@
                             "type": "object",
                             "properties": {
                               "_id": {
-            "type": "string",
+                                "type": "string",
                                 "example": "507f1f77bcf86cd799439012"
-          },
+                              },
                               "title": {
-            "type": "string",
+                                "type": "string",
                                 "example": "لوحة زيتية"
                               },
                               "price": {
@@ -18034,7 +18054,7 @@
                                   "type": "object",
                                   "properties": {
                                     "url": {
-            "type": "string",
+                                      "type": "string",
                                       "format": "uri"
                                     },
                                     "id": {
@@ -18050,7 +18070,7 @@
                                     "type": "string"
                                   },
                                   "name": {
-            "type": "string",
+                                    "type": "string",
                                     "example": "رسم زيتي"
                                   }
                                 }
@@ -18156,39 +18176,39 @@
             "content": {
               "application/json": {
                 "schema": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": true
-          },
-          "message": {
-            "type": "string",
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
                       "example": "تم جلب بلاغات الفنان بنجاح"
-          },
-          "data": {
+                    },
+                    "data": {
                       "type": "object",
                       "properties": {
                         "artist": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
-            "example": "507f1f77bcf86cd799439011"
-          },
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
                             "displayName": {
-            "type": "string",
+                              "type": "string",
                               "example": "أحمد محمد"
-          }
-        }
-      },
+                            }
+                          }
+                        },
                         "reports": {
                           "type": "array",
                           "items": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string",
                                 "example": "507f1f77bcf86cd799439013"
                               },
                               "reporter": {
@@ -18196,47 +18216,47 @@
                                 "properties": {
                                   "_id": {
                                     "type": "string"
-          },
-          "displayName": {
-            "type": "string",
+                                  },
+                                  "displayName": {
+                                    "type": "string",
                                     "example": "محمد علي"
-          },
-          "email": {
-            "type": "string",
+                                  },
+                                  "email": {
+                                    "type": "string",
                                     "example": "mohamed@example.com"
                                   }
                                 }
-          },
+                              },
                               "type": {
-            "type": "string",
+                                "type": "string",
                                 "example": "inappropriate_content"
-          },
+                              },
                               "description": {
-            "type": "string",
+                                "type": "string",
                                 "example": "المحتوى غير مناسب"
-          },
+                              },
                               "status": {
-            "type": "string",
+                                "type": "string",
                                 "example": "pending"
                               },
                               "createdAt": {
-            "type": "string",
+                                "type": "string",
                                 "format": "date-time"
                               }
                             }
                           }
                         },
                         "pagination": {
-            "type": "object",
-            "properties": {
+                          "type": "object",
+                          "properties": {
                             "page": {
                               "type": "integer",
                               "example": 1
                             },
                             "limit": {
                               "type": "integer",
-                "example": 10
-              },
+                              "example": 10
+                            },
                             "total": {
                               "type": "integer",
                               "example": 5
@@ -18334,12 +18354,12 @@
                       "type": "object",
                       "properties": {
                         "artist": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
-            "example": "507f1f77bcf86cd799439011"
-          },
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
                             "displayName": {
                               "type": "string",
                               "example": "أحمد محمد"
@@ -18352,7 +18372,7 @@
                             "type": "object",
                             "properties": {
                               "_id": {
-            "type": "string",
+                                "type": "string",
                                 "example": "507f1f77bcf86cd799439014"
                               },
                               "user": {
@@ -18362,19 +18382,19 @@
                                     "type": "string"
                                   },
                                   "displayName": {
-            "type": "string",
+                                    "type": "string",
                                     "example": "سارة أحمد"
-          }
-        }
-      },
+                                  }
+                                }
+                              },
                               "artwork": {
-        "type": "object",
-        "properties": {
-          "_id": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
                                     "type": "string"
                                   },
                                   "title": {
-            "type": "string",
+                                    "type": "string",
                                     "example": "لوحة زيتية"
                                   }
                                 }
@@ -18457,7 +18477,7 @@
             "name": "artistId",
             "required": true,
             "schema": {
-            "type": "string",
+              "type": "string",
               "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف الفنان"
@@ -18497,7 +18517,7 @@
                       "example": true
                     },
                     "message": {
-            "type": "string",
+                      "type": "string",
                       "example": "تم جلب سجل نشاط الفنان بنجاح"
                     },
                     "data": {
@@ -18507,22 +18527,22 @@
                           "type": "object",
                           "properties": {
                             "_id": {
-            "type": "string",
+                              "type": "string",
                               "example": "507f1f77bcf86cd799439011"
-          },
+                            },
                             "displayName": {
-            "type": "string",
+                              "type": "string",
                               "example": "أحمد محمد"
-          }
-        }
-      },
+                            }
+                          }
+                        },
                         "activities": {
                           "type": "array",
                           "items": {
-        "type": "object",
-        "properties": {
+                            "type": "object",
+                            "properties": {
                               "type": {
-            "type": "string",
+                                "type": "string",
                                 "enum": [
                                   "login",
                                   "request",
@@ -18533,21 +18553,21 @@
                               "icon": {
                                 "type": "string",
                                 "example": "🔐"
-          },
-          "title": {
-            "type": "string",
+                              },
+                              "title": {
+                                "type": "string",
                                 "example": "تسجيل دخول"
-          },
-          "description": {
-            "type": "string",
+                              },
+                              "description": {
+                                "type": "string",
                                 "example": "تم تسجيل الدخول من 192.168.1.1"
                               },
                               "date": {
-            "type": "string",
+                                "type": "string",
                                 "format": "date-time"
-          },
-          "status": {
-            "type": "string",
+                              },
+                              "status": {
+                                "type": "string",
                                 "example": "info"
                               }
                             }
@@ -18586,14 +18606,14 @@
             "content": {
               "application/json": {
                 "schema": {
-        "type": "object",
-        "properties": {
+                  "type": "object",
+                  "properties": {
                     "success": {
                       "type": "boolean",
                       "example": false
                     },
                     "message": {
-            "type": "string",
+                      "type": "string",
                       "example": "معرف الفنان غير صالح"
                     }
                   }
@@ -18612,14 +18632,14 @@
             "content": {
               "application/json": {
                 "schema": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "example": false
-          },
-          "message": {
-            "type": "string",
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
                       "example": "الفنان غير موجود"
                     }
                   }
@@ -18648,7 +18668,7 @@
             "name": "artistId",
             "required": true,
             "schema": {
-            "type": "string",
+              "type": "string",
               "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف الفنان"
@@ -18664,8 +18684,8 @@
                   "status"
                 ],
                 "properties": {
-          "status": {
-            "type": "string",
+                  "status": {
+                    "type": "string",
                     "enum": [
                       "active",
                       "inactive",
@@ -18674,30 +18694,30 @@
                     "description": "الحالة الجديدة للفنان"
                   },
                   "reason": {
-            "type": "string",
+                    "type": "string",
                     "minLength": 1,
                     "maxLength": 500,
                     "description": "سبب الحظر (مطلوب إذا كانت الحالة banned)"
                   }
                 }
+              }
+            }
           }
-        }
-      }
-    },
-    "responses": {
+        },
+        "responses": {
           "200": {
             "description": "تم تحديث حالة الفنان بنجاح",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
                       "example": true
-                },
-                "message": {
-                  "type": "string",
+                    },
+                    "message": {
+                      "type": "string",
                       "example": "تم تحديث حالة الفنان بنجاح إلى active"
                     },
                     "data": {
@@ -18723,32 +18743,32 @@
                           "format": "date-time"
                         }
                       }
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-      },
+          },
           "400": {
             "description": "حالة غير صالحة أو معرف فنان غير صالح",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": false
-                },
-                "message": {
-                  "type": "string",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
                       "example": "سبب الحظر مطلوب عند حظر الفنان"
+                    }
+                  }
                 }
               }
             }
-          }
-        }
-      },
+          },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
           },
@@ -18757,24 +18777,24 @@
           },
           "404": {
             "description": "الفنان غير موجود",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "success": {
-                  "type": "boolean",
-                  "example": false
-                },
-                "message": {
-                  "type": "string",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
                       "example": "الفنان غير موجود"
+                    }
+                  }
                 }
               }
             }
           }
-        }
-      }
         }
       }
     }
