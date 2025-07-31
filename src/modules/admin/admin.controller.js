@@ -1283,7 +1283,7 @@ export const getUserActivity = asyncHandler(async (req, res, next) => {
   const tokenModel = (await import('../../../DB/models/token.model.js')).default;
 
   const [recentLogins, recentOrders, recentReviews] = await Promise.all([
-    tokenModel.find({ user: new mongoose.Types.ObjectId(id), type: 'access' })
+    tokenModel.find({ user: new mongoose.Types.ObjectId(id) })
       .sort({ createdAt: -1 })
       .lean(),
     specialRequestModel.find({ sender: new mongoose.Types.ObjectId(id) })
@@ -2192,8 +2192,7 @@ export const getArtistActivity = asyncHandler(async (req, res, next) => {
   const activities = await Promise.all([
     // تسجيلات الدخول
     tokenModel.find({ 
-      user: new mongoose.Types.ObjectId(artistId),
-      type: 'access'
+      user: new mongoose.Types.ObjectId(artistId)
     })
       .sort({ createdAt: -1 })
       .lean(),
