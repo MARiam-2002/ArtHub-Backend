@@ -698,7 +698,7 @@ router.get('/profile',
 router.put('/profile', 
   authenticate, 
   isAuthorized('admin', 'superadmin'), 
-  fileUpload.single('profileImage'),
+  fileUpload(filterObject.image).single('profileImage'),
   isValidation(Validators.updateProfileSchema), 
   adminController.updateAdminProfile
 );
