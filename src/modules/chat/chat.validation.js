@@ -38,7 +38,7 @@ const objectIdPattern = /^[0-9a-fA-F]{24}$/;
 // Main validation schemas
 export const createChatSchema = {
   body: Joi.object({
-    participantId: Joi.string()
+    otherUserId: Joi.string()
       .pattern(objectIdPattern)
       .required()
       .messages({

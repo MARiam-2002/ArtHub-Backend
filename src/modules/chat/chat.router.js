@@ -175,7 +175,7 @@ router.get('/', authenticate, chatController.getChats);
  *       500:
  *         description: Server error
  */
-router.post('/create', authenticate, chatController.getOrCreateChat);
+router.post('/create', authenticate, isValidation(Validators.createChatSchema), chatController.getOrCreateChat);
 
 /**
  * @swagger
