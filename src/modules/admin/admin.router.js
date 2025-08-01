@@ -628,32 +628,77 @@ router.get('/profile',
  *   put:
  *     summary: Update admin profile
  *     tags: [Admin Dashboard]
- *     description: Update current admin profile information
+ *     description: Update current admin profile information including profile image
  *     security:
  *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
  *               displayName:
  *                 type: string
+ *                 description: Admin display name
+ *                 example: "أحمد محمد"
  *               email:
  *                 type: string
  *                 format: email
+ *                 description: Admin email address
+ *                 example: "admin@example.com"
+ *               profileImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Profile image file (JPEG, PNG, JPG, GIF, WEBP - max 5MB)
  *     responses:
  *       200:
  *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث الملف الشخصي بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     displayName:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     profileImage:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
+ *                         id:
+ *                           type: string
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
  *       400:
- *         description: Bad request
+ *         description: Bad request - validation error or email already exists
  *       401:
  *         description: Unauthorized
+ *       404:
+ *         description: Admin not found
+ *       500:
+ *         description: Internal server error
  */
 router.put('/profile', 
   authenticate, 
   isAuthorized('admin', 'superadmin'), 
+  fileUpload.single('profileImage'),
   isValidation(Validators.updateProfileSchema), 
   adminController.updateAdminProfile
 );

@@ -510,50 +510,202 @@ export const getAdminProfile = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin, SuperAdmin)
  */
 export const updateAdminProfile = asyncHandler(async (req, res, next) => {
-  await ensureDatabaseConnection();
-  
-  const { displayName, email } = req.body;
-  const adminId = req.user._id;
+  try {
+    await ensureDatabaseConnection();
+    
+    const adminId = req.user._id;
+    const updateData = {};
 
-  const admin = await userModel.findById(adminId);
-  if (!admin) {
-    return res.status(404).json({
-      success: false,
-      message: 'الأدمن غير موجود',
-      data: null
+    // Only update provided fields (excluding empty strings and null values)
+    const allowedFields = ['displayName', 'email'];
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined && req.body[field] !== null && req.body[field] !== '') {
+        updateData[field] = req.body[field];
+      }
     });
-  }
 
-  // Check if email is already taken by another user
-  if (email && email !== admin.email) {
-    const existingUser = await userModel.findOne({ email, _id: { $ne: adminId } });
-    if (existingUser) {
-      return res.status(400).json({
+    // Check if email is already taken by another user
+    if (req.body.email && req.body.email.trim() !== '') {
+      const existingUser = await userModel.findOne({ 
+        email: req.body.email, 
+        _id: { $ne: adminId } 
+      });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'البريد الإلكتروني مستخدم بالفعل',
+          data: null
+        });
+      }
+    }
+
+    // Handle password change if provided
+    if (req.body.newPassword) {
+      // Get admin with password for verification
+      const adminWithPassword = await userModel.findById(adminId).select('+password');
+      if (!adminWithPassword) {
+        return res.status(404).json({
+          success: false,
+          message: 'الأدمن غير موجود',
+          data: null
+        });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(req.body.currentPassword, adminWithPassword.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'كلمة المرور الحالية غير صحيحة',
+          data: null
+        });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(req.body.newPassword, 12);
+      updateData.password = hashedPassword;
+    }
+
+    // Get current admin
+    const currentAdmin = await userModel.findById(adminId);
+    if (!currentAdmin) {
+      return res.status(404).json({
         success: false,
-        message: 'البريد الإلكتروني مستخدم بالفعل',
+        message: 'الأدمن غير موجود',
         data: null
       });
     }
-  }
 
-  // Update fields
-  if (displayName) admin.displayName = displayName;
-  if (email) admin.email = email;
-
-  await admin.save();
-
-  res.json({
-    success: true,
-    message: 'تم تحديث الملف الشخصي بنجاح',
-    data: {
-      _id: admin._id,
-      email: admin.email,
-      displayName: admin.displayName,
-      role: admin.role,
-      profileImage: admin.profileImage,
-      updatedAt: admin.updatedAt
+    // Check if any field is being updated
+    const hasUpdates = Object.keys(updateData).length > 0 || req.file;
+    if (!hasUpdates) {
+      return res.status(400).json({
+        success: false,
+        message: 'يرجى توفير حقل واحد على الأقل للتحديث',
+        data: null
+      });
     }
-  });
+
+    // Handle profile image if provided
+    if (req.file) {
+      // Check if file path exists
+      if (!req.file.path) {
+        console.log('⚠️ File uploaded but no path available');
+        return res.status(400).json({
+          success: false,
+          message: 'ملف الصورة غير صالح',
+          data: null
+        });
+      }
+
+      try {
+        // Check file type
+        if (!req.file.mimetype || !req.file.mimetype.startsWith('image/')) {
+          return res.status(400).json({
+            success: false,
+            message: 'يجب أن يكون الملف صورة',
+            data: null
+          });
+        }
+
+        // Check file size (5MB max)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (req.file.size > maxSize) {
+          return res.status(400).json({
+            success: false,
+            message: 'حجم الصورة يجب أن يكون أقل من 5 ميجابايت',
+            data: null
+          });
+        }
+
+        // Delete old image from Cloudinary if exists
+        if (currentAdmin.profileImage && currentAdmin.profileImage.id) {
+          try {
+            const cloudinary = await import('../../utils/cloudinary.js');
+            await cloudinary.default.uploader.destroy(currentAdmin.profileImage.id);
+            console.log('🗑️ Old admin image deleted successfully');
+          } catch (error) {
+            console.log('⚠️ Error deleting old admin image:', error.message);
+          }
+        }
+
+        // Upload new image to Cloudinary
+        console.log('🔄 Starting admin image upload to Cloudinary...');
+        console.log('📁 File path:', req.file.path);
+        console.log('📏 File size:', req.file.size);
+        console.log('📄 File type:', req.file.mimetype);
+
+        const cloudinary = await import('../../utils/cloudinary.js');
+        const { secure_url, public_id } = await cloudinary.default.uploader.upload(
+          req.file.path,
+          {
+            folder: `arthub/admin-profiles/${currentAdmin._id}`,
+            transformation: [
+              { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+              { quality: 'auto', fetch_format: 'auto' }
+            ]
+          }
+        );
+        
+        console.log('✅ New admin image uploaded successfully');
+        console.log('🔗 URL:', secure_url);
+        console.log('🆔 Public ID:', public_id);
+        
+        // Create new image data
+        updateData.profileImage = {
+          url: secure_url,
+          id: public_id,
+        };
+      } catch (uploadError) {
+        console.error('❌ Admin image upload error:', uploadError);
+        console.error('❌ Error details:', {
+          message: uploadError.message,
+          name: uploadError.name,
+          stack: uploadError.stack
+        });
+        return res.status(400).json({
+          success: false,
+          message: 'حدث خطأ أثناء رفع الصورة',
+          data: null
+        });
+      }
+    }
+
+    const updatedAdmin = await userModel
+      .findByIdAndUpdate(adminId, updateData, { 
+        new: true, 
+        runValidators: true 
+      })
+      .select('-password');
+
+    if (!updatedAdmin) {
+      return res.status(404).json({
+        success: false,
+        message: 'الأدمن غير موجود',
+        data: null
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الملف الشخصي بنجاح',
+      data: {
+        _id: updatedAdmin._id,
+        email: updatedAdmin.email,
+        displayName: updatedAdmin.displayName,
+        role: updatedAdmin.role,
+        profileImage: updatedAdmin.profileImage,
+        updatedAt: updatedAdmin.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Update admin profile error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء تحديث الملف الشخصي',
+      error: error.message
+    });
+  }
 });
 
 /**

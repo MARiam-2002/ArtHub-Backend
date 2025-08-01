@@ -154,8 +154,56 @@ export const updateProfileSchema = {
       .messages({
         'string.min': 'الاسم يجب أن يكون حرفين على الأقل',
         'string.max': 'الاسم يجب أن يكون أقل من 50 حرف'
+      }),
+    email: joi.string()
+      .email({ tlds: { allow: false } })
+      .optional()
+      .messages({
+        'string.email': 'يرجى إدخال بريد إلكتروني صحيح'
+      }),
+    currentPassword: joi.string()
+      .optional()
+      .messages({
+        'string.base': 'كلمة المرور الحالية يجب أن تكون نصاً'
+      }),
+    newPassword: joi.string()
+      .min(8)
+      .max(50)
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+      .optional()
+      .messages({
+        'string.min': 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل',
+        'string.max': 'كلمة المرور الجديدة يجب أن تكون أقل من 50 حرف',
+        'string.pattern.base': 'كلمة المرور الجديدة يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص'
+      }),
+    confirmNewPassword: joi.string()
+      .optional()
+      .messages({
+        'string.base': 'تأكيد كلمة المرور يجب أن يكون نصاً'
       })
-  })
+  }).custom((value, helpers) => {
+    // If newPassword is provided, currentPassword and confirmNewPassword are required
+    if (value.newPassword && !value.currentPassword) {
+      return helpers.error('any.invalid', { message: 'كلمة المرور الحالية مطلوبة لتغيير كلمة المرور' });
+    }
+    if (value.newPassword && !value.confirmNewPassword) {
+      return helpers.error('any.invalid', { message: 'تأكيد كلمة المرور مطلوب' });
+    }
+    if (value.newPassword && value.newPassword !== value.confirmNewPassword) {
+      return helpers.error('any.invalid', { message: 'كلمة المرور الجديدة وتأكيدها غير متطابقين' });
+    }
+    return value;
+  }),
+  file: joi.object({
+    fieldname: joi.string().valid('profileImage').optional(),
+    originalname: joi.string().optional(),
+    encoding: joi.string().optional(),
+    mimetype: joi.string().valid('image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp').optional(),
+    size: joi.number().max(5 * 1024 * 1024).optional(), // 5MB max
+    destination: joi.string().optional(),
+    filename: joi.string().optional(),
+    path: joi.string().optional()
+  }).optional()
 };
 
 // Change own password validation

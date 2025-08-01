@@ -190,12 +190,12 @@ export const adminPaths = {
     put: {
       tags: ['Admin'],
       summary: 'تحديث ملف الأدمن',
-      description: 'تحديث معلومات ملف الأدمن الحالي',
+      description: 'تحديث معلومات ملف الأدمن الحالي (الاسم، البريد الإلكتروني، الصورة الشخصية، كلمة المرور)',
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
         content: {
-          'application/json': {
+          'multipart/form-data': {
             schema: {
               type: 'object',
               properties: {
@@ -209,6 +209,26 @@ export const adminPaths = {
                   format: 'email',
                   description: 'البريد الإلكتروني',
                   example: 'admin@example.com'
+                },
+                currentPassword: {
+                  type: 'string',
+                  description: 'كلمة المرور الحالية (مطلوبة عند تغيير كلمة المرور)',
+                  example: 'CurrentPass123!'
+                },
+                newPassword: {
+                  type: 'string',
+                  description: 'كلمة المرور الجديدة (مطلوبة عند تغيير كلمة المرور)',
+                  example: 'NewPass123!'
+                },
+                confirmNewPassword: {
+                  type: 'string',
+                  description: 'تأكيد كلمة المرور الجديدة (مطلوب عند تغيير كلمة المرور)',
+                  example: 'NewPass123!'
+                },
+                profileImage: {
+                  type: 'string',
+                  format: 'binary',
+                  description: 'الصورة الشخصية (اختياري)'
                 }
               }
             }
