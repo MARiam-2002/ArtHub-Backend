@@ -452,21 +452,35 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
         isDeleted: false
       } 
     },
-    // جلب أعمال الفنان
+    // جلب أعمال الفنان في الفترة المحددة
     {
       $lookup: {
         from: 'artworks',
-        localField: '_id',
-        foreignField: 'artist',
+        let: { artistId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$artist', '$$artistId'] },
+              createdAt: { $gte: startDate, $lte: endDate }
+            }
+          }
+        ],
         as: 'artworks'
       }
     },
-    // جلب تقييمات الفنان
+    // جلب تقييمات الفنان في الفترة المحددة
     {
       $lookup: {
         from: 'reviews',
-        localField: '_id',
-        foreignField: 'artist',
+        let: { artistId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$artist', '$$artistId'] },
+              createdAt: { $gte: startDate, $lte: endDate }
+            }
+          }
+        ],
         as: 'reviews'
       }
     },
@@ -552,7 +566,7 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
   // إضافة معلومات الفترة المحددة للاستجابة
   const periodInfo = year && month 
     ? { year: parseInt(year), month: parseInt(month), type: 'specific' }
-    : { period, type: 'relative' };
+    : { type: 'default', period: 'last_month' };
 
   res.status(200).json({
     success: true,
