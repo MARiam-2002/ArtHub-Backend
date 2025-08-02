@@ -308,6 +308,14 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       path: 'members',
       select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
     })
+    .populate({
+      path: 'lastMessage',
+      select: 'content text messageType sender isRead readAt sentAt createdAt',
+      populate: {
+        path: 'sender',
+        select: 'displayName profileImage photoURL'
+      }
+    })
     .lean();
 
     if (!chat) {

@@ -5,6 +5,36 @@
 
 ## ✅ الحل السريع
 
+### 🔧 إصلاحات Backend (تمت)
+
+#### 1. إصلاح Socket.IO Service
+```javascript
+// في src/utils/socketService.js
+// تم إصلاح التحقق من العضوية في Chat Room
+const chat = await chatModel.findOne({
+  _id: chatId,
+  members: { $in: [userId] } // ✅ صحيح
+});
+```
+
+#### 2. إصلاح Chat Controller
+```javascript
+// في src/modules/chat/chat.controller.js
+// تم إصلاح جميع استعلامات members
+const chat = await chatModel.findOne({
+  _id: chatId,
+  members: { $in: [userId] }, // ✅ صحيح
+  isDeleted: { $ne: true }
+});
+```
+
+#### 3. إزالة تضارب الأحداث
+```javascript
+// تم إزالة send_message event من Socket.IO
+// الآن الرسائل تُرسل فقط عبر HTTP API
+// وتصل عبر new_message event
+```
+
 ### 1. تحديث ChatService في Flutter
 
 ```dart
@@ -83,7 +113,7 @@ class ChatService {
     });
 
     // Listen for new messages
-    _socket!.on('new_message', (data) {
+    _socket!.on('new_message', (data) => {
       print('📨 Received new_message event: $data');
       ServiceLocator.get<ChatCubit>().handleIncomingMessage(data);
     });
@@ -301,5 +331,20 @@ class _MainScreenState extends State<MainScreen> {
 2. **تأكد من تهيئة Socket في MainScreen**
 3. **تحقق من الـ logs للتأكد من الاتصال**
 4. **اختبر مع مستخدمين مختلفين**
+
+## 🔧 إصلاحات Backend المكتملة
+
+### ✅ تم إصلاح:
+1. **Socket.IO Authentication** - التحقق من العضوية في Chat Room
+2. **Chat Controller Queries** - جميع استعلامات `members`
+3. **Event Handling** - إزالة تضارب الأحداث
+4. **Message Broadcasting** - إرسال الرسائل عبر Socket.IO
+
+### ✅ المشاكل التي تم حلها:
+- ❌ `members: userId` (خطأ)
+- ✅ `members: { $in: [userId] }` (صحيح)
+- ❌ تضارب في أحداث Socket.IO
+- ✅ إرسال الرسائل عبر HTTP API فقط
+- ✅ استقبال الرسائل عبر Socket.IO فقط
 
 هذا الحل يجب أن يصلح مشكلة استقبال الرسائل في Flutter! 🚀 
