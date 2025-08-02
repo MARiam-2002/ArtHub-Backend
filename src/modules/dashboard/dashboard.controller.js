@@ -417,29 +417,58 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
-  const { limit = 3, period = '1month' } = req.query;
+  const { limit = 3, period = 'monthly', year, month } = req.query;
   
   let startDate = new Date();
+  let endDate = new Date();
   
-  switch (period) {
-    case '1week':
-      startDate.setDate(startDate.getDate() - 7);
-      break;
-    case '1month':
-      startDate.setMonth(startDate.getMonth() - 1);
-      break;
-    case '3months':
-      startDate.setMonth(startDate.getMonth() - 3);
-      break;
-    case '6months':
-      startDate.setMonth(startDate.getMonth() - 6);
-      break;
-    case '1year':
-      startDate.setFullYear(startDate.getFullYear() - 1);
-      break;
-    default:
-      startDate.setMonth(startDate.getMonth() - 1);
-      break;
+  // تحديد الفترة الزمنية بناءً على المعاملات
+  if (year && month) {
+    // فلترة محددة بالسنة والشهر
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month) - 1; // الشهر يبدأ من 0 في JavaScript
+    
+    if (yearNum < 1900 || yearNum > 2100 || monthNum < 0 || monthNum > 11) {
+      return res.status(400).json({
+        success: false,
+        message: 'السنة أو الشهر غير صحيح',
+        data: null
+      });
+    }
+    
+    startDate = new Date(yearNum, monthNum, 1);
+    endDate = new Date(yearNum, monthNum + 1, 0, 23, 59, 59, 999);
+  } else {
+    // فلترة نسبية بناءً على الفترة
+    switch (period) {
+      case 'weekly':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case 'monthly':
+        startDate.setMonth(startDate.getMonth() - 1);
+        break;
+      case 'yearly':
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        break;
+      case '1week':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case '1month':
+        startDate.setMonth(startDate.getMonth() - 1);
+        break;
+      case '3months':
+        startDate.setMonth(startDate.getMonth() - 3);
+        break;
+      case '6months':
+        startDate.setMonth(startDate.getMonth() - 6);
+        break;
+      case '1year':
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        break;
+      default:
+        startDate.setMonth(startDate.getMonth() - 1);
+        break;
+    }
   }
 
   // جلب أفضل الفنانين أداءً
@@ -489,7 +518,8 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
                 $and: [
                   { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
                   { $eq: ['$status', 'completed'] },
-                  { $gte: ['$createdAt', startDate] }
+                  { $gte: ['$createdAt', startDate] },
+                  { $lte: ['$createdAt', endDate] }
                 ]
               }
             }
@@ -547,10 +577,16 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
     }
   ]);
 
+  // إضافة معلومات الفترة المحددة للاستجابة
+  const periodInfo = year && month 
+    ? { year: parseInt(year), month: parseInt(month), type: 'specific' }
+    : { period, type: 'relative' };
+
   res.status(200).json({
     success: true,
     message: 'تم جلب بيانات الفنانين بنجاح',
-    data: topArtists
+    data: topArtists,
+    periodInfo
   });
 }); 
 

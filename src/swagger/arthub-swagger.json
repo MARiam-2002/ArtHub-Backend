@@ -14969,7 +14969,7 @@
           "Dashboard"
         ],
         "summary": "أفضل الفنانين أداءً",
-        "description": "جلب قائمة أفضل الفنانين أداءً مع مقاييسهم",
+        "description": "جلب قائمة أفضل الفنانين أداءً مع مقاييسهم. يمكن فلترة النتائج بالسنة والشهر أو بالفترة النسبية",
         "security": [
           {
             "BearerAuth": []
@@ -14996,12 +14996,39 @@
               "enum": [
                 "weekly",
                 "monthly",
-                "yearly"
+                "yearly",
+                "1week",
+                "1month",
+                "3months",
+                "6months",
+                "1year"
               ],
               "default": "monthly"
             },
-            "description": "الفترة الزمنية لحساب الأداء",
+            "description": "الفترة الزمنية النسبية لحساب الأداء (يتم تجاهلها إذا تم تحديد السنة والشهر)",
             "example": "monthly"
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer",
+              "minimum": 1900,
+              "maximum": 2100
+            },
+            "description": "السنة المحددة للفلترة (مطلوب مع الشهر). مثال: 2025, 2024, 2023",
+            "example": 2025
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "description": "الشهر المحدد للفلترة (مطلوب مع السنة). 1=يناير, 2=فبراير, 3=مارس, 4=أبريل, 5=مايو, 6=يونيو, 7=يوليو, 8=أغسطس, 9=سبتمبر, 10=أكتوبر, 11=نوفمبر, 12=ديسمبر",
+            "example": 1
           }
         ],
         "responses": {
@@ -15058,6 +15085,31 @@
                               }
                             }
                           }
+                        }
+                      }
+                    },
+                    "periodInfo": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["specific", "relative"],
+                          "description": "نوع الفترة - محددة أو نسبية"
+                        },
+                        "year": {
+                          "type": "integer",
+                          "description": "السنة المحددة (في حالة الفترة المحددة)",
+                          "example": 2025
+                        },
+                        "month": {
+                          "type": "integer",
+                          "description": "الشهر المحدد (في حالة الفترة المحددة)",
+                          "example": 1
+                        },
+                        "period": {
+                          "type": "string",
+                          "description": "الفترة النسبية (في حالة الفترة النسبية)",
+                          "example": "monthly"
                         }
                       }
                     }
