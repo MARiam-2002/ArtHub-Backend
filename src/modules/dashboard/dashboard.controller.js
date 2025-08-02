@@ -86,10 +86,12 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
 
   // حساب النسب المئوية مع تحديد حد أقصى للقيم السالبة
   const calculatePercentageChange = (current, previous) => {
-    if (previous === 0) return 0;
-    const change = Math.round(((current - previous) / previous) * 100);
-    // تحديد حد أقصى للنسب السالبة (-100%) لتجنب القيم الكبيرة جداً
-    return Math.max(change, -100);
+    if (previous === 0) {
+      if (current > 0) return 100; // Represents 100% growth from zero
+      return 0; // If both are 0, no change
+    }
+    const change = ((current - previous) / previous) * 100;
+    return Math.round(Math.abs(change)); // Return absolute value, direction indicated by isPositive
   };
 
   const usersPercentageChange = calculatePercentageChange(currentMonthUsers, lastMonthUsers);
@@ -1314,10 +1316,12 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
 
     // حساب النسب المئوية مع تحديد حد أقصى للقيم السالبة
     const calculatePercentageChange = (current, previous) => {
-      if (previous === 0) return 0;
-      const change = Math.round(((current - previous) / previous) * 100);
-      // تحديد حد أقصى للنسب السالبة (-100%) لتجنب القيم الكبيرة جداً
-      return Math.max(change, -100);
+      if (previous === 0) {
+        if (current > 0) return 100; // Represents 100% growth from zero
+        return 0; // If both are 0, no change
+      }
+      const change = ((current - previous) / previous) * 100;
+      return Math.round(Math.abs(change)); // Return absolute value, direction indicated by isPositive
     };
 
     const usersPercentageChange = calculatePercentageChange(currentYearUsers, previousYearUsers);
