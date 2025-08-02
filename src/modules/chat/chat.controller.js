@@ -581,7 +581,13 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
     // Send real-time notification via Socket.IO
     try {
+      console.log('📡 Sending real-time message to chat:', chatId);
       sendToChat(chatId, 'new_message', formattedMessage);
+      
+      // Also send to specific user if they're not in the chat room
+      if (receiverId) {
+        sendToUser(receiverId, 'new_message', formattedMessage);
+      }
     } catch (socketError) {
       console.warn('Socket.IO notification failed:', socketError);
     }
