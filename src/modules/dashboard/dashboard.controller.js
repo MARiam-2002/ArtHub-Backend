@@ -84,21 +84,21 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
     { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } },
   ]);
 
-  // حساب النسب المئوية
-  const usersPercentageChange = lastMonthUsers > 0 
-    ? Math.round(((currentMonthUsers - lastMonthUsers) / lastMonthUsers) * 100)
-    : 12; // قيمة افتراضية إذا لم تكن هناك بيانات سابقة
+  // حساب النسب المئوية مع تحديد حد أقصى للقيم السالبة
+  const calculatePercentageChange = (current, previous) => {
+    if (previous === 0) return 0;
+    const change = Math.round(((current - previous) / previous) * 100);
+    // تحديد حد أقصى للنسب السالبة (-100%) لتجنب القيم الكبيرة جداً
+    return Math.max(change, -100);
+  };
 
-  const artistsPercentageChange = lastMonthArtists > 0
-    ? Math.round(((currentMonthArtists - lastMonthArtists) / lastMonthArtists) * 100)
-    : 8; // قيمة افتراضية إذا لم تكن هناك بيانات سابقة
+  const usersPercentageChange = calculatePercentageChange(currentMonthUsers, lastMonthUsers);
+  const artistsPercentageChange = calculatePercentageChange(currentMonthArtists, lastMonthArtists);
 
   const currentRevenue = currentMonthRevenue.length > 0 ? currentMonthRevenue[0].totalRevenue : 0;
   const previousRevenue = lastMonthRevenue.length > 0 ? lastMonthRevenue[0].totalRevenue : 0;
   
-  const revenuePercentageChange = previousRevenue > 0
-    ? Math.round(((currentRevenue - previousRevenue) / previousRevenue) * 100)
-    : -2.5; // قيمة افتراضية إذا لم تكن هناك بيانات سابقة
+  const revenuePercentageChange = calculatePercentageChange(currentRevenue, previousRevenue);
 
   res.status(200).json({
     success: true,
@@ -1312,21 +1312,21 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
       ])
     ]);
 
-    // حساب النسب المئوية
-    const usersPercentageChange = previousYearUsers > 0 
-      ? Math.round(((currentYearUsers - previousYearUsers) / previousYearUsers) * 100)
-      : 0;
+    // حساب النسب المئوية مع تحديد حد أقصى للقيم السالبة
+    const calculatePercentageChange = (current, previous) => {
+      if (previous === 0) return 0;
+      const change = Math.round(((current - previous) / previous) * 100);
+      // تحديد حد أقصى للنسب السالبة (-100%) لتجنب القيم الكبيرة جداً
+      return Math.max(change, -100);
+    };
 
-    const artistsPercentageChange = previousYearArtists > 0
-      ? Math.round(((currentYearArtists - previousYearArtists) / previousYearArtists) * 100)
-      : 0;
+    const usersPercentageChange = calculatePercentageChange(currentYearUsers, previousYearUsers);
+    const artistsPercentageChange = calculatePercentageChange(currentYearArtists, previousYearArtists);
 
     const currentRevenue = currentYearRevenue.length > 0 ? currentYearRevenue[0].totalRevenue : 0;
     const previousRevenue = previousYearRevenue.length > 0 ? previousYearRevenue[0].totalRevenue : 0;
     
-    const revenuePercentageChange = previousRevenue > 0
-      ? Math.round(((currentRevenue - previousRevenue) / previousRevenue) * 100)
-      : 0;
+    const revenuePercentageChange = calculatePercentageChange(currentRevenue, previousRevenue);
 
     // 🟦 2. أفضل الفنانين أداءً للسنة المحددة
     const topArtists = await userModel.aggregate([
