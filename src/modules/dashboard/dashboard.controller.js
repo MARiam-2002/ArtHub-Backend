@@ -417,7 +417,7 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin)
  */
 export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
-  const { limit = 3, period = 'monthly', year, month } = req.query;
+  const { limit = 3, year, month } = req.query;
   
   let startDate = new Date();
   let endDate = new Date();
@@ -439,36 +439,8 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
     startDate = new Date(yearNum, monthNum, 1);
     endDate = new Date(yearNum, monthNum + 1, 0, 23, 59, 59, 999);
   } else {
-    // فلترة نسبية بناءً على الفترة
-    switch (period) {
-      case 'weekly':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case 'monthly':
-        startDate.setMonth(startDate.getMonth() - 1);
-        break;
-      case 'yearly':
-        startDate.setFullYear(startDate.getFullYear() - 1);
-        break;
-      case '1week':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case '1month':
-        startDate.setMonth(startDate.getMonth() - 1);
-        break;
-      case '3months':
-        startDate.setMonth(startDate.getMonth() - 3);
-        break;
-      case '6months':
-        startDate.setMonth(startDate.getMonth() - 6);
-        break;
-      case '1year':
-        startDate.setFullYear(startDate.getFullYear() - 1);
-        break;
-      default:
-        startDate.setMonth(startDate.getMonth() - 1);
-        break;
-    }
+    // إذا لم يتم تحديد السنة والشهر، استخدم الشهر الماضي كافتراضي
+    startDate.setMonth(startDate.getMonth() - 1);
   }
 
   // جلب أفضل الفنانين أداءً
