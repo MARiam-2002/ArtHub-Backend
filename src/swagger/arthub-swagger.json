@@ -14963,6 +14963,334 @@
         }
       }
     },
+    "/api/dashboard/overview": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "الإحصائيات الشاملة للوحة التحكم",
+        "description": "جلب الإحصائيات الشاملة (الإحصائيات الرئيسية، أفضل الفنانين، تتبع المبيعات) مع إمكانية التصفية حسب السنة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "السنة المطلوبة للإحصائيات (اختياري - افتراضي: السنة الحالية)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الإحصائيات الشاملة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب الإحصائيات الشاملة لعام 2025 بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "year": {
+                          "type": "integer",
+                          "example": 2025,
+                          "description": "السنة المحددة"
+                        },
+                        "period": {
+                          "type": "object",
+                          "properties": {
+                            "startDate": {
+                              "type": "string",
+                              "format": "date-time",
+                              "example": "2025-01-01T00:00:00.000Z"
+                            },
+                            "endDate": {
+                              "type": "string",
+                              "format": "date-time",
+                              "example": "2025-12-31T23:59:59.999Z"
+                            }
+                          }
+                        },
+                        "statistics": {
+                          "type": "object",
+                          "description": "الإحصائيات الرئيسية",
+                          "properties": {
+                            "totalUsers": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "number",
+                                  "example": 12847
+                                },
+                                "percentageChange": {
+                                  "type": "number",
+                                  "example": 12
+                                },
+                                "isPositive": {
+                                  "type": "boolean",
+                                  "example": true
+                                }
+                              }
+                            },
+                            "activeArtists": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "number",
+                                  "example": 3429
+                                },
+                                "percentageChange": {
+                                  "type": "number",
+                                  "example": 8
+                                },
+                                "isPositive": {
+                                  "type": "boolean",
+                                  "example": true
+                                }
+                              }
+                            },
+                            "totalRevenue": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "number",
+                                  "example": 1545118
+                                },
+                                "percentageChange": {
+                                  "type": "number",
+                                  "example": -2.5
+                                },
+                                "isPositive": {
+                                  "type": "boolean",
+                                  "example": false
+                                },
+                                "currency": {
+                                  "type": "string",
+                                  "example": "SAR"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "topArtists": {
+                          "type": "object",
+                          "description": "أفضل الفنانين أداءً",
+                          "properties": {
+                            "artists": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "displayName": {
+                                    "type": "string",
+                                    "example": "أحمد محمد"
+                                  },
+                                  "profileImage": {
+                                    "type": "string"
+                                  },
+                                  "job": {
+                                    "type": "string",
+                                    "example": "رسام"
+                                  },
+                                  "performance": {
+                                    "type": "object",
+                                    "properties": {
+                                      "sales": {
+                                        "type": "number",
+                                        "example": 125000
+                                      },
+                                      "rating": {
+                                        "type": "number",
+                                        "example": 4.5
+                                      },
+                                      "artworks": {
+                                        "type": "number",
+                                        "example": 25
+                                      },
+                                      "salesCount": {
+                                        "type": "number",
+                                        "example": 15
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "count": {
+                              "type": "number",
+                              "example": 5
+                            }
+                          }
+                        },
+                        "salesTrends": {
+                          "type": "object",
+                          "description": "تتبع المبيعات الشهري",
+                          "properties": {
+                            "chartData": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "month": {
+                                    "type": "string",
+                                    "example": "يناير"
+                                  },
+                                  "revenue": {
+                                    "type": "number",
+                                    "example": 125000
+                                  },
+                                  "orders": {
+                                    "type": "number",
+                                    "example": 45
+                                  },
+                                  "averageOrder": {
+                                    "type": "number",
+                                    "example": 2777
+                                  }
+                                }
+                              }
+                            },
+                            "summary": {
+                              "type": "object",
+                              "properties": {
+                                "totalRevenue": {
+                                  "type": "number",
+                                  "example": 1545118
+                                },
+                                "totalOrders": {
+                                  "type": "number",
+                                  "example": 1243
+                                },
+                                "averageOrderValue": {
+                                  "type": "number",
+                                  "example": 1243
+                                },
+                                "completedOrders": {
+                                  "type": "number",
+                                  "example": 1200
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "additionalStats": {
+                          "type": "object",
+                          "description": "إحصائيات إضافية",
+                          "properties": {
+                            "totalArtworks": {
+                              "type": "number",
+                              "example": 5678
+                            },
+                            "totalReviews": {
+                              "type": "number",
+                              "example": 2345
+                            },
+                            "activeArtistsCount": {
+                              "type": "number",
+                              "example": 3429
+                            },
+                            "completedOrders": {
+                              "type": "number",
+                              "example": 1200
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "year": {
+                          "type": "integer",
+                          "example": 2025
+                        },
+                        "previousYear": {
+                          "type": "integer",
+                          "example": 2024
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "السنة غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "السنة يجب أن تكون رقماً صحيحاً"
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - للمديرين فقط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dashboard/artists/performance": {
       "get": {
         "tags": [
