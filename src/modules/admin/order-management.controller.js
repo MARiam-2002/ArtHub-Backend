@@ -1,6 +1,6 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import specialRequestModel from '../../../DB/models/specialRequest.model.js';
-import transactionModel from '../../../DB/models/transaction.model.js';
+// import transactionModel from '../../../DB/models/transaction.model.js'; // Not used - system uses specialRequestModel
 import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';

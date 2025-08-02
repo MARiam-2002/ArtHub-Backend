@@ -901,11 +901,11 @@ router.get(
  *     security:
  *       - BearerAuth: []
               *     parameters:
-             *       - in: query
-             *         name: year
-             *         schema:
-             *           type: integer
-             *         description: السنة المطلوبة للإحصائيات (اختياري - افتراضي: السنة الحالية)
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *         description: السنة المطلوبة للإحصائيات (اختياري - افتراضي: السنة الحالية)
  *     responses:
  *       200:
  *         description: تم جلب الإحصائيات الشاملة بنجاح

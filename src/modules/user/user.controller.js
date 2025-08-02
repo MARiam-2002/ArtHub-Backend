@@ -5,7 +5,7 @@ import bcryptjs from 'bcryptjs';
 import followModel from '../../../DB/models/follow.model.js';
 import reviewModel from '../../../DB/models/review.model.js';
 import mongoose from 'mongoose';
-import transactionModel from '../../../DB/models/transaction.model.js';
+import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import chatModel from '../../../DB/models/chat.model.js';
@@ -424,8 +424,8 @@ export const getArtistProfile = asyncHandler(async (req, res, next) => {
     const artworks = await artworkModel.find({ artist: artistId }).sort({ createdAt: -1 }).limit(10);
 
     // جلب عدد المبيعات
-    const salesCount = await transactionModel.countDocuments({
-      seller: artistId,
+    const salesCount = await specialRequestModel.countDocuments({
+      artist: artistId,
       status: 'completed'
     });
 
@@ -1029,7 +1029,7 @@ export const getMyProfile = asyncHandler(async (req, res, next) => {
       followModel.countDocuments({ following: userId }),
       followModel.countDocuments({ follower: userId }),
       artworkModel.countDocuments({ artist: userId, isAvailable: true }),
-      transactionModel.countDocuments({ seller: userId, status: 'completed' }),
+      specialRequestModel.countDocuments({ artist: userId, status: 'completed' }),
       reviewModel.countDocuments({ artist: userId })
     ]);
 
@@ -1139,10 +1139,10 @@ export const getDetailedStats = asyncHandler(async (req, res, next) => {
       artworkModel.countDocuments({ artist: userId, ...dateFilter }),
       followModel.countDocuments({ following: userId, ...dateFilter }),
       followModel.countDocuments({ follower: userId, ...dateFilter }),
-      transactionModel.countDocuments({ seller: userId, status: 'completed', ...dateFilter }),
-      transactionModel.aggregate([
-        { $match: { seller: new mongoose.Types.ObjectId(userId), status: 'completed', ...dateFilter } },
-        { $group: { _id: null, total: { $sum: '$amount' } } }
+      specialRequestModel.countDocuments({ artist: userId, status: 'completed', ...dateFilter }),
+      specialRequestModel.aggregate([
+        { $match: { artist: new mongoose.Types.ObjectId(userId), status: 'completed', ...dateFilter } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } }
       ]),
       artworkModel.aggregate([
         { $match: { artist: new mongoose.Types.ObjectId(userId), ...dateFilter } },
