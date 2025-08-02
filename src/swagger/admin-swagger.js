@@ -189,8 +189,8 @@ export const adminPaths = {
     },
     put: {
       tags: ['Admin'],
-      summary: 'تحديث ملف الأدمن',
-      description: 'تحديث معلومات ملف الأدمن الحالي (الاسم، البريد الإلكتروني، الصورة الشخصية، كلمة المرور)',
+      summary: 'تحديث ملف الأدمن الشخصي',
+      description: 'تحديث معلومات ملف الأدمن الحالي مع إمكانية رفع صورة شخصية',
       security: [{ BearerAuth: [] }],
       requestBody: {
         required: true,
@@ -201,13 +201,15 @@ export const adminPaths = {
               properties: {
                 displayName: {
                   type: 'string',
-                  description: 'اسم العرض',
+                  minLength: 2,
+                  maxLength: 50,
+                  description: 'اسم الأدمن المعروض',
                   example: 'أحمد محمد'
                 },
                 email: {
                   type: 'string',
                   format: 'email',
-                  description: 'البريد الإلكتروني',
+                  description: 'البريد الإلكتروني للأدمن',
                   example: 'admin@example.com'
                 },
                 currentPassword: {
@@ -217,18 +219,21 @@ export const adminPaths = {
                 },
                 newPassword: {
                   type: 'string',
-                  description: 'كلمة المرور الجديدة (مطلوبة عند تغيير كلمة المرور)',
+                  minLength: 8,
+                  maxLength: 50,
+                  pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]",
+                  description: 'كلمة المرور الجديدة (يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص)',
                   example: 'NewPass123!'
                 },
                 confirmNewPassword: {
                   type: 'string',
-                  description: 'تأكيد كلمة المرور الجديدة (مطلوب عند تغيير كلمة المرور)',
+                  description: 'تأكيد كلمة المرور الجديدة',
                   example: 'NewPass123!'
                 },
                 profileImage: {
                   type: 'string',
                   format: 'binary',
-                  description: 'الصورة الشخصية (اختياري)'
+                  description: 'صورة شخصية جديدة (اختياري - الحد الأقصى 5MB)'
                 }
               }
             }
@@ -237,7 +242,7 @@ export const adminPaths = {
       },
       responses: {
         200: {
-          description: 'تم تحديث الملف بنجاح',
+          description: 'تم تحديث الملف الشخصي بنجاح',
           content: {
             'application/json': {
               schema: {
@@ -249,25 +254,54 @@ export const adminPaths = {
                   },
                   message: {
                     type: 'string',
-                    example: 'تم تحديث الملف بنجاح'
+                    example: 'تم تحديث الملف الشخصي بنجاح'
                   },
                   data: {
                     type: 'object',
                     properties: {
                       _id: {
-                        type: 'string'
+                        type: 'string',
+                        description: 'معرف الأدمن',
+                        example: '507f1f77bcf86cd799439011'
                       },
                       email: {
-                        type: 'string'
+                        type: 'string',
+                        format: 'email',
+                        description: 'البريد الإلكتروني المحدث',
+                        example: 'admin@example.com'
                       },
                       displayName: {
-                        type: 'string'
+                        type: 'string',
+                        description: 'الاسم المعروض المحدث',
+                        example: 'أحمد محمد'
                       },
                       role: {
-                        type: 'string'
+                        type: 'string',
+                        enum: ['admin', 'superadmin'],
+                        description: 'دور الأدمن',
+                        example: 'admin'
                       },
-                      isActive: {
-                        type: 'boolean'
+                      profileImage: {
+                        type: 'object',
+                        properties: {
+                          url: {
+                            type: 'string',
+                            format: 'uri',
+                            description: 'رابط الصورة الشخصية',
+                            example: 'https://res.cloudinary.com/example/image/upload/v1234567890/arthub/admin-profiles/507f1f77bcf86cd799439011/profile.jpg'
+                          },
+                          id: {
+                            type: 'string',
+                            description: 'معرف الصورة في Cloudinary',
+                            example: 'arthub/admin-profiles/507f1f77bcf86cd799439011/profile'
+                          }
+                        }
+                      },
+                      updatedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        description: 'تاريخ ووقت آخر تحديث',
+                        example: '2024-01-15T10:30:00.000Z'
                       }
                     }
                   }
@@ -277,7 +311,7 @@ export const adminPaths = {
           }
         },
         400: {
-          description: 'بيانات غير صحيحة',
+          description: 'خطأ في البيانات المرسلة',
           content: {
             'application/json': {
               schema: {
@@ -289,7 +323,21 @@ export const adminPaths = {
                   },
                   message: {
                     type: 'string',
-                    example: 'بيانات غير صحيحة'
+                    oneOf: [
+                      'البريد الإلكتروني مستخدم بالفعل',
+                      'كلمة المرور الحالية غير صحيحة',
+                      'يرجى توفير حقل واحد على الأقل للتحديث',
+                      'يجب أن يكون الملف صورة',
+                      'حجم الصورة يجب أن يكون أقل من 5 ميجابايت',
+                      'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل',
+                      'كلمة المرور الجديدة يجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص',
+                      'كلمة المرور الحالية مطلوبة لتغيير كلمة المرور',
+                      'تأكيد كلمة المرور مطلوب',
+                      'كلمة المرور الجديدة وتأكيدها غير متطابقين',
+                      'الاسم يجب أن يكون حرفين على الأقل',
+                      'الاسم يجب أن يكون أقل من 50 حرف',
+                      'يرجى إدخال بريد إلكتروني صحيح'
+                    ]
                   }
                 }
               }
@@ -297,7 +345,7 @@ export const adminPaths = {
           }
         },
         401: {
-          description: 'غير مصرح',
+          description: 'غير مصرح - يجب تسجيل الدخول كأدمن',
           content: {
             'application/json': {
               schema: {
@@ -309,7 +357,47 @@ export const adminPaths = {
                   },
                   message: {
                     type: 'string',
-                    example: 'غير مصرح'
+                    example: 'غير مصرح - يجب تسجيل الدخول كأدمن'
+                  }
+                }
+              }
+            }
+          }
+        },
+        404: {
+          description: 'الأدمن غير موجود',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'الأدمن غير موجود'
+                  }
+                }
+              }
+            }
+          }
+        },
+        500: {
+          description: 'خطأ في الخادم',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: {
+                    type: 'boolean',
+                    example: false
+                  },
+                  message: {
+                    type: 'string',
+                    example: 'حدث خطأ أثناء تحديث الملف الشخصي'
                   }
                 }
               }
