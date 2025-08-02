@@ -1,6 +1,6 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import userModel from '../../../DB/models/user.model.js';
-import transactionModel from '../../../DB/models/transaction.model.js';
+import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
 import reviewModel from '../../../DB/models/review.model.js';
 import mongoose from 'mongoose';
@@ -29,9 +29,9 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
   });
 
   // احصائيات الإيرادات
-  const totalRevenueResult = await transactionModel.aggregate([
+  const totalRevenueResult = await specialRequestModel.aggregate([
     { $match: { status: 'completed' } },
-    { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } },
+    { $group: { _id: null, totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } },
   ]);
   const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].totalRevenue : 0;
 
@@ -52,14 +52,14 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
     isDeleted: false
   });
 
-  const currentMonthRevenue = await transactionModel.aggregate([
+  const currentMonthRevenue = await specialRequestModel.aggregate([
     { 
       $match: { 
         status: 'completed',
         createdAt: { $gte: thisMonth }
       } 
     },
-    { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } },
+    { $group: { _id: null, totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } },
   ]);
 
   // إحصائيات الشهر الماضي
@@ -74,14 +74,14 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
     isDeleted: false
   });
 
-  const lastMonthRevenue = await transactionModel.aggregate([
+  const lastMonthRevenue = await specialRequestModel.aggregate([
     { 
       $match: { 
         status: 'completed',
         createdAt: { $gte: lastMonth, $lt: thisMonth }
       } 
     },
-    { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } },
+    { $group: { _id: null, totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } },
   ]);
 
   // حساب النسب المئوية مع تحديد حد أقصى للقيم السالبة
@@ -207,9 +207,9 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
           year: { $year: '$createdAt' },
           month: { $month: '$createdAt' }
         },
-        totalRevenue: { $sum: '$pricing.totalAmount' },
+        totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
         orderCount: { $sum: 1 },
-        averageOrderValue: { $avg: '$pricing.totalAmount' }
+        averageOrderValue: { $avg: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
       }
     },
     { $sort: { '_id.year': 1, '_id.month': 1 } }
@@ -231,7 +231,7 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
           month: { $month: '$createdAt' },
           week: { $week: '$createdAt' }
         },
-        revenue: { $sum: '$pricing.totalAmount' }
+        revenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
       }
     },
     {
@@ -245,9 +245,9 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
 
   // تنفيذ Aggregations
   const [ordersData, revenueData, weeklyMonthlyData] = await Promise.all([
-    transactionModel.aggregate(ordersAggregation),
-    transactionModel.aggregate(revenueAggregation),
-    transactionModel.aggregate(weeklyMonthlyRevenue)
+    specialRequestModel.aggregate(ordersAggregation),
+    specialRequestModel.aggregate(revenueAggregation),
+    specialRequestModel.aggregate(weeklyMonthlyRevenue)
   ]);
 
   // تنسيق البيانات للرسوم البيانية
@@ -489,22 +489,14 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
     // جلب مبيعات الفنان
     {
       $lookup: {
-        from: 'transactions',
+        from: 'specialrequests',
         let: { artistId: '$_id' },
         pipeline: [
-          {
-            $lookup: {
-              from: 'artworks',
-              localField: 'artwork',
-              foreignField: '_id',
-              as: 'artworkData'
-            }
-          },
           {
             $match: {
               $expr: {
                 $and: [
-                  { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
+                  { $eq: ['$artist', '$$artistId'] },
                   { $eq: ['$status', 'completed'] },
                   { $gte: ['$createdAt', startDate] },
                   { $lte: ['$createdAt', endDate] }
@@ -525,9 +517,9 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
             0
           ] 
         },
-        totalSales: { 
-          $sum: '$sales.pricing.totalAmount' 
-        },
+                  totalSales: { 
+            $sum: { $ifNull: ['$sales.finalPrice', '$sales.quotedPrice', '$sales.budget'] } 
+          },
         salesCount: { $size: '$sales' }
       }
     },
@@ -1282,14 +1274,14 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
         isDeleted: false
       }),
       // الإيرادات في السنة الحالية
-      transactionModel.aggregate([
+      specialRequestModel.aggregate([
         { 
           $match: { 
             status: 'completed',
             createdAt: { $gte: startDate, $lte: endDate }
           } 
         },
-        { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } }
+        { $group: { _id: null, totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } }
       ]),
       // المستخدمين في السنة السابقة
       userModel.countDocuments({
@@ -1303,14 +1295,14 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
         isDeleted: false
       }),
       // الإيرادات في السنة السابقة
-      transactionModel.aggregate([
+      specialRequestModel.aggregate([
         { 
           $match: { 
             status: 'completed',
             createdAt: { $gte: previousYearStart, $lte: previousYearEnd }
           } 
         },
-        { $group: { _id: null, totalRevenue: { $sum: '$pricing.totalAmount' } } }
+        { $group: { _id: null, totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } }
       ])
     ]);
 
@@ -1376,22 +1368,14 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
       // جلب مبيعات الفنان في السنة المحددة
       {
         $lookup: {
-          from: 'transactions',
+          from: 'specialrequests',
           let: { artistId: '$_id' },
           pipeline: [
-            {
-              $lookup: {
-                from: 'artworks',
-                localField: 'artwork',
-                foreignField: '_id',
-                as: 'artworkData'
-              }
-            },
             {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
+                    { $eq: ['$artist', '$$artistId'] },
                     { $eq: ['$status', 'completed'] },
                     { $gte: ['$createdAt', startDate] },
                     { $lte: ['$createdAt', endDate] }
@@ -1413,7 +1397,7 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
             ] 
           },
           totalSales: { 
-            $sum: '$sales.pricing.totalAmount' 
+            $sum: { $ifNull: ['$sales.finalPrice', '$sales.quotedPrice', '$sales.budget'] } 
           },
           salesCount: { $size: '$sales' }
         }
@@ -1454,7 +1438,7 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
     ]);
 
     // 🟨 3. تتبع المبيعات الشهري للسنة المحددة
-    const monthlySalesData = await transactionModel.aggregate([
+    const monthlySalesData = await specialRequestModel.aggregate([
       { 
         $match: { 
           status: 'completed',
@@ -1467,9 +1451,9 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
             year: { $year: '$createdAt' },
             month: { $month: '$createdAt' }
           },
-          totalRevenue: { $sum: '$pricing.totalAmount' },
+          totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
           orderCount: { $sum: 1 },
-          averageOrderValue: { $avg: '$pricing.totalAmount' }
+          averageOrderValue: { $avg: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
         }
       },
       { $sort: { '_id.year': 1, '_id.month': 1 } }
@@ -1539,7 +1523,7 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
         isDeleted: false
       }),
       // الطلبات المكتملة في السنة
-      transactionModel.countDocuments({
+      specialRequestModel.countDocuments({
         status: 'completed',
         createdAt: { $gte: startDate, $lte: endDate }
       })
