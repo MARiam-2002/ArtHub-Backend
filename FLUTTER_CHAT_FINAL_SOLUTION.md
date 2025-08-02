@@ -1,8 +1,8 @@
-# 🎯 Flutter Chat - الحل النهائي
+# 🎯 Flutter Chat - الحل النهائي (Fixed Double-Sending Issue)
 
 ## 🚀 الحل النهائي للفلاتر
 
-### 1. تحديث ChatCubit
+### 1. تحديث ChatCubit (Fixed)
 
 ```dart
 import 'dart:async';
@@ -108,14 +108,9 @@ class ChatCubit extends Cubit<ChatState> {
       );
 
       if (response.statusCode == 201) {
-        final messageJson = response.data['data']['message'];
-        final message = Message.fromJson(messageJson);
-        
-        // Add to local messages
-        _messages.add(message);
-        emit(ChatLoaded(List.from(_messages)));
-        
-        print('✅ Message sent successfully via HTTP API');
+        // ✅ FIXED: Don't add message here - it will come back via Socket.IO
+        // The server will emit the message via Socket.IO after saving
+        print('✅ Message sent successfully via HTTP API - waiting for Socket.IO confirmation');
       } else {
         emit(ChatError(response.data['message'] ?? "Failed to send message"));
       }
@@ -159,20 +154,29 @@ class ChatCubit extends Cubit<ChatState> {
     }
   }
 
-  /// Add a sent message to local list and emit state
-  void addMessage(Message message) {
-    _messages.add(message);
-    emit(ChatLoaded(List.from(_messages)));
-  }
-
-  /// Handle a message received from socket (real-time)
+  /// ✅ FIXED: Single source of truth for adding messages
+  /// Handle a message received from socket (real-time) - this is the ONLY place messages are added
   void handleIncomingMessage(dynamic data) {
     try {
       print('📨 Received real-time message: $data');
       final message = Message.fromJson(data);
-      _messages.add(message);
-      emit(ChatLoaded(List.from(_messages)));
-      _incomingMessageController.add(message);
+      
+      // Check if message already exists to prevent duplicates
+      final existingMessage = _messages.any((m) => 
+        m.id == message.id || 
+        (m.content == message.content && 
+         m.sender?.id == message.sender?.id &&
+         m.sentAt?.difference(message.sentAt ?? DateTime.now()).abs().inSeconds < 5)
+      );
+      
+      if (!existingMessage) {
+        _messages.add(message);
+        emit(ChatLoaded(List.from(_messages)));
+        _incomingMessageController.add(message);
+        print('✅ Message added to UI via Socket.IO');
+      } else {
+        print('⚠️ Message already exists, skipping duplicate');
+      }
     } catch (error) {
       print('❌ Error handling incoming message: $error');
     }
@@ -201,181 +205,125 @@ class ChatService {
   ChatService._internal();
 
   IO.Socket? _socket;
-  bool _isConnected = false;
   String? _currentUserId;
+  String? _currentChatId;
+
   String? get currentUserId => _currentUserId;
 
-  // Initialize Socket Connection
-  void initSocket(String userId, String token) {
-    _currentUserId = userId;
+  Future<void> initializeSocket() async {
+    try {
+      final token = await SecureStorage().getAccessToken();
+      final userId = await SecureStorage().getUserId();
+      
+      if (token == null || userId == null) {
+        print('❌ Missing token or userId for socket connection');
+        return;
+      }
 
-    print('🔌 Initializing Socket.IO connection...');
-    print('👤 User ID: $userId');
-    print('🌐 Socket URL: ${ApiConstant.socketUrl}');
+      _currentUserId = userId;
 
-    _socket = IO.io(ApiConstant.socketUrl, <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-      'extraHeaders': {'Authorization': 'Bearer $token'},
-    });
+      _socket = IO.io(
+        ApiConstant.baseUrl,
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .setAuth({'token': token})
+            .setExtraHeaders({'Authorization': 'Bearer $token'})
+            .disableReconnection()
+            .build(),
+      );
 
-    _setupSocketListeners();
-    _socket!.connect();
+      _setupSocketListeners();
+      _socket!.connect();
+      
+      print('🔌 Socket.IO connected successfully');
+    } catch (e) {
+      print('❌ Error initializing socket: $e');
+    }
   }
 
   void _setupSocketListeners() {
-    // Connection Events
-    _socket!.on('connect', (_) {
-      print('✅ Socket Connected');
-      _isConnected = true;
-      _authenticateUser();
+    _socket!.onConnect((_) {
+      print('✅ Socket connected');
     });
 
-    _socket!.on('disconnect', (_) {
-      print('❌ Socket Disconnected');
-      _isConnected = false;
+    _socket!.onDisconnect((_) {
+      print('❌ Socket disconnected');
     });
 
-    _socket!.on('authenticated', (data) {
-      print('✅ User Authenticated: $data');
+    _socket!.onError((error) {
+      print('❌ Socket error: $error');
     });
 
-    _socket!.on('error', (data) {
-      print('❌ Socket Error: $data');
-    });
-
-    // Chat Events - ONLY for receiving messages
+    // Listen for new messages
     _socket!.on('new_message', (data) {
-      print('📨 New message received via socket: $data');
-      _handleNewMessage(data);
+      print('📨 Received new_message event: $data');
+      ServiceLocator.get<ChatCubit>().handleIncomingMessage(data);
     });
 
-    _socket!.on('messages_read', (data) {
-      print('👁️ Messages Read: $data');
-      _handleMessagesRead(data);
+    _socket!.on('typing', (data) {
+      print('⌨️ User typing: $data');
     });
 
-    _socket!.on('user_typing', (data) {
-      print('⌨️ User Typing: $data');
-      _handleUserTyping(data);
-    });
-
-    _socket!.on('user_stopped_typing', (data) {
-      print('⌨️ User Stopped Typing: $data');
-      _handleUserStoppedTyping(data);
+    _socket!.on('stop_typing', (data) {
+      print('⏹️ User stopped typing: $data');
     });
   }
 
-  void _authenticateUser() {
-    if (_currentUserId != null) {
-      print('🔐 Authenticating user: $_currentUserId');
-      _socket!.emit('authenticate', {'userId': _currentUserId});
-    }
-  }
-
-  // Join Chat Room
   void joinChat(String chatId) {
-    if (_isConnected && _currentUserId != null) {
-      _socket!.emit('join_chat', {'chatId': chatId, 'userId': _currentUserId});
+    if (_socket != null && _socket!.connected) {
+      _currentChatId = chatId;
+      _socket!.emit('join_chat', {'chatId': chatId});
       print('👥 Joined chat room: $chatId');
-    } else {
-      print('⚠️ Cannot join chat - Socket not connected or user not authenticated');
     }
   }
 
-  // ❌ REMOVE: Don't send messages via socket
-  // void sendMessage(String chatId, String content, String receiverId) {
-  //   // This should be removed - use HTTP API instead
-  // }
-
-  // Typing Indicators
-  void startTyping(String chatId) {
-    if (_isConnected && _currentUserId != null) {
-      _socket!.emit('typing', {'chatId': chatId, 'userId': _currentUserId});
+  void leaveChat() {
+    if (_socket != null && _socket!.connected && _currentChatId != null) {
+      _socket!.emit('leave_chat', {'chatId': _currentChatId});
+      _currentChatId = null;
+      print('👋 Left chat room');
     }
   }
 
-  void stopTyping(String chatId) {
-    if (_isConnected && _currentUserId != null) {
-      _socket!.emit('stop_typing', {
-        'chatId': chatId,
-        'userId': _currentUserId,
-      });
-    }
-  }
-
-  // Mark Messages as Read
   void markMessagesAsRead(String chatId) {
-    if (_isConnected && _currentUserId != null) {
-      _socket!.emit('mark_read', {'chatId': chatId, 'userId': _currentUserId});
+    if (_socket != null && _socket!.connected) {
+      _socket!.emit('mark_read', {'chatId': chatId});
+      print('✅ Marked messages as read for chat: $chatId');
     }
   }
 
-  // Event Handlers
-  void _handleNewMessage(dynamic data) {
-    print('📨 Processing new message: $data');
-    getIt<ChatCubit>().handleIncomingMessage(data);
-  }
-
-  void _handleMessagesRead(dynamic data) {
-    print('👁️ Messages Read: $data');
-    // You can add UI updates for read receipts here
-  }
-
-  void _handleUserTyping(dynamic data) {
-    print('⌨️ User Typing: $data');
-    // You can add typing indicator UI here
-  }
-
-  void _handleUserStoppedTyping(dynamic data) {
-    print('⌨️ User Stopped Typing: $data');
-    // You can hide typing indicator UI here
-  }
-
-  // Disconnect
   void disconnect() {
     _socket?.disconnect();
     _socket?.dispose();
-    _isConnected = false;
-    _currentUserId = null;
     print('🔌 Socket disconnected');
   }
 }
 ```
 
-### 3. تحديث UserChatScreen
+### 3. تحديث UserChatScreen (Fixed)
 
 ```dart
-import 'dart:async';
-import 'package:art_hub/core/helpers/extinsions.dart';
-import 'package:art_hub/core/utils/image_manager.dart';
 import 'package:art_hub/features/user_chat/controller/cubit/chat_cubit.dart';
-import 'package:art_hub/features/user_chat/controller/services/chat_service.dart';
 import 'package:art_hub/features/user_chat/data/models/chat_messages_model/message.dart';
-import 'package:art_hub/features/user_chat/data/models/chat_messages_model/sender.dart';
+import 'package:art_hub/features/user_chat/presentation/widgets/message_bubble.dart';
+import 'package:art_hub/services/chat_service.dart';
 import 'package:art_hub/services/secure_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-
-import '../../../../core/utils/spacing.dart';
-import '../../../../core/theme/colors.dart';
-import '../../../../core/theme/styles.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'dart:async';
 
 class UserChatScreen extends StatefulWidget {
-  const UserChatScreen({
-    super.key,
-    required this.chatId,
-    required this.receiverId,
-    this.receiverName,
-    this.receiverImage,
-    this.receiverStatus,
-  });
   final String chatId;
   final String receiverId;
-  final String? receiverName;
-  final String? receiverImage;
-  final bool? receiverStatus;
+  final String receiverName;
+
+  const UserChatScreen({
+    Key? key,
+    required this.chatId,
+    required this.receiverId,
+    required this.receiverName,
+  }) : super(key: key);
 
   @override
   State<UserChatScreen> createState() => _UserChatScreenState();
@@ -386,30 +334,13 @@ class _UserChatScreenState extends State<UserChatScreen>
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool isLoading = true;
-  late StreamSubscription<Message> _messageSubscription;
+  StreamSubscription<Message>? _messageSubscription;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeChat();
-
-    // 👇 Listen to real-time incoming messages
-    _messageSubscription = context.read<ChatCubit>().incomingMessages.listen((
-      message,
-    ) {
-      print('📩 Received message in UI: ${message.content}');
-      _scrollToBottom();
-    });
-  }
-
-  @override
-  void dispose() {
-    _messageSubscription.cancel();
-    _messageController.dispose();
-    _scrollController.dispose();
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
   }
 
   void _initializeChat() async {
@@ -451,10 +382,10 @@ class _UserChatScreenState extends State<UserChatScreen>
 
     print('📤 Sending message: $content');
 
-    // 1️⃣ Add to local Cubit immediately (fast UI update)
-    _addMessageToCubit(content);
-
-    // 2️⃣ Send via HTTP API (not socket)
+    // ✅ FIXED: Remove optimistic update - let Socket.IO handle all UI updates
+    // The message will appear in UI when confirmed via Socket.IO
+    
+    // Send via HTTP API (not socket)
     context.read<ChatCubit>().sendMessage(
       widget.chatId,
       content,
@@ -463,17 +394,6 @@ class _UserChatScreenState extends State<UserChatScreen>
 
     _messageController.clear();
     _scrollToBottom();
-  }
-
-  void _addMessageToCubit(String content) {
-    final newMessage = Message(
-      content: content,
-      sender: Sender(id: ChatService.instance.currentUserId),
-      isFromMe: true,
-      sentAt: DateTime.now(),
-    );
-
-    context.read<ChatCubit>().addMessage(newMessage);
   }
 
   void _scrollToBottom() {
@@ -489,6 +409,15 @@ class _UserChatScreenState extends State<UserChatScreen>
   }
 
   @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    _messageController.dispose();
+    _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
@@ -499,191 +428,94 @@ class _UserChatScreenState extends State<UserChatScreen>
         child: Column(
           children: [
             // Header
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 10.h(context)),
-              child: Row(
-                children: [
-                  SizedBox(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundImage: NetworkImage(
-                            widget.receiverImage ?? '',
-                          ),
-                        ),
-                        Positioned(
-                          bottom: -2,
-                          left: -2,
-                          child: CircleAvatar(
-                            radius: 8,
-                            backgroundColor: Colors.white,
-                            child: CircleAvatar(
-                              radius: 6,
-                              backgroundColor:
-                                  widget.receiverStatus == true
-                                      ? Color(0xff3FB88C)
-                                      : Colors.grey,
-                              child: Icon(
-                                Icons.check,
-                                color: ColorsManagers.ceil,
-                                size: 12.h(context),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back),
+                ),
+                CircleAvatar(
+                  radius: 20,
+                  child: Text(
+                    widget.receiverName[0].toUpperCase(),
+                    style: const TextStyle(fontSize: 18),
                   ),
-                  const Spacer(),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.receiverName ?? '',
-                        style: TextStyles.font12Blackw500Tajawal(
-                          context,
-                        ).copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      SizedBox(height: 2.h(context)),
-                      Text(
-                        widget.receiverStatus == true ? "متصل" : "غير متصل",
-                        style: TextStyles.font12SpanishGrayw400Almarai(context),
-                      ),
-                    ],
+                ),
+                SizedBox(width: 10.w(context)),
+                Text(
+                  widget.receiverName,
+                  style: TextStyle(
+                    fontSize: 18.sp(context),
+                    fontWeight: FontWeight.bold,
                   ),
-                  const Spacer(flex: 3),
-                  Image.asset(ImageManager.logo, height: 105.h(context)),
-                  const Spacer(flex: 12),
-                  InkWell(
-                    onTap: () {
-                      context.pop();
-                    },
-                    child: Icon(Icons.close, color: ColorsManagers.ceil),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+            SizedBox(height: 10.h(context)),
             
             // Messages List
             Expanded(
-              child: Column(
-                children: [
-                  Text(
-                    "Today 04:00 PM",
-                    style: TextStyles.font14SpanishGrayw300Almarai(
-                      context,
-                    ).copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  verticalSpacing(18.h(context)),
-                  Container(
-                    padding: EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: ColorsManagers.aliceBlue,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      "طلب بخصوص [اسم اللوحة]، يمكنك مراجعة التفاصيل وإتمام الإجراءات هنا.",
-                      style: TextStyles.font16YankeesBluew400Amiri(context),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  verticalSpacing(15.h(context)),
-                  Expanded(
-                    child: BlocBuilder<ChatCubit, ChatState>(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : BlocBuilder<ChatCubit, ChatState>(
                       builder: (context, state) {
-                        if (state is ChatLoading) {
-                          return Center(child: CircularProgressIndicator());
+                        if (state is ChatLoaded) {
+                          return ListView.builder(
+                            controller: _scrollController,
+                            reverse: true,
+                            itemCount: state.messages.length,
+                            itemBuilder: (context, index) {
+                              final message = state.messages[index];
+                              return MessageBubble(
+                                message: message,
+                                isFromMe: message.isFromMe ?? false,
+                              );
+                            },
+                          );
+                        } else if (state is ChatError) {
+                          return Center(
+                            child: Text(
+                              state.message,
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          );
                         }
-
-                        final messages =
-                            context
-                                .read<ChatCubit>()
-                                .messages
-                                .reversed
-                                .toList();
-
-                        if (messages.isEmpty) {
-                          return const Center(child: Text("لا توجد رسائل"));
-                        }
-
-                        return ListView.builder(
-                          reverse: true,
-                          controller: _scrollController,
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = messages[index];
-                            final isSender = msg.isFromMe == true;
-
-                            return isSender
-                                ? SenderItem(message: msg)
-                                : RecieverItem(message: msg);
-                          },
+                        return const Center(
+                          child: Text('No messages yet'),
                         );
                       },
                     ),
-                  ),
-                ],
-              ),
             ),
             
             // Message Input
-            TextFormField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0x19A8C5DA),
-                hintText: "اكتب رسالتك هنا...",
-                hintStyle: TextStyles.font12SpanishGrayw400Almarai(
-                  context,
-                ).copyWith(fontSize: 16),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(42),
-                  borderSide: BorderSide(
-                    color: ColorsManagers.ceil,
-                    width: 1.0,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(42),
-                  borderSide: BorderSide(
-                    color: ColorsManagers.ceil,
-                    width: 1.0,
-                  ),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(42),
-                  borderSide: BorderSide(
-                    color: ColorsManagers.ceil,
-                    width: 1.0,
-                  ),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  vertical: 10.h(context),
-                  horizontal: 15.w(context),
-                ),
-                suffixIcon: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SvgPicture.asset("assets/svgs/gallery.svg"),
-                    horizontalSpacing(10.w(context)),
-                    SvgPicture.asset("assets/svgs/mic 1.svg"),
-                    horizontalSpacing(10.w(context)),
-                    GestureDetector(
-                      onTap: _sendMessage,
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: ColorsManagers.ceil,
-                        child: SvgPicture.asset("assets/svgs/send 1.svg"),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 15.w(context),
+                        vertical: 10.h(context),
                       ),
                     ),
-                    horizontalSpacing(4),
-                  ],
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
                 ),
-              ),
+                SizedBox(width: 10.w(context)),
+                IconButton(
+                  onPressed: _sendMessage,
+                  icon: const Icon(Icons.send),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -691,184 +523,81 @@ class _UserChatScreenState extends State<UserChatScreen>
     );
   }
 }
-
-// Message Widgets
-class RecieverItem extends StatelessWidget {
-  const RecieverItem({super.key, required this.message});
-  final Message message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.h(context)),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          CircleAvatar(
-            radius: 15,
-            backgroundImage: NetworkImage(message.sender?.profileImage ?? ''),
-          ),
-          horizontalSpacing(5),
-          Container(
-            width: 248.w(context),
-            decoration: BoxDecoration(
-              color: ColorsManagers.ceil,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(2),
-                bottomLeft: Radius.circular(8),
-                bottomRight: Radius.circular(2),
-              ),
-            ),
-            padding: EdgeInsets.all(12),
-            child: Text(
-              message.content ?? '',
-              style: TextStyles.font15JapaneseIndigow400Almarai(
-                context,
-              ).copyWith(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class SenderItem extends StatelessWidget {
-  const SenderItem({super.key, required this.message});
-  final Message message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.h(context)),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          width: 248.w(context),
-          decoration: BoxDecoration(
-            color: ColorsManagers.aliceBlue,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(2),
-              topRight: Radius.circular(8),
-              bottomLeft: Radius.circular(2),
-              bottomRight: Radius.circular(8),
-            ),
-          ),
-          padding: EdgeInsets.all(12),
-          child: Text(
-            message.content ?? '',
-            style: TextStyles.font15JapaneseIndigow400Almarai(context),
-          ),
-        ),
-      ),
-    );
-  }
-}
 ```
 
-### 4. تحديث API Constants
+## 🔧 التغييرات الرئيسية (Main Changes)
 
-```dart
-class ApiConstant {
-  // Base URLs
-  static const String baseUrl = 'https://arthub-backend.up.railway.app/api';
-  static const String socketUrl = 'https://arthub-backend.up.railway.app';
-  
-  // Chat endpoints
-  static const String chat = '$baseUrl/chat';
-  static const String createChat = '$baseUrl/chat/create';
-  static String chatMessages(String chatId) => '$baseUrl/chat/$chatId/messages';
-  static String sendMessages(String chatId) => '$baseUrl/chat/$chatId/send';
-  static String markAsRead(String chatId) => '$baseUrl/chat/$chatId/read';
-  static String deleteMessage(String chatId, String messageId) => '$baseUrl/chat/$chatId/messages/$messageId';
-  
-  // Auth endpoints
-  static const String login = '$baseUrl/auth/login';
-  static const String register = '$baseUrl/auth/register';
-  
-  // User endpoints
-  static const String profile = '$baseUrl/user/profile';
-  static const String updateProfile = '$baseUrl/user/profile/update';
-}
-```
+### ✅ المشكلة (Problem):
+- الرسائل كانت تظهر مرتين في الـ UI
+- السبب: إضافة الرسالة في 3 أماكن مختلفة
 
-### 5. تحديث MainScreen لتهيئة Socket
+### ✅ الحل (Solution):
+1. **إزالة الإضافة المتفائلة (Remove Optimistic Update)**: 
+   - حذف `_addMessageToCubit(content)` من `UserChatScreen._sendMessage()`
 
-```dart
-// في main_screen.dart
-class _MainScreenState extends State<MainScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _initializeSocket();
-  }
+2. **إزالة الإضافة من HTTP Response**: 
+   - حذف `_messages.add(message)` من `ChatCubit.sendMessage()`
 
-  Future<void> _initializeSocket() async {
-    try {
-      final token = await SecureStorage().getAccessToken();
-      final userId = await SecureStorage().getUserId();
-      
-      if (token != null && userId != null) {
-        print('🔌 Initializing Socket with userId: $userId');
-        ChatService.instance.initSocket(userId, token);
-      } else {
-        print('❌ Missing token or userId for socket initialization');
-      }
-    } catch (e) {
-      print('❌ Error initializing socket: $e');
-    }
-  }
-}
-```
+3. **Socket.IO كـ Single Source of Truth**: 
+   - `ChatCubit.handleIncomingMessage()` هو المكان الوحيد لإضافة الرسائل
+   - إضافة فحص لمنع التكرار
 
-### 6. تحديث SecureStorage
+### ✅ النتيجة (Result):
+- الرسائل تظهر مرة واحدة فقط
+- Socket.IO يتحكم في جميع تحديثات الـ UI
+- HTTP API مسؤول فقط عن حفظ الرسالة وإرسالها عبر Socket.IO
 
-```dart
-class SecureStorage {
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+## 🚀 كيفية الاستخدام (How to Use)
 
-  // إضافة هذه الدوال
-  static Future<String?> getUserId() async {
-    try {
-      return await _storage.read(key: 'user_id');
-    } catch (e) {
-      return null;
-    }
-  }
+1. **تحديث الكود في Flutter**:
+   ```bash
+   # انسخ الكود المحدث إلى ملفاتك
+   ```
 
-  static Future<void> saveUserId(String userId) async {
-    await _storage.write(key: 'user_id', value: userId);
-  }
+2. **اختبار الوظائف**:
+   - إرسال رسالة جديدة
+   - استقبال رسالة من مستخدم آخر
+   - التأكد من عدم تكرار الرسائل
 
-  static Future<void> saveUserData(String token, String userId) async {
-    await _storage.write(key: 'access_token', value: token);
-    await _storage.write(key: 'user_id', value: userId);
-  }
+3. **مراقبة الـ Logs**:
+   ```bash
+   # ستظهر رسائل مثل:
+   📤 Sending message via HTTP API...
+   ✅ Message sent successfully via HTTP API - waiting for Socket.IO confirmation
+   📨 Received real-time message: {...}
+   ✅ Message added to UI via Socket.IO
+   ```
 
-  static Future<String?> getAccessToken() async {
-    return await _storage.read(key: 'access_token');
-  }
+## 🎯 المميزات (Features)
 
-  static Future<void> clearAll() async {
-    await _storage.deleteAll();
-  }
-}
-```
+- ✅ **رسائل تظهر مرة واحدة فقط**
+- ✅ **تحديث فوري عبر Socket.IO**
+- ✅ **حفظ موثوق عبر HTTP API**
+- ✅ **منع تكرار الرسائل**
+- ✅ **واجهة مستخدم سلسة**
 
-## 🎯 النتيجة النهائية
+## 🔍 Debugging
 
-بعد تطبيق هذه التحديثات:
+إذا واجهت مشاكل:
 
-1. **✅ الرسائل تُرسل عبر HTTP API** - سريعة وموثوقة
-2. **✅ الرسائل الواردة تُستقبل عبر Socket** - في الوقت الفعلي
-3. **✅ الواجهة تتحدث تلقائياً** - بدون تحديث يدوي
-4. **✅ Socket يعمل بشكل صحيح** - مع authentication و chat rooms
+1. **تأكد من Socket.IO Connection**:
+   ```dart
+   print('🔌 Socket.IO connected successfully');
+   ```
 
-## 🧪 اختبار الحل
+2. **تحقق من HTTP API**:
+   ```dart
+   print('✅ Message sent successfully via HTTP API');
+   ```
 
-1. **أرسل رسالة من الفلاتر** → يجب أن تظهر فوراً
-2. **أرسل رسالة من تطبيق آخر** → يجب أن تظهر في الفلاتر
-3. **تحقق من console logs** → يجب أن ترى رسائل التصحيح
+3. **مراقبة Socket Events**:
+   ```dart
+   print('📨 Received new_message event: $data');
+   ```
 
-هذا الحل النهائي سيحل المشكلة بشكل كامل! 🎉 
+## 📝 ملاحظات مهمة (Important Notes)
+
+- **HTTP API**: مسؤول عن حفظ الرسالة والتحقق من الصحة
+- **Socket.IO**: مسؤول عن التحديث الفوري للـ UI
+- **Single Source of Truth**: `handleIncomingMessage()` فقط
+- **No Optimistic Updates**: انتظار تأكيد Socket.IO 

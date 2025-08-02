@@ -53,12 +53,18 @@ export const initializeSocketIO = server => {
     // Handle joining a chat room
     socket.on('join_chat', async data => {
       try {
-        const { chatId, userId } = data;
+        const { chatId } = data;
+        const userId = socket.userId;
+
+        if (!userId) {
+          socket.emit('error', { message: 'User not authenticated' });
+          return;
+        }
 
         // Verify user belongs to this chat
         const chat = await chatModel.findOne({
           _id: chatId,
-          $or: [{ sender: userId }, { receiver: userId }]
+          members: { $in: [userId] }
         });
 
         if (!chat) {
@@ -91,92 +97,34 @@ export const initializeSocketIO = server => {
       }
     });
 
-    // Handle new message
-    socket.on('send_message', async data => {
-      try {
-        const { chatId, content, senderId, receiverId } = data;
-
-        if (!chatId || !content || !senderId) {
-          socket.emit('error', { message: 'Invalid message data' });
-          return;
-        }
-
-        // Create and save the message
-        const newMessage = await messageModel.create({
-          chat: chatId,
-          sender: senderId,
-          content,
-          sentAt: new Date()
-        });
-
-        // Update chat's last message
-        await chatModel.findByIdAndUpdate(chatId, {
-          lastMessage: newMessage._id,
-          updatedAt: new Date()
-        });
-
-        // Populate sender info before emitting
-        const populatedMessage = await messageModel
-          .findById(newMessage._id)
-          .populate('sender', 'displayName profileImage');
-
-        // Emit to the chat room
-        io.to(`chat:${chatId}`).emit('new_message', populatedMessage);
-
-        // Send notification to receiver if they're not in the chat room
-        if (receiverId) {
-          const receiverSocketId = userSocketMap.get(receiverId);
-          const receiverInRoom =
-            receiverSocketId &&
-            io.sockets.adapter.rooms.get(`chat:${chatId}`)?.has(receiverSocketId);
-
-          if (!receiverInRoom) {
-            // Get sender name for the notification
-            const sender = await userModel.findById(senderId).select('displayName');
-            const senderName = sender?.displayName || 'مستخدم';
-
-            // Send push notification
-            try {
-              await sendPushNotificationToUser(
-                receiverId,
-                createMultilingualNotification(
-                  'رسالة جديدة',
-                  'New Message',
-                  `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
-                  `${senderName}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`
-                ),
-                {
-                  type: 'chat',
-                  chatId,
-                  senderId
-                }
-              );
-            } catch (notificationError) {
-              console.error('Failed to send message notification:', notificationError);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error sending message:', error);
-        socket.emit('error', { message: 'Failed to send message' });
-      }
+    // Handle leaving a chat room
+    socket.on('leave_chat', data => {
+      const { chatId } = data;
+      socket.leave(`chat:${chatId}`);
+      console.log(`User left chat ${chatId}`);
     });
 
     // Handle typing indicators
     socket.on('typing', data => {
-      const { chatId, userId } = data;
-      socket.to(`chat:${chatId}`).emit('user_typing', { chatId, userId });
+      const { chatId } = data;
+      socket.to(`chat:${chatId}`).emit('typing', { chatId, userId: socket.userId });
     });
 
     socket.on('stop_typing', data => {
-      const { chatId, userId } = data;
-      socket.to(`chat:${chatId}`).emit('user_stopped_typing', { chatId, userId });
+      const { chatId } = data;
+      socket.to(`chat:${chatId}`).emit('stop_typing', { chatId, userId: socket.userId });
     });
 
     // Handle read receipts
     socket.on('mark_read', async data => {
       try {
-        const { chatId, userId } = data;
+        const { chatId } = data;
+        const userId = socket.userId;
+
+        if (!userId) {
+          socket.emit('error', { message: 'User not authenticated' });
+          return;
+        }
 
         // Update messages as read
         await messageModel.updateMany(
@@ -233,6 +181,7 @@ export const sendToUser = (userId, event, data) => {
     throw new Error('Socket.IO not initialized');
   }
 
+  console.log(`📤 Sending ${event} to user ${userId}:`, data);
   io.to(`user:${userId}`).emit(event, data);
 };
 
@@ -247,6 +196,7 @@ export const sendToChat = (chatId, event, data) => {
     throw new Error('Socket.IO not initialized');
   }
 
+  console.log(`📤 Sending ${event} to chat ${chatId}:`, data);
   io.to(`chat:${chatId}`).emit(event, data);
 };
 

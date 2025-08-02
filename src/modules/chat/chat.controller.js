@@ -107,7 +107,7 @@ export const getChats = asyncHandler(async (req, res, next) => {
 
     // Build query for searching
     let searchQuery = { 
-      members: userId, 
+      members: { $in: [userId] }, 
       isDeleted: { $ne: true } 
     };
 
@@ -301,7 +301,7 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     // Check if user is member of chat
     const chat = await chatModel.findOne({
       _id: chatId,
-      members: userId,
+      members: { $in: [userId] },
       isDeleted: { $ne: true }
     })
     .populate({
@@ -422,7 +422,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     // Check if user is member of chat
     const chat = await chatModel.findOne({
       _id: chatId,
-      members: userId,
+      members: { $in: [userId] },
       isDeleted: { $ne: true }
     }).lean();
 
@@ -668,7 +668,7 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
     // Check if user is member of chat
     const chat = await chatModel.findOne({
       _id: chatId,
-      members: userId,
+      members: { $in: [userId] },
       isDeleted: { $ne: true }
     }).lean();
 
@@ -750,7 +750,7 @@ export const deleteMessage = asyncHandler(async (req, res, next) => {
     // Check if user is member of chat
     const chat = await chatModel.findOne({
       _id: chatId,
-      members: userId,
+      members: { $in: [userId] },
       isDeleted: { $ne: true }
     }).lean();
 
@@ -854,7 +854,7 @@ export const getUnreadCount = asyncHandler(async (req, res, next) => {
 
     // Get all user's chats
     const userChats = await chatModel.find({
-      members: userId,
+      members: { $in: [userId] },
       isDeleted: { $ne: true }
     }).select('_id').lean();
 
@@ -905,7 +905,7 @@ export const deleteChat = asyncHandler(async (req, res, next) => {
     // Check if user is member of chat
     const chat = await chatModel.findOne({
       _id: chatId,
-      members: userId
+      members: { $in: [userId] }
     });
 
     if (!chat) {
