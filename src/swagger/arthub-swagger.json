@@ -330,12 +330,21 @@
       "FCMTokenRequest": {
         "type": "object",
         "required": [
-          "fcmToken"
+          "token"
         ],
         "properties": {
-          "fcmToken": {
+          "token": {
             "type": "string",
-            "example": "fMEGG8-TQVSEJHBFrk-BZ3:APA91bHZKmJLnmRJHBFrk..."
+            "minLength": 10,
+            "maxLength": 1000,
+            "description": "رمز FCM للإشعارات الفورية",
+            "example": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC..."
+          },
+          "deviceType": {
+            "type": "string",
+            "enum": ["android", "ios", "web"],
+            "description": "نوع الجهاز",
+            "example": "android"
           }
         }
       },
@@ -3235,11 +3244,21 @@
       "FCMTokenSchema": {
         "type": "object",
         "required": [
-          "fcmToken"
+          "token"
         ],
         "properties": {
-          "fcmToken": {
-            "type": "string"
+          "token": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000,
+            "description": "رمز FCM للإشعارات الفورية",
+            "example": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC..."
+          },
+          "deviceType": {
+            "type": "string",
+            "enum": ["android", "ios", "web"],
+            "description": "نوع الجهاز",
+            "example": "android"
           }
         }
       },
