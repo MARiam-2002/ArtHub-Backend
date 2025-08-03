@@ -7306,7 +7306,46 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FCMTokenSchema"
+                "type": "object",
+                "required": ["token"],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 1000,
+                    "description": "رمز FCM للإشعارات الفورية",
+                    "example": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC..."
+                  },
+                  "deviceType": {
+                    "type": "string",
+                    "enum": ["android", "ios", "web"],
+                    "description": "نوع الجهاز",
+                    "example": "android"
+                  }
+                }
+              },
+              "examples": {
+                "android": {
+                  "summary": "Android Device",
+                  "value": {
+                    "token": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC...",
+                    "deviceType": "android"
+                  }
+                },
+                "ios": {
+                  "summary": "iOS Device",
+                  "value": {
+                    "token": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC...",
+                    "deviceType": "ios"
+                  }
+                },
+                "web": {
+                  "summary": "Web Browser",
+                  "value": {
+                    "token": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC...",
+                    "deviceType": "web"
+                  }
+                }
               }
             }
           }
@@ -7372,13 +7411,22 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token"
-                ],
+                "required": ["token"],
                 "properties": {
                   "token": {
                     "type": "string",
-                    "description": "رمز FCM المراد إلغاء تسجيله"
+                    "minLength": 10,
+                    "maxLength": 1000,
+                    "description": "رمز FCM المراد إلغاء تسجيله",
+                    "example": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC..."
+                  }
+                }
+              },
+              "examples": {
+                "delete_token": {
+                  "summary": "Delete FCM Token",
+                  "value": {
+                    "token": "eHb1fxhb7rI:APA91bEhYKjBqLNdBgKBALRhHuHLaDVVUhwa6ugfOvVGiC..."
                   }
                 }
               }
