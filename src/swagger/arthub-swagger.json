@@ -18190,6 +18190,280 @@
         }
       }
     },
+    "/api/dashboard/sales/comprehensive": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "تحليل شامل للمبيعات",
+        "description": "يجمع البيانات من جميع endpoints المبيعات في استجابة واحدة مع فلترة حسب السنة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer",
+              "minimum": 2020,
+              "maximum": 2030,
+              "default": 2024
+            },
+            "description": "السنة المطلوبة للتحليل (افتراضي: السنة الحالية)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب التحليل الشامل للمبيعات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب التحليل الشامل للمبيعات بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "year": {
+                          "type": "integer",
+                          "example": 2024
+                        },
+                        "analytics": {
+                          "type": "object",
+                          "properties": {
+                            "topSellingArtist": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string",
+                                  "example": "أحمد محمد"
+                                },
+                                "image": {
+                                  "type": "string",
+                                  "example": "https://example.com/profile.jpg"
+                                },
+                                "sales": {
+                                  "type": "number",
+                                  "example": 125000
+                                },
+                                "orders": {
+                                  "type": "number",
+                                  "example": 25
+                                }
+                              }
+                            },
+                            "totalOrders": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "number",
+                                  "example": 168
+                                },
+                                "percentageChange": {
+                                  "type": "number",
+                                  "example": 15
+                                },
+                                "isPositive": {
+                                  "type": "boolean",
+                                  "example": true
+                                }
+                              }
+                            },
+                            "totalSales": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "number",
+                                  "example": 1284700
+                                },
+                                "percentageChange": {
+                                  "type": "number",
+                                  "example": 20
+                                },
+                                "isPositive": {
+                                  "type": "boolean",
+                                  "example": true
+                                }
+                              }
+                            },
+                            "averageOrderValue": {
+                              "type": "number",
+                              "example": 7650
+                            }
+                          }
+                        },
+                        "trends": {
+                          "type": "object",
+                          "properties": {
+                            "chartData": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "month": {
+                                    "type": "string",
+                                    "example": "يناير"
+                                  },
+                                  "sales": {
+                                    "type": "number",
+                                    "example": 105000
+                                  },
+                                  "orders": {
+                                    "type": "number",
+                                    "example": 14
+                                  }
+                                }
+                              }
+                            },
+                            "summary": {
+                              "type": "object",
+                              "properties": {
+                                "totalSales": {
+                                  "type": "number",
+                                  "example": 1284700
+                                },
+                                "totalOrders": {
+                                  "type": "number",
+                                  "example": 168
+                                },
+                                "averageMonthlySales": {
+                                  "type": "number",
+                                  "example": 107058
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "topArtists": {
+                          "type": "object",
+                          "properties": {
+                            "artists": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string",
+                                    "example": "507f1f77bcf86cd799439011"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "example": "أحمد محمد"
+                                  },
+                                  "image": {
+                                    "type": "string",
+                                    "example": "https://example.com/profile.jpg"
+                                  },
+                                  "job": {
+                                    "type": "string",
+                                    "example": "فنان تشكيلي"
+                                  },
+                                  "rating": {
+                                    "type": "number",
+                                    "example": 4.5
+                                  },
+                                  "reviewsCount": {
+                                    "type": "number",
+                                    "example": 25
+                                  },
+                                  "isVerified": {
+                                    "type": "boolean",
+                                    "example": true
+                                  },
+                                  "sales": {
+                                    "type": "number",
+                                    "example": 125000
+                                  },
+                                  "orders": {
+                                    "type": "number",
+                                    "example": 25
+                                  },
+                                  "growth": {
+                                    "type": "object",
+                                    "properties": {
+                                      "sales": {
+                                        "type": "number",
+                                        "example": 12
+                                      },
+                                      "orders": {
+                                        "type": "number",
+                                        "example": 8
+                                      },
+                                      "isPositive": {
+                                        "type": "boolean",
+                                        "example": true
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "total": {
+                              "type": "number",
+                              "example": 10
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "خطأ في المعاملات",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح - مطلوب مصادقة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ممنوع - مطلوب صلاحيات إدارية",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dashboard/sales/top-artists": {
       "get": {
         "tags": [
