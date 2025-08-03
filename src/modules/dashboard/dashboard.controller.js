@@ -438,11 +438,23 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
       });
     }
     
-    startDate = new Date(yearNum, monthNum, 1);
-    endDate = new Date(yearNum, monthNum + 1, 0, 23, 59, 59, 999);
+    // استخدام UTC لتجنب مشاكل التوقيت
+    startDate = new Date(Date.UTC(yearNum, monthNum, 1, 0, 0, 0, 0));
+    endDate = new Date(Date.UTC(yearNum, monthNum + 1, 0, 23, 59, 59, 999));
+    
+    console.log('🔍 Date filtering for artists performance:');
+    console.log(`📅 Year: ${yearNum}, Month: ${monthNum + 1}`);
+    console.log(`📅 Start Date (UTC): ${startDate.toISOString()}`);
+    console.log(`📅 End Date (UTC): ${endDate.toISOString()}`);
   } else {
     // إذا لم يتم تحديد السنة والشهر، استخدم الشهر الماضي كافتراضي
-    startDate.setMonth(startDate.getUTCMonth() - 1);
+    const now = new Date();
+    startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+    endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59, 999));
+    
+    console.log('🔍 Using default date range (last month):');
+    console.log(`📅 Start Date (UTC): ${startDate.toISOString()}`);
+    console.log(`📅 End Date (UTC): ${endDate.toISOString()}`);
   }
 
   // جلب أفضل الفنانين أداءً
@@ -486,7 +498,7 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
         as: 'reviews'
       }
     },
-    // جلب مبيعات الفنان
+    // جلب مبيعات الفنان - إصلاح الفلترة الزمنية
     {
       $lookup: {
         from: 'specialrequests',
@@ -517,9 +529,20 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
             0
           ] 
         },
-                  totalSales: { 
-            $sum: { $ifNull: ['$sales.finalPrice', '$sales.quotedPrice', '$sales.budget'] } 
-          },
+        totalSales: { 
+          $sum: { 
+            $map: {
+              input: '$sales',
+              as: 'sale',
+              in: { 
+                $ifNull: [
+                  '$$sale.finalPrice', 
+                  { $ifNull: ['$$sale.quotedPrice', '$$sale.budget'] }
+                ]
+              }
+            }
+          }
+        },
         salesCount: { $size: '$sales' }
       }
     },
@@ -556,6 +579,8 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
       }
     }
   ]);
+
+  console.log(`📊 Found ${topArtists.length} artists with activity in the specified period`);
 
   // إضافة معلومات الفترة المحددة للاستجابة
   const periodInfo = year && month 
@@ -896,7 +921,7 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @desc    أفضل الفنانين مبيعاً
+ * @desc    جلب أفضل الفنانين مبيعاً
  * @route   GET /api/dashboard/sales/top-artists
  * @access  Private (Admin, SuperAdmin)
  */
@@ -912,7 +937,7 @@ export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
   const parsedPage = parseInt(page);
   const skip = (parsedPage - 1) * parsedLimit;
 
-  // جلب أفضل الفنانين (جميع البيانات)
+  // جلب أفضل الفنانين (جميع البيانات - بدون فلتر زمني)
   const currentPeriodArtists = await specialRequestModel.aggregate([
     { 
       $match: { 
