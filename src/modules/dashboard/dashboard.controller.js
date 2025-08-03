@@ -37,8 +37,8 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
 
   // حساب النسب المئوية مقارنة بالشهر الماضي
   const currentDate = new Date();
-  const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-  const thisMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  const lastMonth = new Date(currentDate.getUTCFullYear(), currentDate.getUTCMonth() - 1, 1);
+  const thisMonth = new Date(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), 1);
 
   // إحصائيات الشهر الحالي
   const currentMonthUsers = await userModel.countDocuments({
@@ -140,20 +140,20 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
   // تحديد الفترة الزمنية
   switch (period) {
     case '1month':
-      startDate.setMonth(startDate.getMonth() - 1);
+      startDate.setMonth(startDate.getUTCMonth() - 1);
       break;
     case '3months':
-      startDate.setMonth(startDate.getMonth() - 3);
+      startDate.setMonth(startDate.getUTCMonth() - 3);
       break;
     case '6months':
-      startDate.setMonth(startDate.getMonth() - 6);
+      startDate.setMonth(startDate.getUTCMonth() - 6);
       break;
     case '9months':
-      startDate.setMonth(startDate.getMonth() - 9);
+      startDate.setMonth(startDate.getUTCMonth() - 9);
       break;
     case '12months':
     default:
-      startDate.setMonth(startDate.getMonth() - 12);
+      startDate.setMonth(startDate.getUTCMonth() - 12);
       break;
   }
 
@@ -313,8 +313,8 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
   }
   
   // تحضير بيانات الرسوم البيانية من البيانات الفعلية
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getUTCFullYear();
+  const currentMonth = new Date().getUTCMonth() + 1;
   
   for (let i = monthsToShow - 1; i >= 0; i--) {
     const targetMonth = currentMonth - i;
@@ -442,7 +442,7 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
     endDate = new Date(yearNum, monthNum + 1, 0, 23, 59, 59, 999);
   } else {
     // إذا لم يتم تحديد السنة والشهر، استخدم الشهر الماضي كافتراضي
-    startDate.setMonth(startDate.getMonth() - 1);
+    startDate.setMonth(startDate.getUTCMonth() - 1);
   }
 
   // جلب أفضل الفنانين أداءً
@@ -586,20 +586,20 @@ export const getSalesAnalytics = asyncHandler(async (req, res, next) => {
   // تحديد الفترة الزمنية
   switch (period) {
     case '7days':
-      startDate.setDate(startDate.getDate() - 7);
-      previousPeriodStart.setDate(previousPeriodStart.getDate() - 14);
+      startDate.setUTCDate(startDate.getUTCDate() - 7);
+      previousPeriodStart.setUTCDate(previousPeriodStart.getUTCDate() - 14);
       break;
     case '30days':
-      startDate.setDate(startDate.getDate() - 30);
-      previousPeriodStart.setDate(previousPeriodStart.getDate() - 60);
+      startDate.setUTCDate(startDate.getUTCDate() - 30);
+      previousPeriodStart.setUTCDate(previousPeriodStart.getUTCDate() - 60);
       break;
     case '90days':
-      startDate.setDate(startDate.getDate() - 90);
-      previousPeriodStart.setDate(previousPeriodStart.getDate() - 180);
+      startDate.setUTCDate(startDate.getUTCDate() - 90);
+      previousPeriodStart.setUTCDate(previousPeriodStart.getUTCDate() - 180);
       break;
     case '1year':
-      startDate.setFullYear(startDate.getFullYear() - 1);
-      previousPeriodStart.setFullYear(previousPeriodStart.getFullYear() - 2);
+      startDate.setUTCFullYear(startDate.getUTCFullYear() - 1);
+      previousPeriodStart.setUTCFullYear(previousPeriodStart.getUTCFullYear() - 2);
       break;
   }
 
@@ -731,20 +731,20 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
   // تحديد الفترة الزمنية حسب الصورة
   switch (period) {
     case '1month':
-      startDate.setMonth(startDate.getMonth() - 1);
+      startDate.setUTCMonth(startDate.getUTCMonth() - 1);
       break;
     case '3months':
-      startDate.setMonth(startDate.getMonth() - 3);
+      startDate.setUTCMonth(startDate.getUTCMonth() - 3);
       break;
     case '6months':
-      startDate.setMonth(startDate.getMonth() - 6);
+      startDate.setUTCMonth(startDate.getUTCMonth() - 6);
       break;
     case '9months':
-      startDate.setMonth(startDate.getMonth() - 9);
+      startDate.setUTCMonth(startDate.getUTCMonth() - 9);
       break;
     case '12months':
     default:
-      startDate.setMonth(startDate.getMonth() - 12);
+      startDate.setUTCMonth(startDate.getUTCMonth() - 12);
       break;
   }
 
@@ -779,8 +779,8 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
     'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
   ];
 
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getUTCFullYear();
+  const currentMonth = new Date().getUTCMonth() + 1;
   
   // تحديد عدد الشهور المطلوبة حسب الفترة
   let monthsToShow = 12;
@@ -819,10 +819,10 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
   // ملء البيانات للشهور المطلوبة
   for (let i = monthsToShow - 1; i >= 0; i--) {
     const targetDate = new Date();
-    targetDate.setMonth(targetDate.getMonth() - i);
+    targetDate.setUTCMonth(targetDate.getUTCMonth() - i);
     
-    const year = targetDate.getFullYear();
-    const month = targetDate.getMonth() + 1;
+    const year = targetDate.getUTCFullYear();
+    const month = targetDate.getUTCMonth() + 1;
     const monthName = months[month - 1];
     
     const key = `${year}-${month}`;
@@ -954,7 +954,7 @@ export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
 
   // حساب النمو مقارنة بالشهر السابق
   const lastMonth = new Date();
-  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
   
   const previousMonthArtists = await specialRequestModel.aggregate([
     { 
@@ -1064,16 +1064,16 @@ export const downloadSalesReport = asyncHandler(async (req, res, next) => {
   // تحديد الفترة الزمنية
   switch (period) {
     case '7days':
-      startDate.setDate(startDate.getDate() - 7);
+      startDate.setUTCDate(startDate.getUTCDate() - 7);
       break;
     case '30days':
-      startDate.setDate(startDate.getDate() - 30);
+      startDate.setUTCDate(startDate.getUTCDate() - 30);
       break;
     case '90days':
-      startDate.setDate(startDate.getDate() - 90);
+      startDate.setUTCDate(startDate.getUTCDate() - 90);
       break;
     case '1year':
-      startDate.setFullYear(startDate.getFullYear() - 1);
+      startDate.setUTCFullYear(startDate.getUTCFullYear() - 1);
       break;
   }
 
@@ -1230,7 +1230,7 @@ export const getDashboardOverview = asyncHandler(async (req, res, next) => {
     
     // إذا لم يتم تحديد سنة، استخدم السنة الحالية
     if (!year) {
-      selectedYear = new Date().getFullYear();
+      selectedYear = new Date().getUTCFullYear();
     } else {
       selectedYear = parseInt(year);
       

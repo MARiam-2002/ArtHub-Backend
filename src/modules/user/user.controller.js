@@ -1164,7 +1164,7 @@ export const getDetailedStats = asyncHandler(async (req, res, next) => {
       {
         $match: {
           artist: new mongoose.Types.ObjectId(userId),
-          createdAt: { $gte: new Date(new Date().getFullYear(), 0, 1) }
+          createdAt: { $gte: new Date(new Date().getUTCFullYear(), 0, 1) }
         }
       },
       {

@@ -470,6 +470,62 @@ export const safeDbOperation = async (operation, timeoutMs = 5000, retries = 2) 
   throw lastError;
 };
 
+/**
+ * Get current year using UTC to avoid timezone issues
+ * @returns {number} Current year in UTC
+ */
+export const getCurrentYearUTC = () => {
+  return new Date().getUTCFullYear();
+};
+
+/**
+ * Get current month using UTC (1-12)
+ * @returns {number} Current month in UTC (1-12)
+ */
+export const getCurrentMonthUTC = () => {
+  return new Date().getUTCMonth() + 1;
+};
+
+/**
+ * Get start of year in UTC
+ * @param {number} year - Year to get start date for (optional, defaults to current year)
+ * @returns {Date} Start of year in UTC
+ */
+export const getStartOfYearUTC = (year = null) => {
+  const targetYear = year || getCurrentYearUTC();
+  return new Date(Date.UTC(targetYear, 0, 1));
+};
+
+/**
+ * Get end of year in UTC
+ * @param {number} year - Year to get end date for (optional, defaults to current year)
+ * @returns {Date} End of year in UTC
+ */
+export const getEndOfYearUTC = (year = null) => {
+  const targetYear = year || getCurrentYearUTC();
+  return new Date(Date.UTC(targetYear, 11, 31, 23, 59, 59, 999));
+};
+
+/**
+ * Get start of month in UTC
+ * @param {number} year - Year
+ * @param {number} month - Month (1-12)
+ * @returns {Date} Start of month in UTC
+ */
+export const getStartOfMonthUTC = (year, month) => {
+  return new Date(Date.UTC(year, month - 1, 1));
+};
+
+/**
+ * Get end of month in UTC
+ * @param {number} year - Year
+ * @param {number} month - Month (1-12)
+ * @returns {Date} End of month in UTC
+ */
+export const getEndOfMonthUTC = (year, month) => {
+  return new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+};
+
 export default {
   checkCollectionHealth,
   checkIndex,
@@ -481,5 +537,11 @@ export default {
   optimizeForServerless,
   createIndex,
   safeDbOperation,
-  getConnectionOptions
+  getConnectionOptions,
+  getCurrentYearUTC,
+  getCurrentMonthUTC,
+  getStartOfYearUTC,
+  getEndOfYearUTC,
+  getStartOfMonthUTC,
+  getEndOfMonthUTC
 };
