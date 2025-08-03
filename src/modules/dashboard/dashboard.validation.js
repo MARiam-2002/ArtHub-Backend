@@ -73,4 +73,14 @@ export const downloadSalesReportValidation = {
       'any.only': 'صيغة التقرير يجب أن تكون json أو csv'
     })
   }).optional()
+};
+
+// Validation for comprehensive sales analysis query parameters
+export const getComprehensiveSalesAnalysisValidation = {
+  query: joi.object({
+    year: joi.number().integer().min(2020).max(2030).messages({
+      'number.min': 'السنة يجب أن تكون 2020 أو أحدث',
+      'number.max': 'السنة يجب أن تكون 2030 أو أقل'
+    })
+  }).optional()
 }; 

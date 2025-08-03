@@ -792,6 +792,182 @@ router.get(
 
 /**
  * @swagger
+ * /api/dashboard/sales/comprehensive:
+ *   get:
+ *     summary: تحليل شامل للمبيعات
+ *     tags: [Dashboard]
+ *     description: يجمع البيانات من جميع endpoints المبيعات في response واحد مع الفلترة حسب السنة
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *           example: 2025
+ *         description: السنة المطلوبة للتحليل (اختياري - إذا لم يتم تحديدها، تستخدم السنة الحالية)
+ *     responses:
+ *       200:
+ *         description: تم جلب التحليل الشامل للمبيعات بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب التحليل الشامل للمبيعات بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     year:
+ *                       type: integer
+ *                       example: 2025
+ *                     analytics:
+ *                       type: object
+ *                       properties:
+ *                         topSellingArtist:
+ *                           type: object
+ *                           nullable: true
+ *                           properties:
+ *                             name:
+ *                               type: string
+ *                               example: "أحمد محمد"
+ *                             image:
+ *                               type: string
+ *                               example: "https://example.com/image.jpg"
+ *                             sales:
+ *                               type: number
+ *                               example: 125000
+ *                             orders:
+ *                               type: number
+ *                               example: 25
+ *                         totalOrders:
+ *                           type: object
+ *                           properties:
+ *                             value:
+ *                               type: number
+ *                               example: 1243
+ *                             percentageChange:
+ *                               type: number
+ *                               example: 15
+ *                             isPositive:
+ *                               type: boolean
+ *                               example: true
+ *                         totalSales:
+ *                           type: object
+ *                           properties:
+ *                             value:
+ *                               type: number
+ *                               example: 847392
+ *                             percentageChange:
+ *                               type: number
+ *                               example: 12
+ *                             isPositive:
+ *                               type: boolean
+ *                               example: true
+ *                         averageOrderValue:
+ *                           type: number
+ *                           example: 681.57
+ *                     trends:
+ *                       type: object
+ *                       properties:
+ *                         chartData:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               month:
+ *                                 type: string
+ *                                 example: "يناير"
+ *                               sales:
+ *                                 type: number
+ *                                 example: 250000
+ *                               orders:
+ *                                 type: number
+ *                                 example: 45
+ *                         summary:
+ *                           type: object
+ *                           properties:
+ *                             totalSales:
+ *                               type: number
+ *                               example: 847392
+ *                             totalOrders:
+ *                               type: number
+ *                               example: 1243
+ *                             averageMonthlySales:
+ *                               type: number
+ *                               example: 70616
+ *                     topArtists:
+ *                       type: object
+ *                       properties:
+ *                         artists:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                                 example: "507f1f77bcf86cd799439011"
+ *                               name:
+ *                                 type: string
+ *                                 example: "أحمد محمد"
+ *                               image:
+ *                                 type: string
+ *                                 example: "https://example.com/image.jpg"
+ *                               job:
+ *                                 type: string
+ *                                 example: "رسام"
+ *                               rating:
+ *                                 type: number
+ *                                 example: 4.5
+ *                               reviewsCount:
+ *                                 type: number
+ *                                 example: 25
+ *                               isVerified:
+ *                                 type: boolean
+ *                                 example: true
+ *                               sales:
+ *                                 type: number
+ *                                 example: 125000
+ *                               orders:
+ *                                 type: number
+ *                                 example: 25
+ *                               growth:
+ *                                 type: object
+ *                                 properties:
+ *                                   sales:
+ *                                     type: number
+ *                                     example: 15
+ *                                   orders:
+ *                                     type: number
+ *                                     example: 10
+ *                                   isPositive:
+ *                                     type: boolean
+ *                                     example: true
+ *                         total:
+ *                           type: number
+ *                           example: 10
+ *       401:
+ *         description: غير مصرح
+ *       403:
+ *         description: ممنوع - للمديرين فقط
+ *       500:
+ *         description: خطأ في الخادم
+ */
+router.get(
+  '/sales/comprehensive',
+  authenticate,
+  isAuthorized('admin', 'superadmin'),
+  isValidation(dashboardValidation.getComprehensiveSalesAnalysisValidation),
+  dashboardController.getComprehensiveSalesAnalysis
+);
+
+/**
+ * @swagger
  * /api/dashboard/sales/report:
  *   get:
  *     summary: تحميل تقرير المبيعات

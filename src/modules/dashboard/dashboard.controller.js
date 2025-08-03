@@ -1075,6 +1075,314 @@ export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
 });
 
 /**
+ * @desc    تحليل شامل للمبيعات - يجمع البيانات من جميع endpoints
+ * @route   GET /api/dashboard/sales/comprehensive
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const getComprehensiveSalesAnalysis = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { year } = req.query;
+  
+  // تحديد السنة - إذا لم يتم تحديدها، استخدم السنة الحالية
+  let targetYear = new Date().getUTCFullYear();
+  if (year) {
+    targetYear = parseInt(year);
+  }
+  
+  // تحديد بداية ونهاية السنة
+  const startOfYear = new Date(targetYear, 0, 1); // يناير 1
+  const endOfYear = new Date(targetYear, 11, 31, 23, 59, 59, 999); // ديسمبر 31
+  
+  // السنة السابقة للمقارنة
+  const previousYearStart = new Date(targetYear - 1, 0, 1);
+  const previousYearEnd = new Date(targetYear - 1, 11, 31, 23, 59, 59, 999);
+  
+  // استيراد نموذج الطلبات الخاصة
+  const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
+
+  // ====== 1. تحليل المبيعات - إحصائيات عامة ======
+  
+  // إحصائيات السنة الحالية
+  const currentYearStats = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startOfYear, $lte: endOfYear },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: null,
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+        totalOrders: { $sum: 1 },
+        averageOrderValue: { $avg: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
+      }
+    }
+  ]);
+
+  // إحصائيات السنة السابقة للمقارنة
+  const previousYearStats = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: previousYearStart, $lte: previousYearEnd },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: null,
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+        totalOrders: { $sum: 1 },
+        averageOrderValue: { $avg: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } }
+      }
+    }
+  ]);
+
+  const currentStats = currentYearStats[0] || { totalSales: 0, totalOrders: 0, averageOrderValue: 0 };
+  const previousStats = previousYearStats[0] || { totalSales: 0, totalOrders: 0, averageOrderValue: 0 };
+
+  // حساب النسب المئوية
+  const salesPercentageChange = previousStats.totalSales > 0 
+    ? Math.round(((currentStats.totalSales - previousStats.totalSales) / previousStats.totalSales) * 100)
+    : 0;
+
+  const ordersPercentageChange = previousStats.totalOrders > 0
+    ? Math.round(((currentStats.totalOrders - previousStats.totalOrders) / previousStats.totalOrders) * 100)
+    : 0;
+
+  // أفضل فنان مبيعاً للسنة الحالية
+  const topSellingArtist = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startOfYear, $lte: endOfYear },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'artist',
+        foreignField: '_id',
+        as: 'artistData'
+      }
+    },
+    {
+      $group: {
+        _id: '$artist',
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+        orderCount: { $sum: 1 },
+        artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage.url', 0] } }
+      }
+    },
+    {
+      $sort: { totalSales: -1 }
+    },
+    {
+      $limit: 1
+    }
+  ]);
+
+  // ====== 2. تتبع المبيعات - بيانات الرسم البياني ======
+  
+  // تجميع البيانات الشهرية للسنة المحددة
+  const monthlySales = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startOfYear, $lte: endOfYear },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' }
+        },
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+        orderCount: { $sum: 1 }
+      }
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1 } }
+  ]);
+
+  // تنسيق البيانات للرسم البياني
+  const months = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+
+  // إنشاء بيانات الرسم البياني للشهور الـ 12
+  const chartData = [];
+  const salesData = {};
+  
+  // تحويل البيانات إلى كائن للبحث السريع
+  monthlySales.forEach(item => {
+    const key = `${item._id.year}-${item._id.month}`;
+    salesData[key] = {
+      sales: item.totalSales,
+      orders: item.orderCount
+    };
+  });
+
+  // ملء البيانات لجميع شهور السنة
+  for (let month = 1; month <= 12; month++) {
+    const monthName = months[month - 1];
+    const key = `${targetYear}-${month}`;
+    const data = salesData[key] || { sales: 0, orders: 0 };
+    
+    chartData.push({
+      month: monthName,
+      sales: data.sales,
+      orders: data.orders
+    });
+  }
+
+  // ====== 3. أفضل الفنانين مبيعاً ======
+  
+  // جلب أفضل 10 فنانين للسنة المحددة
+  const topArtists = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: startOfYear, $lte: endOfYear },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'artist',
+        foreignField: '_id',
+        as: 'artistData'
+      }
+    },
+    {
+      $group: {
+        _id: '$artist',
+        totalSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+        orderCount: { $sum: 1 },
+        artistName: { $first: { $arrayElemAt: ['$artistData.displayName', 0] } },
+        artistImage: { $first: { $arrayElemAt: ['$artistData.profileImage.url', 0] } },
+        artistJob: { $first: { $arrayElemAt: ['$artistData.job', 0] } },
+        artistRating: { $first: { $arrayElemAt: ['$artistData.averageRating', 0] } },
+        artistReviewsCount: { $first: { $arrayElemAt: ['$artistData.reviewsCount', 0] } },
+        artistIsVerified: { $first: { $arrayElemAt: ['$artistData.isVerified', 0] } }
+      }
+    },
+    {
+      $sort: { totalSales: -1 }
+    },
+    {
+      $limit: 10
+    }
+  ]);
+
+  // حساب النمو مقارنة بالسنة السابقة
+  const previousYearArtists = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        createdAt: { $gte: previousYearStart, $lte: previousYearEnd },
+        status: 'completed',
+        isDeleted: { $ne: true }
+      } 
+    },
+    {
+      $group: {
+        _id: '$artist',
+        previousSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
+        previousOrders: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // تحويل البيانات السابقة إلى كائن للبحث السريع
+  const previousData = {};
+  previousYearArtists.forEach(artist => {
+    previousData[artist._id.toString()] = {
+      sales: artist.previousSales,
+      orders: artist.previousOrders
+    };
+  });
+
+  // حساب النمو وإضافة البيانات الإضافية
+  const artistsWithGrowth = topArtists.map(artist => {
+    const previous = previousData[artist._id.toString()] || { sales: 0, orders: 0 };
+    
+    const salesGrowth = previous.sales > 0 
+      ? Math.round(((artist.totalSales - previous.sales) / previous.sales) * 100)
+      : 0;
+    
+    const ordersGrowth = previous.orders > 0
+      ? Math.round(((artist.orderCount - previous.orders) / previous.orders) * 100)
+      : 0;
+
+    return {
+      _id: artist._id,
+      name: artist.artistName,
+      image: artist.artistImage,
+      job: artist.artistJob || 'فنان',
+      rating: artist.artistRating || 0,
+      reviewsCount: artist.artistReviewsCount || 0,
+      isVerified: artist.artistIsVerified || false,
+      sales: artist.totalSales,
+      orders: artist.orderCount,
+      growth: {
+        sales: salesGrowth,
+        orders: ordersGrowth,
+        isPositive: salesGrowth >= 0
+      }
+    };
+  });
+
+  // ====== تجميع البيانات النهائية ======
+  
+  res.status(200).json({
+    success: true,
+    message: 'تم جلب التحليل الشامل للمبيعات بنجاح',
+    data: {
+      year: targetYear,
+      analytics: {
+        topSellingArtist: topSellingArtist[0] ? {
+          name: topSellingArtist[0].artistName,
+          image: topSellingArtist[0].artistImage,
+          sales: topSellingArtist[0].totalSales,
+          orders: topSellingArtist[0].orderCount
+        } : null,
+        totalOrders: {
+          value: currentStats.totalOrders,
+          percentageChange: ordersPercentageChange,
+          isPositive: ordersPercentageChange >= 0
+        },
+        totalSales: {
+          value: currentStats.totalSales,
+          percentageChange: salesPercentageChange,
+          isPositive: salesPercentageChange >= 0
+        },
+        averageOrderValue: currentStats.averageOrderValue
+      },
+      trends: {
+        chartData,
+        summary: {
+          totalSales: currentStats.totalSales,
+          totalOrders: currentStats.totalOrders,
+          averageMonthlySales: currentStats.totalSales / 12
+        }
+      },
+      topArtists: {
+        artists: artistsWithGrowth,
+        total: artistsWithGrowth.length
+      }
+    }
+  });
+});
+
+/**
  * @desc    تحميل تقرير المبيعات
  * @route   GET /api/dashboard/sales/report
  * @access  Private (Admin, SuperAdmin)
