@@ -7277,6 +7277,9 @@
         "security": [
           {
             "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
           }
         ],
         "requestBody": {
@@ -7339,6 +7342,9 @@
         "security": [
           {
             "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
           }
         ],
         "requestBody": {
@@ -7369,6 +7375,62 @@
           }
         },
         "x-screen": "SettingsScreen"
+      },
+      "get": {
+        "tags": [
+          "FCM Tokens"
+        ],
+        "summary": "الحصول على رموز FCM للمستخدم",
+        "description": "جلب جميع رموز FCM المسجلة للمستخدم الحالي\n\n**Flutter Integration:**\n```dart\nfinal response = await dio.get('/api/notifications/token');\n```\n",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الرموز بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب رموز الإشعارات بنجاح"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "token": {
+                            "type": "string"
+                          },
+                          "deviceType": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-screen": "SettingsScreen"
       }
     },
     "/api/notifications/token/firebase": {
@@ -7376,8 +7438,8 @@
         "tags": [
           "FCM Tokens"
         ],
-        "summary": "تسجيل رمز إشعارات FCM (Firebase)",
-        "description": "تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase",
+        "summary": "تسجيل رمز إشعارات FCM (Firebase) - DEPRECATED",
+        "description": "⚠️ DEPRECATED: This endpoint is deprecated.\nPlease use `/api/notifications/token` instead for FCM token management.\n\nتسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase",
         "security": [
           {
             "FirebaseAuth": []
@@ -7401,14 +7463,15 @@
             "description": "الرمز مطلوب"
           }
         },
-        "x-screen": "SettingsScreen"
+        "x-screen": "SettingsScreen",
+        "deprecated": true
       },
       "delete": {
         "tags": [
           "FCM Tokens"
         ],
-        "summary": "إلغاء تسجيل رمز إشعارات FCM (Firebase)",
-        "description": "إلغاء تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase",
+        "summary": "إلغاء تسجيل رمز إشعارات FCM (Firebase) - DEPRECATED",
+        "description": "⚠️ DEPRECATED: This endpoint is deprecated.\nPlease use `/api/notifications/token` instead for FCM token management.\n\nإلغاء تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase",
         "security": [
           {
             "FirebaseAuth": []
@@ -7441,7 +7504,8 @@
             "description": "الرمز مطلوب"
           }
         },
-        "x-screen": "SettingsScreen"
+        "x-screen": "SettingsScreen",
+        "deprecated": true
       }
     },
     "/api/reviews/artwork": {

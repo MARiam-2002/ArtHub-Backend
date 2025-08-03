@@ -733,9 +733,13 @@ router.post('/refresh-token', isValidation(Validators.refreshTokenSchema), authC
  * @swagger
  * /api/auth/fcm-token:
  *   post:
- *     summary: Update FCM token
+ *     summary: Update FCM token (DEPRECATED - Use /api/notifications/token instead)
  *     tags: [Authentication]
- *     description: Update user's FCM token for push notifications
+ *     description: |
+ *       ⚠️ DEPRECATED: This endpoint is deprecated. 
+ *       Please use `/api/notifications/token` instead for FCM token management.
+ *       
+ *       Update user's FCM token for push notifications
  *     security:
  *       - BearerAuth: []
  *       - FirebaseAuth: []
@@ -775,8 +779,10 @@ router.post('/refresh-token', isValidation(Validators.refreshTokenSchema), authC
  *                 errorCode:
  *                   type: string
  *                   example: "UNAUTHORIZED"
+ *     deprecated: true
  */
-router.post('/fcm-token', authenticate, isValidation(Validators.fcmTokenSchema), authController.updateFCMToken);
+// DEPRECATED: Use /api/notifications/token instead
+// router.post('/fcm-token', authenticate, isValidation(Validators.fcmTokenSchema), authController.updateFCMToken);
 
 /**
  * @swagger

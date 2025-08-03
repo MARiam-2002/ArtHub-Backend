@@ -369,10 +369,11 @@
     },
     "/auth/fcm-token": {
       "post": {
-        "summary": "تحديث رمز FCM",
+        "summary": "تحديث رمز FCM (DEPRECATED - Use /api/notifications/token instead)",
         "tags": [
           "Authentication"
         ],
+        "description": "⚠️ DEPRECATED: This endpoint is deprecated.\nPlease use `/api/notifications/token` instead for FCM token management.",
         "security": [
           {
             "BearerAuth": []
@@ -392,7 +393,8 @@
           "200": {
             "description": "تم تحديث رمز الإشعارات"
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/auth/me": {

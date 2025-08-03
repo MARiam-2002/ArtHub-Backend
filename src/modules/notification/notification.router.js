@@ -458,6 +458,7 @@ router.post(
  *       ```
  *     security:
  *       - BearerAuth: []
+ *       - FirebaseAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -507,6 +508,7 @@ router.post(
  *       ```
  *     security:
  *       - BearerAuth: []
+ *       - FirebaseAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -525,8 +527,49 @@ router.post(
  *       400:
  *         description: الرمز مطلوب
  *     x-screen: "SettingsScreen"
+ *   get:
+ *     tags:
+ *       - FCM Tokens
+ *     summary: الحصول على رموز FCM للمستخدم
+ *     description: |
+ *       جلب جميع رموز FCM المسجلة للمستخدم الحالي
+ *       
+ *       **Flutter Integration:**
+ *       ```dart
+ *       final response = await dio.get('/api/notifications/token');
+ *       ```
+ *     security:
+ *       - BearerAuth: []
+ *       - FirebaseAuth: []
+ *     responses:
+ *       200:
+ *         description: تم جلب الرموز بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب رموز الإشعارات بنجاح"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       token:
+ *                         type: string
+ *                       deviceType:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *     x-screen: "SettingsScreen"
  */
-// FCM token endpoints
+// FCM token endpoints - Unified for both Bearer and Firebase auth
 router.post('/token', isAuthenticated, isValidation(fcmTokenSchema), notificationController.registerFCMToken);
 router.delete('/token', isAuthenticated, isValidation(fcmTokenSchema), notificationController.unregisterFCMToken);
 router.get('/token', isAuthenticated, notificationController.getUserFCMTokens);
@@ -537,8 +580,12 @@ router.get('/token', isAuthenticated, notificationController.getUserFCMTokens);
  *   post:
  *     tags:
  *       - FCM Tokens
- *     summary: تسجيل رمز إشعارات FCM (Firebase)
- *     description: تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase
+ *     summary: تسجيل رمز إشعارات FCM (Firebase) - DEPRECATED
+ *     description: |
+ *       ⚠️ DEPRECATED: This endpoint is deprecated.
+ *       Please use `/api/notifications/token` instead for FCM token management.
+ *       
+ *       تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase
  *     security:
  *       - FirebaseAuth: []
  *     requestBody:
@@ -553,11 +600,16 @@ router.get('/token', isAuthenticated, notificationController.getUserFCMTokens);
  *       400:
  *         description: الرمز مطلوب
  *     x-screen: "SettingsScreen"
+ *     deprecated: true
  *   delete:
  *     tags:
  *       - FCM Tokens
- *     summary: إلغاء تسجيل رمز إشعارات FCM (Firebase)
- *     description: إلغاء تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase
+ *     summary: إلغاء تسجيل رمز إشعارات FCM (Firebase) - DEPRECATED
+ *     description: |
+ *       ⚠️ DEPRECATED: This endpoint is deprecated.
+ *       Please use `/api/notifications/token` instead for FCM token management.
+ *       
+ *       إلغاء تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase
  *     security:
  *       - FirebaseAuth: []
  *     requestBody:
@@ -578,7 +630,8 @@ router.get('/token', isAuthenticated, notificationController.getUserFCMTokens);
  *       400:
  *         description: الرمز مطلوب
  *     x-screen: "SettingsScreen"
+ *     deprecated: true
  */
-// Firebase FCM token endpoints temporarily disabled - functions not implemented
+// DEPRECATED: Firebase FCM token endpoints - Use /api/notifications/token instead
 
 export default router;
