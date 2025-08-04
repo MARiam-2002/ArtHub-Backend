@@ -184,106 +184,192 @@ export const adminMessageEmail = (subject, message, attachments = []) => `<!DOCT
         body {
             margin: 0;
             padding: 0;
-            background-color: #F1F7FF;
+            background-color: #F8FAFC;
             font-family: 'Tajawal', sans-serif;
         }
         .container {
-            max-width: 600px;
-            margin: 40px auto;
+            max-width: 650px;
+            margin: 30px auto;
             background-color: #ffffff;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            border: 1px solid #E2E8F0;
         }
         .header {
-            background-color: #C1D1E6;
-            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 20px;
             text-align: center;
+            position: relative;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
         }
         .header img {
-            max-width: 150px;
+            max-width: 180px;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
         }
         .content {
-            padding: 40px;
-            color: #4B4B4B;
-            line-height: 1.8;
+            padding: 45px 40px;
+            color: #374151;
+            line-height: 1.7;
             text-align: right;
         }
         .content h1 {
-            color: #112B47;
-            font-size: 24px;
-            margin-bottom: 20px;
+            color: #1F2937;
+            font-size: 28px;
+            margin-bottom: 25px;
+            font-weight: 700;
+            text-align: center;
+            position: relative;
+        }
+        .content h1::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
         }
         .message-content {
-            background-color: #EAF3FF;
-            border: 1px dashed #C1D1E6;
-            border-radius: 8px;
-            padding: 20px;
+            background: linear-gradient(145deg, #F0F4FF, #E8F2FF);
+            border: 2px solid #E0E7FF;
+            border-radius: 12px;
+            padding: 25px;
             margin: 30px 0;
             text-align: right;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .message-content::before {
+            content: '"';
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            font-size: 48px;
+            color: #667eea;
+            font-family: serif;
+            line-height: 1;
         }
         .message-content p {
             margin: 0 0 15px 0;
             font-size: 16px;
-            color: #112B47;
-            line-height: 1.6;
+            color: #374151;
+            line-height: 1.8;
+        }
+        .message-content p:last-child {
+            margin-bottom: 0;
         }
         .attachments-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #C1D1E6;
+            margin-top: 35px;
+            padding-top: 25px;
+            border-top: 2px solid #E5E7EB;
         }
         .attachments-title {
-            color: #112B47;
+            color: #1F2937;
+            font-size: 20px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .attachments-title::before {
+            content: '📎';
             font-size: 18px;
-            margin-bottom: 15px;
         }
         .attachment-item {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #F8FBFF;
-            border-radius: 6px;
-            border: 1px solid #E1E8F0;
+            margin-bottom: 12px;
+            padding: 15px;
+            background: linear-gradient(145deg, #F9FAFB, #F3F4F6);
+            border-radius: 8px;
+            border: 1px solid #E5E7EB;
+            transition: all 0.2s ease;
+        }
+        .attachment-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #667eea;
         }
         .attachment-icon {
-            margin-left: 10px;
-            color: #6B7280;
+            margin-left: 12px;
+            color: #667eea;
+            font-size: 18px;
         }
         .attachment-link {
             color: #2563EB;
             text-decoration: none;
             font-weight: 500;
+            font-size: 15px;
+            transition: color 0.2s ease;
         }
         .attachment-link:hover {
+            color: #1D4ED8;
             text-decoration: underline;
         }
         .footer {
-            background-color: #C1D1E6;
-            padding: 20px;
+            background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+            padding: 25px 20px;
             text-align: center;
-            color: #112B47;
+            color: #64748B;
             font-size: 14px;
+            border-top: 1px solid #E2E8F0;
         }
         .footer a {
-            color: #112B47;
+            color: #667eea;
             text-decoration: none;
+            font-weight: 500;
+        }
+        .footer a:hover {
+            text-decoration: underline;
         }
         .disclaimer {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #E1E8F0;
+            margin-top: 25px;
+            padding: 20px;
+            background: linear-gradient(145deg, #FEF3C7, #FDE68A);
+            border-radius: 8px;
             text-align: center;
-            color: #6B7280;
-            font-size: 12px;
+            color: #92400E;
+            font-size: 13px;
+            border: 1px solid #F59E0B;
+        }
+        .disclaimer p {
+            margin: 0 0 8px 0;
+        }
+        .disclaimer p:last-child {
+            margin-bottom: 0;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 15px;
+                border-radius: 8px;
+            }
+            .content {
+                padding: 30px 25px;
+            }
+            .header img {
+                max-width: 140px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://i.ibb.co/ksqMN9QL/Art-Hub-06-1-1.png" alt="ArtHub Logo">
+            <img src="https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png" alt="ArtHub Logo">
         </div>
         <div class="content">
             <h1>${subject || 'رسالة من إدارة المنصة'}</h1>
