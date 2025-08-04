@@ -172,3 +172,146 @@ export const resetPassword = (userName, code) => `<!DOCTYPE html>
     </div>
 </body>
 </html>`;
+
+export const adminMessageEmail = (subject, message, attachments = []) => `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${subject || 'رسالة من إدارة المنصة'}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F1F7FF;
+            font-family: 'Tajawal', sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .header {
+            background-color: #C1D1E6;
+            padding: 20px;
+            text-align: center;
+        }
+        .header img {
+            max-width: 150px;
+        }
+        .content {
+            padding: 40px;
+            color: #4B4B4B;
+            line-height: 1.8;
+            text-align: right;
+        }
+        .content h1 {
+            color: #112B47;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .message-content {
+            background-color: #EAF3FF;
+            border: 1px dashed #C1D1E6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: right;
+        }
+        .message-content p {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            color: #112B47;
+            line-height: 1.6;
+        }
+        .attachments-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #C1D1E6;
+        }
+        .attachments-title {
+            color: #112B47;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #F8FBFF;
+            border-radius: 6px;
+            border: 1px solid #E1E8F0;
+        }
+        .attachment-icon {
+            margin-left: 10px;
+            color: #6B7280;
+        }
+        .attachment-link {
+            color: #2563EB;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .attachment-link:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            background-color: #C1D1E6;
+            padding: 20px;
+            text-align: center;
+            color: #112B47;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #112B47;
+            text-decoration: none;
+        }
+        .disclaimer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #E1E8F0;
+            text-align: center;
+            color: #6B7280;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://i.ibb.co/ksqMN9QL/Art-Hub-06-1-1.png" alt="ArtHub Logo">
+        </div>
+        <div class="content">
+            <h1>${subject || 'رسالة من إدارة المنصة'}</h1>
+            <div class="message-content">
+                ${message}
+            </div>
+            ${attachments && attachments.length > 0 ? `
+                <div class="attachments-section">
+                    <h3 class="attachments-title">المرفقات:</h3>
+                    ${attachments.map(file => `
+                        <div class="attachment-item">
+                            <span class="attachment-icon">📎</span>
+                            <a href="${file.url}" class="attachment-link" target="_blank">
+                                ${file.originalName || 'ملف مرفق'}
+                            </a>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            <div class="disclaimer">
+                <p>هذه الرسالة من إدارة منصة ArtHub</p>
+                <p>يرجى عدم الرد على هذا البريد الإلكتروني</p>
+            </div>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 ArtHub. جميع الحقوق محفوظة</p>
+            <p>إذا كنت بحاجة إلى مساعدة، <a href="mailto:support@arthub.com">تواصل مع الدعم الفني</a>.</p>
+        </div>
+    </div>
+</body>
+</html>`;

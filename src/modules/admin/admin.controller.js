@@ -1196,35 +1196,9 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     try {
       const { sendEmail } = await import('../../utils/sendEmails.js');
       
-      // إنشاء محتوى HTML للرسالة
-      const htmlContent = `
-        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-          <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #333; margin-bottom: 20px; text-align: center;">${subject || 'رسالة من إدارة المنصة'}</h2>
-            <div style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-              ${message}
-            </div>
-            ${attachments && attachments.length > 0 ? `
-              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-                <h4 style="color: #333; margin-bottom: 10px;">المرفقات:</h4>
-                <ul style="list-style: none; padding: 0;">
-                  ${attachments.map(file => `
-                    <li style="margin-bottom: 5px;">
-                      <a href="${file.url}" style="color: #007bff; text-decoration: none;">
-                        📎 ${file.originalName || 'ملف مرفق'}
-                      </a>
-                    </li>
-                  `).join('')}
-                </ul>
-              </div>
-            ` : ''}
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #999; font-size: 12px;">
-              <p>هذه الرسالة من إدارة منصة ArtHub</p>
-              <p>يرجى عدم الرد على هذا البريد الإلكتروني</p>
-            </div>
-          </div>
-        </div>
-      `;
+      // استخدام قالب البريد الإلكتروني الجديد
+      const { adminMessageEmail } = await import('../../utils/generateHtml.js');
+      const htmlContent = adminMessageEmail(subject, message, attachments);
       
       await sendEmail({
         to: user.email,
