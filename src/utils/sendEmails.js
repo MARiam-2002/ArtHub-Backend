@@ -12,12 +12,22 @@ export const sendEmail = async ({ to, subject, html, attachments }) => {
     }
   });
 
-  const emailInfo = await transporter.sendMail({
-    from: `"ArtHub" < ${process.env.EMAIL} >`,
+  const mailOptions = {
+    from: `"ArtHub" <${process.env.EMAIL}>`,
     to,
     subject,
-    html,
-    attachments
-  });
+    html
+  };
+
+  // إضافة المرفقات إذا كانت موجودة
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments.map(file => ({
+      filename: file.originalName || 'attachment',
+      path: file.url,
+      contentType: file.type || 'application/octet-stream'
+    }));
+  }
+
+  const emailInfo = await transporter.sendMail(mailOptions);
   return emailInfo.accepted.length < 1 ? false : true;
 };
