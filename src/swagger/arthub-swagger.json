@@ -3429,29 +3429,33 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["artwork", "rating", "comment"],
+                "required": ["artwork", "rating"],
                 "properties": {
                   "artwork": {
                     "type": "string",
                     "pattern": "^[0-9a-fA-F]{24}$",
-                    "description": "معرف العمل الفني",
+                    "description": "معرف العمل الفني (مطلوب)",
                     "example": "507f1f77bcf86cd799439011"
                   },
                   "rating": {
                     "type": "number",
                     "minimum": 1,
                     "maximum": 5,
-                    "description": "التقييم العام (1-5)",
+                    "description": "التقييم العام (1-5) (مطلوب)",
                     "example": 4
                   },
                   "title": {
                     "type": "string",
-                    "description": "عنوان التقييم",
+                    "minLength": 5,
+                    "maxLength": 100,
+                    "description": "عنوان التقييم (اختياري)",
                     "example": "عمل فني رائع"
                   },
                   "comment": {
                     "type": "string",
-                    "description": "التعليق المفصل",
+                    "minLength": 10,
+                    "maxLength": 2000,
+                    "description": "التعليق المفصل (اختياري)",
                     "example": "هذا العمل يظهر مهارة عالية في التقنية والإبداع"
                   },
                   "pros": {
@@ -3581,72 +3585,81 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "rating": {
-                    "type": "number",
-                    "minimum": 1,
-                    "maximum": 5,
-                    "description": "التقييم العام (1-5)",
-                    "example": 4
-                  },
-                  "title": {
-                    "type": "string",
-                    "description": "عنوان التقييم",
-                    "example": "عمل فني رائع"
-                  },
-                  "comment": {
-                    "type": "string",
-                    "description": "التعليق المفصل",
-                    "example": "هذا العمل يظهر مهارة عالية في التقنية والإبداع"
-                  },
-                  "pros": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "النقاط الإيجابية",
-                    "example": ["تقنية ممتازة", "ألوان جميلة"]
-                  },
-                  "cons": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "النقاط السلبية",
-                    "example": ["يحتاج لمزيد من التفاصيل"]
-                  },
-                  "subRatings": {
-                    "type": "object",
-                    "description": "التقييمات الفرعية",
-                    "properties": {
-                      "creativity": {
-                        "type": "number",
-                        "minimum": 1,
-                        "maximum": 5
-                      },
-                      "technique": {
-                        "type": "number",
-                        "minimum": 1,
-                        "maximum": 5
-                      },
-                      "composition": {
-                        "type": "number",
-                        "minimum": 1,
-                        "maximum": 5
-                      }
-                    },
-                    "example": {
-                      "creativity": 5,
-                      "technique": 4,
-                      "composition": 5
-                    }
-                  },
-                  "isRecommended": {
-                    "type": "boolean",
-                    "description": "هل يوصي بهذا العمل",
-                    "example": true
-                  }
-                }
+                                 "properties": {
+                   "rating": {
+                     "type": "number",
+                     "minimum": 1,
+                     "maximum": 5,
+                     "description": "التقييم العام (1-5) - اختياري",
+                     "example": 4
+                   },
+                   "title": {
+                     "type": "string",
+                     "minLength": 5,
+                     "maxLength": 100,
+                     "description": "عنوان التقييم - اختياري",
+                     "example": "عمل فني رائع"
+                   },
+                   "comment": {
+                     "type": "string",
+                     "minLength": 10,
+                     "maxLength": 2000,
+                     "description": "التعليق المفصل - اختياري",
+                     "example": "هذا العمل يظهر مهارة عالية في التقنية والإبداع"
+                   },
+                   "pros": {
+                     "type": "array",
+                     "items": {
+                       "type": "string",
+                       "minLength": 3,
+                       "maxLength": 200
+                     },
+                     "maxItems": 10,
+                     "description": "النقاط الإيجابية - اختياري",
+                     "example": ["تقنية ممتازة", "ألوان جميلة"]
+                   },
+                   "cons": {
+                     "type": "array",
+                     "items": {
+                       "type": "string",
+                       "minLength": 3,
+                       "maxLength": 200
+                     },
+                     "maxItems": 10,
+                     "description": "النقاط السلبية - اختياري",
+                     "example": ["يحتاج لمزيد من التفاصيل"]
+                   },
+                   "subRatings": {
+                     "type": "object",
+                     "description": "التقييمات الفرعية - اختياري",
+                     "additionalProperties": {
+                       "type": "number",
+                       "minimum": 1,
+                       "maximum": 5
+                     },
+                     "example": {
+                       "creativity": 5,
+                       "technique": 4,
+                       "composition": 5
+                     }
+                   },
+                   "isRecommended": {
+                     "type": "boolean",
+                     "description": "هل يوصي بهذا العمل - اختياري",
+                     "example": true
+                   },
+                   "tags": {
+                     "type": "array",
+                     "items": {
+                       "type": "string",
+                       "minLength": 2,
+                       "maxLength": 30
+                     },
+                     "maxItems": 10,
+                     "description": "علامات التقييم - اختياري",
+                     "example": ["فن", "إبداع", "تقنية"]
+                   }
+                 }
               }
             }
           }
@@ -3714,31 +3727,35 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["artist", "rating", "comment"],
+                                 "required": ["artist", "rating"],
                 "properties": {
-                  "artist": {
-                    "type": "string",
-                    "pattern": "^[0-9a-fA-F]{24}$",
-                    "description": "معرف الفنان",
-                    "example": "507f1f77bcf86cd799439011"
-                  },
-                  "rating": {
-                    "type": "number",
-                    "minimum": 1,
-                    "maximum": 5,
-                    "description": "التقييم العام (1-5)",
-                    "example": 4
-                  },
-                  "title": {
-                    "type": "string",
-                    "description": "عنوان التقييم",
-                    "example": "فنان موهوب"
-                  },
-                  "comment": {
-                    "type": "string",
-                    "description": "التعليق المفصل",
-                    "example": "فنان موهوب ومبدع في أعماله"
-                  },
+                                     "artist": {
+                     "type": "string",
+                     "pattern": "^[0-9a-fA-F]{24}$",
+                     "description": "معرف الفنان (مطلوب)",
+                     "example": "507f1f77bcf86cd799439011"
+                   },
+                   "rating": {
+                     "type": "number",
+                     "minimum": 1,
+                     "maximum": 5,
+                     "description": "التقييم العام (1-5) (مطلوب)",
+                     "example": 4
+                   },
+                   "title": {
+                     "type": "string",
+                     "minLength": 5,
+                     "maxLength": 100,
+                     "description": "عنوان التقييم (اختياري)",
+                     "example": "فنان موهوب"
+                   },
+                   "comment": {
+                     "type": "string",
+                     "minLength": 10,
+                     "maxLength": 2000,
+                     "description": "التعليق المفصل (اختياري)",
+                     "example": "فنان موهوب ومبدع في أعماله"
+                   },
                   "pros": {
                     "type": "array",
                     "items": {
@@ -3867,23 +3884,27 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "rating": {
-                    "type": "number",
-                    "minimum": 1,
-                    "maximum": 5,
-                    "description": "التقييم العام (1-5)",
-                    "example": 4
-                  },
-                  "title": {
-                    "type": "string",
-                    "description": "عنوان التقييم",
-                    "example": "فنان موهوب"
-                  },
-                  "comment": {
-                    "type": "string",
-                    "description": "التعليق المفصل",
-                    "example": "فنان موهوب ومبدع في أعماله"
-                  },
+                                     "rating": {
+                     "type": "number",
+                     "minimum": 1,
+                     "maximum": 5,
+                     "description": "التقييم العام (1-5) - اختياري",
+                     "example": 4
+                   },
+                   "title": {
+                     "type": "string",
+                     "minLength": 5,
+                     "maxLength": 100,
+                     "description": "عنوان التقييم - اختياري",
+                     "example": "فنان موهوب"
+                   },
+                   "comment": {
+                     "type": "string",
+                     "minLength": 10,
+                     "maxLength": 2000,
+                     "description": "التعليق المفصل - اختياري",
+                     "example": "فنان موهوب ومبدع في أعماله"
+                   },
                   "pros": {
                     "type": "array",
                     "items": {
