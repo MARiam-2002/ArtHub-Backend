@@ -1165,7 +1165,7 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
       adminName: req.user.displayName,
       adminRole: req.user.role,
       messageType: 'admin_message',
-      platformLogo: 'https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png',
+      platformLogo: 'https://asset.cloudinary.com/dgzucjqgi/5edb0afedff20d7496bb511380ff941c',
       attachments: attachments, // إضافة المرفقات
       sentAt: new Date()
     }
