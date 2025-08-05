@@ -3505,6 +3505,36 @@
                     "description": "هل يوصي بهذا العمل",
                     "example": true
                   }
+                },
+                "example": {
+                  "artwork": "507f1f77bcf86cd799439011",
+                  "rating": 4
+                },
+                "examples": {
+                  "minimal": {
+                    "summary": "الحد الأدنى المطلوب",
+                    "value": {
+                      "artwork": "507f1f77bcf86cd799439011",
+                      "rating": 4
+                    }
+                  },
+                  "detailed": {
+                    "summary": "تقييم مفصل (اختياري)",
+                    "value": {
+                      "artwork": "507f1f77bcf86cd799439011",
+                      "rating": 4,
+                      "title": "عمل فني رائع",
+                      "comment": "هذا العمل يظهر مهارة عالية في التقنية والإبداع",
+                      "pros": ["تقنية ممتازة", "ألوان جميلة"],
+                      "cons": ["يحتاج لمزيد من التفاصيل"],
+                      "subRatings": {
+                        "creativity": 5,
+                        "technique": 4,
+                        "composition": 5
+                      },
+                      "isRecommended": true
+                    }
+                  }
                 }
               }
             }
@@ -3802,6 +3832,36 @@
                     "type": "boolean",
                     "description": "هل يوصي بهذا الفنان",
                     "example": true
+                  }
+                },
+                "example": {
+                  "artist": "507f1f77bcf86cd799439011",
+                  "rating": 4
+                },
+                "examples": {
+                  "minimal": {
+                    "summary": "الحد الأدنى المطلوب",
+                    "value": {
+                      "artist": "507f1f77bcf86cd799439011",
+                      "rating": 4
+                    }
+                  },
+                  "detailed": {
+                    "summary": "تقييم مفصل (اختياري)",
+                    "value": {
+                      "artist": "507f1f77bcf86cd799439011",
+                      "rating": 4,
+                      "title": "فنان موهوب",
+                      "comment": "فنان موهوب ومبدع في أعماله",
+                      "pros": ["مبدع", "محترف"],
+                      "cons": ["يحتاج لمزيد من التنوع"],
+                      "subRatings": {
+                        "creativity": 5,
+                        "professionalism": 4,
+                        "communication": 5
+                      },
+                      "isRecommended": true
+                    }
                   }
                 }
               }
