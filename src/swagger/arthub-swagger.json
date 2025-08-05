@@ -646,13 +646,302 @@
              "description": "نوع الجهاز"
            }
          }
+       },
+       "AuthResponse": {
+         "type": "object",
+         "properties": {
+           "success": {
+             "type": "boolean",
+             "example": true
+           },
+           "message": {
+             "type": "string",
+             "example": "تم تسجيل الدخول بنجاح"
+           },
+           "data": {
+             "type": "object",
+             "properties": {
+               "_id": {
+                 "type": "string",
+                 "example": "60d0fe4f5311236168a109ca"
+               },
+               "email": {
+                 "type": "string",
+                 "format": "email",
+                 "example": "user@example.com"
+               },
+               "displayName": {
+                 "type": "string",
+                 "example": "مريم فوزي"
+               },
+               "role": {
+                 "type": "string",
+                 "enum": ["user", "artist"],
+                 "example": "artist"
+               },
+               "profileImage": {
+                 "type": "object",
+                 "properties": {
+                   "url": {
+                     "type": "string",
+                     "format": "uri",
+                     "example": "https://res.cloudinary.com/demo/image/upload/v1612345678/profile.jpg"
+                   }
+                 }
+               },
+               "isVerified": {
+                 "type": "boolean",
+                 "example": true
+               },
+               "accessToken": {
+                 "type": "string",
+                 "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+               },
+               "refreshToken": {
+                 "type": "string",
+                 "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+               }
+             }
+           }
+         }
+       },
+       "WishlistItem": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cb"
+           },
+           "title": {
+             "type": "string",
+             "example": "لوحة فنية زهرية زرقاء"
+           },
+           "price": {
+             "type": "number",
+             "example": 1500
+           },
+           "images": {
+             "type": "array",
+             "items": {
+               "type": "string"
+             },
+             "example": [
+               "https://res.cloudinary.com/example/image/upload/v123/artwork1.jpg"
+             ]
+           },
+           "artist": {
+             "type": "object",
+             "properties": {
+               "_id": {
+                 "type": "string"
+               },
+               "displayName": {
+                 "type": "string"
+               },
+               "profileImage": {
+                 "type": "string"
+               }
+             }
+           },
+           "addedAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "ArtistProfile": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "displayName": {
+             "type": "string",
+             "example": "أحمد محمد"
+           },
+           "profileImage": {
+             "type": "string",
+             "example": "https://res.cloudinary.com/example/image/upload/v123/profile.jpg"
+           },
+           "job": {
+             "type": "string",
+             "example": "فنان تشكيلي"
+           },
+           "bio": {
+             "type": "string",
+             "example": "فنان تشكيلي متخصص في الرسم الزيتي"
+           },
+           "rating": {
+             "type": "number",
+             "example": 4.5
+           },
+           "reviewsCount": {
+             "type": "number",
+             "example": 25
+           },
+           "artworksCount": {
+             "type": "number",
+             "example": 15
+           },
+           "followersCount": {
+             "type": "number",
+             "example": 120
+           },
+           "isFollowing": {
+             "type": "boolean",
+             "example": false
+           },
+           "recentArtworks": {
+             "type": "array",
+             "items": {
+               "$ref": "#/components/schemas/ArtworkSummary"
+             }
+           },
+           "joinDate": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "ArtworkSummary": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cb"
+           },
+           "title": {
+             "type": "string",
+             "example": "لوحة فنية زهرية زرقاء"
+           },
+           "price": {
+             "type": "number",
+             "example": 1500
+           },
+           "mainImage": {
+             "type": "string",
+             "example": "https://res.cloudinary.com/example/image/upload/v123/artwork1.jpg"
+           },
+           "status": {
+             "type": "string",
+             "enum": ["available", "sold", "reserved"],
+             "example": "available"
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "ArtistSummary": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "displayName": {
+             "type": "string",
+             "example": "أحمد محمد"
+           },
+           "profileImage": {
+             "type": "string",
+             "example": "https://res.cloudinary.com/example/image/upload/v123/profile.jpg"
+           },
+           "job": {
+             "type": "string",
+             "example": "فنان تشكيلي"
+           },
+           "rating": {
+             "type": "number",
+             "example": 4.5
+           },
+           "artworksCount": {
+             "type": "number",
+             "example": 15
+           },
+           "followersCount": {
+             "type": "number",
+             "example": 120
+           }
+         }
+       },
+       "NotificationSettings": {
+         "type": "object",
+         "properties": {
+           "pushNotifications": {
+             "type": "boolean",
+             "example": true
+           },
+           "emailNotifications": {
+             "type": "boolean",
+             "example": true
+           },
+           "artworkUpdates": {
+             "type": "boolean",
+             "example": true
+           },
+           "newFollowers": {
+             "type": "boolean",
+             "example": true
+           },
+           "messages": {
+             "type": "boolean",
+             "example": true
+           },
+           "reviews": {
+             "type": "boolean",
+             "example": true
+           },
+           "transactions": {
+             "type": "boolean",
+             "example": true
+           }
+         }
+       },
+       "UpdateNotificationSettings": {
+         "type": "object",
+         "properties": {
+           "pushNotifications": {
+             "type": "boolean"
+           },
+           "emailNotifications": {
+             "type": "boolean"
+           },
+           "artworkUpdates": {
+             "type": "boolean"
+           },
+           "newFollowers": {
+             "type": "boolean"
+           },
+           "messages": {
+             "type": "boolean"
+           },
+           "reviews": {
+             "type": "boolean"
+           },
+           "transactions": {
+             "type": "boolean"
+           }
+         }
        }
     },
     "securitySchemes": {
       "BearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from login or registration"
+      },
+      "FirebaseAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase ID token obtained from Firebase Authentication"
       }
     }
   },
@@ -784,6 +1073,551 @@
           },
           "401": {
             "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login-with-fingerprint": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "تسجيل الدخول ببصمة الجهاز",
+        "description": "تسجيل الدخول باستخدام بصمة الجهاز للدخول بدون كلمة مرور",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fingerprint"],
+                "properties": {
+                  "fingerprint": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 500,
+                    "description": "بصمة الجهاز الفريدة",
+                    "example": "fp_1234567890abcdef_browser_chrome_os_windows"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بصمة الجهاز مطلوبة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "لم يتم العثور على حساب مرتبط بهذا الجهاز",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/update-fingerprint": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "تحديث بصمة الجهاز",
+        "description": "تحديث أو تعيين بصمة الجهاز للدخول بدون كلمة مرور",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fingerprint"],
+                "properties": {
+                  "fingerprint": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 500,
+                    "description": "بصمة الجهاز الفريدة",
+                    "example": "fp_1234567890abcdef_browser_chrome_os_windows"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث بصمة الجهاز بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث بصمة الجهاز بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "fingerprint": {
+                          "type": "string",
+                          "example": "fp_1234567890abcdef_browser_chrome_os_windows"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بصمة الجهاز مطلوبة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "يجب تسجيل الدخول أولاً",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/firebase": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "تسجيل الدخول بفايربيس",
+        "description": "تسجيل الدخول باستخدام رمز فايربيس. إذا لم يكن المستخدم موجود، سيتم إنشاء حساب جديد تلقائياً",
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "description": "لا حاجة لجسم الطلب. يجب إرسال رمز فايربيس في رأس Authorization"
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "رمز المصادقة غير صالح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "نسيت كلمة المرور",
+        "description": "إرسال رمز إعادة تعيين كلمة المرور إلى البريد الإلكتروني",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إرسال رمز إعادة تعيين كلمة المرور بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "لا يوجد حساب مرتبط بهذا البريد الإلكتروني",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-forget-code": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "التحقق من رمز إعادة تعيين كلمة المرور",
+        "description": "التحقق من الرمز المكون من 4 أرقام المرسل إلى البريد الإلكتروني",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "forgetCode"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "forgetCode": {
+                    "type": "string",
+                    "pattern": "^\\d{4}$",
+                    "example": "1234"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم التحقق من الرمز بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم التحقق من الرمز بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "الرمز غير صحيح أو منتهي الصلاحية",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "إعادة تعيين كلمة المرور",
+        "description": "إعادة تعيين كلمة مرور المستخدم باستخدام الرمز المؤكد",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "confirmPassword"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "NewPassword123!"
+                  },
+                  "confirmPassword": {
+                    "type": "string",
+                    "example": "NewPassword123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إعادة تعيين كلمة المرور بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إعادة تعيين كلمة المرور بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة أو لم يتم التحقق من الرمز",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh-token": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "تحديث رمز الوصول",
+        "description": "الحصول على رمز وصول جديد باستخدام رمز التحديث",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث رمز الوصول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث رمز الوصول بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "accessToken": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "رمز التحديث غير صالح أو منتهي الصلاحية",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "الحصول على بيانات المستخدم الحالي",
+        "description": "الحصول على ملف المستخدم المصادق عليه حالياً",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب بيانات المستخدم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بيانات المستخدم بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "لم يتم توفير رمز المصادقة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "تسجيل الخروج",
+        "description": "إلغاء صلاحية رمز الوصول الحالي أو رمز تحديث محدد",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "رمز تحديث محدد لإلغاء صلاحيته (اختياري)",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الخروج بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تسجيل الخروج بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "لم يتم توفير رمز المصادقة",
             "content": {
               "application/json": {
                 "schema": {
@@ -1340,6 +2174,1082 @@
                     },
                     "data": {
                       "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/cover-image": {
+      "put": {
+        "tags": ["User"],
+        "summary": "تحديث صورة الغلاف",
+        "description": "تحديث صورة الغلاف للمستخدم المصادق عليه",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "coverImage": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "صورة الغلاف (JPG, PNG, GIF, WEBP)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث صورة الغلاف بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث صورة الغلاف بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "example": "أحمد محمد"
+                        },
+                        "coverImages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string",
+                                "example": "https://res.cloudinary.com/example/image/upload/v123/cover.jpg"
+                              },
+                              "id": {
+                                "type": "string",
+                                "example": "arthub/user-covers/507f1f77bcf86cd799439011/cover"
+                              },
+                              "type": {
+                                "type": "string",
+                                "example": "cover"
+                              }
+                            }
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-07-27T00:30:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/bio": {
+      "put": {
+        "tags": ["User"],
+        "summary": "تحديث الوصف الشخصي",
+        "description": "تحديث الوصف الشخصي للمستخدم المصادق عليه",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["bio"],
+                "properties": {
+                  "bio": {
+                    "type": "string",
+                    "description": "الوصف الشخصي (حد أقصى 500 حرف)",
+                    "example": "فنان تشكيلي متخصص في الرسم الزيتي والتصوير الفوتوغرافي"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث الوصف بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث الوصف بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "_id": {
+                          "type": "string",
+                          "example": "507f1f77bcf86cd799439011"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "example": "أحمد محمد"
+                        },
+                        "bio": {
+                          "type": "string",
+                          "example": "فنان تشكيلي متخصص في الرسم الزيتي"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-07-27T00:30:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/change-password": {
+      "put": {
+        "tags": ["User"],
+        "summary": "تغيير كلمة المرور",
+        "description": "تغيير كلمة مرور المستخدم المصادق عليه",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["currentPassword", "newPassword", "confirmPassword"],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "CurrentPassword123!"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "example": "NewPassword123!"
+                  },
+                  "confirmPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "NewPassword123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تغيير كلمة المرور بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تغيير كلمة المرور بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/wishlist": {
+      "get": {
+        "tags": ["User"],
+        "summary": "الحصول على قائمة المفضلة",
+        "description": "الحصول على قائمة المفضلة للمستخدم المصادق عليه مع الصفحات",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب قائمة المفضلة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب قائمة المفضلة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "wishlist": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/WishlistItem"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/wishlist/toggle": {
+      "post": {
+        "tags": ["User"],
+        "summary": "إضافة/إزالة عمل فني من المفضلة",
+        "description": "إضافة أو إزالة عمل فني من قائمة المفضلة للمستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artworkId"],
+                "properties": {
+                  "artworkId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "example": "60d0fe4f5311236168a109ca"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث قائمة المفضلة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إضافة العمل إلى المفضلة"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "string",
+                          "enum": ["added", "removed"],
+                          "example": "added"
+                        },
+                        "wishlistCount": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "isInWishlist": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "العمل الفني غير موجود"
+          }
+        }
+      }
+    },
+    "/api/users/artist/{artistId}": {
+      "get": {
+        "tags": ["User"],
+        "summary": "الحصول على ملف فنان",
+        "description": "الحصول على ملف فنان عام مع الإحصائيات والأعمال الفنية الحديثة",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان",
+            "example": "60d0fe4f5311236168a109ca"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب بيانات الفنان بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بيانات الفنان بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ArtistProfile"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          }
+        }
+      }
+    },
+    "/api/users/my-artworks": {
+      "get": {
+        "tags": ["User"],
+        "summary": "الحصول على أعمالي الفنية",
+        "description": "الحصول على الأعمال الفنية التي أنشأها الفنان المصادق عليه",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد العناصر في الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["available", "sold"]
+            },
+            "description": "تصفية حسب حالة التوفر"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب أعمالك الفنية بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب أعمالك الفنية بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artworks": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ArtworkSummary"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/following": {
+      "get": {
+        "tags": ["User"],
+        "summary": "الحصول على الفنانين المتابَعين",
+        "description": "الحصول على قائمة الفنانين الذين يتابعهم المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب قائمة المتابعين بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب قائمة المتابعين بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "following": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ArtistSummary"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/notification-settings": {
+      "get": {
+        "tags": ["User"],
+        "summary": "الحصول على إعدادات الإشعارات",
+        "description": "الحصول على إعدادات الإشعارات للمستخدم المصادق عليه",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب إعدادات الإشعارات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب إعدادات الإشعارات بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/NotificationSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["User"],
+        "summary": "تحديث إعدادات الإشعارات",
+        "description": "تحديث إعدادات الإشعارات للمستخدم المصادق عليه",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationSettings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث إعدادات الإشعارات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث إعدادات الإشعارات بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/NotificationSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/top-artists": {
+      "get": {
+        "tags": ["User"],
+        "summary": "جلب أفضل الفنانين",
+        "description": "جلب أفضل الفنانين مرتبين حسب التقييم والمتابعين. مخصص لشاشة \"مشاهدة الجميع\" لأفضل الفنانين",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد الفنانين في الصفحة",
+            "example": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب أفضل الفنانين بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب أفضل الفنانين بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artists": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "profileImage": {
+                                "type": "string"
+                              },
+                              "job": {
+                                "type": "string"
+                              },
+                              "bio": {
+                                "type": "string"
+                              },
+                              "rating": {
+                                "type": "number"
+                              },
+                              "reviewsCount": {
+                                "type": "number"
+                              },
+                              "artworksCount": {
+                                "type": "number"
+                              },
+                              "followersCount": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-screen": "ArtistsScreen"
+      }
+    },
+    "/api/users/latest-artists": {
+      "get": {
+        "tags": ["User"],
+        "summary": "جلب أحدث الفنانين",
+        "description": "جلب أحدث الفنانين المسجلين في النظام. مخصص لشاشة \"مشاهدة الجميع\" لأحدث الفنانين",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد الفنانين في الصفحة",
+            "example": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب أحدث الفنانين بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب أحدث الفنانين بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artists": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "profileImage": {
+                                "type": "string"
+                              },
+                              "job": {
+                                "type": "string"
+                              },
+                              "bio": {
+                                "type": "string"
+                              },
+                              "joinDate": {
+                                "type": "string"
+                              },
+                              "artworksCount": {
+                                "type": "number"
+                              },
+                              "followersCount": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-screen": "ArtistsScreen"
+      }
+    },
+    "/api/users/delete-account": {
+      "delete": {
+        "tags": ["User"],
+        "summary": "حذف الحساب",
+        "description": "حذف حساب المستخدم نهائياً (حذف ناعم)",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["password"],
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "userPassword123!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم حذف الحساب بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم حذف الحساب بنجاح"
                     }
                   }
                 }
@@ -2575,10 +4485,38 @@
       "get": {
         "tags": ["Chat"],
         "summary": "الحصول على المحادثات",
-        "description": "الحصول على محادثات المستخدم",
+        "description": "الحصول على جميع محادثات المستخدم المصادق عليه مع الصفحات والبحث",
         "security": [
           {
             "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة للترقيم"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد المحادثات في الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "البحث في اسم المستخدم الآخر"
           }
         ],
         "responses": {
@@ -2593,23 +4531,117 @@
                       "type": "boolean",
                       "example": true
                     },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب المحادثات بنجاح"
+                    },
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Chat"
+                      "type": "object",
+                      "properties": {
+                        "chats": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "otherUser": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "displayName": {
+                                    "type": "string"
+                                  },
+                                  "profileImage": {
+                                    "type": "string"
+                                  },
+                                  "isOnline": {
+                                    "type": "boolean"
+                                  },
+                                  "lastSeen": {
+                                    "type": "string"
+                                  },
+                                  "isVerified": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              "lastMessage": {
+                                "type": "object",
+                                "properties": {
+                                  "_id": {
+                                    "type": "string"
+                                  },
+                                  "content": {
+                                    "type": "string"
+                                  },
+                                  "messageType": {
+                                    "type": "string"
+                                  },
+                                  "isFromMe": {
+                                    "type": "boolean"
+                                  },
+                                  "sentAt": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "unreadCount": {
+                                "type": "number"
+                              },
+                              "lastActivity": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "totalUnreadCount": {
+                          "type": "number"
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "currentPage": {
+                              "type": "number"
+                            },
+                            "totalPages": {
+                              "type": "number"
+                            },
+                            "totalItems": {
+                              "type": "number"
+                            },
+                            "hasNextPage": {
+                              "type": "boolean"
+                            },
+                            "hasPrevPage": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
                       }
                     }
                   }
                 }
               }
             }
+          },
+          "401": {
+            "description": "غير مصرح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
           }
         }
-      },
+      }
+    },
+    "/api/chat/create": {
       "post": {
         "tags": ["Chat"],
-        "summary": "إنشاء محادثة جديدة",
-        "description": "إنشاء محادثة مع مستخدم آخر",
+        "summary": "إنشاء أو الحصول على محادثة",
+        "description": "إنشاء محادثة جديدة أو الحصول على محادثة موجودة مع مستخدم آخر",
         "security": [
           {
             "BearerAuth": []
@@ -2621,11 +4653,11 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["participant"],
+                "required": ["otherUserId"],
                 "properties": {
-                  "participant": {
+                  "otherUserId": {
                     "type": "string",
-                    "example": "60d0fe4f5311236168a109cb"
+                    "description": "معرف المستخدم الآخر للمحادثة معه"
                   }
                 }
               }
@@ -2634,7 +4666,7 @@
         },
         "responses": {
           "201": {
-            "description": "تم إنشاء المحادثة بنجاح",
+            "description": "تم إنشاء أو الحصول على المحادثة بنجاح",
             "content": {
               "application/json": {
                 "schema": {
@@ -2649,12 +4681,40 @@
                       "example": "تم إنشاء المحادثة بنجاح"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Chat"
+                      "type": "object",
+                      "properties": {
+                        "chat": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string"
+                            },
+                            "otherUser": {
+                              "type": "object"
+                            },
+                            "lastMessage": {
+                              "type": "object"
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "معرف مستخدم غير صحيح"
+          },
+          "404": {
+            "description": "المستخدم غير موجود"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
           }
         }
       }
@@ -2663,7 +4723,7 @@
       "get": {
         "tags": ["Chat"],
         "summary": "الحصول على رسائل المحادثة",
-        "description": "الحصول على رسائل محادثة محددة",
+        "description": "الحصول على رسائل محادثة محددة مع الصفحات",
         "security": [
           {
             "BearerAuth": []
@@ -2679,6 +4739,24 @@
               "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف المحادثة"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة للترقيم"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "عدد الرسائل في الصفحة"
           }
         ],
         "responses": {
@@ -2693,23 +4771,79 @@
                       "type": "boolean",
                       "example": true
                     },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب الرسائل بنجاح"
+                    },
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Message"
+                      "type": "object",
+                      "properties": {
+                        "chat": {
+                          "type": "object"
+                        },
+                        "messages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "content": {
+                                "type": "string"
+                              },
+                              "messageType": {
+                                "type": "string"
+                              },
+                              "isFromMe": {
+                                "type": "boolean"
+                              },
+                              "sender": {
+                                "type": "object"
+                              },
+                              "attachments": {
+                                "type": "array"
+                              },
+                              "images": {
+                                "type": "array"
+                              },
+                              "isRead": {
+                                "type": "boolean"
+                              },
+                              "sentAt": {
+                                "type": "string"
+                              },
+                              "replyTo": {
+                                "type": "object"
+                              }
+                            }
+                          }
+                        },
+                        "pagination": {
+                          "type": "object"
+                        }
                       }
                     }
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "معرف محادثة غير صحيح"
+          },
+          "404": {
+            "description": "المحادثة غير موجودة أو غير مصرح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
           }
         }
       },
       "post": {
         "tags": ["Chat"],
         "summary": "إرسال رسالة",
-        "description": "إرسال رسالة في محادثة",
+        "description": "إرسال رسالة في محادثة محددة مع دعم رفع ملفات الوسائط",
         "security": [
           {
             "BearerAuth": []
@@ -2730,19 +4864,88 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["content"],
                 "properties": {
                   "content": {
                     "type": "string",
-                    "example": "مرحباً، كيف حالك؟"
+                    "description": "محتوى الرسالة (اختياري إذا تم رفع ملفات)"
                   },
                   "messageType": {
                     "type": "string",
-                    "enum": ["text", "image", "file"],
-                    "example": "text"
+                    "enum": ["text", "image", "file", "voice", "location", "contact"],
+                    "default": "text",
+                    "description": "نوع الرسالة (يتم اكتشافه تلقائياً من الملفات المرفوعة)"
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "الملفات المرفوعة (صور، صوت، فيديو، مستندات) - حد أقصى 10 ملفات"
+                  },
+                  "attachments": {
+                    "type": "string",
+                    "description": "سلسلة JSON للمرفقات الموجودة"
+                  },
+                  "images": {
+                    "type": "string",
+                    "description": "سلسلة JSON لروابط الصور الموجودة"
+                  },
+                  "replyTo": {
+                    "type": "string",
+                    "description": "معرف الرسالة للرد عليها"
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "محتوى الرسالة (مطلوب للرسائل النصية)"
+                  },
+                  "messageType": {
+                    "type": "string",
+                    "enum": ["text", "image", "file", "voice", "location", "contact"],
+                    "default": "text",
+                    "description": "نوع الرسالة"
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "size": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "description": "مرفقات الملفات"
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "روابط الصور"
+                  },
+                  "replyTo": {
+                    "type": "string",
+                    "description": "معرف الرسالة للرد عليها"
                   }
                 }
               }
@@ -2772,6 +4975,363 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/chat/{chatId}/send": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "إرسال رسالة",
+        "description": "إرسال رسالة في محادثة محددة مع دعم رفع ملفات الوسائط",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "محتوى الرسالة (اختياري إذا تم رفع ملفات)"
+                  },
+                  "messageType": {
+                    "type": "string",
+                    "enum": ["text", "image", "file", "voice", "location", "contact"],
+                    "default": "text",
+                    "description": "نوع الرسالة (يتم اكتشافه تلقائياً من الملفات المرفوعة)"
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "الملفات المرفوعة (صور، صوت، فيديو، مستندات) - حد أقصى 10 ملفات"
+                  },
+                  "attachments": {
+                    "type": "string",
+                    "description": "سلسلة JSON للمرفقات الموجودة"
+                  },
+                  "images": {
+                    "type": "string",
+                    "description": "سلسلة JSON لروابط الصور الموجودة"
+                  },
+                  "replyTo": {
+                    "type": "string",
+                    "description": "معرف الرسالة للرد عليها"
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "محتوى الرسالة (مطلوب للرسائل النصية)"
+                  },
+                  "messageType": {
+                    "type": "string",
+                    "enum": ["text", "image", "file", "voice", "location", "contact"],
+                    "default": "text",
+                    "description": "نوع الرسالة"
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "size": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "description": "مرفقات الملفات"
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "روابط الصور"
+                  },
+                  "replyTo": {
+                    "type": "string",
+                    "description": "معرف الرسالة للرد عليها"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال الرسالة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إرسال الرسالة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة أو محتوى مفقود"
+          },
+          "404": {
+            "description": "المحادثة غير موجودة أو غير مصرح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/chat/{chatId}/read": {
+      "put": {
+        "tags": ["Chat"],
+        "summary": "تمييز الرسائل كمقروءة",
+        "description": "تمييز جميع الرسائل في محادثة كمقروءة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تمييز الرسائل كمقروءة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تمييز الرسائل كمقروءة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "modifiedCount": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "معرف محادثة غير صحيح"
+          },
+          "404": {
+            "description": "المحادثة غير موجودة أو غير مصرح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/chat/{chatId}/messages/{messageId}": {
+      "delete": {
+        "tags": ["Chat"],
+        "summary": "حذف رسالة",
+        "description": "حذف رسالة من محادثة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف المحادثة"
+          },
+          {
+            "in": "path",
+            "name": "messageId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الرسالة"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deleteForEveryone": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "حذف للجميع (فقط خلال ساعة واحدة ومن المرسل)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم حذف الرسالة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "messageId": {
+                          "type": "string"
+                        },
+                        "deleteForEveryone": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "معرفات غير صحيحة"
+          },
+          "403": {
+            "description": "لا يمكن حذف الرسالة"
+          },
+          "404": {
+            "description": "المحادثة أو الرسالة غير موجودة"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/chat/unread-count": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "الحصول على عدد الرسائل غير المقروءة",
+        "description": "الحصول على العدد الإجمالي للرسائل غير المقروءة للمستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على عدد الرسائل غير المقروءة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب عدد الرسائل غير المقروءة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "unreadCount": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم"
           }
         }
       }
