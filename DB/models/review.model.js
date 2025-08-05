@@ -587,7 +587,7 @@ reviewSchema.methods.updateEngagementScore = function() {
     (this.sharesCount * shareWeight) +
     (this.responses.length * responseWeight);
     
-  return this.save();
+  // لا نقوم بـ save() هنا لتجنب ParallelSaveError
 };
 
 reviewSchema.methods.calculateQualityScore = function() {
@@ -610,7 +610,7 @@ reviewSchema.methods.calculateQualityScore = function() {
   if (this.attachments && this.attachments.length > 0) score += 10;
   
   this.analytics.qualityScore = Math.min(score, 100);
-  return this.save();
+  // لا نقوم بـ save() هنا لتجنب ParallelSaveError
 };
 
 // Static Methods
