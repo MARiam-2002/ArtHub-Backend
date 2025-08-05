@@ -354,13 +354,19 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
   }
 
   // إرجاع التقييم مع البيانات المطلوبة
-  const populatedReview = await reviewModel
-    .findById(review._id)
-    .populate('user', 'displayName userName profileImage')
-    .populate('artist', 'displayName userName profileImage')
-    .lean();
+  try {
+    const populatedReview = await reviewModel
+      .findById(review._id)
+      .populate('user', 'displayName userName profileImage')
+      .populate('artist', 'displayName userName profileImage')
+      .lean();
 
-  res.success(populatedReview, 'تم إضافة تقييم الفنان بنجاح', 201);
+    res.success(populatedReview, 'تم إضافة تقييم الفنان بنجاح', 201);
+  } catch (populateError) {
+    console.error('خطأ في populate:', populateError);
+    // إرجاع التقييم بدون populate في حالة الخطأ
+    res.success(review, 'تم إضافة تقييم الفنان بنجاح', 201);
+  }
 });
 
 /**
