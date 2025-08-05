@@ -77,14 +77,21 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
 
   const review = await reviewModel.create(reviewData);
 
-  // تحديث متوسط تقييم العمل الفني
-  const ratingStats = await reviewModel.getAverageRating(artwork, 'artwork');
-  await artworkModel.findByIdAndUpdate(artwork, {
-    rating: ratingStats.avgRating || 0,
-    reviewsCount: ratingStats.count || 0
-  });
+  // إرسال الاستجابة فوراً
+  res.success(review, 'تم إضافة التقييم بنجاح', 201);
 
-  // إرسال إشعار للفنان
+  // تحديث متوسط تقييم العمل الفني في الخلفية
+  try {
+    const ratingStats = await reviewModel.getAverageRating(artwork, 'artwork');
+    await artworkModel.findByIdAndUpdate(artwork, {
+      rating: ratingStats.avgRating || 0,
+      reviewsCount: ratingStats.count || 0
+    });
+  } catch (updateError) {
+    console.error('خطأ في تحديث إحصائيات العمل الفني:', updateError);
+  }
+
+  // إرسال إشعار للفنان في الخلفية
   try {
     await createNotification({
       userId: artworkDoc.artist,
@@ -100,15 +107,6 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
   } catch (notificationError) {
     console.error('خطأ في إرسال الإشعار:', notificationError);
   }
-
-  // إرجاع التقييم مع البيانات المطلوبة
-  const populatedReview = await reviewModel
-    .findById(review._id)
-    .populate('user', 'displayName userName profileImage')
-    .populate('artwork', 'title images')
-    .lean();
-
-  res.success(populatedReview, 'تم إضافة التقييم بنجاح', 201);
 });
 
 /**
@@ -337,7 +335,10 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
 
   const review = await reviewModel.create(reviewData);
 
-  // إرسال إشعار للفنان
+  // إرسال الاستجابة فوراً
+  res.success(review, 'تم إضافة تقييم الفنان بنجاح', 201);
+
+  // إرسال إشعار للفنان في الخلفية
   try {
     await createNotification({
       userId: artist,
@@ -351,21 +352,6 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
     });
   } catch (notificationError) {
     console.error('خطأ في إرسال الإشعار:', notificationError);
-  }
-
-  // إرجاع التقييم مع البيانات المطلوبة
-  try {
-    const populatedReview = await reviewModel
-      .findById(review._id)
-      .populate('user', 'displayName userName profileImage')
-      .populate('artist', 'displayName userName profileImage')
-      .lean();
-
-    res.success(populatedReview, 'تم إضافة تقييم الفنان بنجاح', 201);
-  } catch (populateError) {
-    console.error('خطأ في populate:', populateError);
-    // إرجاع التقييم بدون populate في حالة الخطأ
-    res.success(review, 'تم إضافة تقييم الفنان بنجاح', 201);
   }
 });
 
