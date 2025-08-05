@@ -295,7 +295,7 @@ export const adminMessageEmail = (subject, message, attachments = []) => `<!DOCT
             </div>
             ${attachments && attachments.length > 0 ? `
                 <div class="attachments-section">
-                    <h3 class="attachments-title">المرفقات:</h3>
+                    <h3 class="attachments-title">: المرفقات</h3>
                     ${attachments.map(file => `
                         <div class="attachment-item">
                             <span class="attachment-icon">📎</span>
