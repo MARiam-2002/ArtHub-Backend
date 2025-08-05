@@ -1238,7 +1238,17 @@
         ],
         "requestBody": {
           "required": false,
-          "description": "لا حاجة لجسم الطلب. يجب إرسال رمز فايربيس في رأس Authorization"
+          "description": "لا حاجة لجسم الطلب. يجب إرسال رمز فايربيس في رأس Authorization",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "لا حاجة لجسم الطلب. يتم إرسال رمز فايربيس في رأس Authorization: Bearer <firebase_id_token>",
+                "properties": {},
+                "example": {}
+              }
+            }
+          }
         },
         "responses": {
           "200": {
