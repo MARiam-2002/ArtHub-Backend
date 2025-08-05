@@ -1222,46 +1222,27 @@
         "type": "object",
         "required": [
           "title",
-          "description",
-          "category",
-          "images"
+          "price",
+          "category"
         ],
         "properties": {
           "title": {
-            "type": "object",
-            "required": [
-              "ar"
-            ],
-            "properties": {
-              "ar": {
-                "type": "string",
-                "example": "لوحة فنية جميلة"
-              },
-              "en": {
-                "type": "string",
-                "example": "Beautiful Artwork"
-              }
-            }
+            "type": "string",
+            "description": "عنوان العمل الفني",
+            "example": "لوحة فنية زهرية زرقاء مرسومة يدويا",
+            "minLength": 3,
+            "maxLength": 100
           },
           "description": {
-            "type": "object",
-            "required": [
-              "ar"
-            ],
-            "properties": {
-              "ar": {
-                "type": "string",
-                "example": "وصف اللوحة الفنية"
-              },
-              "en": {
-                "type": "string",
-                "example": "Artwork description"
-              }
-            }
+            "type": "string",
+            "description": "وصف العمل الفني",
+            "maxLength": 1000
           },
           "category": {
             "type": "string",
-            "example": "60d0fe4f5311236168a109ca"
+            "description": "معرف الفئة",
+            "example": "60d0fe4f5311236168a109ca",
+            "pattern": "^[0-9a-fA-F]{24}$"
           },
           "images": {
             "type": "array",
@@ -1269,54 +1250,55 @@
               "type": "string",
               "format": "binary"
             },
+            "description": "صور العمل الفني (1-5 صور). الصيغ المدعومة: jpg, jpeg, png, gif, webp, svg, bmp, tiff.",
             "minItems": 1,
-            "maxItems": 10
+            "maxItems": 5
           },
           "price": {
             "type": "number",
-            "minimum": 0,
+            "description": "سعر العمل الفني",
+            "minimum": 1,
+            "maximum": 1000000,
             "example": 500
-          },
-          "currency": {
-            "type": "string",
-            "enum": [
-              "SAR",
-              "USD",
-              "EUR"
-            ],
-            "default": "SAR",
-            "example": "SAR"
-          },
-          "dimensions": {
-            "type": "object",
-            "properties": {
-              "width": {
-                "type": "number",
-                "minimum": 0,
-                "example": 50
-              },
-              "height": {
-                "type": "number",
-                "minimum": 0,
-                "example": 70
-              },
-              "unit": {
-                "type": "string",
-                "enum": [
-                  "cm",
-                  "inch",
-                  "m"
-                ],
-                "default": "cm",
-                "example": "cm"
-              }
-            }
           },
           "tags": {
             "type": "array",
             "items": {
               "type": "string"
             },
+            "description": "وسوم العمل الفني"
+          },
+          "isFramed": {
+            "type": "boolean",
+            "description": "هل العمل مؤطر"
+          },
+          "dimensions": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number",
+                "description": "العرض بالسنتيمتر",
+                "minimum": 1
+              },
+              "height": {
+                "type": "number",
+                "description": "الارتفاع بالسنتيمتر",
+                "minimum": 1
+              },
+              "depth": {
+                "type": "number",
+                "description": "العمق بالسنتيمتر",
+                "minimum": 0
+              }
+            }
+          },
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "المواد المستخدمة"
+          }
             "maxItems": 10,
             "example": [
               "فن",
