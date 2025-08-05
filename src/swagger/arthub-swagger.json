@@ -512,6 +512,140 @@
              "example": "2023-06-15T10:30:45.123Z"
            }
          }
+       },
+       "PaginationResponse": {
+         "type": "object",
+         "properties": {
+           "currentPage": {
+             "type": "integer",
+             "example": 1
+           },
+           "totalPages": {
+             "type": "integer",
+             "example": 10
+           },
+           "totalItems": {
+             "type": "integer",
+             "example": 100
+           },
+           "hasNextPage": {
+             "type": "boolean",
+             "example": true
+           },
+           "hasPrevPage": {
+             "type": "boolean",
+             "example": false
+           }
+         }
+       },
+       "CreateNotificationSchema": {
+         "type": "object",
+         "required": ["recipient", "title", "message", "type"],
+         "properties": {
+           "recipient": {
+             "type": "string",
+             "description": "معرف المستخدم المتلقي"
+           },
+           "title": {
+             "type": "object",
+             "properties": {
+               "ar": {
+                 "type": "string",
+                 "description": "العنوان باللغة العربية"
+               },
+               "en": {
+                 "type": "string",
+                 "description": "العنوان باللغة الإنجليزية"
+               }
+             }
+           },
+           "message": {
+             "type": "object",
+             "properties": {
+               "ar": {
+                 "type": "string",
+                 "description": "الرسالة باللغة العربية"
+               },
+               "en": {
+                 "type": "string",
+                 "description": "الرسالة باللغة الإنجليزية"
+               }
+             }
+           },
+           "type": {
+             "type": "string",
+             "enum": ["system", "artwork", "message", "follow", "review", "transaction"],
+             "description": "نوع الإشعار"
+           },
+           "data": {
+             "type": "object",
+             "description": "بيانات إضافية للإشعار"
+           }
+         }
+       },
+       "BulkNotificationSchema": {
+         "type": "object",
+         "required": ["recipients", "title", "message", "type"],
+         "properties": {
+           "recipients": {
+             "type": "array",
+             "items": {
+               "type": "string"
+             },
+             "description": "قائمة معرفات المستخدمين المتلقين"
+           },
+           "title": {
+             "type": "object",
+             "properties": {
+               "ar": {
+                 "type": "string",
+                 "description": "العنوان باللغة العربية"
+               },
+               "en": {
+                 "type": "string",
+                 "description": "العنوان باللغة الإنجليزية"
+               }
+             }
+           },
+           "message": {
+             "type": "object",
+             "properties": {
+               "ar": {
+                 "type": "string",
+                 "description": "الرسالة باللغة العربية"
+               },
+               "en": {
+                 "type": "string",
+                 "description": "الرسالة باللغة الإنجليزية"
+               }
+             }
+           },
+           "type": {
+             "type": "string",
+             "enum": ["system", "artwork", "message", "follow", "review", "transaction"],
+             "description": "نوع الإشعار"
+           },
+           "data": {
+             "type": "object",
+             "description": "بيانات إضافية للإشعار"
+           }
+         }
+       },
+       "FCMTokenSchema": {
+         "type": "object",
+         "required": ["token"],
+         "properties": {
+           "token": {
+             "type": "string",
+             "description": "رمز FCM"
+           },
+           "deviceType": {
+             "type": "string",
+             "enum": ["android", "ios", "web"],
+             "default": "android",
+             "description": "نوع الجهاز"
+           }
+         }
        }
     },
     "securitySchemes": {
@@ -1453,6 +1587,26 @@
             "BearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
         "responses": {
           "200": {
             "description": "تم الحصول على الإشعارات بنجاح",
@@ -1475,13 +1629,50 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "غير مصرح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
           }
         }
       },
-      "put": {
+      "post": {
         "tags": ["Notification"],
-        "summary": "تحديث حالة الإشعار",
-        "description": "تحديث حالة الإشعار كمقروء",
+        "summary": "إنشاء إشعار جديد (للمشرفين)",
+        "description": "إنشاء إشعار جديد وإرساله لمستخدم محدد. ملاحظة: هذا الـ API متاح للمشرفين فقط",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNotificationSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء الإشعار بنجاح"
+          },
+          "400": {
+            "description": "خطأ في البيانات المرسلة"
+          },
+          "404": {
+            "description": "المستخدم المتلقي غير موجود"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Notification"],
+        "summary": "حذف جميع الإشعارات",
+        "description": "حذف جميع إشعارات المستخدم. تحذير: هذا الإجراء لا يمكن التراجع عنه",
         "security": [
           {
             "BearerAuth": []
@@ -1489,19 +1680,19 @@
         ],
         "parameters": [
           {
-            "in": "path",
-            "name": "id",
-            "required": true,
+            "name": "language",
+            "in": "query",
             "schema": {
               "type": "string",
-              "pattern": "^[0-9a-fA-F]{24}$"
+              "enum": ["ar", "en"],
+              "default": "ar"
             },
-            "description": "معرف الإشعار"
+            "description": "لغة الاستجابة"
           }
         ],
         "responses": {
           "200": {
-            "description": "تم تحديث الإشعار بنجاح",
+            "description": "تم حذف جميع الإشعارات بنجاح",
             "content": {
               "application/json": {
                 "schema": {
@@ -1513,7 +1704,20 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "تم تحديث الإشعار بنجاح"
+                      "example": "تم حذف جميع الإشعارات بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deletedCount": {
+                          "type": "integer",
+                          "example": 25
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "تم حذف 25 إشعار"
+                        }
+                      }
                     }
                   }
                 }
@@ -1521,6 +1725,599 @@
             }
           }
         }
+      }
+    },
+    "/api/notifications/firebase": {
+      "get": {
+        "tags": ["Notification"],
+        "summary": "الحصول على إشعارات المستخدم (Firebase)",
+        "description": "استرجاع إشعارات المستخدم باستخدام مصادقة Firebase",
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "schema": {
+              "type": "string",
+              "enum": ["ar", "en"],
+              "default": "ar"
+            },
+            "description": "لغة الاستجابة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على الإشعارات بنجاح"
+          }
+        }
+      }
+    },
+    "/api/notifications/stats": {
+      "get": {
+        "tags": ["Notification"],
+        "summary": "الحصول على إحصائيات الإشعارات",
+        "description": "جلب إحصائيات شاملة عن إشعارات المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["day", "week", "month", "year", "all"],
+              "default": "month"
+            },
+            "description": "فترة الإحصائيات"
+          },
+          {
+            "name": "groupBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["type", "date", "status"]
+            },
+            "description": "تجميع الإحصائيات حسب"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ar", "en"],
+              "default": "ar"
+            },
+            "description": "لغة الاستجابة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الإحصائيات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "unread": {
+                              "type": "integer"
+                            },
+                            "read": {
+                              "type": "integer"
+                            },
+                            "readRate": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "byType": {
+                          "type": "object"
+                        },
+                        "recentActivity": {
+                          "type": "array"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/settings": {
+      "get": {
+        "tags": ["Notification"],
+        "summary": "الحصول على إعدادات الإشعارات",
+        "description": "الحصول على تفضيلات إشعارات المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على إعدادات الإشعارات بنجاح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Notification"],
+        "summary": "تحديث إعدادات الإشعارات",
+        "description": "تحديث تفضيلات إشعارات المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notificationSettings": {
+                    "type": "object",
+                    "properties": {
+                      "pushNotifications": {
+                        "type": "boolean"
+                      },
+                      "emailNotifications": {
+                        "type": "boolean"
+                      },
+                      "messageNotifications": {
+                        "type": "boolean"
+                      },
+                      "followNotifications": {
+                        "type": "boolean"
+                      },
+                      "artworkNotifications": {
+                        "type": "boolean"
+                      },
+                      "marketingNotifications": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث إعدادات الإشعارات بنجاح"
+          },
+          "400": {
+            "description": "طلب غير صحيح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/notifications/{notificationId}/read": {
+      "patch": {
+        "tags": ["Notification"],
+        "summary": "تحديد الإشعار كمقروء",
+        "description": "تحديد إشعار محدد كمقروء",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notificationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الإشعار"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تحديد الإشعار كمقروء"
+          },
+          "404": {
+            "description": "الإشعار غير موجود"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "patch": {
+        "tags": ["Notification"],
+        "summary": "تحديد جميع الإشعارات كمقروءة",
+        "description": "تحديد جميع إشعارات المستخدم كمقروءة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تحديد جميع الإشعارات كمقروءة"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/notifications/{notificationId}": {
+      "delete": {
+        "tags": ["Notification"],
+        "summary": "حذف إشعار",
+        "description": "حذف إشعار محدد",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notificationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "معرف الإشعار"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف الإشعار بنجاح"
+          },
+          "404": {
+            "description": "الإشعار غير موجود"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/notifications/bulk": {
+      "post": {
+        "tags": ["Notification"],
+        "summary": "إرسال إشعارات متعددة (للمشرفين)",
+        "description": "إرسال إشعار واحد لعدة مستخدمين",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkNotificationSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال الإشعارات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إرسال 15 إشعار بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalSent": {
+                          "type": "integer",
+                          "example": 15
+                        },
+                        "totalRecipients": {
+                          "type": "integer",
+                          "example": 20
+                        },
+                        "validRecipients": {
+                          "type": "integer",
+                          "example": 15
+                        },
+                        "invalidRecipients": {
+                          "type": "integer",
+                          "example": 5
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "لا يوجد مستخدمون صالحون للإرسال"
+          }
+        }
+      }
+    },
+    "/api/notifications/token": {
+      "post": {
+        "tags": ["FCM Tokens"],
+        "summary": "تسجيل رمز إشعارات FCM",
+        "description": "تسجيل رمز FCM للإشعارات الفورية للمستخدم الحالي",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FCMTokenSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الرمز بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تسجيل رمز الإشعارات بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": {
+                          "type": "string"
+                        },
+                        "deviceType": {
+                          "type": "string"
+                        },
+                        "registered": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "الرمز مطلوب أو غير صحيح"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["FCM Tokens"],
+        "summary": "إلغاء تسجيل رمز إشعارات FCM",
+        "description": "إلغاء تسجيل رمز FCM للإشعارات الفورية",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "رمز FCM المراد إلغاء تسجيله"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إلغاء تسجيل الرمز بنجاح"
+          },
+          "400": {
+            "description": "الرمز مطلوب"
+          }
+        }
+      },
+      "get": {
+        "tags": ["FCM Tokens"],
+        "summary": "الحصول على رموز FCM للمستخدم",
+        "description": "جلب جميع رموز FCM المسجلة للمستخدم الحالي",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الرموز بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب رموز الإشعارات بنجاح"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "token": {
+                            "type": "string"
+                          },
+                          "deviceType": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/token/firebase": {
+      "post": {
+        "tags": ["FCM Tokens"],
+        "summary": "تسجيل رمز إشعارات FCM (Firebase) - DEPRECATED",
+        "description": "⚠️ DEPRECATED: This endpoint is deprecated. Please use `/api/notifications/token` instead for FCM token management. تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase",
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FCMTokenSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الرمز بنجاح"
+          },
+          "400": {
+            "description": "الرمز مطلوب"
+          }
+        },
+        "deprecated": true
+      },
+      "delete": {
+        "tags": ["FCM Tokens"],
+        "summary": "إلغاء تسجيل رمز إشعارات FCM (Firebase) - DEPRECATED",
+        "description": "⚠️ DEPRECATED: This endpoint is deprecated. Please use `/api/notifications/token` instead for FCM token management. إلغاء تسجيل رمز FCM للإشعارات الفورية باستخدام مصادقة Firebase",
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "رمز FCM المراد إلغاء تسجيله"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم إلغاء تسجيل الرمز بنجاح"
+          },
+          "400": {
+            "description": "الرمز مطلوب"
+          }
+        },
+        "deprecated": true
       }
     },
     "/api/transactions": {
@@ -1984,6 +2781,11 @@
         "tags": ["Home"],
         "summary": "الصفحة الرئيسية",
         "description": "الحصول على بيانات الصفحة الرئيسية",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "تم الحصول على بيانات الصفحة الرئيسية بنجاح",
@@ -1996,25 +2798,92 @@
                       "type": "boolean",
                       "example": true
                     },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب بيانات الصفحة الرئيسية بنجاح"
+                    },
                     "data": {
                       "type": "object",
                       "properties": {
-                        "featuredArtworks": {
-                          "type": "array",
-                          "items": {
-                            "$ref": "#/components/schemas/Artwork"
-                          }
-                        },
                         "categories": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/Category"
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "image": {
+                                "type": "string"
+                              },
+                              "artworksCount": {
+                                "type": "number"
+                              }
+                            }
                           }
                         },
-                        "topArtists": {
+                        "featuredArtists": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/components/schemas/User"
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "profileImage": {
+                                "type": "string"
+                              },
+                              "followersCount": {
+                                "type": "number"
+                              },
+                              "artworksCount": {
+                                "type": "number"
+                              }
+                            }
+                          }
+                        },
+                        "featuredArtworks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "mainImage": {
+                                "type": "string"
+                              },
+                              "images": {
+                                "type": "array"
+                              },
+                              "price": {
+                                "type": "number"
+                              },
+                              "artist": {
+                                "type": "object"
+                              }
+                            }
+                          }
+                        },
+                        "trendingArtworks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "personalizedArtworks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
                           }
                         }
                       }
@@ -2023,6 +2892,512 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/home/search": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "البحث في الأعمال الفنية والفنانين",
+        "description": "البحث في الأعمال الفنية والفنانين مع خيارات التصفية المتقدمة",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            },
+            "description": "نص البحث",
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": ["all", "artworks", "artists"],
+              "default": "all"
+            },
+            "description": "نوع البحث"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": ["relevance", "price_low", "price_high", "rating", "newest", "popular"],
+              "default": "relevance"
+            },
+            "description": "خيارات الترتيب"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب نتائج البحث بنجاح"
+          },
+          "400": {
+            "description": "طلب غير صحيح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/home/trending": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "الأعمال الفنية الرائجة",
+        "description": "الحصول على الأعمال الفنية الرائجة لقسم الاستكشاف",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الأعمال الرائجة بنجاح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/home/artwork/{id}": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "تفاصيل العمل الفني",
+        "description": "الحصول على معلومات مفصلة عن عمل فني واحد",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "معرف العمل الفني"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب تفاصيل العمل الفني بنجاح"
+          },
+          "400": {
+            "description": "معرف العمل الفني غير صحيح"
+          },
+          "404": {
+            "description": "العمل الفني غير موجود"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/home/artist/{id}": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "ملف الفنان الشخصي",
+        "description": "الحصول على ملف الفنان الشخصي مع أعماله الفنية",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "معرف الفنان"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة للأعمال الفنية"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب ملف الفنان بنجاح"
+          },
+          "400": {
+            "description": "معرف الفنان غير صحيح"
+          },
+          "404": {
+            "description": "الفنان غير موجود"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/home/category/{id}": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "الأعمال الفنية حسب الفئة",
+        "description": "الحصول على الأعمال الفنية المصنفة حسب الفئة",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "معرف الفئة"
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "enum": ["newest", "price_low", "price_high", "rating", "popular"],
+              "default": "newest"
+            },
+            "description": "خيارات الترتيب"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "عدد العناصر في الصفحة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب أعمال الفئة بنجاح"
+          },
+          "400": {
+            "description": "معرف الفئة غير صحيح"
+          },
+          "404": {
+            "description": "الفئة غير موجودة"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/home/featured-artworks": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "جلب الأعمال المميزة",
+        "description": "جلب الأعمال الفنية المميزة (Featured) مع التقسيم. مخصص لشاشة \"مشاهدة الجميع\" للأعمال المميزة.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد الأعمال في الصفحة",
+            "example": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الأعمال المميزة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب الأعمال المميزة بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artworks": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Artwork"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/home/most-rated-artworks": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "جلب أكثر الأعمال تقييماً",
+        "description": "جلب الأعمال الفنية الأكثر تقييماً مع التقسيم. مخصص لشاشة \"مشاهدة الجميع\" لأكثر الأعمال تقييماً.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد الأعمال في الصفحة",
+            "example": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب أكثر الأعمال تقييماً بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب أكثر الأعمال تقييماً بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artworks": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Artwork"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم"
+          }
+        }
+      }
+    },
+    "/api/home/personalized-artworks": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "جلب الأعمال المخصصة لك",
+        "description": "جلب الأعمال الفنية المخصصة للمستخدم بناءً على تفضيلاته. مخصص لشاشة \"مشاهدة الجميع\" للأعمال المخصصة.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة",
+            "example": 1
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "description": "عدد الأعمال في الصفحة",
+            "example": 20
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب الأعمال المخصصة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب الأعمال المخصصة لك بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "artworks": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Artwork"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationResponse"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "isPersonalized": {
+                          "type": "boolean",
+                          "description": "هل المحتوى مخصص للمستخدم"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح"
+          },
+          "500": {
+            "description": "خطأ في الخادم"
           }
         }
       }
