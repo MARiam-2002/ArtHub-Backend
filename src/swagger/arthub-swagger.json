@@ -4886,14 +4886,6 @@
                     },
                     "description": "الملفات المرفوعة (صور، صوت، فيديو، مستندات) - حد أقصى 10 ملفات"
                   },
-                  "attachments": {
-                    "type": "string",
-                    "description": "سلسلة JSON للمرفقات الموجودة"
-                  },
-                  "images": {
-                    "type": "string",
-                    "description": "سلسلة JSON لروابط الصور الموجودة"
-                  },
                   "replyTo": {
                     "type": "string",
                     "description": "معرف الرسالة للرد عليها"
@@ -4914,34 +4906,6 @@
                     "enum": ["text", "image", "file", "voice", "location", "contact"],
                     "default": "text",
                     "description": "نوع الرسالة"
-                  },
-                  "attachments": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "url": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "size": {
-                          "type": "number"
-                        }
-                      }
-                    },
-                    "description": "مرفقات الملفات"
-                  },
-                  "images": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "روابط الصور"
                   },
                   "replyTo": {
                     "type": "string",
@@ -5026,14 +4990,6 @@
                     },
                     "description": "الملفات المرفوعة (صور، صوت، فيديو، مستندات) - حد أقصى 10 ملفات"
                   },
-                  "attachments": {
-                    "type": "string",
-                    "description": "سلسلة JSON للمرفقات الموجودة"
-                  },
-                  "images": {
-                    "type": "string",
-                    "description": "سلسلة JSON لروابط الصور الموجودة"
-                  },
                   "replyTo": {
                     "type": "string",
                     "description": "معرف الرسالة للرد عليها"
@@ -5054,34 +5010,6 @@
                     "enum": ["text", "image", "file", "voice", "location", "contact"],
                     "default": "text",
                     "description": "نوع الرسالة"
-                  },
-                  "attachments": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "url": {
-                          "type": "string"
-                        },
-                        "type": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "size": {
-                          "type": "number"
-                        }
-                      }
-                    },
-                    "description": "مرفقات الملفات"
-                  },
-                  "images": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "روابط الصور"
                   },
                   "replyTo": {
                     "type": "string",
