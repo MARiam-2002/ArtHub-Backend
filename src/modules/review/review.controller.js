@@ -237,23 +237,25 @@ export const getArtworkReviews = asyncHandler(async (req, res, next) => {
   // معلومات الصفحات
   const totalPages = Math.ceil(totalCount / limit);
 
-  const responseData = {
-    reviews,
-    stats: {
-      avgRating: Math.round((ratingStats.avgRating || 0) * 10) / 10,
-      totalReviews: totalCount,
-      distribution,
-      verifiedCount,
-      recommendedCount,
-      recommendationRate: totalCount > 0 ? Math.round((recommendedCount / totalCount) * 100) : 0
+  // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
+  const simplifiedReviews = reviews.map(review => ({
+    _id: review._id,
+    rating: review.rating,
+    comment: review.comment,
+    user: {
+      displayName: review.user.displayName,
+      profileImage: review.user.profileImage?.url || null
     },
-    pagination: {
-      currentPage: page,
-      totalPages,
-      totalItems: totalCount,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-      limit
+    createdAt: review.createdAt
+  }));
+
+  // إرجاع البيانات المبسطة فقط كما في الصورة
+  const responseData = {
+    reviews: simplifiedReviews,
+    stats: {
+      avgRating: ratingStats.avgRating ? Math.round(ratingStats.avgRating * 10) / 10 : 0,
+      totalReviews: totalCount,
+      distribution
     }
   };
 
@@ -483,23 +485,25 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
   // معلومات الصفحات
   const totalPages = Math.ceil(totalCount / limit);
 
-  const responseData = {
-    reviews,
-    stats: {
-      avgRating: Math.round((ratingStats.avgRating || 0) * 10) / 10,
-      totalReviews: totalCount,
-      distribution,
-      verifiedCount,
-      recommendedCount,
-      recommendationRate: totalCount > 0 ? Math.round((recommendedCount / totalCount) * 100) : 0
+  // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
+  const simplifiedReviews = reviews.map(review => ({
+    _id: review._id,
+    rating: review.rating,
+    comment: review.comment,
+    user: {
+      displayName: review.user.displayName,
+      profileImage: review.user.profileImage?.url || null
     },
-    pagination: {
-      currentPage: page,
-      totalPages,
-      totalItems: totalCount,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-      limit
+    createdAt: review.createdAt
+  }));
+
+  // إرجاع البيانات المبسطة فقط كما في الصورة
+  const responseData = {
+    reviews: simplifiedReviews,
+    stats: {
+      avgRating: ratingStats.avgRating ? Math.round(ratingStats.avgRating * 10) / 10 : 0,
+      totalReviews: totalCount,
+      distribution
     }
   };
 
