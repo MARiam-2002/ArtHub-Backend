@@ -1237,15 +1237,23 @@
           }
         ],
         "requestBody": {
-          "required": false,
-          "description": "لا حاجة لجسم الطلب. يجب إرسال رمز فايربيس في رأس Authorization",
+          "required": true,
+          "description": "يجب إرسال Firebase ID Token في رأس Authorization: Bearer <firebase_id_token>",
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "description": "لا حاجة لجسم الطلب. يتم إرسال رمز فايربيس في رأس Authorization: Bearer <firebase_id_token>",
-                "properties": {},
-                "example": {}
+                "description": "Firebase ID Token يتم إرساله في رأس Authorization وليس في body",
+                "properties": {
+                  "note": {
+                    "type": "string",
+                    "description": "ملاحظة: Firebase ID Token يتم إرساله في رأس Authorization: Bearer <token>",
+                    "example": "أرسل Firebase ID Token في رأس Authorization"
+                  }
+                },
+                "example": {
+                  "note": "أرسل Firebase ID Token في رأس Authorization"
+                }
               }
             }
           }
