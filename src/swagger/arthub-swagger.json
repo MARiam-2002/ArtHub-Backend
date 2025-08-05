@@ -3410,6 +3410,1096 @@
         }
       }
     },
+    "/api/reviews/artwork": {
+      "post": {
+        "tags": ["Review"],
+        "summary": "إنشاء تقييم جديد لعمل فني",
+        "description": "إضافة تقييم وتعليق مفصل لعمل فني مع إمكانية إضافة تقييمات فرعية ونقاط إيجابية وسلبية",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artwork", "rating", "comment"],
+                "properties": {
+                  "artwork": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "description": "معرف العمل الفني",
+                    "example": "507f1f77bcf86cd799439011"
+                  },
+                  "rating": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "التقييم العام (1-5)",
+                    "example": 4
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "عنوان التقييم",
+                    "example": "عمل فني رائع"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "description": "التعليق المفصل",
+                    "example": "هذا العمل يظهر مهارة عالية في التقنية والإبداع"
+                  },
+                  "pros": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط الإيجابية",
+                    "example": ["تقنية ممتازة", "ألوان جميلة"]
+                  },
+                  "cons": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط السلبية",
+                    "example": ["يحتاج لمزيد من التفاصيل"]
+                  },
+                  "subRatings": {
+                    "type": "object",
+                    "description": "التقييمات الفرعية",
+                    "properties": {
+                      "creativity": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "technique": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "composition": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      }
+                    },
+                    "example": {
+                      "creativity": 5,
+                      "technique": 4,
+                      "composition": 5
+                    }
+                  },
+                  "isRecommended": {
+                    "type": "boolean",
+                    "description": "هل يوصي بهذا العمل",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Review"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "العمل الفني غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/artwork/{reviewId}": {
+      "put": {
+        "tags": ["Review"],
+        "summary": "تحديث تقييم عمل فني",
+        "description": "تحديث تقييم موجود لعمل فني",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reviewId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف التقييم"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "التقييم العام (1-5)",
+                    "example": 4
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "عنوان التقييم",
+                    "example": "عمل فني رائع"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "description": "التعليق المفصل",
+                    "example": "هذا العمل يظهر مهارة عالية في التقنية والإبداع"
+                  },
+                  "pros": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط الإيجابية",
+                    "example": ["تقنية ممتازة", "ألوان جميلة"]
+                  },
+                  "cons": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط السلبية",
+                    "example": ["يحتاج لمزيد من التفاصيل"]
+                  },
+                  "subRatings": {
+                    "type": "object",
+                    "description": "التقييمات الفرعية",
+                    "properties": {
+                      "creativity": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "technique": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "composition": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      }
+                    },
+                    "example": {
+                      "creativity": 5,
+                      "technique": 4,
+                      "composition": 5
+                    }
+                  },
+                  "isRecommended": {
+                    "type": "boolean",
+                    "description": "هل يوصي بهذا العمل",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Review"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "التقييم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/artist": {
+      "post": {
+        "tags": ["Review"],
+        "summary": "إنشاء تقييم جديد لفنان",
+        "description": "إضافة تقييم وتعليق مفصل لفنان مع إمكانية إضافة تقييمات فرعية",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artist", "rating", "comment"],
+                "properties": {
+                  "artist": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{24}$",
+                    "description": "معرف الفنان",
+                    "example": "507f1f77bcf86cd799439011"
+                  },
+                  "rating": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "التقييم العام (1-5)",
+                    "example": 4
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "عنوان التقييم",
+                    "example": "فنان موهوب"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "description": "التعليق المفصل",
+                    "example": "فنان موهوب ومبدع في أعماله"
+                  },
+                  "pros": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط الإيجابية",
+                    "example": ["مبدع", "محترف"]
+                  },
+                  "cons": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط السلبية",
+                    "example": ["يحتاج لمزيد من التنوع"]
+                  },
+                  "subRatings": {
+                    "type": "object",
+                    "description": "التقييمات الفرعية",
+                    "properties": {
+                      "creativity": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "professionalism": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "communication": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      }
+                    },
+                    "example": {
+                      "creativity": 5,
+                      "professionalism": 4,
+                      "communication": 5
+                    }
+                  },
+                  "isRecommended": {
+                    "type": "boolean",
+                    "description": "هل يوصي بهذا الفنان",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Review"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الفنان غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/artist/{reviewId}": {
+      "put": {
+        "tags": ["Review"],
+        "summary": "تحديث تقييم فنان",
+        "description": "تحديث تقييم موجود لفنان",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reviewId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف التقييم"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rating": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "التقييم العام (1-5)",
+                    "example": 4
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "عنوان التقييم",
+                    "example": "فنان موهوب"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "description": "التعليق المفصل",
+                    "example": "فنان موهوب ومبدع في أعماله"
+                  },
+                  "pros": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط الإيجابية",
+                    "example": ["مبدع", "محترف"]
+                  },
+                  "cons": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "النقاط السلبية",
+                    "example": ["يحتاج لمزيد من التنوع"]
+                  },
+                  "subRatings": {
+                    "type": "object",
+                    "description": "التقييمات الفرعية",
+                    "properties": {
+                      "creativity": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "professionalism": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "communication": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 5
+                      }
+                    },
+                    "example": {
+                      "creativity": 5,
+                      "professionalism": 4,
+                      "communication": 5
+                    }
+                  },
+                  "isRecommended": {
+                    "type": "boolean",
+                    "description": "هل يوصي بهذا الفنان",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Review"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "التقييم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}": {
+      "delete": {
+        "tags": ["Review"],
+        "summary": "حذف تقييم",
+        "description": "حذف تقييم موجود",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reviewId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف التقييم"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم حذف التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم حذف التقييم بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "التقييم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/helpful": {
+      "post": {
+        "tags": ["Review"],
+        "summary": "تقييم التقييم كمفيد",
+        "description": "تقييم التقييم كمفيد أو غير مفيد",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reviewId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف التقييم"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["isHelpful"],
+                "properties": {
+                  "isHelpful": {
+                    "type": "boolean",
+                    "description": "هل التقييم مفيد",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث تقييم التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث تقييم التقييم بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "التقييم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/report": {
+      "post": {
+        "tags": ["Review"],
+        "summary": "الإبلاغ عن تقييم",
+        "description": "الإبلاغ عن تقييم غير مناسب",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reviewId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف التقييم"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reason"],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "enum": ["inappropriate", "spam", "fake", "other"],
+                    "description": "سبب الإبلاغ",
+                    "example": "inappropriate"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "وصف إضافي للإبلاغ",
+                    "example": "محتوى غير مناسب"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم الإبلاغ بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم الإبلاغ بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "التقييم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/my": {
+      "get": {
+        "tags": ["Review"],
+        "summary": "الحصول على تقييماتي",
+        "description": "الحصول على تقييمات المستخدم الحالي",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "رقم الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "description": "عدد العناصر في الصفحة"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": ["artwork", "artist", "all"]
+            },
+            "description": "نوع التقييم"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على التقييمات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/admin/stats": {
+      "get": {
+        "tags": ["Review"],
+        "summary": "إحصائيات التقييمات (للمدير)",
+        "description": "الحصول على إحصائيات التقييمات للمدير",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "تاريخ البداية"
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "تاريخ النهاية"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على الإحصائيات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalReviews": {
+                          "type": "number",
+                          "example": 150
+                        },
+                        "averageRating": {
+                          "type": "number",
+                          "example": 4.2
+                        },
+                        "reviewsByType": {
+                          "type": "object",
+                          "properties": {
+                            "artwork": {
+                              "type": "number",
+                              "example": 100
+                            },
+                            "artist": {
+                              "type": "number",
+                              "example": 50
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/moderate": {
+      "patch": {
+        "tags": ["Review"],
+        "summary": "إدارة التقييم (للمدير)",
+        "description": "إدارة حالة التقييم (قبول/رفض/حذف)",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "FirebaseAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reviewId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف التقييم"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["approved", "rejected", "deleted"],
+                    "description": "حالة التقييم",
+                    "example": "approved"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "سبب التغيير",
+                    "example": "محتوى مناسب"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث حالة التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Review"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "التقييم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/follow": {
       "post": {
         "tags": ["Follow"],
