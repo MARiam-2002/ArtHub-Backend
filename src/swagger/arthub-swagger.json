@@ -4616,9 +4616,6 @@
                               "example": 84
                             }
                           }
-                        },
-                        "pagination": {
-                          "$ref": "#/components/schemas/PaginationResponse"
                         }
                       }
                     }
@@ -4741,9 +4738,6 @@
                               "example": 84
                             }
                           }
-                        },
-                        "pagination": {
-                          "$ref": "#/components/schemas/PaginationResponse"
                         }
                       }
                     }
