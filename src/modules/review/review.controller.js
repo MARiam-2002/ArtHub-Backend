@@ -77,8 +77,16 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
 
   const review = await reviewModel.create(reviewData);
 
+  // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
+  const simplifiedReview = {
+    _id: review._id,
+    rating: review.rating,
+    comment: review.comment,
+    createdAt: review.createdAt
+  };
+
   // إرسال الاستجابة فوراً
-  res.success(review, 'تم إضافة التقييم بنجاح', 201);
+  res.success(simplifiedReview, 'تم إضافة التقييم بنجاح', 201);
 
   // تحديث متوسط تقييم العمل الفني في الخلفية
   try {
@@ -337,8 +345,16 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
 
   const review = await reviewModel.create(reviewData);
 
+  // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
+  const simplifiedReview = {
+    _id: review._id,
+    rating: review.rating,
+    comment: review.comment,
+    createdAt: review.createdAt
+  };
+
   // إرسال الاستجابة فوراً
-  res.success(review, 'تم إضافة تقييم الفنان بنجاح', 201);
+  res.success(simplifiedReview, 'تم إضافة تقييم الفنان بنجاح', 201);
 
   // إرسال إشعار للفنان في الخلفية
   try {
