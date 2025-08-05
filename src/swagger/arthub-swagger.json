@@ -221,35 +221,298 @@
           }
         }
       },
-      "PaginationMeta": {
-        "type": "object",
-        "properties": {
-          "currentPage": {
-            "type": "integer",
-            "example": 1
-          },
-          "totalPages": {
-            "type": "integer",
-            "example": 10
-          },
-          "totalItems": {
-            "type": "integer",
-            "example": 100
-          },
-          "itemsPerPage": {
-            "type": "integer",
-            "example": 10
-          },
-          "hasNextPage": {
-            "type": "boolean",
-            "example": true
-          },
-          "hasPrevPage": {
-            "type": "boolean",
-            "example": false
-          }
-        }
-      }
+             "PaginationMeta": {
+         "type": "object",
+         "properties": {
+           "currentPage": {
+             "type": "integer",
+             "example": 1
+           },
+           "totalPages": {
+             "type": "integer",
+             "example": 10
+           },
+           "totalItems": {
+             "type": "integer",
+             "example": 100
+           },
+           "itemsPerPage": {
+             "type": "integer",
+             "example": 10
+           },
+           "hasNextPage": {
+             "type": "boolean",
+             "example": true
+           },
+           "hasPrevPage": {
+             "type": "boolean",
+             "example": false
+           }
+         }
+       },
+       "Review": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cd"
+           },
+           "user": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "artwork": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cb"
+           },
+           "rating": {
+             "type": "number",
+             "minimum": 1,
+             "maximum": 5,
+             "example": 4
+           },
+           "comment": {
+             "type": "string",
+             "example": "عمل فني رائع!"
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "Follow": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ce"
+           },
+           "follower": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "following": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cb"
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "Notification": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cf"
+           },
+           "user": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "title": {
+             "type": "string",
+             "example": "إشعار جديد"
+           },
+           "message": {
+             "type": "string",
+             "example": "تم إضافة عمل فني جديد"
+           },
+           "type": {
+             "type": "string",
+             "enum": ["artwork", "follow", "review", "transaction"],
+             "example": "artwork"
+           },
+           "isRead": {
+             "type": "boolean",
+             "example": false
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "Transaction": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109d0"
+           },
+           "buyer": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "seller": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cb"
+           },
+           "artwork": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cc"
+           },
+           "amount": {
+             "type": "number",
+             "example": 1500
+           },
+           "status": {
+             "type": "string",
+             "enum": ["pending", "completed", "cancelled"],
+             "example": "pending"
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "Report": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109d1"
+           },
+           "reporter": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "reportedUser": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cb"
+           },
+           "reason": {
+             "type": "string",
+             "example": "محتوى غير مناسب"
+           },
+           "description": {
+             "type": "string",
+             "example": "تفاصيل التقرير"
+           },
+           "status": {
+             "type": "string",
+             "enum": ["pending", "resolved", "dismissed"],
+             "example": "pending"
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "SpecialRequest": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109d2"
+           },
+           "client": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "artist": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109cb"
+           },
+           "title": {
+             "type": "string",
+             "example": "طلب عمل فني مخصص"
+           },
+           "description": {
+             "type": "string",
+             "example": "أريد لوحة فنية مخصصة"
+           },
+           "budget": {
+             "type": "number",
+             "example": 2000
+           },
+           "status": {
+             "type": "string",
+             "enum": ["pending", "accepted", "rejected", "completed"],
+             "example": "pending"
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "Chat": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109d3"
+           },
+           "participants": {
+             "type": "array",
+             "items": {
+               "type": "string"
+             },
+             "example": ["60d0fe4f5311236168a109ca", "60d0fe4f5311236168a109cb"]
+           },
+           "lastMessage": {
+             "type": "string",
+             "example": "مرحباً، كيف حالك؟"
+           },
+           "lastMessageTime": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       },
+       "Message": {
+         "type": "object",
+         "properties": {
+           "_id": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109d4"
+           },
+           "chat": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109d3"
+           },
+           "sender": {
+             "type": "string",
+             "example": "60d0fe4f5311236168a109ca"
+           },
+           "content": {
+             "type": "string",
+             "example": "مرحباً، كيف حالك؟"
+           },
+           "messageType": {
+             "type": "string",
+             "enum": ["text", "image", "file"],
+             "example": "text"
+           },
+           "isRead": {
+             "type": "boolean",
+             "example": false
+           },
+           "createdAt": {
+             "type": "string",
+             "format": "date-time",
+             "example": "2023-06-15T10:30:45.123Z"
+           }
+         }
+       }
     },
     "securitySchemes": {
       "BearerAuth": {
@@ -965,6 +1228,883 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews": {
+      "get": {
+        "tags": ["Review"],
+        "summary": "الحصول على جميع التقييمات",
+        "description": "الحصول على قائمة التقييمات مع إمكانية التصفية",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "artwork",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "تصفية حسب العمل الفني"
+          },
+          {
+            "in": "query",
+            "name": "user",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "تصفية حسب المستخدم"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على التقييمات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Review"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Review"],
+        "summary": "إضافة تقييم جديد",
+        "description": "إضافة تقييم لعمل فني",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artwork", "rating", "comment"],
+                "properties": {
+                  "artwork": {
+                    "type": "string",
+                    "example": "60d0fe4f5311236168a109cb"
+                  },
+                  "rating": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "example": 4
+                  },
+                  "comment": {
+                    "type": "string",
+                    "example": "عمل فني رائع!"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إضافة التقييم بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إضافة التقييم بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Review"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follow": {
+      "post": {
+        "tags": ["Follow"],
+        "summary": "متابعة مستخدم",
+        "description": "متابعة مستخدم آخر",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["following"],
+                "properties": {
+                  "following": {
+                    "type": "string",
+                    "example": "60d0fe4f5311236168a109cb"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تمت المتابعة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تمت المتابعة بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Follow"],
+        "summary": "إلغاء متابعة مستخدم",
+        "description": "إلغاء متابعة مستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف المستخدم"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم إلغاء المتابعة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إلغاء المتابعة بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "tags": ["Notification"],
+        "summary": "الحصول على الإشعارات",
+        "description": "الحصول على إشعارات المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على الإشعارات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Notification"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Notification"],
+        "summary": "تحديث حالة الإشعار",
+        "description": "تحديث حالة الإشعار كمقروء",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الإشعار"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم تحديث الإشعار بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تحديث الإشعار بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/transactions": {
+      "get": {
+        "tags": ["Transaction"],
+        "summary": "الحصول على المعاملات",
+        "description": "الحصول على معاملات المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على المعاملات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Transaction"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Transaction"],
+        "summary": "إنشاء معاملة جديدة",
+        "description": "إنشاء معاملة لشراء عمل فني",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artwork", "amount"],
+                "properties": {
+                  "artwork": {
+                    "type": "string",
+                    "example": "60d0fe4f5311236168a109cb"
+                  },
+                  "amount": {
+                    "type": "number",
+                    "example": 1500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء المعاملة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إنشاء المعاملة بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Transaction"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "post": {
+        "tags": ["Report"],
+        "summary": "إرسال تقرير",
+        "description": "إرسال تقرير عن مستخدم أو محتوى",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reportedUser", "reason"],
+                "properties": {
+                  "reportedUser": {
+                    "type": "string",
+                    "example": "60d0fe4f5311236168a109cb"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "example": "محتوى غير مناسب"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "تفاصيل التقرير"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال التقرير بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إرسال التقرير بنجاح"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/special-requests": {
+      "get": {
+        "tags": ["SpecialRequest"],
+        "summary": "الحصول على الطلبات الخاصة",
+        "description": "الحصول على الطلبات الخاصة للمستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على الطلبات الخاصة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SpecialRequest"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["SpecialRequest"],
+        "summary": "إنشاء طلب خاص",
+        "description": "إنشاء طلب عمل فني مخصص",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["artist", "title", "description", "budget"],
+                "properties": {
+                  "artist": {
+                    "type": "string",
+                    "example": "60d0fe4f5311236168a109cb"
+                  },
+                  "title": {
+                    "type": "string",
+                    "example": "طلب عمل فني مخصص"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "أريد لوحة فنية مخصصة"
+                  },
+                  "budget": {
+                    "type": "number",
+                    "example": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء الطلب الخاص بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إنشاء الطلب الخاص بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SpecialRequest"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "الحصول على المحادثات",
+        "description": "الحصول على محادثات المستخدم",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على المحادثات بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Chat"],
+        "summary": "إنشاء محادثة جديدة",
+        "description": "إنشاء محادثة مع مستخدم آخر",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["participant"],
+                "properties": {
+                  "participant": {
+                    "type": "string",
+                    "example": "60d0fe4f5311236168a109cb"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إنشاء المحادثة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إنشاء المحادثة بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Chat"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/{chatId}/messages": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "الحصول على رسائل المحادثة",
+        "description": "الحصول على رسائل محادثة محددة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم الحصول على الرسائل بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Chat"],
+        "summary": "إرسال رسالة",
+        "description": "إرسال رسالة في محادثة",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chatId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف المحادثة"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["content"],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "example": "مرحباً، كيف حالك؟"
+                  },
+                  "messageType": {
+                    "type": "string",
+                    "enum": ["text", "image", "file"],
+                    "example": "text"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "تم إرسال الرسالة بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم إرسال الرسالة بنجاح"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Message"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/home": {
+      "get": {
+        "tags": ["Home"],
+        "summary": "الصفحة الرئيسية",
+        "description": "الحصول على بيانات الصفحة الرئيسية",
+        "responses": {
+          "200": {
+            "description": "تم الحصول على بيانات الصفحة الرئيسية بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "featuredArtworks": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Artwork"
+                          }
+                        },
+                        "categories": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Category"
+                          }
+                        },
+                        "topArtists": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/terms": {
+      "get": {
+        "tags": ["Terms"],
+        "summary": "الشروط والأحكام",
+        "description": "الحصول على الشروط والأحكام",
+        "responses": {
+          "200": {
+            "description": "تم الحصول على الشروط والأحكام بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "terms": {
+                          "type": "string",
+                          "example": "الشروط والأحكام..."
+                        },
+                        "privacy": {
+                          "type": "string",
+                          "example": "سياسة الخصوصية..."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "فحص صحة الخادم",
+        "description": "فحص حالة الخادم وقاعدة البيانات",
+        "responses": {
+          "200": {
+            "description": "الخادم يعمل بشكل طبيعي",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "example": "UP"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2023-06-15T10:30:45.123Z"
+                        },
+                        "version": {
+                          "type": "string",
+                          "example": "1.0.0"
+                        },
+                        "environment": {
+                          "type": "string",
+                          "example": "development"
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
