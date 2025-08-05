@@ -551,29 +551,6 @@
                     "description": "يمكنك إضافة حتى 5 صور (jpg, png, webp, ...الخ)",
                     "minItems": 1,
                     "maxItems": 5
-                  },
-                  "description": {
-                    "type": "string",
-                    "description": "وصف العمل الفني",
-                    "example": "لوحة فنية جميلة مرسومة يدويًا بألوان زاهية"
-                  },
-                  "dimensions": {
-                    "type": "string",
-                    "description": "أبعاد العمل الفني",
-                    "example": "50x70 سم"
-                  },
-                  "materials": {
-                    "type": "string",
-                    "description": "المواد المستخدمة",
-                    "example": "زيت على قماش"
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "العلامات",
-                    "example": ["رسم", "زيت", "طبيعة"]
                   }
                 }
               }
