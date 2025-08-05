@@ -4540,83 +4540,6 @@
               "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف العمل الفني"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            },
-            "description": "رقم الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 10
-            },
-            "description": "عدد العناصر في الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "rating",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 5
-            },
-            "description": "تصفية حسب التقييم"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["createdAt", "rating", "helpfulVotes"],
-              "default": "createdAt"
-            },
-            "description": "ترتيب النتائج"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "desc"
-            },
-            "description": "ترتيب النتائج"
-          },
-          {
-            "in": "query",
-            "name": "verified",
-            "schema": {
-              "type": "string",
-              "enum": ["true", "false"]
-            },
-            "description": "تصفية حسب المشتريات المعتمدة"
-          },
-          {
-            "in": "query",
-            "name": "recommended",
-            "schema": {
-              "type": "string",
-              "enum": ["true", "false"]
-            },
-            "description": "تصفية حسب التوصيات"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "البحث في التقييمات"
           }
         ],
         "responses": {
@@ -4742,83 +4665,6 @@
               "pattern": "^[0-9a-fA-F]{24}$"
             },
             "description": "معرف الفنان"
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "default": 1
-            },
-            "description": "رقم الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50,
-              "default": 10
-            },
-            "description": "عدد العناصر في الصفحة"
-          },
-          {
-            "in": "query",
-            "name": "rating",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 5
-            },
-            "description": "تصفية حسب التقييم"
-          },
-          {
-            "in": "query",
-            "name": "sortBy",
-            "schema": {
-              "type": "string",
-              "enum": ["createdAt", "rating", "helpfulVotes"],
-              "default": "createdAt"
-            },
-            "description": "ترتيب النتائج"
-          },
-          {
-            "in": "query",
-            "name": "sortOrder",
-            "schema": {
-              "type": "string",
-              "enum": ["asc", "desc"],
-              "default": "desc"
-            },
-            "description": "ترتيب النتائج"
-          },
-          {
-            "in": "query",
-            "name": "verified",
-            "schema": {
-              "type": "string",
-              "enum": ["true", "false"]
-            },
-            "description": "تصفية حسب المشتريات المعتمدة"
-          },
-          {
-            "in": "query",
-            "name": "recommended",
-            "schema": {
-              "type": "string",
-              "enum": ["true", "false"]
-            },
-            "description": "تصفية حسب التوصيات"
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "schema": {
-              "type": "string"
-            },
-            "description": "البحث في التقييمات"
           }
         ],
         "responses": {
@@ -4918,6 +4764,226 @@
           },
           "404": {
             "description": "الفنان غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/artist/{artistId}/simple": {
+      "get": {
+        "tags": ["Review"],
+        "summary": "جلب تقييمات الفنان (بسيط)",
+        "description": "جلب تقييمات الفنان بدون فلترة أو باجينيشن",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artistId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الفنان"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب تقييمات الفنان بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب تقييمات الفنان بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reviews": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Review"
+                          }
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "avgRating": {
+                              "type": "number",
+                              "example": 5.0
+                            },
+                            "totalReviews": {
+                              "type": "number",
+                              "example": 89
+                            },
+                            "distribution": {
+                              "type": "object",
+                              "properties": {
+                                "5": {
+                                  "type": "number",
+                                  "example": 45
+                                },
+                                "4": {
+                                  "type": "number",
+                                  "example": 25
+                                },
+                                "3": {
+                                  "type": "number",
+                                  "example": 12
+                                },
+                                "2": {
+                                  "type": "number",
+                                  "example": 5
+                                },
+                                "1": {
+                                  "type": "number",
+                                  "example": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الفنان غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/artwork/{artworkId}/simple": {
+      "get": {
+        "tags": ["Review"],
+        "summary": "جلب تقييمات العمل الفني (بسيط)",
+        "description": "جلب تقييمات العمل الفني بدون فلترة أو باجينيشن",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artworkId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف العمل الفني"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "تم جلب تقييمات العمل الفني بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم جلب تقييمات العمل الفني بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reviews": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Review"
+                          }
+                        },
+                        "stats": {
+                          "type": "object",
+                          "properties": {
+                            "avgRating": {
+                              "type": "number",
+                              "example": 5.0
+                            },
+                            "totalReviews": {
+                              "type": "number",
+                              "example": 89
+                            },
+                            "distribution": {
+                              "type": "object",
+                              "properties": {
+                                "5": {
+                                  "type": "number",
+                                  "example": 45
+                                },
+                                "4": {
+                                  "type": "number",
+                                  "example": 25
+                                },
+                                "3": {
+                                  "type": "number",
+                                  "example": 12
+                                },
+                                "2": {
+                                  "type": "number",
+                                  "example": 5
+                                },
+                                "1": {
+                                  "type": "number",
+                                  "example": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "العمل الفني غير موجود",
             "content": {
               "application/json": {
                 "schema": {
