@@ -1924,7 +1924,7 @@
       },
       "post": {
         "summary": "إنشاء عمل فني جديد",
-        "description": "إنشاء عمل فني جديد مع رفع الصور (للفنانين فقط). يدعم حتى 5 صور مع رفع متوازي إلى Cloudinary. يتم تحسين الصور تلقائياً وتنظيمها في مجلدات.",
+        "description": "إنشاء عمل فني جديد مع رفع الصور (فقط الحقول الأساسية من واجهة المستخدم)",
         "tags": [
           "Artworks"
         ],
@@ -1942,31 +1942,27 @@
                 "required": [
                   "title",
                   "price",
-                  "category"
+                  "category",
+                  "images"
                 ],
                 "properties": {
                   "title": {
                     "type": "string",
                     "description": "عنوان العمل الفني",
-                    "example": "لوحة فنية زهرية زرقاء مرسومة يدويا",
+                    "example": "لوحة فنية زهرية زرقاء مرسومة يدويًا",
                     "minLength": 3,
                     "maxLength": 100
                   },
-                  "description": {
-                    "type": "string",
-                    "description": "وصف العمل الفني",
-                    "maxLength": 1000
-                  },
                   "price": {
                     "type": "number",
-                    "description": "سعر العمل الفني",
-                    "example": 100.00,
+                    "description": "السعر",
+                    "example": 100,
                     "minimum": 1,
                     "maximum": 1000000
                   },
                   "category": {
                     "type": "string",
-                    "description": "معرف الفئة",
+                    "description": "معرف التصنيف",
                     "example": "60d0fe4f5311236168a109ca",
                     "pattern": "^[0-9a-fA-F]{24}$"
                   },
@@ -1976,44 +1972,9 @@
                       "type": "string",
                       "format": "binary"
                     },
-                    "description": "صور العمل الفني (1-5 صور). الصيغ المدعومة: jpg, jpeg, png, gif, webp, svg, bmp, tiff. سيتم تحسين الصور تلقائياً إلى 1920x1080.",
-                    "maxItems": 5,
-                    "minItems": 1
-                  },
-                  "tags": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "وسوم العمل الفني"
-                  },
-                  "isFramed": {
-                    "type": "boolean",
-                    "description": "هل العمل مؤطر"
-                  },
-                  "dimensions": {
-                    "type": "object",
-                    "properties": {
-                      "width": {
-                        "type": "number",
-                        "description": "العرض بالسنتيمتر"
-                      },
-                      "height": {
-                        "type": "number",
-                        "description": "الارتفاع بالسنتيمتر"
-                      },
-                      "depth": {
-                        "type": "number",
-                        "description": "العمق بالسنتيمتر"
-                      }
-                    }
-                  },
-                  "materials": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "المواد المستخدمة"
+                    "description": "يمكنك إضافة حتى 5 صور (jpg, png, webp, ...الخ)",
+                    "minItems": 1,
+                    "maxItems": 5
                   }
                 }
               }
@@ -2044,94 +2005,27 @@
                           "description": "معرف العمل الفني"
                         },
                         "title": {
-                          "type": "string",
-                          "description": "عنوان العمل الفني"
+                          "type": "string"
                         },
                         "price": {
-                          "type": "number",
-                          "description": "سعر العمل الفني"
+                          "type": "number"
                         },
                         "images": {
                           "type": "array",
-                          "description": "صور العمل الفني",
                           "items": {
                             "type": "object",
                             "properties": {
-                              "originalName": {
-                                "type": "string",
-                                "description": "اسم الملف الأصلي"
-                              },
-                              "url": {
-                                "type": "string",
-                                "description": "رابط الصورة في Cloudinary"
-                              },
-                              "id": {
-                                "type": "string",
-                                "description": "معرف الصورة في Cloudinary"
-                              },
-                              "format": {
-                                "type": "string",
-                                "description": "صيغة الملف"
-                              },
-                              "size": {
-                                "type": "number",
-                                "description": "حجم الملف بالبايت"
-                              },
-                              "type": {
-                                "type": "string",
-                                "description": "نوع MIME"
-                              },
-                              "uploadedAt": {
-                                "type": "string",
-                                "format": "date-time",
-                                "description": "تاريخ رفع الصورة"
-                              }
+                              "url": { "type": "string" },
+                              "originalName": { "type": "string" }
                             }
                           }
                         },
                         "category": {
                           "type": "object",
                           "properties": {
-                            "_id": {
-                              "type": "string",
-                              "description": "معرف الفئة"
-                            },
-                            "name": {
-                              "type": "string",
-                              "description": "اسم الفئة"
-                            }
+                            "_id": { "type": "string" },
+                            "name": { "type": "string" }
                           }
-                        },
-                        "artist": {
-                          "type": "object",
-                          "properties": {
-                            "_id": {
-                              "type": "string",
-                              "description": "معرف الفنان"
-                            },
-                            "displayName": {
-                              "type": "string",
-                              "description": "اسم الفنان"
-                            },
-                            "profileImage": {
-                              "type": "string",
-                              "description": "صورة البروفايل"
-                            }
-                          }
-                        },
-                        "status": {
-                          "type": "string",
-                          "description": "حالة العمل الفني",
-                          "enum": ["available", "sold", "reserved"]
-                        },
-                        "viewCount": {
-                          "type": "number",
-                          "description": "عدد المشاهدات"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time",
-                          "description": "تاريخ الإنشاء"
                         }
                       }
                     }
@@ -2140,41 +2034,9 @@
               }
             }
           },
-          "400": {
-            "description": "بيانات غير صالحة",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": {
-                      "type": "boolean",
-                      "example": false
-                    },
-                    "message": {
-                      "type": "string",
-                      "example": "يمكن إضافة 5 صور على الأكثر"
-                    },
-                    "data": {
-                      "type": "null"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "غير مصرح"
-          },
-          "403": {
-            "description": "فقط الفنانين يمكنهم إنشاء أعمال فنية"
-          },
-          "413": {
-            "description": "حجم الملف كبير جداً"
-          },
-          "500": {
-            "description": "خطأ في الخادم"
-          }
+          "400": { "description": "خطأ في البيانات" },
+          "401": { "description": "غير مصرح" },
+          "500": { "description": "خطأ في الخادم" }
         }
       }
     },
