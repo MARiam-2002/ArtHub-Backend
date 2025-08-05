@@ -20174,8 +20174,7 @@
           }
         }
       }
-    }
-  },
+    },
   "/api/admin/overview": {
     "get": {
       "tags": ["Admin Dashboard"],
@@ -20330,5 +20329,4 @@
       }
     }
   }
-}
-}
+}}}
