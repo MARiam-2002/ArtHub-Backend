@@ -153,7 +153,7 @@ export const resetPassword = (userName, code) => `<!DOCTYPE html>
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png" alt="ArtHub Logo">
+            <img src="https://res.cloudinary.com/dgzucjqgi/image/upload/v1746479874/ArtHub-06_2_kjeduf.png" alt="ArtHub Logo">
         </div>
         <div class="content">
             <h1>مرحباً ${userName}</h1>
@@ -286,7 +286,7 @@ export const adminMessageEmail = (subject, message, attachments = []) => `<!DOCT
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://res.cloudinary.com/dz5dpvxg7/image/upload/v1691521498/arthub/logo/art-hub-logo.png" alt="ArtHub Logo">
+            <img src="https://res.cloudinary.com/dgzucjqgi/image/upload/v1746479874/ArtHub-06_2_kjeduf.png" alt="ArtHub Logo">
         </div>
         <div class="content">
             <h1>${subject || 'رسالة من إدارة المنصة'}</h1>
