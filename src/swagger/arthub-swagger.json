@@ -1208,7 +1208,6 @@
             "description": "المواد المستخدمة"
           }
         }
-        }
       },
       "ChatResponse": {
         "type": "object",
@@ -4043,7 +4042,45 @@
           "content": {
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/CreateArtworkRequest"
+                "type": "object",
+                "required": [
+                  "title",
+                  "price",
+                  "category",
+                  "images"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "عنوان العمل الفني",
+                    "example": "لوحة فنية زهرية زرقاء مرسومة يدويًا",
+                    "minLength": 3,
+                    "maxLength": 100
+                  },
+                  "price": {
+                    "type": "number",
+                    "description": "السعر",
+                    "example": 100,
+                    "minimum": 1,
+                    "maximum": 1000000
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "معرف التصنيف",
+                    "example": "60d0fe4f5311236168a109ca",
+                    "pattern": "^[0-9a-fA-F]{24}$"
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "يمكنك إضافة حتى 5 صور (jpg, png, webp, ...الخ)",
+                    "minItems": 1,
+                    "maxItems": 5
+                  }
+                }
               }
             }
           }

@@ -1,10 +1,9 @@
-const fs = require('fs');
+import fs from 'fs';
 
 try {
-  const content = fs.readFileSync('swagger.json', 'utf8');
+  const content = fs.readFileSync('src/swagger/arthub-swagger.json', 'utf8');
   JSON.parse(content);
-  console.log('✅ swagger.json is valid JSON');
+  console.log('✅ JSON is valid');
 } catch (error) {
   console.error('❌ JSON error:', error.message);
-  console.error('Position:', error.message.match(/position (\d+)/)?.[1] || 'unknown');
 } 

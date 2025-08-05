@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // قراءة ملف swagger.json بدلاً من استخدام assert
-const swaggerJsonPath = path.join(__dirname, 'arthub-swagger.json');
+const swaggerJsonPath = path.join(__dirname, '..', '..', 'swagger.json');
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerJsonPath, 'utf8'));
 
 // المسارات موجودة بالفعل في arthub-swagger.json، لا حاجة لإضافتها مرة أخرى
