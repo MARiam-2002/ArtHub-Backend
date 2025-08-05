@@ -617,6 +617,11 @@ reviewSchema.methods.calculateQualityScore = function() {
 reviewSchema.statics.getAverageRating = async function(targetId, targetType = 'artwork') {
   const matchCondition = targetType === 'artwork' ? { artwork: targetId } : { artist: targetId };
   
+  // إضافة شرط إضافي لتقييمات الفنان
+  if (targetType === 'artist') {
+    matchCondition.artwork = { $exists: false };
+  }
+  
   const result = await this.aggregate([
     { $match: { ...matchCondition, status: 'active' } },
     {
@@ -644,6 +649,11 @@ reviewSchema.statics.getAverageRating = async function(targetId, targetType = 'a
 
 reviewSchema.statics.getRatingDistribution = async function(targetId, targetType = 'artwork') {
   const matchCondition = targetType === 'artwork' ? { artwork: targetId } : { artist: targetId };
+  
+  // إضافة شرط إضافي لتقييمات الفنان
+  if (targetType === 'artist') {
+    matchCondition.artwork = { $exists: false };
+  }
   
   const result = await this.aggregate([
     { $match: { ...matchCondition, status: 'active' } },

@@ -434,9 +434,10 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
     return res.fail(null, 'الفنان غير موجود', 404);
   }
 
-  // بناء فلتر البحث
+  // بناء فلتر البحث - تقييمات الفنان فقط (بدون artwork)
   const filter = {
     artist: artistId,
+    artwork: { $exists: false }, // تقييمات الفنان فقط بدون لوحة
     status: 'active'
   };
 
@@ -471,15 +472,17 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
     reviewModel.getRatingDistribution(artistId, 'artist')
   ]);
 
-  // حساب إحصائيات إضافية
+  // حساب إحصائيات إضافية - تقييمات الفنان فقط
   const verifiedCount = await reviewModel.countDocuments({
     artist: artistId,
+    artwork: { $exists: false }, // تقييمات الفنان فقط
     status: 'active',
     isVerifiedPurchase: true
   });
 
   const recommendedCount = await reviewModel.countDocuments({
     artist: artistId,
+    artwork: { $exists: false }, // تقييمات الفنان فقط
     status: 'active',
     isRecommended: true
   });
