@@ -940,4 +940,92 @@ export const exportReviewsSchema = {
         })
     })
   })
+};
+
+/**
+ * Schema for validating target ID (artwork or artist)
+ */
+export const targetIdSchema = {
+  params: Joi.object({
+    artworkId: Joi.string()
+      .pattern(MONGODB_OBJECTID_REGEX)
+      .messages({
+        'string.pattern.base': 'معرف العمل الفني غير صالح',
+        'any.required': 'معرف العمل الفني مطلوب'
+      }),
+    artistId: Joi.string()
+      .pattern(MONGODB_OBJECTID_REGEX)
+      .messages({
+        'string.pattern.base': 'معرف الفنان غير صالح',
+        'any.required': 'معرف الفنان مطلوب'
+      }),
+    reviewId: Joi.string()
+      .pattern(MONGODB_OBJECTID_REGEX)
+      .messages({
+        'string.pattern.base': 'معرف التقييم غير صالح',
+        'any.required': 'معرف التقييم مطلوب'
+      })
+  })
+};
+
+/**
+ * Schema for review query parameters
+ */
+export const reviewQuerySchema = {
+  query: Joi.object({
+    page: Joi.number()
+      .integer()
+      .min(1)
+      .default(1)
+      .messages({
+        'number.base': 'رقم الصفحة يجب أن يكون رقم صحيح',
+        'number.min': 'رقم الصفحة يجب أن يكون 1 على الأقل'
+      }),
+    limit: Joi.number()
+      .integer()
+      .min(1)
+      .max(50)
+      .default(10)
+      .messages({
+        'number.base': 'عدد العناصر يجب أن يكون رقم صحيح',
+        'number.min': 'عدد العناصر يجب أن يكون 1 على الأقل',
+        'number.max': 'عدد العناصر يجب أن يكون 50 على الأكثر'
+      }),
+    rating: Joi.number()
+      .integer()
+      .min(1)
+      .max(5)
+      .messages({
+        'number.base': 'التقييم يجب أن يكون رقم صحيح',
+        'number.min': 'التقييم يجب أن يكون 1 على الأقل',
+        'number.max': 'التقييم يجب أن يكون 5 على الأكثر'
+      }),
+    sortBy: Joi.string()
+      .valid('createdAt', 'rating', 'helpfulVotes', 'updatedAt')
+      .default('createdAt')
+      .messages({
+        'any.only': 'معيار الترتيب غير صالح'
+      }),
+    sortOrder: Joi.string()
+      .valid('asc', 'desc')
+      .default('desc')
+      .messages({
+        'any.only': 'ترتيب النتائج غير صالح'
+      }),
+    verified: Joi.string()
+      .valid('true', 'false')
+      .messages({
+        'any.only': 'قيمة التحقق غير صالحة'
+      }),
+    recommended: Joi.string()
+      .valid('true', 'false')
+      .messages({
+        'any.only': 'قيمة التوصية غير صالحة'
+      }),
+    search: Joi.string()
+      .max(100)
+      .messages({
+        'string.max': 'نص البحث يجب أن يكون أقل من 100 حرف'
+      })
+  })
 }; 
