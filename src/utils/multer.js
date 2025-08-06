@@ -74,14 +74,45 @@ export const filterObject = {
 
 export const fileUpload = filterArray => {
   const fileFilter = (req, file, cb) => {
-    if (!filterArray.includes(file.mimetype)) {
-      return cb(new Error('invalid file formate'), false);
+    console.log('🔍 File filter checking:', {
+      filename: file.originalname,
+      mimetype: file.mimetype,
+      fieldname: file.fieldname
+    });
+    
+    // التحقق من امتداد الملف أيضاً
+    const fileExtension = file.originalname.toLowerCase().split('.').pop();
+    const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'];
+    
+    // التحقق من الـ mimetype
+    const isValidMimeType = filterArray.includes(file.mimetype);
+    
+    // التحقق من امتداد الملف
+    const isValidExtension = validExtensions.includes(fileExtension);
+    
+    console.log('📊 Validation results:', {
+      isValidMimeType,
+      isValidExtension,
+      fileExtension,
+      mimetype: file.mimetype
+    });
+    
+    // قبول الملف إذا كان الـ mimetype صحيح أو امتداد الملف صحيح
+    if (isValidMimeType || isValidExtension) {
+      console.log('✅ File accepted:', file.originalname);
+      return cb(null, true);
+    } else {
+      console.log('❌ File rejected:', file.originalname);
+      return cb(new Error(`نوع الملف غير مدعوم: ${file.originalname}`), false);
     }
-    return cb(null, true);
   };
 
   return multer({ 
     storage: diskStorage({}), 
-    fileFilter 
+    fileFilter,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+      files: 5 // 5 files max
+    }
   });
 };
