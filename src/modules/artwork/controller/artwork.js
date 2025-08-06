@@ -244,10 +244,17 @@ export const createArtwork = asyncHandler(async (req, res) => {
   const { title, price, category, description } = req.body;
   const artist = req.user._id;
 
-  // التحقق من وجود الفئة
-  const categoryExists = await categoryModel.findById(category);
-  if (!categoryExists) {
-    return res.fail(null, 'الفئة المحددة غير موجودة', 400);
+  // البحث عن الفئة بالاسم بدلاً من المعرف
+  let categoryDoc = null;
+  if (category) {
+    // البحث بالاسم (case-insensitive)
+    categoryDoc = await categoryModel.findOne({
+      name: { $regex: new RegExp(`^${category}$`, 'i') }
+    });
+    
+    if (!categoryDoc) {
+      return res.fail(null, 'الفئة المحددة غير موجودة', 400);
+    }
   }
 
   // التحقق من عدم وجود عمل بنفس العنوان للفنان
@@ -332,7 +339,7 @@ export const createArtwork = asyncHandler(async (req, res) => {
     title: title.trim(),
     description: description || title.trim(), // استخدام العنوان كوصف إذا لم يتم توفير وصف
     price,
-    category,
+    category: categoryDoc._id, // استخدام معرف الفئة الذي تم العثور عليه
     artist,
     image: mainImage, // الصورة الرئيسية
     images: imagesArr, // جميع الصور كقائمة

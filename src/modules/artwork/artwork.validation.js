@@ -34,9 +34,10 @@ const objectIdPattern = /^[0-9a-fA-F]{24}$/;
  *           example: 500
  *         category:
  *           type: string
- *           pattern: "^[0-9a-fA-F]{24}$"
- *           description: معرف الفئة
- *           example: "507f1f77bcf86cd799439011"
+ *           minLength: 2
+ *           maxLength: 50
+ *           description: اسم الفئة
+ *           example: "الرسم الزيتي"
  *         images:
  *           type: array
  *           minItems: 1
@@ -83,10 +84,15 @@ const priceSchema = Joi.number()
     'number.max': 'السعر يجب أن يكون مليون ريال على الأكثر'
   });
 
+// تحديث schema الفئة لتقبل الاسم بدلاً من المعرف
 const categorySchema = Joi.string()
-  .pattern(objectIdPattern)
+  .trim()
+  .min(2)
+  .max(50)
   .messages({
-    'string.pattern.base': 'معرف الفئة غير صحيح'
+    'string.empty': 'اسم الفئة مطلوب',
+    'string.min': 'اسم الفئة يجب أن يكون حرفين على الأقل',
+    'string.max': 'اسم الفئة يجب أن يكون 50 حرف على الأكثر'
   });
 
 const imagesSchema = Joi.array()
@@ -141,7 +147,7 @@ export const createArtworkSchema = {
       'any.required': 'سعر العمل الفني مطلوب'
     }),
     category: categorySchema.required().messages({
-      'any.required': 'فئة العمل الفني مطلوبة'
+      'any.required': 'اسم فئة العمل الفني مطلوب'
     })
   })
 };
@@ -198,7 +204,7 @@ export const searchArtworksQuerySchema = {
         'string.max': 'نص البحث يجب أن يكون 100 حرف على الأكثر',
         'any.required': 'نص البحث مطلوب'
       }),
-    category: Joi.string().pattern(objectIdPattern).optional(),
+    category: Joi.string().trim().min(2).max(50).optional(),
     minPrice: Joi.number().min(0).optional(),
     maxPrice: Joi.number().min(0).optional(),
     page: Joi.number().integer().min(1).default(1),

@@ -157,8 +157,26 @@
             "example": 1500
           },
           "category": {
-            "type": "string",
-            "example": "60d0fe4f5311236168a109cc"
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "60d0fe4f5311236168a109cc"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "_id": {
+                    "type": "string",
+                    "example": "60d0fe4f5311236168a109cc"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "الرسم الزيتي"
+                  }
+                }
+              }
+            ],
+            "description": "معرف التصنيف أو كائن التصنيف الكامل"
           },
           "artist": {
             "type": "string",
@@ -1716,9 +1734,10 @@
             "name": "category",
             "schema": {
               "type": "string",
-              "pattern": "^[0-9a-fA-F]{24}$"
+              "minLength": 2,
+              "maxLength": 50
             },
-            "description": "تصفية حسب التصنيف"
+            "description": "تصفية حسب اسم التصنيف"
           },
           {
             "in": "query",
@@ -1824,9 +1843,10 @@
                   },
                   "category": {
                     "type": "string",
-                    "description": "معرف التصنيف",
-                    "example": "60d0fe4f5311236168a109ca",
-                    "pattern": "^[0-9a-fA-F]{24}$"
+                    "description": "اسم التصنيف",
+                    "example": "الرسم الزيتي",
+                    "minLength": 2,
+                    "maxLength": 50
                   },
                   "images": {
                     "type": "array",
