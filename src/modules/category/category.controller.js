@@ -114,8 +114,8 @@ export const deleteCategory = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get all categories with pagination and search
- * @desc Get paginated list of categories with optional search
+ * Get all categories
+ * @desc Get all categories with optional pagination and search
  * @route GET /api/categories
  * @access Public
  */
@@ -128,6 +128,8 @@ export const getCategories = asyncHandler(async (req, res) => {
   } = req.query;
 
   try {
+    console.log('🔍 Fetching categories with params:', { page, limit, search, includeStats });
+
     // Build search query
     let query = {};
     if (search) {
@@ -139,48 +141,72 @@ export const getCategories = asyncHandler(async (req, res) => {
       };
     }
 
-    // Get paginated results
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { createdAt: -1 },
-      lean: true
-    };
+    console.log('📝 Query:', JSON.stringify(query));
 
-    const result = await categoryModel.paginate(query, options);
+    // Calculate skip value for pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Get total count
+    const totalItems = await categoryModel.countDocuments(query);
+    console.log('📊 Total items:', totalItems);
+
+    // Get paginated results
+    const categories = await categoryModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    console.log('✅ Found categories:', categories.length);
 
     // Add artwork count for each category if requested
-    let categories = result.docs;
+    let categoriesWithStats = categories;
     if (includeStats === 'true') {
-      categories = await Promise.all(
-        result.docs.map(async (category) => {
-          const artworkCount = await artworkModel.countDocuments({ 
-            category: category._id 
-          });
-          return {
-            ...category,
-            artworkCount
-          };
+      console.log('📈 Adding stats for categories...');
+      categoriesWithStats = await Promise.all(
+        categories.map(async (category) => {
+          try {
+            const artworkCount = await artworkModel.countDocuments({ 
+              category: category._id 
+            });
+            return {
+              ...category,
+              artworkCount
+            };
+          } catch (error) {
+            console.error('❌ Error getting artwork count for category:', category._id, error);
+            return {
+              ...category,
+              artworkCount: 0
+            };
+          }
         })
       );
     }
 
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalItems / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
+
     // Format response for Flutter
     const response = {
-      categories,
+      categories: categoriesWithStats,
       pagination: {
-        page: result.page,
-        limit: result.limit,
-        totalPages: result.totalPages,
-        totalItems: result.totalDocs,
-        hasNextPage: result.hasNextPage,
-        hasPrevPage: result.hasPrevPage
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
+        totalItems,
+        hasNextPage,
+        hasPrevPage
       }
     };
 
+    console.log('✅ Sending response with', categoriesWithStats.length, 'categories');
     res.success(response, 'تم جلب التصنيفات بنجاح');
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error('❌ Error fetching categories:', error);
     res.fail(null, 'حدث خطأ أثناء جلب التصنيفات', 500);
   }
 });
