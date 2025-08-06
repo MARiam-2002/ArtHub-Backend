@@ -143,6 +143,11 @@ const artworkSchema = new Schema(
     viewCount: {
       type: Number,
       default: 0
+    },
+    status: {
+      type: String,
+      enum: ['available', 'sold', 'reserved', 'deleted'],
+      default: 'available'
     }
   },
   {

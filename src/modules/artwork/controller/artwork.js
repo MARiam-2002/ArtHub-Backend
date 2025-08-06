@@ -241,7 +241,7 @@ export const getArtworkById = asyncHandler(async (req, res) => {
  * @access Private (Artists only)
  */
 export const createArtwork = asyncHandler(async (req, res) => {
-  const { title, price, category } = req.body;
+  const { title, price, category, description } = req.body;
   const artist = req.user._id;
 
   // التحقق من وجود الفئة
@@ -263,6 +263,7 @@ export const createArtwork = asyncHandler(async (req, res) => {
 
   // معالجة الصور المرفوعة
   let imagesArr = [];
+  let mainImage = '';
   
   // إذا تم رفع ملفات
   if (req.files && req.files.length > 0) {
@@ -301,15 +302,12 @@ export const createArtwork = asyncHandler(async (req, res) => {
 
           console.log(`✅ Image ${index + 1} uploaded:`, secure_url);
           
-          return {
-            originalName: file.originalname,
-            url: secure_url,
-            id: public_id,
-            format: format,
-            size: bytes,
-            type: file.mimetype,
-            uploadedAt: new Date()
-          };
+          // الصورة الأولى هي الصورة الرئيسية
+          if (index === 0) {
+            mainImage = secure_url;
+          }
+          
+          return secure_url;
         } catch (error) {
           console.error(`❌ Error uploading image ${index + 1}:`, error);
           throw new Error(`فشل في رفع الصورة: ${file.originalname}`);
@@ -332,10 +330,12 @@ export const createArtwork = asyncHandler(async (req, res) => {
 
   const artwork = await artworkModel.create({
     title: title.trim(),
+    description: description || title.trim(), // استخدام العنوان كوصف إذا لم يتم توفير وصف
     price,
     category,
     artist,
-    images: imagesArr,
+    image: mainImage, // الصورة الرئيسية
+    images: imagesArr, // جميع الصور كقائمة
     status: 'available',
     viewCount: 0,
     createdAt: new Date()

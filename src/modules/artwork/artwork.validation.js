@@ -226,6 +226,15 @@ export const createArtworkSchema = {
     title: titleSchema.required().messages({
       'any.required': 'عنوان العمل الفني مطلوب'
     }),
+    description: Joi.string()
+      .trim()
+      .min(10)
+      .max(2000)
+      .optional()
+      .messages({
+        'string.min': 'الوصف يجب أن يكون 10 أحرف على الأقل',
+        'string.max': 'الوصف يجب أن يكون 2000 حرف على الأكثر'
+      }),
     price: priceSchema.required().messages({
       'any.required': 'سعر العمل الفني مطلوب'
     }),
