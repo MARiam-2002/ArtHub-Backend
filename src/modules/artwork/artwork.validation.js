@@ -46,73 +46,11 @@ const objectIdPattern = /^[0-9a-fA-F]{24}$/;
  *             format: uri
  *           description: روابط صور العمل الفني
  *           example: ["https://example.com/image1.jpg"]
- *         tags:
- *           type: array
- *           maxItems: 10
- *           items:
- *             type: string
- *             minLength: 2
- *             maxLength: 30
- *           description: وسوم العمل الفني
- *           example: ["طبيعة", "رسم"]
  *         status:
  *           type: string
  *           enum: ["available", "sold", "reserved"]
  *           default: "available"
  *           description: حالة العمل الفني
- *         isFramed:
- *           type: boolean
- *           default: false
- *           description: هل العمل مؤطر
- *         dimensions:
- *           type: object
- *           properties:
- *             width:
- *               type: number
- *               minimum: 1
- *               description: العرض بالسنتيمتر
- *             height:
- *               type: number
- *               minimum: 1
- *               description: الارتفاع بالسنتيمتر
- *             depth:
- *               type: number
- *               minimum: 0
- *               description: العمق بالسنتيمتر
- *         materials:
- *           type: array
- *           maxItems: 5
- *           items:
- *             type: string
- *             minLength: 2
- *             maxLength: 50
- *           description: المواد المستخدمة
- *           example: ["زيت على قماش", "أكريليك"]
- *     UpdateArtworkRequest:
- *       type: object
- *       properties:
- *         title:
- *           type: string
- *           minLength: 3
- *           maxLength: 100
- *         description:
- *           type: string
- *           maxLength: 1000
- *         price:
- *           type: number
- *           minimum: 1
- *           maximum: 1000000
- *         status:
- *           type: string
- *           enum: ["available", "sold", "reserved"]
- *         tags:
- *           type: array
- *         isFramed:
- *           type: boolean
- *         dimensions:
- *           type: object
- *         materials:
- *           type: array
  */
 
 // Common field schemas
@@ -178,46 +116,10 @@ const currencySchema = Joi.string()
     'any.only': 'العملة غير مدعومة'
   });
 
-const tagsSchema = Joi.array()
-  .items(Joi.string().trim().min(2).max(30).messages({
-    'string.min': 'الوسم يجب أن يكون حرفين على الأقل',
-    'string.max': 'الوسم يجب أن يكون 30 حرف على الأكثر'
-  }))
-  .max(10)
-  .default([])
-  .messages({
-    'array.max': 'يمكن إضافة 10 وسوم على الأكثر'
-  });
-
 const statusSchema = Joi.string()
   .valid('available', 'sold', 'reserved')
   .messages({
     'any.only': 'حالة العمل الفني يجب أن تكون: متاح، مباع، أو محجوز'
-  });
-
-const dimensionsSchema = Joi.object({
-  width: Joi.number().positive().messages({
-    'number.positive': 'العرض يجب أن يكون أكبر من صفر'
-  }),
-  height: Joi.number().positive().messages({
-    'number.positive': 'الارتفاع يجب أن يكون أكبر من صفر'
-  }),
-  depth: Joi.number().min(0).messages({
-    'number.min': 'العمق لا يمكن أن يكون سالباً'
-  })
-}).messages({
-  'object.base': 'أبعاد العمل الفني يجب أن تكون كائناً صحيحاً'
-});
-
-const materialsSchema = Joi.array()
-  .items(Joi.string().trim().min(2).max(50).messages({
-    'string.min': 'اسم المادة يجب أن يكون حرفين على الأقل',
-    'string.max': 'اسم المادة يجب أن يكون 50 حرف على الأكثر'
-  }))
-  .max(5)
-  .default([])
-  .messages({
-    'array.max': 'يمكن إضافة 5 مواد على الأكثر'
   });
 
 // Main validation schemas
@@ -249,11 +151,7 @@ export const updateArtworkSchema = {
     title: titleSchema,
     description: descriptionSchema,
     price: priceSchema,
-    tags: tagsSchema,
-    status: statusSchema,
-    isFramed: Joi.boolean(),
-    dimensions: dimensionsSchema,
-    materials: materialsSchema
+    status: statusSchema
   }).min(1).messages({
     'object.min': 'يجب تقديم حقل واحد على الأقل للتحديث'
   })
@@ -284,11 +182,7 @@ export const getArtworksQuerySchema = {
     status: Joi.string().valid('available', 'sold', 'reserved').optional(),
     search: Joi.string().trim().min(2).max(100).optional(),
     sortBy: Joi.string().valid('createdAt', 'price', 'title', 'views').default('createdAt'),
-    sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
-    tags: Joi.alternatives().try(
-      Joi.string(),
-      Joi.array().items(Joi.string())
-    ).optional()
+    sortOrder: Joi.string().valid('asc', 'desc').default('desc')
   })
 };
 

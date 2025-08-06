@@ -40,21 +40,6 @@ import mongoose, { Schema, Types, model } from 'mongoose';
  *         category:
  *           type: string
  *           description: معرف الفئة
- *         tags:
- *           type: array
- *           items:
- *             type: string
- *           description: وسوم العمل الفني للبحث والتصفية
- *         dimensions:
- *           type: object
- *           properties:
- *             width:
- *               type: number
- *             height:
- *               type: number
- *             unit:
- *               type: string
- *           description: أبعاد العمل الفني
  *         medium:
  *           type: string
  *           description: وسيط العمل الفني (زيت، أكريليك، إلخ)
@@ -110,21 +95,6 @@ const artworkSchema = new Schema(
       ref: 'Category',
       required: true
     },
-    tags: [
-      {
-        type: String,
-        trim: true
-      }
-    ],
-    dimensions: {
-      width: Number,
-      height: Number,
-      unit: {
-        type: String,
-        enum: ['cm', 'in', 'mm', 'ft'],
-        default: 'cm'
-      }
-    },
     medium: {
       type: String,
       trim: true
@@ -162,7 +132,6 @@ artworkSchema.index({ title: 'text', description: 'text' });
 artworkSchema.index({ artist: 1 });
 artworkSchema.index({ category: 1 });
 artworkSchema.index({ price: 1 });
-artworkSchema.index({ tags: 1 });
 artworkSchema.index({ createdAt: -1 });
 artworkSchema.index({ isFeatured: 1, createdAt: -1 });
 
