@@ -149,6 +149,10 @@ export const createArtworkSchema = {
     category: categorySchema.required().messages({
       'any.required': 'اسم فئة العمل الفني مطلوب'
     })
+  }),
+  files: Joi.array().min(1).max(5).messages({
+    'array.min': 'يجب إضافة صورة واحدة على الأقل',
+    'array.max': 'يمكن إضافة 5 صور على الأكثر'
   })
 };
 

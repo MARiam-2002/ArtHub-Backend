@@ -241,8 +241,15 @@ export const getArtworkById = asyncHandler(async (req, res) => {
  * @access Private (Artists only)
  */
 export const createArtwork = asyncHandler(async (req, res) => {
+  console.log('🔍 createArtwork called');
+  console.log('📝 Request body:', req.body);
+  console.log('📁 Request files:', req.files ? req.files.length : 'No files');
+  
   const { title, price, category, description } = req.body;
   const artist = req.user._id;
+
+  console.log('👤 Artist ID:', artist);
+  console.log('📋 Data:', { title, price, category, description });
 
   // البحث عن الفئة بالاسم بدلاً من المعرف
   let categoryDoc = null;
@@ -251,6 +258,8 @@ export const createArtwork = asyncHandler(async (req, res) => {
     categoryDoc = await categoryModel.findOne({
       name: { $regex: new RegExp(`^${category}$`, 'i') }
     });
+    
+    console.log('🏷️ Category found:', categoryDoc ? categoryDoc.name : 'Not found');
     
     if (!categoryDoc) {
       return res.fail(null, 'الفئة المحددة غير موجودة', 400);
@@ -272,6 +281,11 @@ export const createArtwork = asyncHandler(async (req, res) => {
   let imagesArr = [];
   let mainImage = '';
   
+  console.log('🖼️ Processing images...');
+  console.log('📁 req.files:', req.files);
+  console.log('📁 req.files type:', typeof req.files);
+  console.log('📁 req.files length:', req.files ? req.files.length : 'undefined');
+  
   // إذا تم رفع ملفات
   if (req.files && req.files.length > 0) {
     console.log('📁 Processing images:', req.files.length, 'files');
@@ -289,10 +303,14 @@ export const createArtwork = asyncHandler(async (req, res) => {
         api_secret: process.env.API_SECRET
       });
 
+      console.log('☁️ Cloudinary configured');
+
       // رفع جميع الصور
       const uploadPromises = req.files.map(async (file, index) => {
         try {
           console.log(`📤 Uploading image ${index + 1}:`, file.originalname);
+          console.log(`📤 File path:`, file.path);
+          console.log(`📤 File size:`, file.size);
           
           const { secure_url, public_id, format, bytes } = await cloudinary.v2.uploader.upload(
             file.path,
@@ -328,6 +346,8 @@ export const createArtwork = asyncHandler(async (req, res) => {
       console.error('❌ Error processing images:', error);
       return res.fail(null, 'فشل في رفع الصور: ' + error.message, 400);
     }
+  } else {
+    console.log('⚠️ No files found in request');
   }
   
   // التحقق من وجود صور على الأقل
