@@ -237,20 +237,17 @@ export const categoryIdSchema = joi
 export const getCategoriesQuerySchema = joi
   .object({
     page: joi
-      .number()
-      .integer()
-      .min(1)
+      .string()
+      .pattern(/^\d+$/)
       .optional()
-      .default(1)
+      .default('1')
       .label('رقم الصفحة')
       .messages(defaultMessages),
     limit: joi
-      .number()
-      .integer()
-      .min(1)
-      .max(100)
+      .string()
+      .pattern(/^\d+$/)
       .optional()
-      .default(10)
+      .default('10')
       .label('عدد العناصر')
       .messages(defaultMessages),
     search: joi

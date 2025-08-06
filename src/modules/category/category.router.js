@@ -168,7 +168,7 @@ const router = Router();
  */
 router.get(
   '/popular',
-  isValidation(Validators.popularCategoriesQuerySchema, 'query'),
+  isValidation({ query: Validators.popularCategoriesQuerySchema }),
   controller.getPopularCategories
 );
 
@@ -277,7 +277,7 @@ router.get('/stats', controller.getCategoryStats);
  */
 router.get(
   '/',
-  isValidation(Validators.getCategoriesQuerySchema, 'query'),
+  isValidation({ query: Validators.getCategoriesQuerySchema }),
   controller.getCategories
 );
 
@@ -338,7 +338,7 @@ router.get(
 router.post(
   '/',
   isAuthenticated,
-  isValidation(Validators.createCategorySchema),
+  isValidation({ body: Validators.createCategorySchema }),
   controller.createCategory
 );
 
@@ -405,8 +405,10 @@ router.post(
  */
 router.get(
   '/:id',
-  isValidation(Validators.categoryIdSchema, 'params'),
-  isValidation(Validators.getCategoryQuerySchema, 'query'),
+  isValidation({ 
+    params: Validators.categoryIdSchema,
+    query: Validators.getCategoryQuerySchema 
+  }),
   controller.getCategory
 );
 
@@ -489,8 +491,10 @@ router.get(
 router.put(
   '/:id',
   isAuthenticated,
-  isValidation(Validators.categoryIdSchema, 'params'),
-  isValidation(Validators.updateCategorySchema),
+  isValidation({ 
+    params: Validators.categoryIdSchema,
+    body: Validators.updateCategorySchema 
+  }),
   controller.updateCategory
 );
 
@@ -573,7 +577,7 @@ router.put(
 router.delete(
   '/:id',
   isAuthenticated,
-  isValidation(Validators.categoryIdSchema, 'params'),
+  isValidation({ params: Validators.categoryIdSchema }),
   controller.deleteCategory
 );
 
