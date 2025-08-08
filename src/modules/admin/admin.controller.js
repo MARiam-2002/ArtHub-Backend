@@ -1174,18 +1174,23 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
   // إرسال push notification إذا كان المستخدم مفعل الإشعارات
   if (user.notificationSettings?.enablePush && user.fcmTokens?.length > 0) {
     try {
-      const { sendPushNotification } = await import('../../utils/pushNotifications.js');
-      await sendPushNotification({
-        tokens: user.fcmTokens,
-        title: subject || 'رسالة من إدارة المنصة',
-        body: message,
-        data: {
+      const { sendPushNotificationToUser } = await import('../../utils/pushNotifications.js');
+      await sendPushNotificationToUser(
+        user._id,
+        {
+          title: subject || 'رسالة من إدارة المنصة',
+          body: message
+        },
+        {
           type: 'admin_message',
+          screen: 'NOTIFICATIONS',
           notificationId: notification._id.toString(),
           adminId: req.user._id.toString(),
-          hasAttachments: attachments.length > 0
+          hasAttachments: attachments.length > 0,
+          timestamp: Date.now().toString()
         }
-      });
+      );
+      console.log('✅ Push notification sent successfully');
     } catch (error) {
       console.error('❌ Error sending push notification:', error);
     }

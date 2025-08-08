@@ -20,6 +20,7 @@ const notificationSchema = new Schema(
         'review', 
         'system', 
         'admin', 
+        'admin_message',
         'other',
         'chat',
         'chat_message',
