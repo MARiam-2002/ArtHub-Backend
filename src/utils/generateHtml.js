@@ -87,6 +87,7 @@ export const resetPassword = (userName, code) => `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إعادة تعيين كلمة المرور</title>
     <style>
@@ -177,6 +178,7 @@ export const adminMessageEmail = (subject, message, attachments = []) => `<!DOCT
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${subject || 'رسالة من إدارة المنصة'}</title>
     <style>

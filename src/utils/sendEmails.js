@@ -15,14 +15,15 @@ export const sendEmail = async ({ to, subject, html, attachments }) => {
   const mailOptions = {
     from: `"ArtHub" <${process.env.EMAIL}>`,
     to,
-    subject,
-    html
+    subject: `=?UTF-8?B?${Buffer.from(subject, 'utf-8').toString('base64')}?=`,
+    html: html,
+    encoding: 'utf-8'
   };
 
   // إضافة المرفقات إذا كانت موجودة
   if (attachments && attachments.length > 0) {
     mailOptions.attachments = attachments.map(file => ({
-      filename: file.originalName || 'attachment',
+      filename: `=?UTF-8?B?${Buffer.from(file.originalName || 'attachment', 'utf-8').toString('base64')}?=`,
       path: file.url,
       contentType: file.type || 'application/octet-stream'
     }));
