@@ -24,6 +24,7 @@ const notificationSchema = new Schema(
         'chat',
         'chat_message',
         'test_notification',
+        'test_backend',
         'new_comment',
         'new_follower',
         'transaction'

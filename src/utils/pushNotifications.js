@@ -99,7 +99,7 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
           apns: {
             headers: {
               'apns-priority': '10',
-              'apns-expiration': Math.floor(Date.now() / 1000) + 3600
+              'apns-expiration': (Math.floor(Date.now() / 1000) + 3600).toString()
             },
             payload: {
               aps: {
