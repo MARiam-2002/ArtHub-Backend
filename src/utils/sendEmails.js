@@ -22,11 +22,19 @@ export const sendEmail = async ({ to, subject, html, attachments }) => {
 
   // إضافة المرفقات إذا كانت موجودة
   if (attachments && attachments.length > 0) {
-    mailOptions.attachments = attachments.map(file => ({
-      filename: `=?UTF-8?B?${Buffer.from(file.originalName || 'attachment', 'utf-8').toString('base64')}?=`,
-      path: file.url,
-      contentType: file.type || 'application/octet-stream'
-    }));
+    mailOptions.attachments = attachments.map(file => {
+      // التأكد من وجود اسم الملف
+      const fileName = file.originalName || file.originalname || 'attachment';
+      
+      // تنظيف اسم الملف من الأحرف الخاصة
+      const cleanFileName = fileName.replace(/[^\w\s\-\.]/g, '_');
+      
+      return {
+        filename: `=?UTF-8?B?${Buffer.from(cleanFileName, 'utf-8').toString('base64')}?=`,
+        path: file.url,
+        contentType: file.type || 'application/octet-stream'
+      };
+    });
   }
 
   const emailInfo = await transporter.sendMail(mailOptions);
