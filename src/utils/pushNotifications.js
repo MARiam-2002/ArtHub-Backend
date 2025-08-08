@@ -41,102 +41,95 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
         ? notification.body[preferredLanguage] || notification.body.ar
         : notification.body;
 
-    // Send notification to all user's devices
-    const message = {
-      tokens: user.fcmTokens,
-      notification: {
-        title: notificationTitle,
-        body: notificationBody
-      },
-      data: {
-        ...data,
-        click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        // Always include these for routing in Flutter
-        screen: data.screen || 'default',
-        id: data.id || '',
-        timestamp: data.timestamp || Date.now().toString(),
-        language: preferredLanguage
-      },
-      android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          default_sound: true,
-          default_vibrate_timings: true,
-          channel_id: 'arthub_channel',
-          icon: 'ic_notification'
-        }
-      },
-      apns: {
-        headers: {
-          'apns-priority': '10'
-        },
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1,
-            content_available: true
-          }
-        }
-      }
-    };
-
-    // Save notification to database if requested
+    // Save notification to database if requested (async - don't wait)
     if (options.saveToDatabase !== false) {
-      try {
-        await notificationModel.create({
-          user: userId,
-          title: {
-            ar: typeof notification.title === 'object' ? notification.title.ar : notification.title,
-            en: typeof notification.title === 'object' ? notification.title.en : notification.title
-          },
-          message: {
-            ar: typeof notification.body === 'object' ? notification.body.ar : notification.body,
-            en: typeof notification.body === 'object' ? notification.body.en : notification.body
-          },
-          type: data.type || 'system',
-          ref: data.refId || null,
-          refModel: data.refModel || null,
-          data: {
-            ...data,
-            screen: data.screen || 'default'
-          }
-        });
-      } catch (dbError) {
+      notificationModel.create({
+        user: userId,
+        title: {
+          ar: typeof notification.title === 'object' ? notification.title.ar : notification.title,
+          en: typeof notification.title === 'object' ? notification.title.en : notification.title
+        },
+        message: {
+          ar: typeof notification.body === 'object' ? notification.body.ar : notification.body,
+          en: typeof notification.body === 'object' ? notification.body.en : notification.body
+        },
+        type: data.type || 'system',
+        ref: data.refId || null,
+        refModel: data.refModel || null,
+        data: {
+          ...data,
+          screen: data.screen || 'default'
+        }
+      }).catch(dbError => {
         console.error('Error saving notification to database:', dbError);
-      }
+      });
     }
 
-    // Send to each token individually since sendMulticast might not be available
-    const results = [];
-    let successCount = 0;
-    let failureCount = 0;
-    
-    for (const token of user.fcmTokens) {
+    // Send to all tokens in parallel for better performance
+    const sendPromises = user.fcmTokens.map(async (token, index) => {
       try {
         const singleMessage = {
           token: token,
-          notification: message.notification,
-          data: message.data,
-          android: message.android,
-          apns: message.apns
+          notification: {
+            title: notificationTitle,
+            body: notificationBody
+          },
+          data: {
+            ...data,
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            screen: data.screen || 'default',
+            id: data.id || '',
+            timestamp: data.timestamp || Date.now().toString(),
+            language: preferredLanguage
+          },
+          android: {
+            priority: 'high',
+            ttl: 60 * 60 * 1000, // ساعة واحدة
+            notification: {
+              sound: 'default',
+              default_sound: true,
+              default_vibrate_timings: true,
+              channel_id: 'arthub_channel',
+              icon: 'ic_notification',
+              priority: 'high',
+              timeoutAfter: 30000, // 30 ثانية
+              color: '#2196F3'
+            }
+          },
+          apns: {
+            headers: {
+              'apns-priority': '10',
+              'apns-expiration': Math.floor(Date.now() / 1000) + 3600
+            },
+            payload: {
+              aps: {
+                sound: 'default',
+                badge: 1,
+                content_available: true
+              }
+            }
+          }
         };
         
         const response = await admin.messaging().send(singleMessage);
-        results.push({ success: true, messageId: response });
-        successCount++;
+        return { success: true, messageId: response, tokenIndex: index };
       } catch (error) {
-        console.log(`Failed to send to token: ${error.message}`);
-        results.push({ success: false, error: error.message });
-        failureCount++;
+        console.log(`Failed to send to token ${index + 1}: ${error.message}`);
+        return { success: false, error: error.message, tokenIndex: index };
       }
-    }
+    });
+
+    // Wait for all notifications to complete
+    const results = await Promise.all(sendPromises);
+    
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
     
     // Remove failed tokens
     if (failureCount > 0) {
       const failedTokens = results
-        .map((result, index) => !result.success ? user.fcmTokens[index] : null)
-        .filter(Boolean);
+        .filter(result => !result.success)
+        .map(result => user.fcmTokens[result.tokenIndex]);
       
       if (failedTokens.length > 0) {
         await userModel.findByIdAndUpdate(userId, {
