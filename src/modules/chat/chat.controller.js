@@ -617,14 +617,10 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
         await sendChatMessageNotification(
           receiverId,
-          'رسالة جديدة',
-          notificationBody,
-          {
-            type: 'chat',
-            chatId,
-            senderId: userId,
-            messageId: message._id.toString()
-          }
+          userId,
+          senderName,
+          content,
+          chatId
         );
       } catch (notificationError) {
         console.warn('Push notification failed:', notificationError);
