@@ -107,19 +107,37 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
       }
     }
 
-    const response = await admin.messaging().sendMulticast(message);
-    console.log('Notification sent successfully:', response);
+    // Send to each token individually since sendMulticast might not be available
+    const results = [];
+    let successCount = 0;
+    let failureCount = 0;
     
-    // Handle failed tokens
-    if (response.failureCount > 0) {
-      const failedTokens = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          failedTokens.push(user.fcmTokens[idx]);
-        }
-      });
+    for (const token of user.fcmTokens) {
+      try {
+        const singleMessage = {
+          token: token,
+          notification: message.notification,
+          data: message.data,
+          android: message.android,
+          apns: message.apns
+        };
+        
+        const response = await admin.messaging().send(singleMessage);
+        results.push({ success: true, messageId: response });
+        successCount++;
+      } catch (error) {
+        console.log(`Failed to send to token: ${error.message}`);
+        results.push({ success: false, error: error.message });
+        failureCount++;
+      }
+    }
+    
+    // Remove failed tokens
+    if (failureCount > 0) {
+      const failedTokens = results
+        .map((result, index) => !result.success ? user.fcmTokens[index] : null)
+        .filter(Boolean);
       
-      // Remove failed tokens from user
       if (failedTokens.length > 0) {
         await userModel.findByIdAndUpdate(userId, {
           $pull: { fcmTokens: { $in: failedTokens } }
@@ -129,10 +147,10 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
     }
     
     return { 
-      success: true, 
-      successCount: response.successCount,
-      failureCount: response.failureCount,
-      messageIds: response.responses.map(r => r.messageId).filter(Boolean)
+      success: successCount > 0, 
+      successCount,
+      failureCount,
+      messageIds: results.filter(r => r.success).map(r => r.messageId)
     };
   } catch (error) {
     console.error('Error sending push notification:', error);

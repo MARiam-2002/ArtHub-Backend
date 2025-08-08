@@ -14,12 +14,29 @@ const notificationSchema = new Schema(
     },
     type: {
       type: String,
-      enum: ['request', 'message', 'review', 'system', 'admin', 'other'],
+      enum: [
+        'request', 
+        'message', 
+        'review', 
+        'system', 
+        'admin', 
+        'other',
+        'chat',
+        'chat_message',
+        'test_notification',
+        'new_comment',
+        'new_follower',
+        'transaction'
+      ],
       default: 'other'
     },
     isRead: { type: Boolean, default: false },
     ref: { type: Types.ObjectId, refPath: 'refModel' },
-    refModel: { type: String, enum: ['SpecialRequest', 'Artwork', 'Message', 'User'] },
+    refModel: { 
+      type: String, 
+      enum: ['SpecialRequest', 'Artwork', 'Message', 'User', null],
+      default: null
+    },
     data: { type: Object, default: {} }
   },
   { timestamps: true }
