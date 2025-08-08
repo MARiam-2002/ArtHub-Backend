@@ -1178,8 +1178,14 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
       await sendPushNotificationToUser(
         user._id,
         {
-          title: subject || 'رسالة من إدارة المنصة',
-          body: message
+          title: {
+            ar: subject || 'رسالة من إدارة المنصة',
+            en: subject || 'Message from Platform Administration'
+          },
+          body: {
+            ar: message,
+            en: message
+          }
         },
         {
           type: 'admin_message',
