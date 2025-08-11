@@ -252,6 +252,16 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
           select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
         })
         .lean();
+        
+      // إرسال حدث المحادثة الجديدة عبر Socket.IO
+      try {
+        const formattedChat = formatChat(chat, userId);
+        console.log('📡 Sending new_chat event to users:', userId, otherUserId);
+        sendToUser(userId, 'new_chat', formattedChat);
+        sendToUser(otherUserId, 'new_chat', formattedChat);
+      } catch (socketError) {
+        console.warn('Socket.IO new chat notification failed:', socketError);
+      }
     }
 
     const response = {
