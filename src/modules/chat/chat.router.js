@@ -519,6 +519,46 @@ router.get('/unread-count', authenticate, chatController.getUnreadCount);
 
 /**
  * @swagger
+ * /chat/unread-counts:
+ *   get:
+ *     summary: Get unread counts for all chats separately
+ *     tags: [Chat]
+ *     description: Get unread counts for all chats separately
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Unread counts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم جلب عدد الرسائل غير المقروءة بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     unreadCounts:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           chatId:
+ *                             type: string
+ *                           unreadCount:
+ *                             type: number
+ *       500:
+ *         description: Server error
+ */
+router.get('/unread-counts', authenticate, chatController.getUnreadCounts);
+
+/**
+ * @swagger
  * components:
  *   schemas:
  *     Chat:

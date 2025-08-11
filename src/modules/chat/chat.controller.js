@@ -599,15 +599,25 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
     // Send real-time notification via Socket.IO
     try {
-      console.log('📡 Sending real-time message to chat:', chatId);
-      sendToChat(chatId, 'new_message', formattedMessage);
+      // Get unread count for this chat
+      const unreadCount = await messageModel.countDocuments({
+        chat: chatId,
+        sender: { $ne: receiverId },
+        isRead: false,
+        isDeleted: { $ne: true }
+      });
+
+      sendToChat(chatId, 'new_message', {
+        message: formattedMessage,
+        unreadCount: unreadCount
+      });
       
       // Also send to specific user if they're not in the chat room
       if (receiverId) {
         sendToUser(receiverId, 'new_message', formattedMessage);
       }
     } catch (socketError) {
-      console.warn('Socket.IO notification failed:', socketError);
+      console.warn('Socket.IO message notification failed:', socketError);
     }
 
     // Send push notification to receiver
@@ -898,6 +908,63 @@ export const getUnreadCount = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Get unread count error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء جلب عدد الرسائل غير المقروءة',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Get unread counts for all chats separately
+ */
+export const getUnreadCounts = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    
+    const userId = req.user._id;
+
+    // Get all user's chats
+    const userChats = await chatModel.find({
+      members: { $in: [userId] },
+      isDeleted: { $ne: true }
+    }).select('_id').lean();
+
+    const chatIds = userChats.map(chat => chat._id);
+
+    // Count unread messages for each chat separately
+    const unreadCounts = {};
+    
+    for (const chatId of chatIds) {
+      const count = await messageModel.countDocuments({
+        chat: chatId,
+        sender: { $ne: userId },
+        isRead: false,
+        isDeleted: { $ne: true }
+      });
+      
+      if (count > 0) {
+        unreadCounts[chatId.toString()] = count;
+      }
+    }
+
+    const response = {
+      success: true,
+      message: 'تم جلب عدد الرسائل غير المقروءة لكل محادثة بنجاح',
+      data: {
+        unreadCounts
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        userId: userId
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Get unread counts error:', error);
     return res.status(500).json({
       success: false,
       message: 'حدث خطأ أثناء جلب عدد الرسائل غير المقروءة',

@@ -431,11 +431,11 @@ export const removeUserFCMToken = async (userId, fcmToken) => {
 // ===== PREDEFINED NOTIFICATION FUNCTIONS =====
 
 /**
- * Send a chat message notification
- * @param {string} receiverId - User ID of message recipient
- * @param {string} senderId - User ID of message sender
- * @param {string} senderName - Display name of sender
- * @param {string} messageText - Content of the message
+ * Send push notification for new chat message
+ * @param {string} receiverId - Receiver user ID
+ * @param {string} senderId - Sender user ID
+ * @param {string} senderName - Name of the sender
+ * @param {string} messageText - Message text content
  * @param {string} chatId - Chat ID
  * @returns {Promise} - Notification result
  */
@@ -445,21 +445,51 @@ export const sendChatMessageNotification = async (
   senderName,
   messageText,
   chatId
-) =>
-  sendPushNotificationToUser(
-    receiverId,
-    {
-      title: senderName || 'رسالة جديدة',
-      body: messageText ? messageText.substring(0, 100) : 'صورة جديدة'
-    },
-    {
-      screen: 'CHAT_DETAIL',
-      chatId: chatId.toString(),
-      senderId: senderId.toString(),
-      type: 'chat_message',
-      timestamp: Date.now().toString()
-    }
-  );
+) => {
+  try {
+    // Get unread count for this specific chat
+    const messageModel = (await import('../../DB/models/message.model.js')).default;
+    const unreadCount = await messageModel.countDocuments({
+      chat: chatId,
+      sender: { $ne: receiverId },
+      isRead: false,
+      isDeleted: { $ne: true }
+    });
+
+    return sendPushNotificationToUser(
+      receiverId,
+      {
+        title: senderName || 'رسالة جديدة',
+        body: messageText ? messageText.substring(0, 100) : 'صورة جديدة'
+      },
+      {
+        screen: 'CHAT_DETAIL',
+        chatId: chatId.toString(),
+        senderId: senderId.toString(),
+        type: 'chat_message',
+        unreadCount: unreadCount.toString(),
+        timestamp: Date.now().toString()
+      }
+    );
+  } catch (error) {
+    console.error('Error sending chat notification:', error);
+    // Fallback to basic notification without unread count
+    return sendPushNotificationToUser(
+      receiverId,
+      {
+        title: senderName || 'رسالة جديدة',
+        body: messageText ? messageText.substring(0, 100) : 'صورة جديدة'
+      },
+      {
+        screen: 'CHAT_DETAIL',
+        chatId: chatId.toString(),
+        senderId: senderId.toString(),
+        type: 'chat_message',
+        timestamp: Date.now().toString()
+      }
+    );
+  }
+};
 
 /**
  * Send notification for new artwork comment
