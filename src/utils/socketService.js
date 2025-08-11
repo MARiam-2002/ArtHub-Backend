@@ -39,11 +39,24 @@ export const initializeSocketIO = server => {
         socket.userId = userId;
         userSocketMap.set(userId, socket.id);
 
+        // Update user's online status
+        await userModel.findByIdAndUpdate(userId, {
+          isOnline: true,
+          lastSeen: new Date()
+        });
+
         console.log(`User ${userId} authenticated with socket ${socket.id}`);
         socket.emit('authenticated', { userId });
 
         // Join user's personal room for direct messages
         socket.join(`user:${userId}`);
+
+        // Broadcast user online status to all connected users
+        socket.broadcast.emit('user_status_changed', {
+          userId,
+          isOnline: true,
+          lastSeen: new Date()
+        });
       } catch (error) {
         console.error('Socket authentication error:', error);
         socket.emit('error', { message: 'Authentication failed' });
@@ -151,6 +164,23 @@ export const initializeSocketIO = server => {
       if (socket.userId) {
         userSocketMap.delete(socket.userId);
         console.log(`User ${socket.userId} disconnected`);
+
+        // Update user's offline status
+        userModel.findByIdAndUpdate(socket.userId, {
+          isOnline: false,
+          lastSeen: new Date()
+        }).then(() => {
+          console.log(`User ${socket.userId} offline status updated`);
+        }).catch(err => {
+          console.error('Error updating user offline status:', err);
+        });
+
+        // Broadcast user offline status to all connected users
+        socket.broadcast.emit('user_status_changed', {
+          userId: socket.userId,
+          isOnline: false,
+          lastSeen: new Date()
+        });
       }
     });
   });
