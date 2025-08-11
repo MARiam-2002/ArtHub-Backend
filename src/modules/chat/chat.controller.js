@@ -51,7 +51,7 @@ function formatMessage(message, currentUserId) {
     _id: message._id,
     content: message.content || message.text || '',
     messageType: message.messageType || 'text',
-    isFromMe: message.sender?._id?.toString() === currentUserId?.toString(),
+    isFromMe: message.isFromMe !== undefined ? message.isFromMe : (message.sender?._id?.toString() === currentUserId?.toString()),
     sender: formatUserForChat(message.sender),
     attachments: message.attachments || [],
     images: message.images || [],
@@ -556,6 +556,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       attachments: allAttachments,
       images: images || [],
       isRead: false,
+      isFromMe: true, // هذه الرسالة من المستخدم الحالي
       sentAt: new Date()
     };
 

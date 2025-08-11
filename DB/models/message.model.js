@@ -53,6 +53,9 @@ import mongoose, { Schema, Types, model } from 'mongoose';
  *           type: string
  *           format: date-time
  *           description: Timestamp when message was read
+ *         isFromMe:
+ *           type: boolean
+ *           description: Indicates if message is from the current user (for UI positioning)
  *         isEdited:
  *           type: boolean
  *           description: Indicates if message was edited
@@ -247,6 +250,12 @@ const messageSchema = new Schema(
     },
     readAt: {
       type: Date
+    },
+    // Message ownership - for Flutter UI positioning
+    isFromMe: {
+      type: Boolean,
+      default: false,
+      description: 'Indicates if message is from the current user (for UI positioning)'
     },
     // Edit functionality
     isEdited: {
