@@ -237,4 +237,85 @@ router.delete(
   reportsController.deleteReport
 );
 
+/**
+ * @swagger
+ * /api/admin/reports/{id}/status:
+ *   patch:
+ *     summary: تحديث حالة بلاغ
+ *     tags: [Reports Management]
+ *     description: تحديث حالة البلاغ فقط
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: معرف البلاغ
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, resolved, rejected, reviewed]
+ *                 description: الحالة الجديدة للبلاغ
+ *                 example: "resolved"
+ *     responses:
+ *       200:
+ *         description: تم تحديث حالة البلاغ بنجاح
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "تم تحديث حالة البلاغ بنجاح"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     status:
+ *                       type: string
+ *                       example: "resolved"
+ *                     statusText:
+ *                       type: string
+ *                       example: "تم الحل"
+ *                     resolvedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-18T10:30:00.000Z"
+ *       400:
+ *         description: بيانات غير صالحة
+ *       401:
+ *         description: غير مصرح
+ *       403:
+ *         description: ممنوع - للمديرين فقط
+ *       404:
+ *         description: البلاغ غير موجود
+ */
+router.patch(
+  '/:id/status',
+  authenticate,
+  isAuthorized('admin', 'superadmin'),
+  isValidation(reportsValidation.updateReportStatusValidation),
+  reportsController.updateReportStatus
+);
+
 export default router; 

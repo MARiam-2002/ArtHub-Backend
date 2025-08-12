@@ -41,4 +41,20 @@ export const deleteReportValidation = {
       'any.required': 'معرف البلاغ مطلوب'
     })
   })
+};
+
+// Validation for updating report status
+export const updateReportStatusValidation = {
+  params: joi.object({
+    id: joi.string().pattern(objectIdPattern).required().messages({
+      'string.pattern.base': 'معرف البلاغ غير صالح',
+      'any.required': 'معرف البلاغ مطلوب'
+    })
+  }),
+  body: joi.object({
+    status: joi.string().valid('pending', 'resolved', 'rejected', 'reviewed').required().messages({
+      'string.valid': 'حالة البلاغ يجب أن تكون واحدة من: pending, resolved, rejected, reviewed',
+      'any.required': 'حالة البلاغ مطلوبة'
+    })
+  })
 }; 

@@ -311,6 +311,72 @@ export const deleteReport = asyncHandler(async (req, res, next) => {
   });
 });
 
+/**
+ * @desc    تحديث حالة بلاغ
+ * @route   PATCH /api/admin/reports/:id/status
+ * @access  Private (Admin, SuperAdmin)
+ */
+export const updateReportStatus = asyncHandler(async (req, res, next) => {
+  await ensureDatabaseConnection();
+  
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'معرف البلاغ غير صالح',
+      data: null
+    });
+  }
+
+  // التحقق من صحة الحالة
+  const validStatuses = ['pending', 'resolved', 'rejected', 'reviewed'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: 'حالة البلاغ غير صالحة',
+      data: null
+    });
+  }
+
+  const report = await reportModel.findById(id);
+  
+  if (!report) {
+    return res.status(404).json({
+      success: false,
+      message: 'البلاغ غير موجود',
+      data: null
+    });
+  }
+
+  // تحديث البلاغ
+  const updateData = { status };
+  
+  // إضافة تاريخ الحل إذا تم حل البلاغ
+  if (status === 'resolved' && report.status !== 'resolved') {
+    updateData.resolvedAt = new Date();
+  }
+
+  const updatedReport = await reportModel.findByIdAndUpdate(
+    id,
+    updateData,
+    { new: true, runValidators: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: 'تم تحديث حالة البلاغ بنجاح',
+    data: {
+      _id: updatedReport._id,
+      status: updatedReport.status,
+      statusText: getStatusText(updatedReport.status),
+      resolvedAt: updatedReport.resolvedAt,
+      updatedAt: updatedReport.updatedAt
+    }
+  });
+});
+
 // Helper functions
 function getReportTypeText(reason) {
   const types = {
