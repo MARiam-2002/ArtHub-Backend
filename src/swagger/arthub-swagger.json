@@ -964,6 +964,179 @@
     }
   },
   "paths": {
+    "/api/admin/login": {
+      "post": {
+        "tags": ["Admin Dashboard"],
+        "summary": "تسجيل دخول الأدمن",
+        "description": "تسجيل دخول للمديرين والمشرفين العامين",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "بريد المدير الإلكتروني",
+                    "example": "admin@arthub.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "كلمة مرور المدير",
+                    "example": "AdminPassword123!"
+                  }
+                },
+                "example": {
+                  "email": "admin@arthub.com",
+                  "password": "AdminPassword123!"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تسجيل الدخول بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "تم تسجيل الدخول بنجاح"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "admin": {
+                          "type": "object",
+                          "properties": {
+                            "_id": {
+                              "type": "string",
+                              "example": "507f1f77bcf86cd799439011"
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "example": "أحمد محمد"
+                            },
+                            "email": {
+                              "type": "string",
+                              "example": "admin@arthub.com"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": ["admin", "superadmin"],
+                              "example": "admin"
+                            },
+                            "isActive": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "isVerified": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "profileImage": {
+                              "type": "object",
+                              "properties": {
+                                "url": {
+                                  "type": "string",
+                                  "example": "https://res.cloudinary.com/example/image/upload/v1234567890/admin-profile.jpg"
+                                },
+                                "id": {
+                                  "type": "string",
+                                  "example": "arthub/admin-profiles/admin_1234567890_abc123"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "token": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUwN2YxZjc3YmNmODZjZDc5OTQzOTAxMSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTcwNTU5NzQwMCwiZXhwIjoxNzA1NjgzODAwfQ.example"
+                        },
+                        "refreshToken": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUwN2YxZjc3YmNmODZjZDc5OTQzOTAxMSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTcwNTU5NzQwMCwiZXhwIjoxNzA1NjgzODAwfQ.refresh"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "البريد الإلكتروني وكلمة المرور مطلوبان"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "بيانات اعتماد غير صحيحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "الحساب محظور أو غير نشط",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الحساب محظور أو غير نشط"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/register": {
       "post": {
         "tags": ["Auth"],
