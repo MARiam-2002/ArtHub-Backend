@@ -51,8 +51,12 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
       $addFields: {
         reporterName: { $arrayElemAt: ['$reporterData.displayName', 0] },
         reporterEmail: { $arrayElemAt: ['$reporterData.email', 0] },
+        reporterId: { $arrayElemAt: ['$reporterData._id', 0] },
+        reporterRole: { $arrayElemAt: ['$reporterData.role', 0] },
         targetUserName: { $arrayElemAt: ['$targetUserData.displayName', 0] },
         targetUserEmail: { $arrayElemAt: ['$targetUserData.email', 0] },
+        targetUserId: { $arrayElemAt: ['$targetUserData._id', 0] },
+        targetUserRole: { $arrayElemAt: ['$targetUserData.role', 0] },
         artworkTitle: { $arrayElemAt: ['$artworkData.title', 0] }
       }
     },
@@ -68,8 +72,12 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
         resolvedAt: 1,
         reporterName: 1,
         reporterEmail: 1,
+        reporterId: 1,
+        reporterRole: 1,
         targetUserName: 1,
         targetUserEmail: 1,
+        targetUserId: 1,
+        targetUserRole: 1,
         artworkTitle: 1
       }
     },
@@ -91,8 +99,12 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
     _id: report._id,
     complainant: report.reporterName || 'مستخدم',
     complainantEmail: report.reporterEmail,
+    complainantId: report.reporterId,
+    complainantRole: report.reporterRole,
     artist: report.targetUserName || 'فنان',
     artistEmail: report.targetUserEmail,
+    artistId: report.targetUserId,
+    artistRole: report.targetUserRole,
     reportType: getReportTypeText(report.reason),
     date: report.createdAt,
     description: report.description,
@@ -173,9 +185,13 @@ export const getReportDetails = asyncHandler(async (req, res, next) => {
         reporterName: { $arrayElemAt: ['$reporterData.displayName', 0] },
         reporterEmail: { $arrayElemAt: ['$reporterData.email', 0] },
         reporterImage: { $arrayElemAt: ['$reporterData.profileImage', 0] },
+        reporterId: { $arrayElemAt: ['$reporterData._id', 0] },
+        reporterRole: { $arrayElemAt: ['$reporterData.role', 0] },
         targetUserName: { $arrayElemAt: ['$targetUserData.displayName', 0] },
         targetUserEmail: { $arrayElemAt: ['$targetUserData.email', 0] },
         targetUserImage: { $arrayElemAt: ['$targetUserData.profileImage', 0] },
+        targetUserId: { $arrayElemAt: ['$targetUserData._id', 0] },
+        targetUserRole: { $arrayElemAt: ['$targetUserData.role', 0] },
         artworkTitle: { $arrayElemAt: ['$artworkData.title', 0] },
         artworkImage: { $arrayElemAt: ['$artworkData.image', 0] }
       }
@@ -193,9 +209,13 @@ export const getReportDetails = asyncHandler(async (req, res, next) => {
         reporterName: 1,
         reporterEmail: 1,
         reporterImage: 1,
+        reporterId: 1,
+        reporterRole: 1,
         targetUserName: 1,
         targetUserEmail: 1,
         targetUserImage: 1,
+        targetUserId: 1,
+        targetUserRole: 1,
         artworkTitle: 1,
         artworkImage: 1
       }
@@ -216,7 +236,32 @@ export const getReportDetails = asyncHandler(async (req, res, next) => {
     success: true,
     message: 'تم جلب تفاصيل البلاغ بنجاح',
     data: {
-      description: reportData.description
+      _id: reportData._id,
+      contentType: reportData.contentType,
+      reason: reportData.reason,
+      description: reportData.description,
+      status: reportData.status,
+      adminNotes: reportData.adminNotes,
+      createdAt: reportData.createdAt,
+      resolvedAt: reportData.resolvedAt,
+      reporter: {
+        name: reportData.reporterName,
+        email: reportData.reporterEmail,
+        image: reportData.reporterImage,
+        id: reportData.reporterId,
+        role: reportData.reporterRole
+      },
+      targetUser: {
+        name: reportData.targetUserName,
+        email: reportData.targetUserEmail,
+        image: reportData.targetUserImage,
+        id: reportData.targetUserId,
+        role: reportData.targetUserRole
+      },
+      artwork: {
+        title: reportData.artworkTitle,
+        image: reportData.artworkImage
+      }
     }
   });
 });
