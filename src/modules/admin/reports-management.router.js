@@ -264,7 +264,7 @@ router.delete(
  *             properties:
  *               status:
  *                 type: string
- *                 enum: [pending, resolved, rejected, reviewed]
+ *                 enum: [pending, resolved, rejected]
  *                 description: الحالة الجديدة للبلاغ
  *                 example: "resolved"
  *     responses:

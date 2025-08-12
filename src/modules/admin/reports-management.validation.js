@@ -52,8 +52,8 @@ export const updateReportStatusValidation = {
     })
   }),
   body: joi.object({
-    status: joi.string().valid('pending', 'resolved', 'rejected', 'reviewed').required().messages({
-      'string.valid': 'حالة البلاغ يجب أن تكون واحدة من: pending, resolved, rejected, reviewed',
+    status: joi.string().valid('pending', 'resolved', 'rejected').required().messages({
+      'string.valid': 'حالة البلاغ يجب أن تكون واحدة من: pending, resolved, rejected',
       'any.required': 'حالة البلاغ مطلوبة'
     })
   })

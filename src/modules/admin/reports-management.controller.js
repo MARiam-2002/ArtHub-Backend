@@ -331,7 +331,7 @@ export const updateReportStatus = asyncHandler(async (req, res, next) => {
   }
 
   // التحقق من صحة الحالة
-  const validStatuses = ['pending', 'resolved', 'rejected', 'reviewed'];
+  const validStatuses = ['pending', 'resolved', 'rejected'];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
