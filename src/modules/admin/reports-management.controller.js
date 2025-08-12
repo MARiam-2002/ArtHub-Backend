@@ -97,14 +97,18 @@ export const getAllReports = asyncHandler(async (req, res, next) => {
   const formattedReports = reports.map((report, index) => ({
     id: isFullRequest ? index + 1 : skip + index + 1,
     _id: report._id,
-    complainant: report.reporterName || 'مستخدم',
-    complainantEmail: report.reporterEmail,
-    complainantId: report.reporterId,
-    complainantRole: report.reporterRole,
-    artist: report.targetUserName || 'فنان',
-    artistEmail: report.targetUserEmail,
-    artistId: report.targetUserId,
-    artistRole: report.targetUserRole,
+    complainant: {
+      id: report.reporterId,
+      name: report.reporterName || 'مستخدم',
+      role: report.reporterRole,
+      email: report.reporterEmail
+    },
+    artist: {
+      id: report.targetUserId,
+      name: report.targetUserName || 'فنان',
+      role: report.targetUserRole,
+      email: report.targetUserEmail
+    },
     reportType: getReportTypeText(report.reason),
     date: report.createdAt,
     description: report.description,
