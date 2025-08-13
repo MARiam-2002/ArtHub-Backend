@@ -13,7 +13,7 @@ import mongoose from 'mongoose';
 export const getAllReports = asyncHandler(async (req, res, next) => {
   await ensureDatabaseConnection();
   
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
   
   // التحقق من إذا كان limit=full
   const isFullRequest = limit === 'full';

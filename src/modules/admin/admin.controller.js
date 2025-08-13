@@ -2277,6 +2277,9 @@ export const getArtistReports = asyncHandler(async (req, res, next) => {
   const { artistId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
+  // التحقق من إذا كان limit=full
+  const isFullRequest = limit === 'full';
+
   if (!mongoose.Types.ObjectId.isValid(artistId)) {
     return res.status(400).json({
       success: false,
@@ -2286,7 +2289,7 @@ export const getArtistReports = asyncHandler(async (req, res, next) => {
   }
 
   // التحقق من وجود الفنان
-  const artist = await userModel.findById(artistId).select('displayName role');
+  const artist = await userModel.findById(artistId).select('displayName role email');
   if (!artist) {
     return res.status(404).json({
       success: false,
@@ -2295,43 +2298,105 @@ export const getArtistReports = asyncHandler(async (req, res, next) => {
     });
   }
 
-  // جلب البلاغات مع pagination
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const reports = await reportModel.find({ 
-    targetUser: new mongoose.Types.ObjectId(artistId) 
-  })
-    .populate('reporter', 'displayName email')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(parseInt(limit))
-    .lean();
+  // إذا كان limit=full، لا نحتاج pagination
+  const skip = isFullRequest ? 0 : (parseInt(page) - 1) * parseInt(limit);
 
-  // إجمالي عدد البلاغات
+  // جلب البلاغات مع تفاصيل المستخدمين باستخدام aggregation
+  const reports = await reportModel.aggregate([
+    {
+      $match: { targetUser: new mongoose.Types.ObjectId(artistId) }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'reporter',
+        foreignField: '_id',
+        as: 'reporterData'
+      }
+    },
+    {
+      $addFields: {
+        reporterName: { $arrayElemAt: ['$reporterData.displayName', 0] },
+        reporterEmail: { $arrayElemAt: ['$reporterData.email', 0] },
+        reporterId: { $arrayElemAt: ['$reporterData._id', 0] },
+        reporterRole: { $arrayElemAt: ['$reporterData.role', 0] },
+        targetUserName: artist.displayName,
+        targetUserEmail: artist.email,
+        targetUserId: artist._id,
+        targetUserRole: artist.role
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        reason: 1,
+        description: 1,
+        status: 1,
+        createdAt: 1,
+        reporterName: 1,
+        reporterEmail: 1,
+        reporterId: 1,
+        reporterRole: 1,
+        targetUserName: 1,
+        targetUserEmail: 1,
+        targetUserId: 1,
+        targetUserRole: 1
+      }
+    },
+    {
+      $sort: { createdAt: -1 }
+    },
+    ...(isFullRequest ? [] : [
+      { $skip: skip },
+      { $limit: parseInt(limit) }
+    ])
+  ]);
+
+  // إجمالي عدد البلاغات للفنان
   const totalReports = await reportModel.countDocuments({ 
     targetUser: new mongoose.Types.ObjectId(artistId) 
   });
 
-  res.json({
+  // تنسيق البيانات للعرض
+  const formattedReports = reports.map((report, index) => ({
+    id: isFullRequest ? index + 1 : skip + index + 1,
+    _id: report._id,
+    complainant: {
+      id: report.reporterId,
+      name: report.reporterName || 'مستخدم',
+      role: report.reporterRole,
+      email: report.reporterEmail
+    },
+    artist: {
+      id: report.targetUserId,
+      name: report.targetUserName || 'فنان',
+      role: report.targetUserRole,
+      email: report.targetUserEmail
+    },
+    reportType: getReportTypeText(report.reason),
+    date: report.createdAt,
+    description: report.description,
+    status: report.status,
+    statusText: getStatusText(report.status)
+  }));
+
+  res.status(200).json({
     success: true,
-    message: 'تم جلب بلاغات الفنان بنجاح',
+    message: isFullRequest ? 'تم جلب جميع بلاغات الفنان بنجاح' : 'تم جلب بلاغات الفنان بنجاح',
     data: {
-      artist: {
-        _id: artist._id,
-        displayName: artist.displayName
-      },
-      reports: reports.map(report => ({
-        _id: report._id,
-        reporter: report.reporter,
-        type: report.type,
-        description: report.description,
-        status: report.status,
-        createdAt: report.createdAt
-      })),
-      pagination: {
+      reports: formattedReports,
+      pagination: isFullRequest ? {
+        page: 1,
+        limit: formattedReports.length,
+        total: totalReports,
+        pages: 1,
+        isFullRequest: true
+      } : {
         page: parseInt(page),
         limit: parseInt(limit),
         total: totalReports,
-        pages: Math.ceil(totalReports / parseInt(limit))
+        pages: Math.ceil(totalReports / parseInt(limit)),
+        isFullRequest: false
       }
     }
   });
@@ -2662,3 +2727,33 @@ export const getAdminOverview = asyncHandler(async (req, res, next) => {
     }
   });
 });
+
+// Helper functions for reports
+function getReportTypeText(reason) {
+  const types = {
+    'inappropriate': 'محتوى غير مناسب',
+    'copyright': 'انتهاك حقوق الملكية',
+    'spam': 'رسائل مزعجة',
+    'offensive': 'محتوى مسيء',
+    'harassment': 'تحرش',
+    'other': 'أخرى',
+    // إضافة أنواع جديدة بناءً على الصورة
+    'delay_delivery': 'تأخير في التسليم',
+    'low_quality': 'جودة منخفضة',
+    'unavailable_communication': 'تواصل غير متاح',
+    'artwork_damage': 'خدش في العمل',
+    'color_mismatch': 'ألوان غير مطابقة',
+    'size_incorrect': 'مقاس غير صحيح'
+  };
+  return types[reason] || 'غير محدد';
+}
+
+function getStatusText(status) {
+  const statuses = {
+    'pending': 'تحت المراجعة',
+    'resolved': 'تم الحل',
+    'rejected': 'مرفوض',
+    'reviewed': 'تمت المراجعة'
+  };
+  return statuses[status] || 'غير محدد';
+}
