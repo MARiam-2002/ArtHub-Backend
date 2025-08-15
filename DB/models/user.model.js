@@ -61,12 +61,12 @@ const userSchema = new Schema(
       url: {
         type: String,
         default:
-          'https://res.cloudinary.com/dgzucjqgi/image/upload/v1753201276/WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c.jpg'
+          'https://asset.cloudinary.com/dgzucjqgi/554357d17f851fe8249797db949e1766'
       },
       id: {
         type: String,
         default:
-          'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
+          'dgzucjqgi/554357d17f851fe8249797db949e1766'
       }
     },
 
