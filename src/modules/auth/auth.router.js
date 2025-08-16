@@ -781,8 +781,8 @@ router.post('/refresh-token', isValidation(Validators.refreshTokenSchema), authC
  *                   example: "UNAUTHORIZED"
  *     deprecated: true
  */
-// DEPRECATED: Use /api/notifications/token instead
-// router.post('/fcm-token', authenticate, isValidation(Validators.fcmTokenSchema), authController.updateFCMToken);
+// FCM Token endpoint for Flutter
+router.post('/fcm-token', authenticate, isValidation(Validators.fcmTokenSchema), authController.updateFCMToken);
 
 /**
  * @swagger

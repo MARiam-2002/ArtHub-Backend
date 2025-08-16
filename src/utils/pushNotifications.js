@@ -92,7 +92,6 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
               channel_id: 'arthub_channel',
               icon: 'ic_notification',
               priority: 'high',
-              timeoutAfter: 30000, // 30 ثانية
               color: '#2196F3'
             }
           },
