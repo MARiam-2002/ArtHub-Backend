@@ -459,8 +459,14 @@ export const sendChatMessageNotification = async (
     return sendPushNotificationToUser(
       receiverId,
       {
-        title: senderName || 'رسالة جديدة',
-        body: messageText ? messageText.substring(0, 100) : 'صورة جديدة'
+        title: {
+          ar: senderName || 'رسالة جديدة',
+          en: senderName || 'New Message'
+        },
+        body: {
+          ar: messageText ? messageText.substring(0, 100) : 'صورة جديدة',
+          en: messageText ? messageText.substring(0, 100) : 'New Image'
+        }
       },
       {
         screen: 'CHAT_DETAIL',
@@ -477,8 +483,14 @@ export const sendChatMessageNotification = async (
     return sendPushNotificationToUser(
       receiverId,
       {
-        title: senderName || 'رسالة جديدة',
-        body: messageText ? messageText.substring(0, 100) : 'صورة جديدة'
+        title: {
+          ar: senderName || 'رسالة جديدة',
+          en: senderName || 'New Message'
+        },
+        body: {
+          ar: messageText ? messageText.substring(0, 100) : 'صورة جديدة',
+          en: messageText ? messageText.substring(0, 100) : 'New Image'
+        }
       },
       {
         screen: 'CHAT_DETAIL',
@@ -510,8 +522,14 @@ export const sendCommentNotification = async (
   sendPushNotificationToUser(
     artistId,
     {
-      title: 'تعليق جديد',
-      body: `قام ${commenterName} بالتعليق على "${artworkTitle}"`
+      title: {
+        ar: 'تعليق جديد',
+        en: 'New Comment'
+      },
+      body: {
+        ar: `قام ${commenterName} بالتعليق على "${artworkTitle}"`,
+        en: `${commenterName} commented on "${artworkTitle}"`
+      }
     },
     {
       screen: 'ARTWORK_DETAIL',
@@ -533,8 +551,14 @@ export const sendFollowNotification = async (artistId, followerId, followerName)
   sendPushNotificationToUser(
     artistId,
     {
-      title: 'متابع جديد',
-      body: `بدأ ${followerName} بمتابعتك`
+      title: {
+        ar: 'متابع جديد',
+        en: 'New Follower'
+      },
+      body: {
+        ar: `بدأ ${followerName} بمتابعتك`,
+        en: `${followerName} started following you`
+      }
     },
     {
       screen: 'PROFILE_FOLLOWERS',
@@ -545,27 +569,131 @@ export const sendFollowNotification = async (artistId, followerId, followerName)
   );
 
 /**
- * Send transaction notification
+ * Send special request notification
  * @param {string} userId - User to notify
- * @param {string} transactionType - Type of transaction (purchase, sale, etc)
- * @param {string} amount - Transaction amount
- * @param {string} itemName - Name of the item involved
+ * @param {string} notificationType - Type of notification (new_request, status_update, response, etc)
+ * @param {string} senderName - Name of the sender
+ * @param {string} requestTitle - Title of the request
+ * @param {string} requestType - Type of request (custom_artwork, ready_artwork, etc)
+ * @param {string} additionalInfo - Additional information
  * @returns {Promise} - Notification result
  */
-export const sendTransactionNotification = async (userId, transactionType, amount, itemName) => {
-  const title = transactionType === 'purchase' ? 'عملية شراء ناجحة' : 'عملية بيع ناجحة';
-  const body =
-    transactionType === 'purchase'
-      ? `تم شراء "${itemName}" بنجاح بمبلغ ${amount}`
-      : `تم بيع "${itemName}" بنجاح بمبلغ ${amount}`;
+export const sendSpecialRequestNotification = async (
+  userId,
+  notificationType,
+  senderName,
+  requestTitle,
+  requestType = 'custom_artwork',
+  additionalInfo = ''
+) => {
+  // تحديد نوع الطلب (خاص أم عادي)
+  const isCustomRequest = requestType === 'custom_artwork';
+  const requestTypeLabel = isCustomRequest ? 'خاص' : 'عادي';
+  const requestTypeLabelEn = isCustomRequest ? 'Custom' : 'Ready';
+  
+  const notifications = {
+    new_request: {
+      title: {
+        ar: `طلب ${requestTypeLabel} جديد`,
+        en: `New ${requestTypeLabelEn} Request`
+      },
+      body: {
+        ar: `لديك طلب ${requestTypeLabel} جديد من ${senderName}: ${requestTitle}`,
+        en: `You have a new ${requestTypeLabelEn.toLowerCase()} request from ${senderName}: ${requestTitle}`
+      }
+    },
+    status_update: {
+      title: {
+        ar: 'تحديث حالة الطلب',
+        en: 'Request Status Update'
+      },
+      body: {
+        ar: `تم تحديث حالة طلبك الخاص: ${additionalInfo}`,
+        en: `Your special request status has been updated: ${additionalInfo}`
+      }
+    },
+    response: {
+      title: {
+        ar: 'رد جديد على الطلب',
+        en: 'New Response to Request'
+      },
+      body: {
+        ar: `رد جديد من ${senderName} على طلبك الخاص`,
+        en: `New response from ${senderName} to your special request`
+      }
+    },
+    accepted: {
+      title: {
+        ar: `تم قبول طلبك ${requestTypeLabel}`,
+        en: `Your ${requestTypeLabelEn} Request Accepted`
+      },
+      body: {
+        ar: `تم قبول طلبك ${requestTypeLabel} من قبل ${senderName}`,
+        en: `Your ${requestTypeLabelEn.toLowerCase()} request has been accepted by ${senderName}`
+      }
+    },
+    rejected: {
+      title: {
+        ar: `تم رفض طلبك ${requestTypeLabel}`,
+        en: `Your ${requestTypeLabelEn} Request Rejected`
+      },
+      body: {
+        ar: `تم رفض طلبك ${requestTypeLabel} من قبل ${senderName}`,
+        en: `Your ${requestTypeLabelEn.toLowerCase()} request has been rejected by ${senderName}`
+      }
+    },
+    in_progress: {
+      title: {
+        ar: `بدء العمل على طلبك ${requestTypeLabel}`,
+        en: `Work Started on Your ${requestTypeLabelEn} Request`
+      },
+      body: {
+        ar: `بدأ ${senderName} العمل على طلبك ${requestTypeLabel}`,
+        en: `${senderName} has started working on your ${requestTypeLabelEn.toLowerCase()} request`
+      }
+    },
+    review: {
+      title: {
+        ar: `طلبك ${requestTypeLabel} قيد المراجعة`,
+        en: `Your ${requestTypeLabelEn} Request Under Review`
+      },
+      body: {
+        ar: `طلبك ${requestTypeLabel} قيد المراجعة من قبل ${senderName}`,
+        en: `Your ${requestTypeLabelEn.toLowerCase()} request is under review by ${senderName}`
+      }
+    },
+    completed: {
+      title: {
+        ar: `تم إكمال طلبك ${requestTypeLabel}`,
+        en: `Your ${requestTypeLabelEn} Request Completed`
+      },
+      body: {
+        ar: `تم إكمال طلبك ${requestTypeLabel} بنجاح من قبل ${senderName}`,
+        en: `Your ${requestTypeLabelEn.toLowerCase()} request has been completed successfully by ${senderName}`
+      }
+    },
+    cancelled: {
+      title: {
+        ar: `تم إلغاء طلب ${requestTypeLabel}`,
+        en: `${requestTypeLabelEn} Request Cancelled`
+      },
+      body: {
+        ar: `قام ${senderName} بإلغاء الطلب ${requestTypeLabel}`,
+        en: `${senderName} has cancelled the ${requestTypeLabelEn.toLowerCase()} request`
+      }
+    }
+  };
+
+  const notification = notifications[notificationType] || notifications.new_request;
 
   return sendPushNotificationToUser(
     userId,
-    { title, body },
+    notification,
     {
-      screen: 'TRANSACTION_DETAILS',
-      type: 'transaction',
-      transactionType,
+      screen: 'SPECIAL_REQUEST_DETAILS',
+      type: 'special_request',
+      requestType: requestType,
+      senderName: senderName,
       timestamp: Date.now().toString()
     }
   );
@@ -616,7 +744,7 @@ export default {
   sendChatMessageNotification,
   sendCommentNotification,
   sendFollowNotification,
-  sendTransactionNotification,
+  sendSpecialRequestNotification,
 
   // Aliases for backward compatibility
   sendPushToUser,

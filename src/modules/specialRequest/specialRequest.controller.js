@@ -5,7 +5,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
 import { getPaginationParams } from '../../utils/pagination.js';
-import { sendPushNotificationToUser } from '../../utils/pushNotifications.js';
+import { sendSpecialRequestNotification } from '../../utils/pushNotifications.js';
 import transactionModel from '../../../DB/models/transaction.model.js';
 
 /**
@@ -331,17 +331,12 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
     const senderName = senderUser?.displayName || 'مستخدم';
 
     try {
-      await sendPushNotificationToUser(
+      await sendSpecialRequestNotification(
         artist,
-        {
-          title: 'طلب خاص جديد',
-          body: `لديك طلب خاص جديد من ${senderName}: ${description}`
-        },
-        {
-          screen: 'SPECIAL_REQUEST_DETAILS',
-          requestId: specialRequest._id.toString(),
-          type: 'new_special_request'
-        }
+        'new_request',
+        senderName,
+        description.substring(0, 50),
+        specialRequest.requestType // تمرير نوع الطلب (custom_artwork أو ready_artwork)
       );
     } catch (notificationError) {
       console.warn('Push notification failed:', notificationError);
@@ -745,17 +740,14 @@ export const updateRequestStatus = asyncHandler(async (req, res, next) => {
 
     if (statusMessages[status]) {
       try {
-        await sendPushNotificationToUser(
+        const artistName = updatedRequest.artist?.displayName || 'الفنان';
+        await sendSpecialRequestNotification(
           request.sender.toString(),
-          {
-            title: statusMessages[status],
-            body: responseText || `تم تحديث حالة طلبك الخاص إلى: ${getStatusLabel(status)}`
-          },
-          {
-            screen: 'SPECIAL_REQUEST_DETAILS',
-            requestId: request._id.toString(),
-            type: 'special_request_update'
-          }
+          status,
+          artistName,
+          updatedRequest.title || 'طلب خاص',
+          updatedRequest.requestType, // تمرير نوع الطلب
+          responseText || `تم تحديث حالة طلبك إلى: ${getStatusLabel(status)}`
         );
       } catch (notificationError) {
         console.warn('Push notification failed:', notificationError);
@@ -867,17 +859,12 @@ export const addResponseToRequest = asyncHandler(async (req, res, next) => {
     const senderName = sender?.displayName || 'مستخدم';
 
     try {
-      await sendPushNotificationToUser(
+      await sendSpecialRequestNotification(
         recipientId,
-        {
-          title: 'رد جديد على الطلب الخاص',
-          body: `تم إضافة رد جديد من ${senderName} على الطلب الخاص`
-        },
-        {
-          screen: 'SPECIAL_REQUEST_DETAILS',
-          requestId: request._id.toString(),
-          type: 'special_request_response'
-        }
+        'response',
+        senderName,
+        request.title || 'طلب خاص',
+        request.requestType // تمرير نوع الطلب
       );
     } catch (notificationError) {
       console.warn('Push notification failed:', notificationError);
@@ -1185,17 +1172,12 @@ export const cancelSpecialRequest = asyncHandler(async (req, res, next) => {
     const userName = user?.displayName || 'مستخدم';
 
     try {
-      await sendPushNotificationToUser(
+      await sendSpecialRequestNotification(
         recipientId,
-        {
-          title: 'تم إلغاء طلب خاص',
-          body: `قام ${userName} بإلغاء الطلب الخاص`
-        },
-        {
-          screen: 'SPECIAL_REQUEST_DETAILS',
-          requestId: request._id.toString(),
-          type: 'cancelled_special_request'
-        }
+        'cancelled',
+        userName,
+        request.title || 'طلب خاص',
+        request.requestType // تمرير نوع الطلب
       );
     } catch (notificationError) {
       console.warn('Push notification failed:', notificationError);
