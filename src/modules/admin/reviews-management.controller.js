@@ -55,9 +55,14 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
     {
       $addFields: {
         userName: { $arrayElemAt: ['$userData.displayName', 0] },
+        userEmail: { $arrayElemAt: ['$userData.email', 0] },
+        userId: { $arrayElemAt: ['$userData._id', 0] },
         artistName: { $arrayElemAt: ['$artistData.displayName', 0] },
+        artistEmail: { $arrayElemAt: ['$artistData.email', 0] },
+        artistId: { $arrayElemAt: ['$artistData._id', 0] },
         artworkTitle: { $arrayElemAt: ['$artworkData.title', 0] },
-        artworkImage: { $arrayElemAt: ['$artworkData.image', 0] }
+        artworkImage: { $arrayElemAt: ['$artworkData.image', 0] },
+        artworkId: { $arrayElemAt: ['$artworkData._id', 0] }
       }
     },
     {
@@ -67,9 +72,14 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
         comment: 1,
         createdAt: 1,
         userName: 1,
+        userEmail: 1,
+        userId: 1,
         artistName: 1,
+        artistEmail: 1,
+        artistId: 1,
         artworkTitle: 1,
-        artworkImage: 1
+        artworkImage: 1,
+        artworkId: 1
       }
     },
     {
@@ -91,8 +101,17 @@ export const getAllReviews = asyncHandler(async (req, res, next) => {
     id: isFullRequest ? index + 1 : skip + index + 1,
     _id: review._id,
     artworkTitle: review.artworkTitle || 'عمل فني',
-    clientName: review.userName || 'مستخدم',
-    artistName: review.artistName || 'فنان',
+    artworkId: review.artworkId,
+    client: {
+      id: review.userId,
+      name: review.userName || 'مستخدم',
+      email: review.userEmail
+    },
+    artist: {
+      id: review.artistId,
+      name: review.artistName || 'فنان',
+      email: review.artistEmail
+    },
     rating: review.rating,
     date: review.createdAt,
     comment: review.comment,
@@ -172,12 +191,15 @@ export const getReviewDetails = asyncHandler(async (req, res, next) => {
         userName: { $arrayElemAt: ['$userData.displayName', 0] },
         userEmail: { $arrayElemAt: ['$userData.email', 0] },
         userImage: { $arrayElemAt: ['$userData.profileImage', 0] },
+        userId: { $arrayElemAt: ['$userData._id', 0] },
         artistName: { $arrayElemAt: ['$artistData.displayName', 0] },
         artistEmail: { $arrayElemAt: ['$artistData.email', 0] },
         artistImage: { $arrayElemAt: ['$artistData.profileImage', 0] },
+        artistId: { $arrayElemAt: ['$artistData._id', 0] },
         artworkTitle: { $arrayElemAt: ['$artworkData.title', 0] },
         artworkImage: { $arrayElemAt: ['$artworkData.image', 0] },
-        artworkDescription: { $arrayElemAt: ['$artworkData.description', 0] }
+        artworkDescription: { $arrayElemAt: ['$artworkData.description', 0] },
+        artworkId: { $arrayElemAt: ['$artworkData._id', 0] }
       }
     },
     {
@@ -190,12 +212,15 @@ export const getReviewDetails = asyncHandler(async (req, res, next) => {
         userName: 1,
         userEmail: 1,
         userImage: 1,
+        userId: 1,
         artistName: 1,
         artistEmail: 1,
         artistImage: 1,
+        artistId: 1,
         artworkTitle: 1,
         artworkImage: 1,
-        artworkDescription: 1
+        artworkDescription: 1,
+        artworkId: 1
       }
     }
   ]);
@@ -214,7 +239,29 @@ export const getReviewDetails = asyncHandler(async (req, res, next) => {
     success: true,
     message: 'تم جلب تفاصيل التقييم بنجاح',
     data: {
-      comment: reviewData.comment
+      _id: reviewData._id,
+      rating: reviewData.rating,
+      comment: reviewData.comment,
+      createdAt: reviewData.createdAt,
+      updatedAt: reviewData.updatedAt,
+      client: {
+        id: reviewData.userId,
+        name: reviewData.userName,
+        email: reviewData.userEmail,
+        image: reviewData.userImage
+      },
+      artist: {
+        id: reviewData.artistId,
+        name: reviewData.artistName,
+        email: reviewData.artistEmail,
+        image: reviewData.artistImage
+      },
+      artwork: {
+        id: reviewData.artworkId,
+        title: reviewData.artworkTitle,
+        image: reviewData.artworkImage,
+        description: reviewData.artworkDescription
+      }
     }
   });
 });
@@ -300,9 +347,12 @@ export const exportReviews = asyncHandler(async (req, res, next) => {
       $addFields: {
         userName: { $arrayElemAt: ['$userData.displayName', 0] },
         userEmail: { $arrayElemAt: ['$userData.email', 0] },
+        userId: { $arrayElemAt: ['$userData._id', 0] },
         artistName: { $arrayElemAt: ['$artistData.displayName', 0] },
         artistEmail: { $arrayElemAt: ['$artistData.email', 0] },
-        artworkTitle: { $arrayElemAt: ['$artworkData.title', 0] }
+        artistId: { $arrayElemAt: ['$artistData._id', 0] },
+        artworkTitle: { $arrayElemAt: ['$artworkData.title', 0] },
+        artworkId: { $arrayElemAt: ['$artworkData._id', 0] }
       }
     },
     {
@@ -313,9 +363,12 @@ export const exportReviews = asyncHandler(async (req, res, next) => {
         createdAt: 1,
         userName: 1,
         userEmail: 1,
+        userId: 1,
         artistName: 1,
         artistEmail: 1,
-        artworkTitle: 1
+        artistId: 1,
+        artworkTitle: 1,
+        artworkId: 1
       }
     },
     {
@@ -354,10 +407,17 @@ export const exportReviews = asyncHandler(async (req, res, next) => {
           id: index + 1,
           _id: review._id,
           artworkTitle: review.artworkTitle || 'عمل فني',
-          clientName: review.userName || 'مستخدم',
-          clientEmail: review.userEmail || '',
-          artistName: review.artistName || 'فنان',
-          artistEmail: review.artistEmail || '',
+          artworkId: review.artworkId,
+          client: {
+            id: review.userId,
+            name: review.userName || 'مستخدم',
+            email: review.userEmail || ''
+          },
+          artist: {
+            id: review.artistId,
+            name: review.artistName || 'فنان',
+            email: review.artistEmail || ''
+          },
           rating: review.rating,
           comment: review.comment || '',
           createdAt: review.createdAt
@@ -452,7 +512,9 @@ export const getReviewsStatistics = asyncHandler(async (req, res, next) => {
     {
       $addFields: {
         userName: { $arrayElemAt: ['$userData.displayName', 0] },
-        artistName: { $arrayElemAt: ['$artistData.displayName', 0] }
+        userId: { $arrayElemAt: ['$userData._id', 0] },
+        artistName: { $arrayElemAt: ['$artistData.displayName', 0] },
+        artistId: { $arrayElemAt: ['$artistData._id', 0] }
       }
     },
     {
@@ -462,7 +524,9 @@ export const getReviewsStatistics = asyncHandler(async (req, res, next) => {
         comment: 1,
         createdAt: 1,
         userName: 1,
-        artistName: 1
+        userId: 1,
+        artistName: 1,
+        artistId: 1
       }
     },
     {
@@ -483,6 +547,7 @@ export const getReviewsStatistics = asyncHandler(async (req, res, next) => {
         ratingDistribution
       },
       topRatedArtists: topRatedArtists.map(artist => ({
+        id: artist._id,
         name: artist.artistName,
         image: artist.artistImage,
         averageRating: Math.round(artist.averageRating * 10) / 10,
@@ -492,8 +557,14 @@ export const getReviewsStatistics = asyncHandler(async (req, res, next) => {
         _id: review._id,
         rating: review.rating,
         comment: review.comment,
-        clientName: review.userName,
-        artistName: review.artistName,
+        client: {
+          id: review.userId,
+          name: review.userName
+        },
+        artist: {
+          id: review.artistId,
+          name: review.artistName
+        },
         createdAt: review.createdAt
       }))
     }
