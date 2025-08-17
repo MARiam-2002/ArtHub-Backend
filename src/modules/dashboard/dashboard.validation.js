@@ -59,6 +59,14 @@ export const getTopSellingArtistsValidation = {
     }),
     page: joi.number().integer().min(1).default(1).messages({
       'number.min': 'رقم الصفحة يجب أن يكون 1 على الأقل'
+    }),
+    year: joi.number().integer().min(1900).max(2100).messages({
+      'number.min': 'السنة يجب أن تكون 1900 أو أحدث',
+      'number.max': 'السنة يجب أن تكون 2100 أو أقل'
+    }),
+    month: joi.number().integer().min(1).max(12).messages({
+      'number.min': 'الشهر يجب أن يكون 1 على الأقل',
+      'number.max': 'الشهر يجب أن يكون 12 كحد أقصى'
     })
   }).optional()
 };

@@ -676,7 +676,7 @@ router.get(
  *   get:
  *     summary: أفضل الفنانين مبيعاً
  *     tags: [Dashboard]
- *     description: جلب قائمة أفضل الفنانين مبيعاً مع إحصائيات النمو
+ *     description: جلب قائمة أفضل الفنانين مبيعاً في فترة زمنية محددة مع دعم الصفحات
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -687,14 +687,28 @@ router.get(
  *           minimum: 1
  *           maximum: 100
  *           default: 10
- *         description: عدد الفنانين المطلوب عرضهم
+ *         description: عدد الفنانين المطلوب عرضهم (الافتراضي 10)
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           minimum: 1
  *           default: 1
- *         description: رقم الصفحة
+ *         description: رقم الصفحة المطلوبة (الافتراضي 1)
+ *       - in: query
+ *         name: year
+ *         schema:
+ *           type: integer
+ *           minimum: 1900
+ *           maximum: 2100
+ *         description: السنة المطلوبة للفلترة (اختياري)
+ *       - in: query
+ *         name: month
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 12
+ *         description: الشهر المطلوب للفلترة (اختياري - يجب تحديد السنة معه)
  *     responses:
  *       200:
  *         description: تم جلب أفضل الفنانين مبيعاً بنجاح
@@ -744,39 +758,55 @@ router.get(
  *                           orders:
  *                             type: number
  *                             example: 25
- *                           growth:
- *                             type: object
- *                             properties:
- *                               sales:
- *                                 type: number
- *                                 example: 12
- *                               orders:
- *                                 type: number
- *                                 example: 8
- *                               isPositive:
- *                                 type: boolean
- *                                 example: true
  *                     pagination:
  *                       type: object
  *                       properties:
- *                         page:
+ *                         currentPage:
  *                           type: integer
  *                           example: 1
+ *                         totalPages:
+ *                           type: integer
+ *                           example: 5
+ *                         totalArtists:
+ *                           type: integer
+ *                           example: 50
  *                         limit:
  *                           type: integer
  *                           example: 10
- *                         total:
- *                           type: integer
- *                           example: 50
- *                         pages:
- *                           type: integer
- *                           example: 5
  *                         hasNext:
  *                           type: boolean
  *                           example: true
  *                         hasPrev:
  *                           type: boolean
  *                           example: false
+ *                 periodInfo:
+ *                   type: object
+ *                   properties:
+ *                     year:
+ *                       type: integer
+ *                       example: 2025
+ *                     month:
+ *                       type: integer
+ *                       example: 1
+ *                     type:
+ *                       type: string
+ *                       example: "specific"
+ *       400:
+ *         description: بيانات غير صحيحة
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "السنة أو الشهر غير صحيح"
+ *                 data:
+ *                   type: null
+ *                   example: null
  *       401:
  *         description: غير مصرح
  *       403:

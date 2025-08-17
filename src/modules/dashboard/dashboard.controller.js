@@ -926,23 +926,79 @@ export const getSalesTrends = asyncHandler(async (req, res, next) => {
  * @access  Private (Admin, SuperAdmin)
  */
 export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
-  await ensureDatabaseConnection();
+  const { limit = 10, page = 1, year, month } = req.query;
   
-  const { limit = 10, page = 1 } = req.query;
+  let startDate = new Date();
+  let endDate = new Date();
   
+  // تحديد الفترة الزمنية بناءً على المعاملات
+  if (year && month) {
+    // فلترة محددة بالسنة والشهر
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month) - 1; // الشهر يبدأ من 0 في JavaScript
+    
+    if (yearNum < 1900 || yearNum > 2100 || monthNum < 0 || monthNum > 11) {
+      return res.status(400).json({
+        success: false,
+        message: 'السنة أو الشهر غير صحيح',
+        data: null
+      });
+    }
+    
+    // استخدام UTC لتجنب مشاكل التوقيت
+    startDate = new Date(Date.UTC(yearNum, monthNum, 1, 0, 0, 0, 0));
+    endDate = new Date(Date.UTC(yearNum, monthNum + 1, 0, 23, 59, 59, 999));
+    
+    console.log('🔍 Date filtering for top selling artists:');
+    console.log(`📅 Year: ${yearNum}, Month: ${monthNum + 1}`);
+    console.log(`📅 Start Date (UTC): ${startDate.toISOString()}`);
+    console.log(`📅 End Date (UTC): ${endDate.toISOString()}`);
+  } else {
+    // إذا لم يتم تحديد السنة والشهر، استخدم الشهر الماضي كافتراضي
+    const now = new Date();
+    startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+    endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59, 999));
+    
+    console.log('🔍 Using default date range (last month):');
+    console.log(`📅 Start Date (UTC): ${startDate.toISOString()}`);
+    console.log(`📅 End Date (UTC): ${endDate.toISOString()}`);
+  }
+
   // استيراد نموذج الطلبات الخاصة
   const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
 
-  const parsedLimit = parseInt(limit);
-  const parsedPage = parseInt(page);
-  const skip = (parsedPage - 1) * parsedLimit;
-
-  // جلب أفضل الفنانين (جميع البيانات - بدون فلتر زمني)
-  const currentPeriodArtists = await specialRequestModel.aggregate([
+  // حساب إجمالي عدد الفنانين للصفحات
+  const totalArtistsCount = await specialRequestModel.aggregate([
     { 
       $match: { 
         status: 'completed',
-        isDeleted: { $ne: true }
+        isDeleted: { $ne: true },
+        createdAt: { $gte: startDate, $lte: endDate }
+      } 
+    },
+    {
+      $group: {
+        _id: '$artist'
+      }
+    },
+    {
+      $count: 'total'
+    }
+  ]);
+
+  const totalArtists = totalArtistsCount.length > 0 ? totalArtistsCount[0].total : 0;
+  const limitNum = parseInt(limit);
+  const pageNum = parseInt(page);
+  const skip = (pageNum - 1) * limitNum;
+  const totalPages = Math.ceil(totalArtists / limitNum);
+
+  // جلب أفضل الفنانين مبيعاً في الفترة المحددة مع الصفحات
+  const topArtists = await specialRequestModel.aggregate([
+    { 
+      $match: { 
+        status: 'completed',
+        isDeleted: { $ne: true },
+        createdAt: { $gte: startDate, $lte: endDate }
       } 
     },
     {
@@ -973,104 +1029,45 @@ export const getTopSellingArtists = asyncHandler(async (req, res, next) => {
       $skip: skip
     },
     {
-      $limit: parsedLimit
+      $limit: limitNum
     }
   ]);
 
-  // حساب النمو مقارنة بالشهر السابق
-  const lastMonth = new Date();
-  lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
-  
-  const previousMonthArtists = await specialRequestModel.aggregate([
-    { 
-      $match: { 
-        createdAt: { $gte: lastMonth },
-        status: 'completed',
-        isDeleted: { $ne: true }
-      } 
-    },
-    {
-      $group: {
-        _id: '$artist',
-        previousSales: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } },
-        previousOrders: { $sum: 1 }
-      }
-    }
-  ]);
+  console.log(`📊 Found ${topArtists.length} top selling artists in the specified period (page ${pageNum}/${totalPages})`);
 
-  // تحويل البيانات السابقة إلى كائن للبحث السريع
-  const previousData = {};
-  previousMonthArtists.forEach(artist => {
-    previousData[artist._id.toString()] = {
-      sales: artist.previousSales,
-      orders: artist.previousOrders
-    };
-  });
+  // إضافة معلومات الفترة المحددة للاستجابة
+  const periodInfo = year && month 
+    ? { year: parseInt(year), month: parseInt(month), type: 'specific' }
+    : { type: 'default', period: 'last_month' };
 
-  // حساب النمو وإضافة البيانات الإضافية
-  const artistsWithGrowth = currentPeriodArtists.map(artist => {
-    const previous = previousData[artist._id.toString()] || { sales: 0, orders: 0 };
-    
-    const salesGrowth = previous.sales > 0 
-      ? Math.round(((artist.totalSales - previous.sales) / previous.sales) * 100)
-      : 0;
-    
-    const ordersGrowth = previous.orders > 0
-      ? Math.round(((artist.orderCount - previous.orders) / previous.orders) * 100)
-      : 0;
-
-    return {
-      _id: artist._id,
-      name: artist.artistName,
-      image: artist.artistImage,
-      job: artist.artistJob || 'فنان',
-      rating: artist.artistRating || 0,
-      reviewsCount: artist.artistReviewsCount || 0,
-      isVerified: artist.artistIsVerified || false,
-      sales: artist.totalSales,
-      orders: artist.orderCount,
-      growth: {
-        sales: salesGrowth,
-        orders: ordersGrowth,
-        isPositive: salesGrowth >= 0
-      }
-    };
-  });
-
-  // حساب إجمالي عدد الفنانين للـ pagination
-  const totalArtists = await specialRequestModel.aggregate([
-    { 
-      $match: { 
-        status: 'completed',
-        isDeleted: { $ne: true }
-      } 
-    },
-    {
-      $group: {
-        _id: '$artist'
-      }
-    },
-    {
-      $count: 'total'
-    }
-  ]);
-
-  const total = totalArtists[0]?.total || 0;
+  // تنسيق البيانات للإرجاع
+  const formattedArtists = topArtists.map(artist => ({
+    _id: artist._id,
+    name: artist.artistName,
+    image: artist.artistImage,
+    job: artist.artistJob || 'فنان',
+    rating: artist.artistRating || 0,
+    reviewsCount: artist.artistReviewsCount || 0,
+    isVerified: artist.artistIsVerified || false,
+    sales: artist.totalSales,
+    orders: artist.orderCount
+  }));
 
   res.status(200).json({
     success: true,
     message: 'تم جلب أفضل الفنانين مبيعاً بنجاح',
     data: {
-      artists: artistsWithGrowth,
+      artists: formattedArtists,
       pagination: {
-        page: parsedPage,
-        limit: parsedLimit,
-        total,
-        pages: Math.ceil(total / parsedLimit),
-        hasNext: parsedPage < Math.ceil(total / parsedLimit),
-        hasPrev: parsedPage > 1
+        currentPage: pageNum,
+        totalPages,
+        totalArtists,
+        limit: limitNum,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
       }
-    }
+    },
+    periodInfo
   });
 });
 
