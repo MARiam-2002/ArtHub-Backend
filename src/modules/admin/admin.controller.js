@@ -1171,8 +1171,8 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     }
   });
 
-  // إرسال push notification إذا كان المستخدم مفعل الإشعارات
-  if (user.notificationSettings?.enablePush && user.fcmTokens?.length > 0) {
+  // إرسال push notification مباشرة إذا كان لدى المستخدم FCM tokens
+  if (user.fcmTokens?.length > 0) {
     try {
       const { sendPushNotificationToUser } = await import('../../utils/pushNotifications.js');
       await sendPushNotificationToUser(
@@ -1192,7 +1192,7 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
           screen: 'NOTIFICATIONS',
           notificationId: notification._id.toString(),
           adminId: req.user._id.toString(),
-          hasAttachments: attachments.length > 0,
+          hasAttachments: String(attachments.length > 0),
           timestamp: Date.now().toString()
         }
       );
@@ -1200,6 +1200,8 @@ export const sendMessageToUser = asyncHandler(async (req, res, next) => {
     } catch (error) {
       console.error('❌ Error sending push notification:', error);
     }
+  } else {
+    console.log('⚠️  No FCM tokens found for user');
   }
 
   // إرسال email إذا كان مفعل

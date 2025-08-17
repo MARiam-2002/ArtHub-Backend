@@ -75,7 +75,9 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
             body: notificationBody
           },
           data: {
-            ...data,
+            ...Object.fromEntries(
+              Object.entries(data).map(([key, value]) => [key, String(value)])
+            ),
             click_action: 'FLUTTER_NOTIFICATION_CLICK',
             screen: data.screen || 'default',
             id: data.id || '',

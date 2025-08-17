@@ -627,22 +627,32 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         const sender = await userModel.findById(userId).select('displayName').lean();
         const senderName = sender?.displayName || 'مستخدم';
         
-        let notificationBody = '';
-        if (messageType === 'text') {
-          notificationBody = `${senderName}: ${content?.substring(0, 50) || ''}${(content?.length || 0) > 50 ? '...' : ''}`;
-        } else if (messageType === 'image') {
-          notificationBody = `${senderName}: أرسل صورة`;
-        } else {
-          notificationBody = `${senderName}: أرسل مرفق`;
-        }
+        // إرسال الإشعارات مباشرة إذا كان لدى المستخدم FCM tokens
+        const receiver = await userModel.findById(receiverId).select('fcmTokens displayName email');
+        
+        if (receiver && receiver.fcmTokens && receiver.fcmTokens.length > 0) {
+          
+          let notificationBody = '';
+          if (messageType === 'text') {
+            notificationBody = `${senderName}: ${content?.substring(0, 50) || ''}${(content?.length || 0) > 50 ? '...' : ''}`;
+          } else if (messageType === 'image') {
+            notificationBody = `${senderName}: أرسل صورة`;
+          } else {
+            notificationBody = `${senderName}: أرسل مرفق`;
+          }
 
-        await sendChatMessageNotification(
-          receiverId,
-          userId,
-          senderName,
-          content,
-          chatId
-        );
+          await sendChatMessageNotification(
+            receiverId,
+            userId,
+            senderName,
+            content,
+            chatId
+          );
+          
+          console.log(`✅ Push notification sent to ${receiver.displayName || receiver.email}`);
+        } else {
+          console.log(`⚠️  No FCM tokens found for user ${receiverId}`);
+        }
       } catch (notificationError) {
         console.warn('Push notification failed:', notificationError);
       }
