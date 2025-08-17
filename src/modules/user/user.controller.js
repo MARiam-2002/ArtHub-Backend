@@ -874,33 +874,163 @@ export const updateNotificationSettings = asyncHandler(async (req, res, next) =>
 });
 
 /**
- * Delete user account (soft delete)
+ * Delete user account (comprehensive soft delete)
  */
 export const deleteAccount = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     
-    const { password } = req.body;
     const userId = req.user._id;
 
-    // Verify password
-    const user = await userModel.findById(userId).select('+password');
+    // Get user info
+    const user = await userModel.findById(userId);
     if (!user) {
       return res.fail(null, 'المستخدم غير موجود', 404);
     }
 
-    const isPasswordValid = await bcryptjs.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.fail(null, 'كلمة المرور غير صحيحة', 400);
+    // Start transaction for comprehensive deletion
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // 1. Update user account (soft delete)
+      await userModel.findByIdAndUpdate(userId, {
+        isActive: false,
+        isDeleted: true,
+        deletedAt: new Date(),
+        deleteReason: 'User requested account deletion',
+        // Clear sensitive data
+        email: `deleted_${Date.now()}_${user.email}`,
+        displayName: 'مستخدم محذوف',
+        profileImage: {
+          url: 'https://asset.cloudinary.com/dgzucjqgi/554357d17f851fe8249797db949e1766',
+          id: 'dgzucjqgi/554357d17f851fe8249797db949e1766'
+        },
+        // Clear FCM tokens
+        fcmTokens: [],
+        // Clear notification settings
+        notificationSettings: {
+          enablePush: false,
+          enableEmail: false,
+          muteChat: true
+        }
+      }, { session });
+
+      // 2. Handle artworks (soft delete)
+      const artworkModel = (await import('../../../DB/models/artwork.model.js')).default;
+      await artworkModel.updateMany(
+        { artist: userId },
+        {
+          isAvailable: false,
+          isDeleted: true,
+          deletedAt: new Date(),
+          deleteReason: 'Artist account deleted'
+        },
+        { session }
+      );
+
+      // 3. Handle reviews (soft delete)
+      const reviewModel = (await import('../../../DB/models/review.model.js')).default;
+      await reviewModel.updateMany(
+        { user: userId },
+        {
+          status: 'deleted',
+          deletedAt: new Date(),
+          deleteReason: 'User account deleted'
+        },
+        { session }
+      );
+
+      // 4. Handle chat messages (soft delete)
+      const messageModel = (await import('../../../DB/models/message.model.js')).default;
+      await messageModel.updateMany(
+        { sender: userId },
+        {
+          isDeleted: true,
+          deletedAt: new Date(),
+          content: 'رسالة محذوفة',
+          text: 'رسالة محذوفة'
+        },
+        { session }
+      );
+
+      // 5. Handle notifications (delete completely)
+      const notificationModel = (await import('../../../DB/models/notification.model.js')).default;
+      await notificationModel.deleteMany(
+        { user: userId },
+        { session }
+      );
+
+      // 6. Handle special requests (soft delete)
+      const specialRequestModel = (await import('../../../DB/models/specialRequest.model.js')).default;
+      await specialRequestModel.updateMany(
+        { sender: userId },
+        {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancellationReason: 'User account deleted'
+        },
+        { session }
+      );
+
+      // 7. Handle transactions (mark as cancelled if pending)
+      const transactionModel = (await import('../../../DB/models/transaction.model.js')).default;
+      await transactionModel.updateMany(
+        { 
+          buyer: userId,
+          status: { $in: ['pending', 'processing'] }
+        },
+        {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancellationReason: 'User account deleted'
+        },
+        { session }
+      );
+
+      // 8. Handle follows (delete completely)
+      const followModel = (await import('../../../DB/models/follow.model.js')).default;
+      await followModel.deleteMany(
+        { $or: [{ follower: userId }, { following: userId }] },
+        { session }
+      );
+
+      // 9. Handle reports (soft delete)
+      const reportModel = (await import('../../../DB/models/report.model.js')).default;
+      await reportModel.updateMany(
+        { reporter: userId },
+        {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancellationReason: 'User account deleted'
+        },
+        { session }
+      );
+
+      // 10. Handle tokens (delete completely)
+      const tokenModel = (await import('../../../DB/models/token.model.js')).default;
+      await tokenModel.deleteMany(
+        { user: userId },
+        { session }
+      );
+
+      // Commit transaction
+      await session.commitTransaction();
+
+      // Log the deletion for audit
+      console.log(`User account deleted: ${userId}, Reason: User requested`);
+
+      res.success(null, 'تم حذف الحساب وجميع البيانات المرتبطة به بنجاح');
+
+    } catch (transactionError) {
+      // Rollback transaction on error
+      await session.abortTransaction();
+      console.error('Transaction error during account deletion:', transactionError);
+      throw new Error('حدث خطأ أثناء حذف البيانات المرتبطة بالحساب');
+    } finally {
+      session.endSession();
     }
 
-    // Soft delete - mark as inactive instead of hard delete
-    await userModel.findByIdAndUpdate(userId, { 
-      isActive: false,
-      deletedAt: new Date()
-    });
-
-    res.success(null, 'تم حذف الحساب بنجاح');
   } catch (error) {
     console.error('Delete account error:', error);
     next(new Error('حدث خطأ أثناء حذف الحساب', { cause: 500 }));

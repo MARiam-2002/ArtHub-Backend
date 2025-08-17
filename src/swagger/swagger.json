@@ -11463,35 +11463,15 @@
         "tags": [
           "Profile"
         ],
-        "description": "Permanently delete user account (soft delete)",
+        "description": "Permanently delete user account and all associated data (comprehensive soft delete)\n\n## New Features:\n- ✅ **Direct deletion:** No password required\n- ✅ **Comprehensive deletion:** All associated data is deleted\n- ✅ **Enhanced security:** Sensitive data is cleared\n- ✅ **Transaction usage:** Ensures consistency in deletion\n\n## What gets deleted:\n- **User account:** soft delete with sensitive data clearing\n- **Artworks:** soft delete and availability cancellation\n- **Reviews:** soft delete\n- **Chat messages:** soft delete\n- **Notifications:** complete deletion\n- **Special requests:** cancellation\n- **Pending transactions:** cancellation\n- **Follows:** complete deletion\n- **Reports:** cancellation\n- **Tokens:** complete deletion\n\n## Security:\n- Clear sensitive data (email, name, image)\n- Cancel FCM tokens to prevent notifications\n- Disable all notification types\n\n## Important Note:\n⚠️ **This operation cannot be undone** - deletion is permanent and account cannot be recovered",
         "security": [
           {
             "BearerAuth": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "password"
-                ],
-                "properties": {
-                  "password": {
-                    "type": "string",
-                    "format": "password",
-                    "example": "userPassword123!"
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "Account deleted successfully",
+            "description": "Account and all associated data deleted successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -11503,7 +11483,11 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "تم حذف الحساب بنجاح"
+                      "example": "تم حذف الحساب وجميع البيانات المرتبطة به بنجاح"
+                    },
+                    "data": {
+                      "type": "null",
+                      "example": null
                     }
                   }
                 }
@@ -11515,6 +11499,16 @@
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "500": {
             "$ref": "#/components/responses/ServerError"

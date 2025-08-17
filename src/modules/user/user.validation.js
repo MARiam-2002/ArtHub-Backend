@@ -254,13 +254,7 @@ export const notificationSettingsSchema = joi.object({
 /**
  * Delete account validation schema
  */
-export const deleteAccountSchema = joi.object({
-  password: joi
-    .string()
-    .required()
-    .label('كلمة المرور')
-    .messages(defaultMessages)
-});
+export const deleteAccountSchema = joi.object({});
 
 /**
  * User ID parameter validation schema

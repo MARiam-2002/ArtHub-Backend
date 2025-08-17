@@ -792,25 +792,41 @@ router.get('/latest-artists',
  *   delete:
  *     summary: Delete user account
  *     tags: [Profile]
- *     description: Permanently delete user account (soft delete)
+ *     description: |
+ *       Permanently delete user account and all associated data (comprehensive soft delete).
+ *       
+ *       **Features:**
+ *       - No password verification required
+ *       - No request body needed
+ *       - Comprehensive data cleanup
+ *       - Transaction-based deletion
+ *       
+ *       **What gets deleted:**
+ *       - User account (soft delete)
+ *       - Artworks (soft delete)
+ *       - Reviews (soft delete)
+ *       - Chat messages (soft delete)
+ *       - Notifications (hard delete)
+ *       - Special requests (cancelled)
+ *       - Pending transactions (cancelled)
+ *       - Follows (hard delete)
+ *       - Reports (cancelled)
+ *       - Tokens (hard delete)
+ *       
+ *       **Security:**
+ *       - Sensitive data is cleared
+ *       - FCM tokens are removed
+ *       - Notifications are disabled
+ *       
+ *       **Note:** This action is irreversible. All associated data will be permanently affected.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - password
- *             properties:
- *               password:
- *                 type: string
- *                 format: password
- *                 example: "userPassword123!"
+ *       required: false
+ *       description: No request body required - account deletion happens immediately
  *     responses:
  *       200:
- *         description: Account deleted successfully
+ *         description: Account and all associated data deleted successfully
  *         content:
  *           application/json:
  *             schema:
@@ -821,13 +837,49 @@ router.get('/latest-artists',
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: "تم حذف الحساب بنجاح"
+ *                   example: "تم حذف الحساب وجميع البيانات المرتبطة به بنجاح"
+ *                 data:
+ *                   type: null
+ *                   example: null
  *       400:
- *         $ref: '#/components/responses/BadRequestError'
+ *         description: Bad request - user not found or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "المستخدم غير موجود"
  *       401:
- *         $ref: '#/components/responses/UnauthorizedError'
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "غير مصرح - يرجى تسجيل الدخول"
  *       500:
- *         $ref: '#/components/responses/ServerError'
+ *         description: Server error during account deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "حدث خطأ أثناء حذف الحساب"
  */
 router.delete('/delete-account',
   isAuthenticated,

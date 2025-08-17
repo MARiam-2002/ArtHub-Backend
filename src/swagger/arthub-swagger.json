@@ -3459,33 +3459,15 @@
       "delete": {
         "tags": ["User"],
         "summary": "حذف الحساب",
-        "description": "حذف حساب المستخدم نهائياً (حذف ناعم)",
+        "description": "حذف حساب المستخدم نهائياً وجميع البيانات المرتبطة به (حذف شامل وناعم)\n\n## المميزات الجديدة:\n- ✅ **حذف مباشر:** لا حاجة لإدخال كلمة المرور\n- ✅ **حذف شامل:** يتم حذف جميع البيانات المرتبطة\n- ✅ **أمان محسن:** مسح البيانات الحساسة\n- ✅ **استخدام Transactions:** ضمان الاتساق في الحذف\n\n## ما يتم حذفه:\n- **حساب المستخدم:** soft delete مع مسح البيانات الحساسة\n- **الأعمال الفنية:** soft delete وإلغاء التوفر\n- **التقييمات:** soft delete\n- **رسائل الشات:** soft delete\n- **الإشعارات:** حذف كامل\n- **الطلبات الخاصة:** إلغاء\n- **المعاملات المعلقة:** إلغاء\n- **المتابعات:** حذف كامل\n- **التقارير:** إلغاء\n- **الرموز:** حذف كامل\n\n## الأمان:\n- مسح البيانات الحساسة (البريد الإلكتروني، الاسم، الصورة)\n- إلغاء FCM tokens لمنع الإشعارات\n- تعطيل جميع أنواع الإشعارات\n\n## ملاحظة مهمة:\n⚠️ **هذه العملية لا يمكن التراجع عنها** - الحذف نهائي ولا يمكن استعادة الحساب",
         "security": [
           {
             "BearerAuth": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["password"],
-                "properties": {
-                  "password": {
-                    "type": "string",
-                    "format": "password",
-                    "example": "userPassword123!"
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
-            "description": "تم حذف الحساب بنجاح",
+            "description": "تم حذف الحساب وجميع البيانات المرتبطة به بنجاح",
             "content": {
               "application/json": {
                 "schema": {
@@ -3497,7 +3479,11 @@
                     },
                     "message": {
                       "type": "string",
-                      "example": "تم حذف الحساب بنجاح"
+                      "example": "تم حذف الحساب وجميع البيانات المرتبطة به بنجاح"
+                    },
+                    "data": {
+                      "type": "null",
+                      "example": null
                     }
                   }
                 }
@@ -3505,7 +3491,7 @@
             }
           },
           "400": {
-            "description": "بيانات غير صحيحة",
+            "description": "بيانات غير صحيحة أو خطأ في العملية",
             "content": {
               "application/json": {
                 "schema": {
@@ -3515,7 +3501,27 @@
             }
           },
           "401": {
-            "description": "غير مصرح",
+            "description": "غير مصرح - يجب تسجيل الدخول",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "المستخدم غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم",
             "content": {
               "application/json": {
                 "schema": {
@@ -3524,7 +3530,8 @@
               }
             }
           }
-        }
+        },
+        "x-screen": "ProfileScreen"
       }
     },
     "/api/reviews": {
