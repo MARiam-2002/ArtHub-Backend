@@ -87,14 +87,23 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
           android: {
             priority: 'high',
             ttl: 60 * 60 * 1000, // ساعة واحدة
+            directBootOk: true, // السماح بالإشعارات أثناء وضع Direct Boot
             notification: {
               sound: 'default',
               default_sound: true,
               default_vibrate_timings: true,
-              channel_id: 'arthub_channel',
-              icon: 'ic_notification',
-              priority: 'high',
-              color: '#2196F3'
+              channel_id: 'arthub_high_importance_channel', // استخدام القناة الجديدة عالية الأهمية
+              icon: 'notification_icon', // استخدام الأيقونة الجديدة
+              priority: 'max', // أقصى أولوية
+              visibility: 'public', // عرض المحتوى على شاشة القفل
+              color: '#2196F3',
+              ticker: 'ArtHub notification', // نص يظهر في شريط الحالة
+              tag: `arthub_${Date.now()}`, // تاج فريد لكل إشعار
+              notification_count: 1, // عدد الإشعارات
+              default_vibrate_timings: true,
+              vibrate_timings: ['100', '200', '100', '100'], // نمط اهتزاز مخصص
+              sticky: false, // عدم تثبيت الإشعار
+              notification_priority: 'PRIORITY_MAX' // أقصى أولوية للإشعار
             }
           },
           apns: {
@@ -172,7 +181,7 @@ export const sendPushNotificationToMultipleUsers = async (
     // Get users' FCM tokens and language preferences
     const users = await userModel
       .find({ _id: { $in: userIds } })
-      .select('fcmToken preferredLanguage');
+      .select('fcmTokens preferredLanguage');
 
     // Group users by language preference for batch notifications
     const usersByLanguage = {
@@ -181,11 +190,13 @@ export const sendPushNotificationToMultipleUsers = async (
     };
 
     users.forEach(user => {
-      if (user.fcmToken) {
+      if (user.fcmTokens && user.fcmTokens.length > 0) {
         const lang = user.preferredLanguage || 'ar';
-        usersByLanguage[lang].push({
-          token: user.fcmToken,
-          userId: user._id
+        user.fcmTokens.forEach(token => {
+          usersByLanguage[lang].push({
+            token: token,
+            userId: user._id
+          });
         });
       }
     });
@@ -233,6 +244,13 @@ export const sendPushNotificationToMultipleUsers = async (
         continue;
       }
 
+      // Split tokens into batches of 500 (FCM limit)
+      const batchSize = 500;
+      const tokenBatches = [];
+      for (let i = 0; i < tokens.length; i += batchSize) {
+        tokenBatches.push(tokens.slice(i, i + batchSize));
+      }
+
       const notificationTitle =
         typeof notification.title === 'object'
           ? notification.title[lang] || notification.title.ar
@@ -243,14 +261,16 @@ export const sendPushNotificationToMultipleUsers = async (
           ? notification.body[lang] || notification.body.ar
           : notification.body;
 
-      // Send notification to multiple devices
-      const message = {
+      // Base message configuration
+      const baseMessage = {
         notification: {
           title: notificationTitle,
           body: notificationBody
         },
         data: {
-          ...data,
+          ...Object.fromEntries(
+            Object.entries(data).map(([key, value]) => [key, String(value)])
+          ),
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
           screen: data.screen || 'default',
           timestamp: data.timestamp || Date.now().toString(),
@@ -258,53 +278,136 @@ export const sendPushNotificationToMultipleUsers = async (
         },
         android: {
           priority: 'high',
+          ttl: 60 * 60 * 1000, // 1 hour
+          directBootOk: true,
           notification: {
             sound: 'default',
             default_sound: true,
             default_vibrate_timings: true,
-            channel_id: 'arthub_channel',
-            icon: 'ic_notification'
+            channel_id: 'arthub_high_importance_channel',
+            icon: 'notification_icon',
+            priority: 'max',
+            visibility: 'public',
+            color: '#2196F3',
+            tag: `arthub_${Date.now()}`
           }
         },
         apns: {
           headers: {
-            'apns-priority': '10'
+            'apns-priority': '10',
+            'apns-expiration': (Math.floor(Date.now() / 1000) + 3600).toString()
           },
           payload: {
             aps: {
               sound: 'default',
               badge: 1,
-              content_available: true
+              content_available: true,
+              'mutable-content': 1
             }
           }
-        },
-        tokens: tokens
+        }
       };
 
-      const response = await admin.messaging().sendMulticast(message);
-      console.log(`${response.successCount} notifications sent successfully for language: ${lang}`);
+      // Process each batch
+      let langSuccessCount = 0;
+      let langFailureCount = 0;
+      const langFailedTokens = [];
 
-      results.successCount += response.successCount;
-      results.failureCount += response.failureCount;
+      // Send batches in parallel for better performance
+      const batchPromises = tokenBatches.map(async (batchTokens) => {
+        try {
+          const message = {
+            ...baseMessage,
+            tokens: batchTokens
+          };
+
+          const response = await admin.messaging().sendMulticast(message);
+          console.log(`Batch: ${response.successCount}/${batchTokens.length} notifications sent for ${lang}`);
+          
+          // Process failed tokens
+          if (response.failureCount > 0) {
+            const batchFailedTokens = [];
+            response.responses.forEach((resp, idx) => {
+              if (!resp.success) {
+                batchFailedTokens.push({
+                  token: batchTokens[idx],
+                  error: resp.error.message,
+                  code: resp.error.code
+                });
+              }
+            });
+            return {
+              successCount: response.successCount,
+              failureCount: response.failureCount,
+              failedTokens: batchFailedTokens
+            };
+          }
+          
+          return {
+            successCount: response.successCount,
+            failureCount: 0,
+            failedTokens: []
+          };
+        } catch (error) {
+          console.error(`Batch sending error: ${error.message}`);
+          return {
+            successCount: 0,
+            failureCount: batchTokens.length,
+            failedTokens: batchTokens.map(token => ({
+              token,
+              error: error.message,
+              code: error.code || 'unknown_error'
+            }))
+          };
+        }
+      });
+
+      // Wait for all batches to complete
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Aggregate results
+      batchResults.forEach(result => {
+        langSuccessCount += result.successCount;
+        langFailureCount += result.failureCount;
+        langFailedTokens.push(...result.failedTokens);
+      });
+
+      console.log(`${langSuccessCount} notifications sent successfully for language: ${lang}`);
+
+      results.successCount += langSuccessCount;
+      results.failureCount += langFailureCount;
 
       results.byLanguage[lang] = {
         sent: tokens.length,
-        success: response.successCount,
-        failure: response.failureCount
+        success: langSuccessCount,
+        failure: langFailureCount
       };
 
-      if (response.failureCount > 0) {
-        const failedTokens = [];
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            failedTokens.push({
-              token: tokens[idx],
-              error: resp.error.message
-            });
+      if (langFailedTokens.length > 0) {
+        console.log(`Failed tokens for ${lang}:`, langFailedTokens);
+        results.byLanguage[lang].failedTokens = langFailedTokens;
+        
+        // Identify permanently invalid tokens to remove
+        const permanentErrorCodes = [
+          'messaging/invalid-registration-token',
+          'messaging/registration-token-not-registered'
+        ];
+        
+        const tokensToRemove = langFailedTokens
+          .filter(item => permanentErrorCodes.includes(item.code))
+          .map(item => item.token);
+        
+        if (tokensToRemove.length > 0) {
+          try {
+            await userModel.updateMany(
+              { fcmTokens: { $in: tokensToRemove } },
+              { $pull: { fcmTokens: { $in: tokensToRemove } } }
+            );
+            console.log(`Removed ${tokensToRemove.length} invalid FCM tokens from database`);
+          } catch (dbError) {
+            console.error('Error removing invalid tokens:', dbError);
           }
-        });
-        console.log(`Failed tokens for ${lang}:`, failedTokens);
-        results.byLanguage[lang].failedTokens = failedTokens;
+        }
       }
     }
 
@@ -426,6 +529,104 @@ export const removeUserFCMToken = async (userId, fcmToken) => {
   } catch (error) {
     console.error('Error removing FCM token:', error);
     return false;
+  }
+};
+
+/**
+ * Clean up invalid FCM tokens periodically
+ * @returns {Promise<Object>} - Cleanup statistics
+ */
+export const cleanupInvalidFCMTokens = async () => {
+  try {
+    console.log('Starting FCM token cleanup process...');
+    
+    // Find users with FCM tokens
+    const users = await userModel.find({ fcmTokens: { $exists: true, $ne: [] } });
+    console.log(`Found ${users.length} users with FCM tokens`);
+    
+    let totalTokens = 0;
+    let validTokens = 0;
+    let invalidTokens = 0;
+    
+    // Process each user individually
+    for (const user of users) {
+      if (!user.fcmTokens || user.fcmTokens.length === 0) continue;
+      
+      totalTokens += user.fcmTokens.length;
+      
+      // Split tokens into batches for validation (max 100 tokens per request)
+      const batchSize = 100;
+      const tokenBatches = [];
+      for (let i = 0; i < user.fcmTokens.length; i += batchSize) {
+        tokenBatches.push(user.fcmTokens.slice(i, i + batchSize));
+      }
+      
+      // Validate each batch of tokens
+      for (const batchTokens of tokenBatches) {
+        try {
+          // Send a silent test message to validate tokens
+          const message = {
+            data: { type: 'token_validation' },
+            tokens: batchTokens,
+            android: {
+              priority: 'normal',
+              ttl: 0, // Don't store the message
+              directBootOk: true
+            },
+            apns: {
+              payload: {
+                aps: {
+                  'content-available': 1,
+                  badge: 0
+                }
+              },
+              headers: {
+                'apns-priority': '5', // Low priority
+                'apns-push-type': 'background'
+              }
+            }
+          };
+          
+          const response = await admin.messaging().sendMulticast(message);
+          
+          // Identify valid and failed tokens
+          const failedTokens = [];
+          response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+              failedTokens.push(batchTokens[idx]);
+            }
+          });
+          
+          validTokens += (batchTokens.length - failedTokens.length);
+          invalidTokens += failedTokens.length;
+          
+          // Remove failed tokens from database
+          if (failedTokens.length > 0) {
+            await userModel.updateOne(
+              { _id: user._id },
+              { $pull: { fcmTokens: { $in: failedTokens } } }
+            );
+            console.log(`Removed ${failedTokens.length} failed tokens for user ${user._id}`);
+          }
+        } catch (error) {
+          console.error(`Error validating tokens for user ${user._id}:`, error);
+        }
+      }
+    }
+    
+    console.log(`FCM token cleanup statistics:`);
+    console.log(`- Total tokens: ${totalTokens}`);
+    console.log(`- Valid tokens: ${validTokens}`);
+    console.log(`- Invalid tokens: ${invalidTokens}`);
+    
+    return {
+      totalTokens,
+      validTokens,
+      invalidTokens
+    };
+  } catch (error) {
+    console.error('Error in FCM token cleanup process:', error);
+    throw error;
   }
 };
 

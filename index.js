@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import http from 'http';
 import { initializeSocketIO } from './src/utils/socketService.js';
 import { ensureDatabaseConnection } from './src/utils/mongodbUtils.js';
+import { initScheduledJobs, stopScheduledJobs } from './src/utils/cron.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -17,6 +18,7 @@ const port = parseInt(process.env.PORT || '3000');
 const MAX_PORT_ATTEMPTS = 10; // Try up to 10 consecutive ports if needed
 let server;
 let io;
+let scheduledJobs;
 
 // Initial database connection attempt - don't block serverless cold start
 const initializeDatabase = async () => {
@@ -715,6 +717,9 @@ if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
       // Initialize Socket.IO
       io = initializeSocketIO(server);
 
+      // Initialize scheduled jobs
+      scheduledJobs = initScheduledJobs();
+
       server.listen(portToUse, () => {
         console.log(`✅ Server running on port ${portToUse}`);
         console.log(`📚 API Documentation: http://localhost:${portToUse}/api-docs`);
@@ -762,6 +767,12 @@ if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
       io.close(() => {
         console.log('✅ Socket.IO server closed');
       });
+    }
+
+    // Stop scheduled jobs
+    if (scheduledJobs) {
+      stopScheduledJobs(scheduledJobs);
+      console.log('✅ Scheduled jobs stopped');
     }
 
     // Close database connections
