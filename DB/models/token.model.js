@@ -174,6 +174,31 @@ tokenSchema.statics.refreshAccessToken = async function (refreshToken, newAccess
   );
 };
 
+
+/**
+ * Static method to update a token pair
+ * @param {string} tokenId - Token document ID
+ * @param {string} newAccessToken - New access token
+ * @param {string} newRefreshToken - New refresh token
+ * @returns {Promise<Object|null>} - Updated token document or null if not found
+ */
+tokenSchema.statics.updateTokenPair = async function (tokenId, newAccessToken, newRefreshToken) {
+  // Calculate new refresh token expiration date
+  const refreshTokenExpiry = new Date();
+  refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 30); // 30 days
+  
+  return this.findByIdAndUpdate(
+    tokenId,
+    { 
+      token: newAccessToken, 
+      refreshToken: newRefreshToken,
+      expiresAt: refreshTokenExpiry,
+      isValid: true
+    },
+    { new: true }
+  );
+};
+
 const tokenModel = mongoose.model('Token', tokenSchema);
 
 export default tokenModel;
