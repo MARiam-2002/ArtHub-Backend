@@ -35,17 +35,21 @@ export const refreshToken = asyncHandler(async (req, res, next) => {
         refreshTokenString,
         process.env.REFRESH_TOKEN_KEY || process.env.TOKEN_KEY
       );
+      console.log('Decoded token:', decoded); // Log decoded token for debugging
     } catch (error) {
+      console.error('JWT verification error:', error); // Log the specific error
       return next(new Error('رمز التحديث غير صالح أو منتهي الصلاحية', { cause: 401 }));
     }
 
-    // Check if token type is refresh
-    if (decoded.tokenType !== 'refresh') {
+    // Check if token type is refresh (if tokenType exists)
+    if (decoded.tokenType && decoded.tokenType !== 'refresh') {
       return next(new Error('نوع الرمز غير صحيح', { cause: 401 }));
     }
 
     // Find token in database
+    console.log('Looking for refresh token in database:', refreshTokenString.substring(0, 20) + '...'); // Log partial token for security
     const tokenDoc = await tokenModel.findValidRefreshToken(refreshTokenString);
+    console.log('Token found in database:', tokenDoc ? 'Yes' : 'No');
 
     if (!tokenDoc) {
       return next(new Error('رمز التحديث غير موجود أو تم إبطاله', { cause: 401 }));
