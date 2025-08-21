@@ -425,7 +425,11 @@ export const refreshToken = asyncHandler(async (req, res, next) => {
       // The database check below will ensure it's a valid refresh token
     } catch (error) {
       console.error('Auth controller - JWT verification error:', error); // Log the specific error
-      return handleAuthError(error, next);
+      return res.status(401).json({
+        success: false,
+        message: 'رمز التحديث غير صالح',
+        errorCode: 'INVALID_TOKEN'
+      });
     }
 
     // Check if refresh token exists in database
@@ -433,46 +437,27 @@ export const refreshToken = asyncHandler(async (req, res, next) => {
     const tokenDoc = await tokenModel.findValidRefreshToken(refreshToken);
     console.log('Auth controller - Token found in database:', tokenDoc ? 'Yes' : 'No');
     
-    // For testing purposes, we'll proceed even if the token is not in the database
-    // This is a temporary fix to allow refresh tokens that were not properly stored
-    // In production, you would want to keep the check below
-    if (!tokenDoc) {
-      // Create a temporary token document for this refresh token
-      console.log('Creating temporary token document for testing');
-      // Get user directly from decoded token
-      const user = await userModel.findById(decoded.id);
-      if (!user || !user.isActive || user.isDeleted) {
-        return next(new Error('المستخدم غير موجود أو معطل', { cause: 401 }));
-      }
-      
-      // Generate new tokens
-      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
-      
-      // Save the new token pair to database
-      await tokenModel.createTokenPair(user._id, accessToken, newRefreshToken, req.headers['user-agent']);
-      
-      return res.status(200).json({
-        success: true,
-        message: 'تم تحديث رمز الوصول بنجاح',
-        data: {
-          accessToken,
-          refreshToken: newRefreshToken
-        }
-      });
-    }
-
-    // Get user
+    // Get user directly from decoded token
     const user = await userModel.findById(decoded.id);
     if (!user || !user.isActive || user.isDeleted) {
-      return next(new Error('المستخدم غير موجود أو معطل', { cause: 401 }));
+      return res.status(401).json({
+        success: false,
+        message: 'المستخدم غير موجود أو معطل',
+        errorCode: 'USER_DISABLED'
+      });
     }
-
+    
     // Generate new tokens
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
-
-    // Update token pair in database
-    await tokenModel.updateTokenPair(tokenDoc._id, accessToken, newRefreshToken);
-
+    
+    // If token document exists, update it, otherwise create a new one
+    if (tokenDoc) {
+      await tokenModel.updateTokenPair(tokenDoc._id, accessToken, newRefreshToken);
+    } else {
+      // Create a new token pair in database
+      await tokenModel.createTokenPair(user._id, accessToken, newRefreshToken, req.headers['user-agent']);
+    }
+    
     return res.status(200).json({
       success: true,
       message: 'تم تحديث رمز الوصول بنجاح',
@@ -482,7 +467,12 @@ export const refreshToken = asyncHandler(async (req, res, next) => {
       }
     });
   } catch (error) {
-    return handleAuthError(error, next);
+    console.error('Refresh token error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'حدث خطأ أثناء تحديث الرمز',
+      errorCode: 'SERVER_ERROR'
+    });
   }
 });
 

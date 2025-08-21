@@ -6,7 +6,7 @@ import userModel from '../../DB/models/user.model.js';
 /**
  * Refresh token middleware
  * Generates a new access token using a valid refresh token
- * 
+ *
  * @swagger
  * components:
  *   schemas:
@@ -47,7 +47,10 @@ export const refreshToken = asyncHandler(async (req, res, next) => {
     }
 
     // Find token in database
-    console.log('Looking for refresh token in database:', refreshTokenString.substring(0, 20) + '...'); // Log partial token for security
+    console.log(
+      'Looking for refresh token in database:',
+      refreshTokenString.substring(0, 20) + '...'
+    ); // Log partial token for security
     const tokenDoc = await tokenModel.findValidRefreshToken(refreshTokenString);
     console.log('Token found in database:', tokenDoc ? 'Yes' : 'No');
 
