@@ -82,11 +82,12 @@ export const refreshToken = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم تحديث رمز الوصول بنجاح',
       data: {
-        token: newAccessToken
+        accessToken: newAccessToken,
+        refreshToken: refreshTokenString
       }
     });
   } catch (error) {
     console.error('Error refreshing token:', error);
     return next(new Error('فشل في تحديث رمز الوصول', { cause: 500 }));
   }
-}); 
+});
