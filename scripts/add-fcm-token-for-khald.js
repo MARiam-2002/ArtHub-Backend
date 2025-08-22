@@ -30,7 +30,7 @@ async function addFCMTokenForKhald() {
     });
     
     // FCM token تجريبي (يجب استبداله ب token حقيقي من Flutter)
-    const testFCMToken = 'eTOE-LvhQSeQauzOIvPsWP:APA91bF4JkfSCnHM5N1X6Q0BMIC_1234567890_TEST_TOKEN';
+    const testFCMToken = 'fPz3hWQnRXGZVeKcT1mLyY:APA91bGXH_valid_fcm_token_format_with_correct_structure_123456789012345678901234567890123456789012345';
     
     // إضافة FCM token جديد
     const updatedUser = await userModel.findByIdAndUpdate(

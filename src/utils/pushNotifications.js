@@ -101,7 +101,7 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
               tag: `arthub_${Date.now()}`, // تاج فريد لكل إشعار
               notification_count: 1, // عدد الإشعارات
               default_vibrate_timings: true,
-              vibrate_timings: ['100', '200', '100', '100'], // نمط اهتزاز مخصص
+              vibrate_timings: ['100s', '200s', '100s', '100s'], // نمط اهتزاز مخصص
               sticky: false, // عدم تثبيت الإشعار
               notification_priority: 'PRIORITY_MAX' // أقصى أولوية للإشعار
             }
