@@ -78,6 +78,22 @@ export const handleDatabaseError = (error, next) => {
   if (error.code === 11000) {
     const field = Object.keys(error.keyPattern || error.keyValue || {})[0] || 'field';
     const value = error.keyValue ? error.keyValue[field] : 'value';
+    
+    // خاص بتقييمات الفنانين المكررة
+    if (field === 'user' && error.keyPattern && error.keyPattern.artist) {
+      return next(
+        new Error(`لقد قمت بتقييم هذا الفنان مسبقاً. يمكنك تحديث تقييمك بدلاً من ذلك.`, { cause: 400 })
+      );
+    }
+    
+    // خاص بتقييمات الأعمال الفنية المكررة
+    if (field === 'user' && error.keyPattern && error.keyPattern.artwork) {
+      return next(
+        new Error(`لقد قمت بتقييم هذا العمل الفني مسبقاً. يمكنك تحديث تقييمك بدلاً من ذلك.`, { cause: 400 })
+      );
+    }
+    
+    // حالات التكرار الأخرى
     return next(
       new Error(`${field} '${value}' موجود بالفعل، يرجى استخدام قيمة أخرى`, { cause: 409 })
     );
@@ -310,4 +326,4 @@ export default {
   globalErrorHandler,
   notFoundHandler,
   asyncHandler
-}; 
+};
