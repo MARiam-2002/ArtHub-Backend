@@ -347,6 +347,7 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
     };
     
     // إرسال الاستجابة فوراً
+    res.success(simplifiedReview, 'تم تحديث التقييم بنجاح');
     
     // إرسال إشعار للفنان في الخلفية
     try {
@@ -367,9 +368,6 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
     
     return;
   }
-
-  res.success(simplifiedReview, 'تم تحديث التقييم بنجاح');
-
 
   // التحقق من التعامل السابق مع الفنان
   const hasTransaction = await transactionModel.findOne({
