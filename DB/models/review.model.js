@@ -412,7 +412,9 @@ const reviewSchema = new Schema(
 
 // Compound Indexes for Performance
 reviewSchema.index({ user: 1, artwork: 1 }, { unique: true, sparse: true, name: 'user_artwork_unique' });
-reviewSchema.index({ user: 1, artist: 1, artwork: 1 }, { unique: true, sparse: true, name: 'user_artist_artwork_unique' });
+// تعديل الفهرس للسماح بتقييم فنانين متعددين
+reviewSchema.index({ user: 1, artist: 1 }, { unique: true, partialFilterExpression: { artwork: { $exists: false } }, name: 'user_artist_unique_no_artwork' });
+reviewSchema.index({ user: 1, artist: 1, artwork: 1 }, { unique: true, partialFilterExpression: { artwork: { $exists: true } }, name: 'user_artist_artwork_unique' });
 reviewSchema.index({ artwork: 1, status: 1, rating: -1 }, { name: 'artwork_status_rating' });
 reviewSchema.index({ artist: 1, status: 1, rating: -1 }, { name: 'artist_status_rating' });
 reviewSchema.index({ status: 1, createdAt: -1 }, { name: 'status_created' });

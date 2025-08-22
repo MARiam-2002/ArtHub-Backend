@@ -317,7 +317,7 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
   // التحقق من عدم وجود تقييم سابق للفنان (بدون لوحة)
   const existingReview = await reviewModel.findOne({ 
     user: userId, 
-    artist:a,
+    artist:artist,
     artwork: { $exists: false }, // تقييم الفنان فقط بدون لوحة
     status: { $ne: 'deleted' }
   });
