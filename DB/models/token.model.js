@@ -141,7 +141,7 @@ tokenSchema.statics.invalidateAllUserTokens = async function (userId) {
 tokenSchema.statics.createTokenPair = async function (userId, accessToken, refreshToken, userAgent) {
   // Calculate expiration dates
   const accessTokenExpiry = new Date();
-  accessTokenExpiry.setHours(accessTokenExpiry.getHours() + 2); // 2 hours for access token
+  accessTokenExpiry.setHours(accessTokenExpiry.getDate() + 30); // 2 hours for access token
   
   const refreshTokenExpiry = new Date();
   refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 30); // 30 days for refresh token
