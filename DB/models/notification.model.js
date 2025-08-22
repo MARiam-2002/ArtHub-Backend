@@ -32,6 +32,9 @@ const notificationSchema = new Schema(
         'artist_review_updated',
         'artist_review_created',
         'artist_review_deleted',
+        'artwork_review_updated',
+        'artwork_review_created',
+        'artwork_review_deleted',
       ],
       default: 'other'
     },
