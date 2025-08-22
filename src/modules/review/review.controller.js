@@ -314,16 +314,59 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
     return res.fail(null, 'لا يمكنك تقييم نفسك', 400);
   }
 
-  // التحقق من عدم وجود تقييم سابق للفنان (بدون لوحة)
+  // التحقق من وجود تقييم سابق للفنان (بدون لوحة)
   const existingReview = await reviewModel.findOne({ 
     user: userId, 
-    artist:artist,
+    artist: artist,
     artwork: { $exists: false }, // تقييم الفنان فقط بدون لوحة
     status: { $ne: 'deleted' }
   });
 
+  // إذا كان هناك تقييم موجود، قم بتحديثه بدلاً من إنشاء واحد جديد
   if (existingReview) {
-    return res.fail(null, 'لقد قمت بتقييم هذا الفنان مسبقاً. يمكنك تحديث تقييمك بدلاً من ذلك.', 400);
+    // تحديث التقييم الموجود
+    existingReview.rating = rating;
+    if (title) existingReview.title = title;
+    if (comment) existingReview.comment = comment;
+    if (pros) existingReview.pros = pros;
+    if (cons) existingReview.cons = cons;
+    if (isRecommended !== undefined) existingReview.isRecommended = isRecommended;
+    
+    // تحديث وقت التعديل
+    existingReview.updatedAt = new Date();
+    
+    await existingReview.save();
+    
+    // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
+    const simplifiedReview = {
+      _id: existingReview._id,
+      rating: existingReview.rating,
+      comment: existingReview.comment,
+      createdAt: existingReview.createdAt,
+      updatedAt: existingReview.updatedAt
+    };
+    
+    // إرسال الاستجابة فوراً
+    res.success(simplifiedReview, 'تم تحديث التقييم بنجاح');
+    
+    // إرسال إشعار للفنان في الخلفية
+    try {
+      await createNotification({
+        userId: artist,
+        type: 'artist_review_updated',
+        title: 'تحديث تقييم ملفك الشخصي',
+        message: `تم تحديث تقييم ملفك الشخصي إلى ${rating} نجوم`,
+        sender: userId,
+        data: {
+          reviewId: existingReview._id,
+          rating
+        }
+      });
+    } catch (notificationError) {
+      console.error('خطأ في إرسال الإشعار:', notificationError);
+    }
+    
+    return;
   }
 
   // التحقق من التعامل السابق مع الفنان
@@ -378,6 +421,7 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
       type: 'artist_reviewed',
       title: 'تقييم جديد لملفك الشخصي',
       message: `تم تقييم ملفك الشخصي بـ ${rating} نجوم`,
+      sender: userId,
       data: {
         reviewId: review._id,
         rating

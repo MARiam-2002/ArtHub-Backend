@@ -28,7 +28,10 @@ const notificationSchema = new Schema(
         'test_backend',
         'new_comment',
         'new_follower',
-        'transaction'
+        'transaction',
+        'artist_review_updated',
+        'artist_review_created',
+        'artist_review_deleted',
       ],
       default: 'other'
     },
