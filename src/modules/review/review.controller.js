@@ -16,6 +16,11 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
   const { artwork, rating, title, comment, pros, cons, subRatings, isRecommended } = req.body;
   const userId = req.user._id;
 
+  // التحقق من أن المستخدم ليس فنان (فقط المستخدمين العاديين يمكنهم تقييم الأعمال الفنية)
+  if (req.user.role !== 'user') {
+    return res.fail(null, 'فقط المستخدمين العاديين يمكنهم تقييم الأعمال الفنية', 403);
+  }
+
   // التحقق من صحة معرف العمل الفني
   if (!mongoose.Types.ObjectId.isValid(artwork)) {
     return res.fail(null, 'معرف العمل الفني غير صالح', 400);
@@ -126,6 +131,11 @@ export const updateArtworkReview = asyncHandler(async (req, res, next) => {
   const { reviewId } = req.params;
   const { rating, title, comment, pros, cons, subRatings, isRecommended } = req.body;
   const userId = req.user._id;
+
+  // التحقق من أن المستخدم ليس فنان (فقط المستخدمين العاديين يمكنهم تقييم الأعمال الفنية)
+  if (req.user.role !== 'user') {
+    return res.fail(null, 'فقط المستخدمين العاديين يمكنهم تقييم الأعمال الفنية', 403);
+  }
 
   // التحقق من صحة معرف التقييم
   if (!mongoose.Types.ObjectId.isValid(reviewId)) {
@@ -279,6 +289,11 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
   const { artist, rating, title, comment, pros, cons, isRecommended } = req.body;
   const userId = req.user._id;
 
+  // التحقق من أن المستخدم ليس فنان (فقط المستخدمين العاديين يمكنهم تقييم الفنانين)
+  if (req.user.role !== 'user') {
+    return res.fail(null, 'فقط المستخدمين العاديين يمكنهم تقييم الفنانين', 403);
+  }
+
   // التحقق من صحة معرف الفنان
   if (!mongoose.Types.ObjectId.isValid(artist)) {
     return res.fail(null, 'معرف الفنان غير صالح', 400);
@@ -382,6 +397,11 @@ export const updateArtistReview = asyncHandler(async (req, res, next) => {
   const { reviewId } = req.params;
   const { rating, title, comment, pros, cons, isRecommended } = req.body;
   const userId = req.user._id;
+
+  // التحقق من أن المستخدم ليس فنان (فقط المستخدمين العاديين يمكنهم تقييم الفنانين)
+  if (req.user.role !== 'user') {
+    return res.fail(null, 'فقط المستخدمين العاديين يمكنهم تقييم الفنانين', 403);
+  }
 
   // التحقق من صحة معرف التقييم
   if (!mongoose.Types.ObjectId.isValid(reviewId)) {
@@ -546,9 +566,14 @@ export const deleteReview = asyncHandler(async (req, res, next) => {
     user: userId,
     status: { $ne: 'deleted' }
   });
-
+  
   if (!review) {
     return res.fail(null, 'التقييم غير موجود أو لا يمكن حذفه', 404);
+  }
+  
+  // إذا كان التقييم لفنان وليس لعمل فني، تحقق من أن المستخدم عادي
+  if (review.artist && !review.artwork && req.user.role !== 'user') {
+    return res.fail(null, 'فقط المستخدمين العاديين يمكنهم حذف تقييمات الفنانين', 403);
   }
 
   // وضع علامة حذف بدلاً من الحذف الفعلي

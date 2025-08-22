@@ -3,6 +3,7 @@ import * as controller from './review.controller.js';
 import { authenticate as isAuthenticated, authenticate as verifyFirebaseToken } from '../../middleware/auth.middleware.js';
 import { isValidation } from '../../middleware/validation.middleware.js';
 import * as Validators from './review.validation.js';
+import { isAuthorized } from '../../middleware/authorization.middleware.js';
 
 const router = Router();
 
@@ -96,6 +97,7 @@ const router = Router();
 router.post(
   '/artwork',
   isAuthenticated,
+  isAuthorized('user'),
   isValidation(Validators.createArtworkReviewSchema),
   controller.createArtworkReview
 );
@@ -162,6 +164,7 @@ router.post(
 router.put(
   '/artwork/:reviewId',
   isAuthenticated,
+  isAuthorized('user'),
   isValidation(Validators.reviewIdSchema),
   isValidation(Validators.updateArtworkReviewSchema),
   controller.updateArtworkReview
@@ -320,6 +323,7 @@ router.get(
 router.post(
   '/artist',
   isAuthenticated,
+  isAuthorized('user'),
   isValidation(Validators.createArtistReviewSchema),
   controller.createArtistReview
 );
@@ -362,6 +366,7 @@ router.post(
 router.put(
   '/artist/:reviewId',
   isAuthenticated,
+  isAuthorized('user'),
   isValidation(Validators.reviewIdSchema),
   isValidation(Validators.updateArtistReviewSchema),
   controller.updateArtistReview
@@ -451,6 +456,7 @@ router.put(
  */
 router.get(
   '/artist/:artistId',
+  isAuthorized('artist'),
   isValidation(Validators.targetIdSchema),
   isValidation(Validators.reviewQuerySchema),
   controller.getArtistReviews
