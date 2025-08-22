@@ -345,24 +345,26 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
       createdAt: existingReview.createdAt,
       updatedAt: existingReview.updatedAt
     };
-    await createNotification({
-      userId: artist,
-      type: 'artist_review_updated',
-      title: 'تحديث تقييم ملفك الشخصي',
-      message: `تم تحديث تقييم ملفك الشخصي إلى ${rating} نجوم`,
-      sender: userId,
-      data: {
-        reviewId: existingReview._id,
-        rating
-      }
-    });
-
-
+    
     // إرسال الاستجابة فوراً
     res.success(simplifiedReview, 'تم تحديث التقييم بنجاح');
     
     // إرسال إشعار للفنان في الخلفية
-     
+    try {
+      await createNotification({
+        userId: artist,
+        type: 'artist_review_updated',
+        title: 'تحديث تقييم ملفك الشخصي',
+        message: `تم تحديث تقييم ملفك الشخصي إلى ${rating} نجوم`,
+        sender: userId,
+        data: {
+          reviewId: existingReview._id,
+          rating
+        }
+      });
+    } catch (notificationError) {
+      console.error('خطأ في إرسال الإشعار:', notificationError);
+    }
     
     return;
   }
