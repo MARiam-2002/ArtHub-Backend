@@ -456,7 +456,6 @@ router.put(
  */
 router.get(
   '/artist/:artistId',
-  isAuthorized('artist'),
   isValidation(Validators.targetIdSchema),
   isValidation(Validators.reviewQuerySchema),
   controller.getArtistReviews
