@@ -392,7 +392,7 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
     artist,
     rating,
     title,
-    comment,
+    comment: comment||"لا يوجد تقييم",
     pros: pros?.filter(p => p && p.trim()),
     cons: cons?.filter(c => c && c.trim()),
     isRecommended,
