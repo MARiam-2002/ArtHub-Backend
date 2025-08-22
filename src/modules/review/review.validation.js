@@ -134,10 +134,10 @@ export const createArtworkReviewSchema = {
         'string.max': 'عنوان التقييم يجب ألا يتجاوز 100 حرف'
       }),
     comment: Joi.string()
-      .min(10)
+      .min(2)
       .max(2000)
       .messages({
-        'string.min': 'التعليق يجب أن يكون على الأقل 10 أحرف',
+        'string.min': 'التعليق يجب أن يكون على الأقل 2 أحرف',
         'string.max': 'التعليق يجب ألا يتجاوز 2000 حرف'
       }),
     pros: Joi.array()
@@ -349,10 +349,10 @@ export const createArtistReviewSchema = {
         'string.max': 'عنوان التقييم يجب ألا يتجاوز 100 حرف'
       }),
     comment: Joi.string()
-      .min(10)
+      .min(2)
       .max(2000)
       .messages({
-        'string.min': 'التعليق يجب أن يكون على الأقل 10 أحرف',
+        'string.min': 'التعليق يجب أن يكون على الأقل 2 أحرف',
         'string.max': 'التعليق يجب ألا يتجاوز 2000 حرف'
       }),
     pros: Joi.array()
@@ -493,10 +493,10 @@ export const updateReviewSchema = {
         'string.max': 'عنوان التقييم يجب ألا يتجاوز 100 حرف'
       }),
     comment: Joi.string()
-      .min(10)
+      .min(2)
       .max(2000)
       .messages({
-        'string.min': 'التعليق يجب أن يكون على الأقل 10 أحرف',
+        'string.min': 'التعليق يجب أن يكون على الأقل 2 أحرف',
         'string.max': 'التعليق يجب ألا يتجاوز 2000 حرف'
       }),
     pros: Joi.array()
