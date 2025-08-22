@@ -37,15 +37,77 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
     return res.fail(null, 'لا يمكنك تقييم عملك الفني الخاص', 400);
   }
 
-  // التحقق من عدم وجود تقييم سابق
+  // التحقق من وجود تقييم سابق
   const existingReview = await reviewModel.findOne({ 
     user: userId, 
     artwork,
     status: { $ne: 'deleted' }
   });
 
+  // إذا كان هناك تقييم موجود، قم بتحديثه بدلاً من إنشاء واحد جديد
   if (existingReview) {
-    return res.fail(null, 'لقد قمت بتقييم هذا العمل الفني مسبقاً. يمكنك تحديث تقييمك بدلاً من ذلك.', 400);
+    // تحديث التقييم الموجود
+    existingReview.rating = rating;
+    if (title) existingReview.title = title;
+    if (comment) existingReview.comment = comment;
+    if (pros) existingReview.pros = pros?.filter(p => p && p.trim());
+    if (cons) existingReview.cons = cons?.filter(c => c && c.trim());
+    if (subRatings) existingReview.subRatings = subRatings;
+    if (isRecommended !== undefined) existingReview.isRecommended = isRecommended;
+    
+    // تحديث وقت التعديل
+    existingReview.updatedAt = new Date();
+    
+    await existingReview.save();
+    
+    // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
+    const simplifiedReview = {
+      _id: existingReview._id,
+      rating: existingReview.rating,
+      comment: existingReview.comment,
+      createdAt: existingReview.createdAt,
+      updatedAt: existingReview.updatedAt
+    };
+    
+    // إرسال الاستجابة فوراً
+    res.success(simplifiedReview, 'تم تحديث التقييم بنجاح');
+    
+    // إرسال إشعار للفنان في الخلفية
+    try {
+      await createNotification({
+        userId: artworkDoc.artist,
+        type: 'artwork_review_updated',
+        title: {
+          ar: 'تحديث تقييم عملك الفني',
+          en: 'Your artwork review has been updated'
+        },
+        message: {
+          ar: `تم تحديث تقييم عملك الفني "${artworkDoc.title}" إلى ${rating} نجوم`,
+          en: `The review for your artwork "${artworkDoc.title}" has been updated to ${rating} stars`
+        },
+        sender: userId,
+        data: {
+          reviewId: existingReview._id,
+          artworkId: artwork,
+          rating
+        }
+      });
+    } catch (notificationError) {
+      console.error('خطأ في إرسال الإشعار:', notificationError);
+    }
+    
+    // تحديث متوسط تقييم العمل الفني في الخلفية
+    try {
+      const ratingStats = await reviewModel.getAverageRating(artwork, 'artwork');
+      await artworkModel.findByIdAndUpdate(artwork, {
+        rating: ratingStats.avgRating || 0,
+        ratingCount: ratingStats.count || 0
+      });
+    } catch (error) {
+      console.error('خطأ في تحديث متوسط التقييم:', error);
+    }
+    
+    return;
   }
 
   // التحقق من المشتريات المعتمدة
@@ -109,8 +171,15 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
     await createNotification({
       userId: artworkDoc.artist,
       type: 'artwork_reviewed',
-      title: 'تقييم جديد لعملك الفني',
-      message: `تم تقييم عملك الفني "${artworkDoc.title}" بـ ${rating} نجوم`,
+      title: {
+        ar: 'تقييم جديد لعملك الفني',
+        en: 'New review for your artwork'
+      },
+      message: {
+        ar: `تم تقييم عملك الفني "${artworkDoc.title}" بـ ${rating} نجوم`,
+        en: `Your artwork "${artworkDoc.title}" has been reviewed with ${rating} stars`
+      },
+      sender: userId,
       data: {
         artworkId: artwork,
         reviewId: review._id,
@@ -179,6 +248,34 @@ export const updateArtworkReview = asyncHandler(async (req, res, next) => {
     .lean();
 
   res.success(updatedReview, 'تم تحديث التقييم بنجاح');
+  
+  // إرسال إشعار للفنان في الخلفية
+  try {
+    // الحصول على معلومات العمل الفني
+    const artworkDoc = await artworkModel.findById(existingReview.artwork).lean();
+    if (artworkDoc) {
+      await createNotification({
+        userId: artworkDoc.artist,
+        type: 'artwork_review_updated',
+        title: {
+          ar: 'تحديث تقييم عملك الفني',
+          en: 'Your artwork review has been updated'
+        },
+        message: {
+          ar: `تم تحديث تقييم عملك الفني "${artworkDoc.title}" إلى ${rating} نجوم`,
+          en: `The review for your artwork "${artworkDoc.title}" has been updated to ${rating} stars`
+        },
+        sender: userId,
+        data: {
+          reviewId: existingReview._id,
+          artworkId: existingReview.artwork,
+          rating
+        }
+      });
+    }
+  } catch (notificationError) {
+    console.error('خطأ في إرسال الإشعار:', notificationError);
+  }
 });
 
 /**
