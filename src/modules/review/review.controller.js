@@ -346,25 +346,29 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
       updatedAt: existingReview.updatedAt
     };
     
+    await createNotification({
+      userId: artist,
+      type: 'artist_review_updated',
+      title: {
+        ar: 'تحديث تقييم ملفك الشخصي',
+        en: 'Your profile review has been updated'
+      },
+      message: {
+        ar: `تم تحديث تقييم ملفك الشخصي إلى ${rating} نجوم`,
+        en: `Your profile review has been updated to ${rating} stars`
+      },
+      sender: userId,
+      data: {
+        reviewId: existingReview._id,
+        rating
+      }
+    });
     // إرسال الاستجابة فوراً
     res.success(simplifiedReview, 'تم تحديث التقييم بنجاح');
     
     // إرسال إشعار للفنان في الخلفية
-    try {
-      await createNotification({
-        userId: artist,
-        type: 'artist_review_updated',
-        title: 'تحديث تقييم ملفك الشخصي',
-        message: `تم تحديث تقييم ملفك الشخصي إلى ${rating} نجوم`,
-        sender: userId,
-        data: {
-          reviewId: existingReview._id,
-          rating
-        }
-      });
-    } catch (notificationError) {
-      console.error('خطأ في إرسال الإشعار:', notificationError);
-    }
+      
+   
     
     return;
   }
@@ -419,8 +423,14 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
     await createNotification({
       userId: artist,
       type: 'artist_reviewed',
-      title: 'تقييم جديد لملفك الشخصي',
-      message: `تم تقييم ملفك الشخصي بـ ${rating} نجوم`,
+      title: {
+        ar: 'تقييم جديد لملفك الشخصي',
+        en: 'New review for your profile'
+      },
+      message: {
+        ar: `تم تقييم ملفك الشخصي بـ ${rating} نجوم`,
+        en: `Your profile has been rated with ${rating} stars`
+      },
       sender: userId,
       data: {
         reviewId: review._id,
@@ -482,6 +492,29 @@ export const updateArtistReview = asyncHandler(async (req, res, next) => {
     .lean();
 
   res.success(updatedReview, 'تم تحديث تقييم الفنان بنجاح');
+  
+  // إرسال إشعار للفنان في الخلفية
+  try {
+    await createNotification({
+      userId: existingReview.artist,
+      type: 'artist_review_updated',
+      title: {
+        ar: 'تحديث تقييم ملفك الشخصي',
+        en: 'Your profile review has been updated'
+      },
+      message: {
+        ar: `تم تحديث تقييم ملفك الشخصي إلى ${rating} نجوم`,
+        en: `Your profile review has been updated to ${rating} stars`
+      },
+      sender: userId,
+      data: {
+        reviewId: existingReview._id,
+        rating
+      }
+    });
+  } catch (notificationError) {
+    console.error('خطأ في إرسال الإشعار:', notificationError);
+  }
 });
 
 /**
