@@ -295,42 +295,58 @@ export const logout = asyncHandler(async (req, res, next) => {
  */
 export const forgetPassword = asyncHandler(async (req, res, next) => {
   try {
+    console.log('Starting forgetPassword process');
     await ensureDatabaseConnection();
     
     const { email } = req.body;
+    console.log('Email received:', email);
 
     // Find user by email
-    const user = await userModel.findOne({ email });
-    if (!user) {
-      return next(new Error('لا يوجد حساب مرتبط بهذا البريد الإلكتروني', { cause: 404 }));
-    }
-
-    // Generate reset code
-    const forgetCode = crypto.randomInt(1000, 9999).toString();
-
-    // Save reset code to user
-    user.forgetCode = forgetCode;
-    user.isForgetCodeVerified = false;
-    await user.save();
-
-    // Send reset email
     try {
-      const emailContent = resetPasswordTemplate(user.displayName, forgetCode);
-      await sendEmail({
-        to: email,
-        subject: 'إعادة تعيين كلمة المرور - ArtHub',
-        html: emailContent
-      });
-    } catch (emailError) {
-      console.error('Failed to send reset email:', emailError);
-      return next(new Error('فشل في إرسال رمز إعادة التعيين، يرجى المحاولة مرة أخرى', { cause: 500 }));
-    }
+      const user = await userModel.findOne({ email });
+      console.log('User found:', user ? 'Yes' : 'No');
+      
+      if (!user) {
+        return next(new Error('لا يوجد حساب مرتبط بهذا البريد الإلكتروني', { cause: 404 }));
+      }
 
-    return res.status(200).json({
-      success: true,
-      message: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'
-    });
+      // Generate reset code
+      const forgetCode = crypto.randomInt(1000, 9999).toString();
+      console.log('Generated forget code');
+
+      // Save reset code to user
+      user.forgetCode = forgetCode;
+      user.isForgetCodeVerified = false;
+      await user.save();
+      console.log('Saved forget code to user');
+
+      // Send reset email
+      try {
+        console.log('Preparing email content with displayName:', user.displayName);
+        const emailContent = resetPasswordTemplate(user.displayName || 'المستخدم', forgetCode);
+        console.log('Email content generated successfully');
+        
+        await sendEmail({
+          to: email,
+          subject: 'إعادة تعيين كلمة المرور - ArtHub',
+          html: emailContent
+        });
+        console.log('Email sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send reset email:', emailError);
+        return next(new Error('فشل في إرسال رمز إعادة التعيين، يرجى المحاولة مرة أخرى', { cause: 500 }));
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني'
+      });
+    } catch (userError) {
+      console.error('Error finding or updating user:', userError);
+      return next(new Error('حدث خطأ أثناء البحث عن المستخدم أو تحديث بياناته', { cause: 500 }));
+    }
   } catch (error) {
+    console.error('Unhandled error in forgetPassword:', error);
     return handleDatabaseError(error, next);
   }
 });
