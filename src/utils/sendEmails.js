@@ -1,42 +1,40 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendEmail = async ({ to, subject, html, attachments }) => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: true,
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASSWORD
+  try {
+    const options = {
+      from: `ArtHub <no-reply@arthub.com>`, // أو بدليه بـ process.env.EMAIL لو عندك دومين متوصل
+      to,
+      subject,
+      html,
+    };
+
+    // إضافة المرفقات لو موجودة
+    if (attachments && attachments.length > 0) {
+      options.attachments = attachments.map(file => {
+        const fileName = file.originalName || file.originalname || 'attachment';
+        const cleanFileName = fileName.replace(/[^\w\s\-\.]/g, '_');
+
+        return {
+          filename: cleanFileName,
+          path: file.url, // Resend بيقبل URL مباشر أو Base64
+        };
+      });
     }
-  });
 
-  const mailOptions = {
-    from: `"ArtHub" <${process.env.EMAIL}>`,
-    to,
-    subject: `=?UTF-8?B?${Buffer.from(subject, 'utf-8').toString('base64')}?=`,
-    html: html,
-    encoding: 'utf-8'
-  };
+    const { data, error } = await resend.emails.send(options);
 
-  // إضافة المرفقات إذا كانت موجودة
-  if (attachments && attachments.length > 0) {
-    mailOptions.attachments = attachments.map(file => {
-      // التأكد من وجود اسم الملف
-      const fileName = file.originalName || file.originalname || 'attachment';
-      
-      // تنظيف اسم الملف من الأحرف الخاصة
-      const cleanFileName = fileName.replace(/[^\w\s\-\.]/g, '_');
-      
-      return {
-        filename: `=?UTF-8?B?${Buffer.from(cleanFileName, 'utf-8').toString('base64')}?=`,
-        path: file.url,
-        contentType: file.type || 'application/octet-stream'
-      };
-    });
+    if (error) {
+      console.error('Resend Error:', error);
+      return false;
+    }
+
+    console.log('Email sent:', data);
+    return true;
+  } catch (err) {
+    console.error('Unexpected Error:', err);
+    return false;
   }
-
-  const emailInfo = await transporter.sendMail(mailOptions);
-  return emailInfo.accepted.length < 1 ? false : true;
 };
