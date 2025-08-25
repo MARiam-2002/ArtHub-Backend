@@ -39,7 +39,7 @@ export const createSpecialRequestSchema = {
       }),
     description: Joi.string()
       .required()
-      .min(20)
+      .min(2)
       .max(2000)
       .messages({
         'string.empty': 'وصف تفصيلي للعمل مطلوب',
