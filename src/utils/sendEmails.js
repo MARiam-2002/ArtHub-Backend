@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export const sendEmail = async ({ to, subject, html, attachments }) => {
   try {
     const options = {
-      from: `ArtHub <no-reply@arthub.com>`, // أو بدليه بـ process.env.EMAIL لو عندك دومين متوصل
+      from: `ArtHub <no-reply@arthubsa.com>`,
       to,
       subject,
       html,
