@@ -608,7 +608,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         isDeleted: { $ne: true }
       });
 
-      // Send to chat room with proper data structure
       sendToChat(chatId, 'new_message', {
         message: formattedMessage,
         unreadCount: unreadCount
@@ -616,10 +615,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       
       // Also send to specific user if they're not in the chat room
       if (receiverId) {
-        sendToUser(receiverId, 'new_message', {
-          message: formattedMessage,
-          unreadCount: unreadCount
-        });
+        sendToUser(receiverId, 'new_message', formattedMessage);
       }
     } catch (socketError) {
       console.warn('Socket.IO message notification failed:', socketError);
