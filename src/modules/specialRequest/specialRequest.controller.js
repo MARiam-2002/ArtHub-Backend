@@ -245,7 +245,7 @@ function summarizeTransaction(tx) {
 }
 
 /**
- * إنشاء طلب خاص جديد - Enhanced for Flutter
+ * إنشاء طلب خاص جديد مع منطق Toggle للطلبات العادية - Enhanced for Flutter
  */
 export const createSpecialRequest = asyncHandler(async (req, res, next) => {
   try {
@@ -282,6 +282,17 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
+    // Validate artwork ID for ready_artwork requests
+    if (requestType === 'ready_artwork') {
+      if (!artwork || !mongoose.Types.ObjectId.isValid(artwork)) {
+        return res.status(400).json({
+          success: false,
+          message: 'معرف العمل الفني مطلوب وغير صالح للطلبات العادية',
+          data: null
+        });
+      }
+    }
+
     // التحقق من وجود الفنان وأنه نشط
     const artistExists = await userModel.findOne({ 
       _id: artist, 
@@ -298,7 +309,98 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // إنشاء الطلب
+    // منطق Toggle للطلبات العادية (ready_artwork)
+    if (requestType === 'ready_artwork' && artwork) {
+      // البحث عن طلب موجود بنفس المستخدم والفنان والعمل الفني
+      const existingRequest = await specialRequestModel.findOne({
+        sender: senderId,
+        artist: artist,
+        artwork: artwork,
+        requestType: 'ready_artwork',
+        status: { $in: ['pending', 'accepted', 'in_progress', 'review'] } // الطلبات النشطة فقط
+      }).lean();
+
+      if (existingRequest) {
+        // حساب الفرق الزمني بالساعات
+        const currentTime = new Date();
+        const requestTime = new Date(existingRequest.createdAt);
+        const hoursDifference = (currentTime - requestTime) / (1000 * 60 * 60);
+
+        console.log(`🔍 طلب موجود منذ ${hoursDifference.toFixed(2)} ساعة`);
+
+        // إذا مر أكثر من 3 ساعات، رفض الإلغاء
+        if (hoursDifference > 3) {
+          return res.status(400).json({
+            success: false,
+            message: 'لا يمكن إلغاء الطلب بعد مرور 3 ساعات من إنشائه',
+            data: {
+              existingRequest: {
+                _id: existingRequest._id,
+                status: existingRequest.status,
+                createdAt: existingRequest.createdAt,
+                hoursElapsed: Math.round(hoursDifference * 100) / 100
+              }
+            },
+            meta: {
+              action: 'cancel_rejected',
+              reason: 'time_limit_exceeded',
+              timeLimit: '3 hours',
+              timeElapsed: `${hoursDifference.toFixed(2)} hours`
+            }
+          });
+        }
+
+        // إلغاء الطلب الموجود
+        const cancelledRequest = await specialRequestModel.findByIdAndUpdate(
+          existingRequest._id,
+          {
+            status: 'cancelled',
+            cancelledAt: new Date(),
+            cancelledBy: senderId,
+            cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الـ 3 ساعات المسموحة'
+          },
+          { new: true }
+        ).populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .lean();
+
+        // إرسال إشعار للفنان بإلغاء الطلب
+        const senderUser = await userModel.findById(senderId).select('displayName').lean();
+        const senderName = senderUser?.displayName || 'مستخدم';
+
+        try {
+          await sendSpecialRequestNotification(
+            artist,
+            'cancelled',
+            senderName,
+            description.substring(0, 50),
+            requestType
+          );
+        } catch (notificationError) {
+          console.warn('Cancel notification failed:', notificationError);
+        }
+
+        const response = {
+          success: true,
+          message: 'تم إلغاء الطلب بنجاح',
+          data: {
+            action: 'cancelled',
+            specialRequest: summarizeSpecialRequest(cancelledRequest),
+            timeElapsed: `${hoursDifference.toFixed(2)} hours`
+          },
+          meta: {
+            timestamp: new Date().toISOString(),
+            userId: senderId,
+            action: 'cancel_request',
+            originalRequestId: existingRequest._id
+          }
+        };
+
+        return res.status(200).json(response);
+      }
+    }
+
+    // إنشاء طلب جديد (الطلبات الخاصة أو الطلبات العادية الجديدة)
     const requestData = {
       sender: senderId,
       artist,
@@ -344,13 +446,16 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
 
     const response = {
       success: true,
-      message: 'تم إنشاء الطلب الخاص بنجاح',
+      message: requestType === 'ready_artwork' ? 'تم إنشاء الطلب العادي بنجاح' : 'تم إنشاء الطلب الخاص بنجاح',
       data: {
+        action: 'created',
         specialRequest: summarizeSpecialRequest(populatedRequest)
       },
       meta: {
         timestamp: new Date().toISOString(),
-        userId: senderId
+        userId: senderId,
+        action: 'create_request',
+        requestType: requestType
       }
     };
 
