@@ -5,7 +5,7 @@ import userModel from '../../DB/models/user.model.js';
 import tokenModel from '../../DB/models/token.model.js';
 
 const generateTokens = (user) => {
-  const accessToken = jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.TOKEN_KEY, {  expiresIn: '1m' });
+  const accessToken = jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.TOKEN_KEY, {  expiresIn: '2h' });
   const refreshToken = jwt.sign({ id: user._id, tokenType: 'refresh' }, process.env.REFRESH_TOKEN_KEY || process.env.TOKEN_KEY, { expiresIn: '30d' });
   return { accessToken, refreshToken };
 };

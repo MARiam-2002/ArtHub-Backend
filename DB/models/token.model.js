@@ -141,7 +141,7 @@ tokenSchema.statics.invalidateAllUserTokens = async function (userId) {
 tokenSchema.statics.createTokenPair = async function (userId, accessToken, refreshToken, userAgent) {
   // Calculate expiration dates
   const accessTokenExpiry = new Date();
-  accessTokenExpiry.setUTCMinutes(accessTokenExpiry.getUTCMinutes() + 1); // 2 minutes
+  accessTokenExpiry.setUTCHours(accessTokenExpiry.getUTCHours() + 2); // ساعتين
   
   const refreshTokenExpiry = new Date();
   refreshTokenExpiry.setUTCDate(refreshTokenExpiry.getUTCDate() + 30); // 30 days
@@ -165,7 +165,7 @@ tokenSchema.statics.createTokenPair = async function (userId, accessToken, refre
 tokenSchema.statics.refreshAccessToken = async function (refreshToken, newAccessToken) {
   // Calculate new access token expiration date
   const accessTokenExpiry = new Date();
-  accessTokenExpiry.setHours(accessTokenExpiry.getHours() + 2); // 2 hours
+  accessTokenExpiry.setUTCHours(accessTokenExpiry.getUTCHours() + 2); // +2 hours UTC
   
   return this.findOneAndUpdate(
     { refreshToken, isValid: true, expiresAt: { $gt: new Date() } },
@@ -185,7 +185,7 @@ tokenSchema.statics.refreshAccessToken = async function (refreshToken, newAccess
 tokenSchema.statics.updateTokenPair = async function (tokenId, newAccessToken, newRefreshToken) {
   // Calculate new refresh token expiration date
   const refreshTokenExpiry = new Date();
-  refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 30); // 30 days
+  refreshTokenExpiry.setUTCDate(refreshTokenExpiry.getUTCDate() + 30); // +30 days UTC
   
   return this.findByIdAndUpdate(
     tokenId,
