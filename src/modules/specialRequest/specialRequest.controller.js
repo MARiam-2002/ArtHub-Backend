@@ -134,6 +134,7 @@ function formatSpecialRequest(request) {
     
     // Metadata
     isPrivate: request.isPrivate || false,
+    isOrdered: request.isOrdered !== undefined ? request.isOrdered : true,
     
     // Calculated fields
     remainingDays: request.remainingDays || null,
@@ -208,6 +209,7 @@ function summarizeSpecialRequest(request) {
     budget: request.budget,
     duration: request.duration,
     status: request.status,
+    isOrdered: request.isOrdered !== undefined ? request.isOrdered : true,
     createdAt: request.createdAt,
     technicalDetails: request.specifications?.technicalDetails || null,
     artist: formatUserForRequest(request.artist),
@@ -318,7 +320,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
         artist: artist,
         artwork: artwork,
         requestType: 'ready_artwork',
-        status: { $in: ['pending', 'accepted', 'in_progress', 'review'] } // الطلبات النشطة فقط
+        isOrdered: true // البحث عن الطلبات المُفعلة فقط
       }).lean();
 
       if (existingRequest) {
@@ -351,11 +353,11 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
           });
         }
 
-        // إلغاء الطلب الموجود
+        // إلغاء الطلب الموجود (تغيير isOrdered إلى false)
         const cancelledRequest = await specialRequestModel.findByIdAndUpdate(
           existingRequest._id,
           {
-            status: 'cancelled',
+            isOrdered: false,
             cancelledAt: new Date(),
             cancelledBy: senderId,
             cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الـ 3 ساعات المسموحة'
@@ -462,8 +464,8 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
 
     // Invalidate cache for both users
     await Promise.all([
-      invalidateUserCache(userId),
-      invalidateUserCache(artistId)
+      invalidateUserCache(senderId),
+      invalidateUserCache(artist)
     ]);
 
     res.status(201).json(response);

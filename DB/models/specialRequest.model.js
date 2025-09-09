@@ -117,6 +117,9 @@ import mongoose, { Schema, Types, model } from 'mongoose';
  *         isPrivate:
  *           type: boolean
  *           description: هل الطلب خاص
+ *         isOrdered:
+ *           type: boolean
+ *           description: هل الطلب مُفعل (للتحكم في toggle الطلب)
  *         completedAt:
  *           type: string
  *           format: date-time
@@ -517,6 +520,12 @@ const specialRequestSchema = new Schema(
       type: Boolean,
       default: false
     },
+    // New field for order tracking
+    isOrdered: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
     // Status timestamps
     completedAt: { 
       type: Date 
@@ -742,6 +751,9 @@ specialRequestSchema.index({ updatedAt: -1 });
 specialRequestSchema.index({ completedAt: -1 });
 specialRequestSchema.index({ isPrivate: 1, status: 1 });
 specialRequestSchema.index({ 'metadata.analytics.viewCount': -1 });
+// New indexes for order tracking
+specialRequestSchema.index({ sender: 1, artist: 1, artwork: 1, isOrdered: 1 });
+specialRequestSchema.index({ sender: 1, requestType: 1, isOrdered: 1 });
 
 // Text search index
 specialRequestSchema.index({ 
