@@ -4,7 +4,6 @@ import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
-import { getCache, setCache, CACHE_CONFIG, invalidateCache } from '../../utils/cache.js';
 
 /**
  * Helper function to safely extract and format image URLs with fallbacks
@@ -128,20 +127,8 @@ function formatCategories(categories) {
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
-    const userId = req.user?._id;
-    const cacheKey = userId ? `home:data:user:${userId}` : 'home:data:guest';
-
-    // Try cache first (no DB hit on cache hit)
-    const cachedResponse = await getCache(cacheKey);
-    if (cachedResponse) {
-      const cachedWithFlag = {
-        ...cachedResponse,
-        meta: { ...(cachedResponse.meta || {}), cached: true }
-      };
-      return res.status(200).json(cachedWithFlag);
-    }
-
     await ensureDatabaseConnection();
+    const userId = req.user?._id;
 
     const [
       categories,
@@ -565,13 +552,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
-        cached: false
       }
     };
-
-    // Cache the response (guest: longer TTL, user: shorter TTL)
-    const ttl = userId ? CACHE_CONFIG.DEFAULT_TTL : CACHE_CONFIG.LONG_TTL;
-    await setCache(cacheKey, response, ttl);
 
     res.status(200).json(response);
 
@@ -1491,23 +1473,3 @@ export const getPersonalizedArtworks = asyncHandler(async (req, res, next) => {
     next(new Error('حدث خطأ أثناء جلب الأعمال المخصصة', { cause: 500 }));
   }
 });
-
-// Cache invalidation helpers for home data
-export const invalidateHomeCache = async () => {
-  try {
-    return await invalidateCache('home:data:*');
-  } catch (error) {
-    console.error('Invalidate home cache error:', error);
-    return 0;
-  }
-};
-
-export const invalidateUserHomeCache = async (userId) => {
-  try {
-    if (!userId) return 0;
-    return await invalidateCache(`home:data:user:${userId}`);
-  } catch (error) {
-    console.error('Invalidate user home cache error:', error);
-    return 0;
-  }
-};
