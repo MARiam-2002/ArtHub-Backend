@@ -495,38 +495,42 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     // إذا كان limit=full، لا نحتاج pagination
     const { skip } = isFullRequest ? { skip: 0 } : getPaginationParams({ page, limit });
 
+    // بناء الاستعلام للطلبات الخاصة حسب role
+    let specialQuery = {};
+    
+    if (userRole === 'artist') {
+      // للفنان: جلب الطلبات المرسلة إليه
+      specialQuery = { artist: new mongoose.Types.ObjectId(userId) };
+      console.log(`🔍 Artist Query:`, specialQuery);
+    } else {
+      // للمستخدم العادي: جلب الطلبات المرسلة منه
+      specialQuery = { sender: new mongoose.Types.ObjectId(userId) };
+      console.log(`🔍 User Query:`, specialQuery);
+    }
+
     // Use cache for user requests
     const cachedData = await cacheSpecialRequests(userId, 'my', async () => {
-      // بناء الاستعلام للطلبات الخاصة حسب role
-      let specialQuery = {};
       
-      if (userRole === 'artist') {
-        // للفنان: جلب الطلبات المرسلة إليه
-        specialQuery = { artist: new mongoose.Types.ObjectId(userId) };
-        console.log(`🔍 Artist Query:`, specialQuery);
-      } else {
-        // للمستخدم العادي: جلب الطلبات المرسلة منه
-        specialQuery = { sender: new mongoose.Types.ObjectId(userId) };
-        console.log(`🔍 User Query:`, specialQuery);
-      }
+      // إنشاء copy من الـ query لتجنب تعديل الـ original
+      const queryCopy = { ...specialQuery };
       
       // إضافة فلاتر الحالة إذا تم تمريرها
       if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-        specialQuery.status = status;
+        queryCopy.status = status;
       } else if (!status) {
         // إذا لم يتم تمرير status، نعرض جميع الحالات
-        // specialQuery.status = { $in: ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'] };
+        // queryCopy.status = { $in: ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'] };
       }
       
       if (requestType) {
-        specialQuery.requestType = requestType;
+        queryCopy.requestType = requestType;
       }
       if (priority) {
-        specialQuery.priority = priority;
+        queryCopy.priority = priority;
       }
 
       // جلب الطلبات الخاصة فقط
-      const specialRequests = await specialRequestModel.find(specialQuery)
+      const specialRequests = await specialRequestModel.find(queryCopy)
         .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
         .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
         .populate('artwork', 'title image')
@@ -588,6 +592,8 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     });
   } catch (error) {
     console.error('Get user requests error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
     next(new Error('حدث خطأ أثناء جلب الطلبات', { cause: 500 }));
   }
 });
