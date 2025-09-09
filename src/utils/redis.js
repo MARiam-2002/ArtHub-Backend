@@ -42,6 +42,11 @@ class InMemoryCache {
     return 'OK';
   }
 
+  // Compatibility with ioredis setex(key, ttl, value)
+  async setex(key, ttl, value) {
+    return this.set(key, value, ttl);
+  }
+
   async get(key) {
     return this.cache.get(key) || null;
   }
