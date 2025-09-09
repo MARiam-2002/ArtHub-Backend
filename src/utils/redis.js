@@ -10,9 +10,20 @@ const redisOptions = {
   lazyConnect: true,
   keepAlive: 30000,
   connectTimeout: 10000,
-  commandTimeout: 5000,
+  commandTimeout: 1000, // Further reduced for maximum speed
   // Force IPv4 resolution, can help in some container environments
-  family: 4, 
+  family: 4,
+  // Performance optimizations
+  enableReadyCheck: false,
+  maxLoadingTimeout: 500,
+  // Connection pooling
+  enableOfflineQueue: false,
+  // Compression for large data
+  enableAutoPipelining: true,
+  // Additional performance tweaks
+  maxMemoryPolicy: 'allkeys-lru',
+  tcpKeepAlive: true,
+  tcpKeepAliveInitialDelay: 0,
 };
 
 // In-memory cache fallback

@@ -38,8 +38,13 @@ export const setCache = async (key, value, ttl = CACHE_CONFIG.DEFAULT_TTL) => {
     const cacheKey = generateCacheKey(key);
     const serializedValue = JSON.stringify(value);
     
-    await redis.setex(cacheKey, ttl, serializedValue);
-    logger.debug(`✅ Cache set: ${cacheKey} (TTL: ${ttl}s)`);
+    // Use compression for large data (>1KB)
+    const dataToStore = serializedValue.length > 1024 ? 
+      Buffer.from(serializedValue).toString('base64') : 
+      serializedValue;
+    
+    await redis.setex(cacheKey, ttl, dataToStore);
+    logger.debug(`✅ Cache set: ${cacheKey} (TTL: ${ttl}s, Size: ${serializedValue.length} chars)`);
     return true;
   } catch (error) {
     logger.error(`❌ Cache set error for key ${key}:`, error.message);
@@ -59,7 +64,15 @@ export const getCache = async (key) => {
     
     if (cachedValue) {
       logger.debug(`✅ Cache hit: ${cacheKey}`);
-      return JSON.parse(cachedValue);
+      
+      // Try to parse as base64 first (compressed), then as regular JSON
+      try {
+        const decodedValue = Buffer.from(cachedValue, 'base64').toString('utf8');
+        return JSON.parse(decodedValue);
+      } catch {
+        // If base64 decode fails, try regular JSON parsing
+        return JSON.parse(cachedValue);
+      }
     }
     
     logger.debug(`❌ Cache miss: ${cacheKey}`);

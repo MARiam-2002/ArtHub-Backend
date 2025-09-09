@@ -81,8 +81,8 @@ export const cacheCategoryArtworks = async (cacheKey, fetchFn, options = {}) => 
 export const cacheHomeData = async (userId, fetchFn) => {
   const cacheKey = userId ? `home:data:user:${userId}` : 'home:data:guest';
   // Use longer TTL for home data as it's frequently accessed and expensive to compute
-  // Guest data: 5 minutes, User data: 3 minutes (more personalized, needs fresher data)
-  const ttl = userId ? CACHE_CONFIG.DEFAULT_TTL : CACHE_CONFIG.LONG_TTL;
+  // Guest data: 15 minutes, User data: 10 minutes (optimized for speed)
+  const ttl = userId ? CACHE_CONFIG.LONG_TTL : CACHE_CONFIG.VERY_LONG_TTL;
   return await cacheWithFallback(cacheKey, fetchFn, ttl);
 };
 
@@ -390,8 +390,28 @@ export const invalidateHomeCache = async () => {
   return totalInvalidated;
 };
 
+/**
+ * Preload home cache for better performance
+ * @param {Function} fetchFn - Function to fetch home data
+ * @returns {Promise<void>}
+ */
+export const preloadHomeCache = async (fetchFn) => {
+  try {
+    // Preload guest data
+    const guestKey = 'home:data:guest';
+    const guestData = await fetchFn();
+    
+    if (guestData) {
+      await setCache(guestKey, guestData, CACHE_CONFIG.VERY_LONG_TTL);
+      logger.debug(`🚀 Preloaded guest home cache`);
+    }
+  } catch (error) {
+    logger.error('❌ Error preloading home cache:', error.message);
+  }
+};
+
 // Import and re-export invalidateCache function
-import { invalidateCache } from './cache.js';
+import { invalidateCache, setCache } from './cache.js';
 
 // Re-export for named imports
 export { invalidateCache };
@@ -404,6 +424,7 @@ export default {
   cacheCategories,
   cacheCategoryArtworks,
   cacheHomeData,
+  preloadHomeCache,
   cacheDashboardStats,
   cacheArtistPerformance,
   cacheArtworkList,
