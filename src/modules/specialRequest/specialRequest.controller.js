@@ -486,6 +486,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
     
     const userId = req.user._id;
+    const userRole = req.user.role; // جلب role من التوكن
     const { page = 1, limit = 10, status, requestType, priority, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
     
     // التحقق من إذا كان limit=full
@@ -496,11 +497,25 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
 
     // Use cache for user requests
     const cachedData = await cacheSpecialRequests(userId, 'my', async () => {
-      // بناء الاستعلام للطلبات الخاصة - فقط pending و accepted
-      const specialQuery = { 
-        sender: userId,
-        status: { $in: ['pending', 'accepted'] }
-      };
+      // بناء الاستعلام للطلبات الخاصة حسب role
+      let specialQuery = {};
+      
+      if (userRole === 'artist') {
+        // للفنان: جلب الطلبات المرسلة إليه
+        specialQuery = { artist: userId };
+      } else {
+        // للمستخدم العادي: جلب الطلبات المرسلة منه
+        specialQuery = { sender: userId };
+      }
+      
+      // إضافة فلاتر الحالة إذا تم تمريرها
+      if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+        specialQuery.status = status;
+      } else if (!status) {
+        // إذا لم يتم تمرير status، نعرض جميع الحالات
+        // specialQuery.status = { $in: ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'] };
+      }
+      
       if (requestType) {
         specialQuery.requestType = requestType;
       }
@@ -523,7 +538,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       return allRequests;
-    }, { page, limit, status, requestType, priority });
+    }, { page, limit, status, requestType, priority, userRole });
 
     // إذا كان limit=full، نرسل جميع الطلبات بدون pagination
     const finalRequests = isFullRequest ? cachedData : cachedData.slice(skip, skip + Number(limit));
@@ -557,7 +572,9 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       },
       meta: {
         userId: userId,
-        filters: { status: 'pending,accepted', requestType, priority, sortBy, sortOrder },
+        userRole: userRole,
+        requestType: userRole === 'artist' ? 'received_requests' : 'sent_requests',
+        filters: { status, requestType, priority, sortBy, sortOrder },
         isFullRequest
       }
     });
