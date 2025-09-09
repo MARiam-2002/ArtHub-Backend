@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
-import { cacheUserProfile, cacheArtistProfile, cacheUserWishlist, cacheUserArtworks, cacheUserFavorites, invalidateUserCache } from '../../utils/cacheHelpers.js';
+import { cacheUserProfile, cacheArtistProfile, cacheUserWishlist, cacheUserArtworks, cacheUserFavorites, invalidateUserCache, invalidateHomeCache } from '../../utils/cacheHelpers.js';
 import chatModel from '../../../DB/models/chat.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
@@ -154,6 +154,7 @@ export const toggleWishlist = asyncHandler(async (req, res, next) => {
 
     // Invalidate user cache
     await invalidateUserCache(userId);
+    await invalidateHomeCache(); // Invalidate home cache
 
     res.success({
       action,
@@ -363,6 +364,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
 
     // Invalidate user cache after profile update
     await invalidateUserCache(userId);
+    await invalidateHomeCache(); // Invalidate home cache
 
     res.success(updatedUser, 'تم تحديث الملف الشخصي بنجاح');
   } catch (error) {
@@ -539,6 +541,9 @@ export const followArtist = asyncHandler(async (req, res) => {
   // Get updated follower count
   const followersCount = await followModel.countDocuments({ following: artistId });
 
+  // Invalidate home cache
+  await invalidateHomeCache();
+
   res.success({ isFollowing: true, followersCount }, 'تمت متابعة الفنان بنجاح');
 });
 
@@ -564,6 +569,9 @@ export const unfollowArtist = asyncHandler(async (req, res) => {
 
   // Get updated follower count
   const followersCount = await followModel.countDocuments({ following: artistId });
+
+  // Invalidate home cache
+  await invalidateHomeCache();
 
   res.success({ isFollowing: false, followersCount }, 'تم إلغاء متابعة الفنان بنجاح');
 });

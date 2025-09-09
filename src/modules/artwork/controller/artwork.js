@@ -4,7 +4,7 @@ import categoryModel from '../../../../DB/models/category.model.js';
 import reviewModel from '../../../../DB/models/review.model.js';
 import { getPaginationParams } from '../../../utils/pagination.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
-import { cacheArtworkList, cacheArtwork, cacheSearchResults, invalidateArtworkCache } from '../../../utils/cacheHelpers.js';
+import { cacheArtworkList, cacheArtwork, cacheSearchResults, invalidateArtworkCache, invalidateHomeCache, invalidateUserCache } from '../../../utils/cacheHelpers.js';
 
 /**
  * جلب الأعمال المميزة
@@ -396,6 +396,7 @@ export const createArtwork = asyncHandler(async (req, res) => {
 
   // Invalidate cache after creating artwork
   await invalidateArtworkCache(populatedArtwork._id);
+  await invalidateHomeCache(); // Invalidate home cache
 
   res.success(populatedArtwork, 'تم إنشاء العمل الفني بنجاح', 201);
 });
@@ -456,6 +457,7 @@ export const updateArtwork = asyncHandler(async (req, res) => {
 
   // Invalidate cache after updating artwork
   await invalidateArtworkCache(id);
+  await invalidateHomeCache(); // Invalidate home cache
 
   res.success(artwork, 'تم تحديث العمل الفني بنجاح');
 });
@@ -483,6 +485,7 @@ export const deleteArtwork = asyncHandler(async (req, res) => {
 
   // Invalidate cache after deleting artwork
   await invalidateArtworkCache(id);
+  await invalidateHomeCache(); // Invalidate home cache
 
   res.success(null, 'تم حذف العمل الفني بنجاح');
 });
@@ -1095,6 +1098,10 @@ export const toggleFavorite = asyncHandler(async (req, res) => {
 
   await user.save();
 
+  // Invalidate cache after toggling favorite
+  await invalidateUserCache(userId);
+  await invalidateHomeCache(); // Invalidate home cache
+
   res.success({
     action,
     isFavorite: action === 'added',
@@ -1146,6 +1153,10 @@ export const addReview = asyncHandler(async (req, res) => {
 
   const populatedReview = await reviewModel.findById(review._id)
     .populate('user', 'displayName profileImage');
+
+  // Invalidate cache after adding review
+  await invalidateArtworkCache(artworkId);
+  await invalidateHomeCache(); // Invalidate home cache
 
   res.success(populatedReview, 'تم إضافة التقييم بنجاح', 201);
 });

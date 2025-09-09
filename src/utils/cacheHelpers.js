@@ -39,6 +39,17 @@ export const cacheArtwork = async (artworkId, fetchFn) => {
 };
 
 /**
+ * Cache artwork details with reviews and related data
+ * @param {string} cacheKey - Cache key
+ * @param {Function} fetchFn - Function to fetch artwork details
+ * @param {Object} options - Cache options
+ * @returns {Promise<any>} - Artwork details data
+ */
+export const cacheArtworkDetails = async (cacheKey, fetchFn, options = {}) => {
+  return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.DEFAULT_TTL);
+};
+
+/**
  * Cache categories list
  * @param {Function} fetchFn - Function to fetch categories
  * @param {Object} options - Cache options
@@ -48,6 +59,17 @@ export const cacheCategories = async (fetchFn, options = {}) => {
   const { limit = 8, includeStats = false } = options;
   const cacheKey = `categories:list:${limit}:${includeStats}`;
   return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.VERY_LONG_TTL);
+};
+
+/**
+ * Cache category artworks
+ * @param {string} cacheKey - Cache key
+ * @param {Function} fetchFn - Function to fetch category artworks
+ * @param {Object} options - Cache options
+ * @returns {Promise<any>} - Category artworks data
+ */
+export const cacheCategoryArtworks = async (cacheKey, fetchFn, options = {}) => {
+  return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.DEFAULT_TTL);
 };
 
 /**
@@ -343,6 +365,31 @@ export const invalidateDashboardCache = async (adminId) => {
   return totalInvalidated;
 };
 
+/**
+ * Invalidate home cache
+ * @returns {Promise<number>} - Number of invalidated keys
+ */
+export const invalidateHomeCache = async () => {
+  const patterns = [
+    'home:data:*',
+    'artworks:featured:*',
+    'artworks:trending:*',
+    'artworks:most-rated:*',
+    'search:*',
+    'artist:profile:*',
+    'category:artworks:*'
+  ];
+  
+  let totalInvalidated = 0;
+  for (const pattern of patterns) {
+    const invalidated = await invalidateCache(pattern);
+    totalInvalidated += invalidated;
+  }
+  
+  logger.debug(`🗑️ Invalidated ${totalInvalidated} cache keys for home data`);
+  return totalInvalidated;
+};
+
 // Import and re-export invalidateCache function
 import { invalidateCache } from './cache.js';
 
@@ -353,7 +400,9 @@ export default {
   cacheUserProfile,
   cacheArtistProfile,
   cacheArtwork,
+  cacheArtworkDetails,
   cacheCategories,
+  cacheCategoryArtworks,
   cacheHomeData,
   cacheDashboardStats,
   cacheArtistPerformance,
@@ -372,5 +421,6 @@ export default {
   invalidateArtistCache,
   invalidateCategoryCache,
   invalidateDashboardCache,
+  invalidateHomeCache,
   invalidateCache
 };

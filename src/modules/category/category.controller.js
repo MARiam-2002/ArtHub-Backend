@@ -1,7 +1,7 @@
 import categoryModel from '../../../DB/models/category.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { cacheCategories, invalidateCategoryCache } from '../../utils/cacheHelpers.js';
+import { cacheCategories, invalidateCategoryCache, invalidateHomeCache } from '../../utils/cacheHelpers.js';
 
 /**
  * Create a new category
@@ -30,6 +30,7 @@ export const createCategory = asyncHandler(async (req, res) => {
 
     // Invalidate category cache after creation
     await invalidateCategoryCache();
+    await invalidateHomeCache(); // Invalidate home cache
 
     res.success(category, 'تم إنشاء التصنيف بنجاح', 201);
   } catch (error) {
@@ -79,6 +80,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
 
     // Invalidate category cache after update
     await invalidateCategoryCache();
+    await invalidateHomeCache(); // Invalidate home cache
 
     res.success(category, 'تم تحديث التصنيف بنجاح');
   } catch (error) {
@@ -116,7 +118,8 @@ export const deleteCategory = asyncHandler(async (req, res) => {
     
     // Invalidate category cache after deletion
     await invalidateCategoryCache();
-    
+    await invalidateHomeCache(); // Invalidate home cache
+
     res.success(null, 'تم حذف التصنيف بنجاح');
   } catch (error) {
     console.error('Error deleting category:', error);
