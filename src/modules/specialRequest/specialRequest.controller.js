@@ -502,10 +502,12 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       
       if (userRole === 'artist') {
         // للفنان: جلب الطلبات المرسلة إليه
-        specialQuery = { artist: userId };
+        specialQuery = { artist: new mongoose.Types.ObjectId(userId) };
+        console.log(`🔍 Artist Query:`, specialQuery);
       } else {
         // للمستخدم العادي: جلب الطلبات المرسلة منه
-        specialQuery = { sender: userId };
+        specialQuery = { sender: new mongoose.Types.ObjectId(userId) };
+        console.log(`🔍 User Query:`, specialQuery);
       }
       
       // إضافة فلاتر الحالة إذا تم تمريرها
@@ -529,6 +531,8 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
         .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
         .populate('artwork', 'title image')
         .lean();
+      
+      console.log(`📊 Found ${specialRequests.length} special requests for ${userRole} ${userId}`);
 
       // تلخيص ودمج
       const summarizedSpecial = specialRequests.map(r => ({ ...summarizeSpecialRequest(r), orderType: 'special' }));
@@ -575,7 +579,11 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
         userRole: userRole,
         requestType: userRole === 'artist' ? 'received_requests' : 'sent_requests',
         filters: { status, requestType, priority, sortBy, sortOrder },
-        isFullRequest
+        isFullRequest,
+        debug: {
+          query: specialQuery,
+          totalFound: cachedData.length
+        }
       }
     });
   } catch (error) {
