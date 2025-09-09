@@ -11,6 +11,8 @@ const redisOptions = {
   keepAlive: 30000,
   connectTimeout: 10000,
   commandTimeout: 5000,
+  // Force IPv4 resolution, can help in some container environments
+  family: 4, 
 };
 
 // In-memory cache fallback
