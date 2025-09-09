@@ -2,21 +2,15 @@ import Redis from 'ioredis';
 import { logger } from './logger.js';
 
 /**
- * Redis connection configuration
+ * Common Redis connection options
  */
-const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD || undefined,
-  db: process.env.REDIS_DB || 0,
+const redisOptions = {
   retryDelayOnFailover: 100,
   maxRetriesPerRequest: 3,
   lazyConnect: true,
   keepAlive: 30000,
   connectTimeout: 10000,
   commandTimeout: 5000,
-  // Parse Redis URL if provided
-  ...(process.env.REDIS_URL && { url: process.env.REDIS_URL })
 };
 
 // In-memory cache fallback
@@ -118,19 +112,32 @@ class InMemoryCache {
 let redis;
 let redisAvailable = false;
 
-// Check if Redis URL is available and valid
-if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
-  try {
-    redis = new Redis(redisConfig);
-    redisAvailable = true;
-    logger.info('🔗 Redis URL found, attempting connection...');
-  } catch (error) {
-    logger.warn('⚠️ Redis connection failed, using in-memory cache fallback');
-    redis = new InMemoryCache();
-    redisAvailable = false;
+try {
+  // Prefer REDIS_URL for environments like Railway, Heroku, etc.
+  if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
+    redis = new Redis(process.env.REDIS_URL, redisOptions);
+    logger.info('🔗 Connecting to Redis using REDIS_URL...');
+  } else {
+    // Fallback to individual ENV VARS for local development or other setups
+    const config = {
+      host: process.env.REDISHOST || process.env.REDIS_HOST || 'localhost',
+      port: process.env.REDISPORT || process.env.REDIS_PORT || 6379,
+      password: process.env.REDISPASSWORD || process.env.REDIS_PASSWORD || undefined,
+      db: process.env.REDIS_DB || 0,
+      ...redisOptions,
+    };
+
+    // Avoid connecting to localhost in production environments if no URL is set
+    if (config.host === 'localhost' && process.env.NODE_ENV === 'production') {
+      throw new Error('No remote Redis configured in production, falling back to in-memory cache.');
+    }
+    
+    redis = new Redis(config);
+    logger.info('🔗 Connecting to Redis using host/port configuration...');
   }
-} else {
-  logger.info('ℹ️ No valid Redis URL found, using in-memory cache');
+  redisAvailable = true;
+} catch (error) {
+  logger.warn(`⚠️ Redis connection failed: ${error.message}. Using in-memory cache fallback.`);
   redis = new InMemoryCache();
   redisAvailable = false;
 }
