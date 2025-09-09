@@ -58,7 +58,10 @@ export const cacheCategories = async (fetchFn, options = {}) => {
  */
 export const cacheHomeData = async (userId, fetchFn) => {
   const cacheKey = userId ? `home:data:user:${userId}` : 'home:data:guest';
-  return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.SHORT_TTL);
+  // Use longer TTL for home data as it's frequently accessed and expensive to compute
+  // Guest data: 5 minutes, User data: 3 minutes (more personalized, needs fresher data)
+  const ttl = userId ? CACHE_CONFIG.DEFAULT_TTL : CACHE_CONFIG.LONG_TTL;
+  return await cacheWithFallback(cacheKey, fetchFn, ttl);
 };
 
 /**

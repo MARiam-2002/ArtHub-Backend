@@ -3,7 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
-import { cacheHomeData, cacheCategories, cacheArtworkList } from '../../utils/cacheHelpers.js';
+import { cacheHomeData, invalidateUserCache, invalidateCache } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -123,24 +123,19 @@ function formatCategories(categories) {
 }
 
 /**
- * Main controller to get all data for the home screen
- * Optimized for Flutter integration with proper image handling and Redis caching
+ * Fetch home data from database (used as fallback function for caching)
  */
-export const getHomeData = asyncHandler(async (req, res, next) => {
-  try {
-    await ensureDatabaseConnection();
-    const userId = req.user?._id;
+const fetchHomeDataFromDB = async (userId) => {
+  await ensureDatabaseConnection();
 
-    // Use cached data with fallback to database
-    const homeData = await cacheHomeData(userId, async () => {
-      const [
-        categories,
-        featuredArtists,
-        featuredArtworks,
-        latestArtists,
-        mostRatedArtworks,
-        trendingArtworks,
-      ] = await Promise.all([
+  const [
+    categories,
+    featuredArtists,
+    featuredArtworks,
+    latestArtists,
+    mostRatedArtworks,
+    trendingArtworks,
+  ] = await Promise.all([
       // 1. Categories with artwork count
       categoryModel.aggregate([
         { $match: {} },
@@ -467,63 +462,34 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         })
         .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
         .lean(),
-      ]);
+    ]);
 
-      // 7. Personalized Artworks (Based on User History)
-      let personalizedArtworks = [];
-      if (userId) {
-        const user = await userModel.findById(userId)
-          .select('recentlyViewed wishlist')
-          .lean();
-        
-        const recentCategories = user?.recentlyViewed?.map(h => h.category).filter(Boolean) || [];
-        const wishlistIds = user?.wishlist?.map(id => new mongoose.Types.ObjectId(id)) || [];
-        
-        const excludedIds = [
-          ...featuredArtworks.map(a => a._id),
-          ...mostRatedArtworks.map(a => a._id),
-          ...trendingArtworks.map(a => a._id),
-        ].map(id => new mongoose.Types.ObjectId(id));
-
-        if (recentCategories.length > 0) {
-          personalizedArtworks = await artworkModel.find({
-            $or: [
-              { category: { $in: recentCategories } },
-              { _id: { $in: wishlistIds } }
-            ],
-            _id: { $nin: excludedIds },
-            isAvailable: true,
-          })
-          .limit(6)
-          .populate({ 
-            path: 'artist', 
-            select: 'displayName profileImage photoURL job isVerified' 
-          })
-          .populate({ 
-            path: 'category', 
-            select: 'name image' 
-          })
-          .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
-          .lean();
-        }
-      }
+    // 7. Personalized Artworks (Based on User History)
+    let personalizedArtworks = [];
+    if (userId) {
+      const user = await userModel.findById(userId)
+        .select('recentlyViewed wishlist')
+        .lean();
       
-      // Fallback for personalized content
-      if (personalizedArtworks.length < 6) {
-        const extraNeeded = 6 - personalizedArtworks.length;
-        const allExcludedIds = [
-          ...featuredArtworks.map(a => a._id),
-          ...mostRatedArtworks.map(a => a._id),
-          ...trendingArtworks.map(a => a._id),
-          ...personalizedArtworks.map(a => a._id),
-        ].map(id => new mongoose.Types.ObjectId(id));
+      const recentCategories = user?.recentlyViewed?.map(h => h.category).filter(Boolean) || [];
+      const wishlistIds = user?.wishlist?.map(id => new mongoose.Types.ObjectId(id)) || [];
+      
+      const excludedIds = [
+        ...featuredArtworks.map(a => a._id),
+        ...mostRatedArtworks.map(a => a._id),
+        ...trendingArtworks.map(a => a._id),
+      ].map(id => new mongoose.Types.ObjectId(id));
 
-        const fallbackArtworks = await artworkModel.find({ 
-          isAvailable: true, 
-          _id: { $nin: allExcludedIds } 
+      if (recentCategories.length > 0) {
+        personalizedArtworks = await artworkModel.find({
+          $or: [
+            { category: { $in: recentCategories } },
+            { _id: { $in: wishlistIds } }
+          ],
+          _id: { $nin: excludedIds },
+          isAvailable: true,
         })
-        .sort({ likeCount: -1, createdAt: -1 })
-        .limit(extraNeeded)
+        .limit(6)
         .populate({ 
           path: 'artist', 
           select: 'displayName profileImage photoURL job isVerified' 
@@ -534,39 +500,83 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         })
         .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
         .lean();
-        
-        personalizedArtworks.push(...fallbackArtworks);
       }
+    }
+    
+    // Fallback for personalized content
+    if (personalizedArtworks.length < 6) {
+      const extraNeeded = 6 - personalizedArtworks.length;
+      const allExcludedIds = [
+        ...featuredArtworks.map(a => a._id),
+        ...mostRatedArtworks.map(a => a._id),
+        ...trendingArtworks.map(a => a._id),
+        ...personalizedArtworks.map(a => a._id),
+      ].map(id => new mongoose.Types.ObjectId(id));
 
-      // Return the data for caching
-      return {
-        categories,
-        featuredArtists,
-        featuredArtworks,
-        latestArtists,
-        mostRatedArtworks,
-        trendingArtworks,
-        personalizedArtworks,
-      };
+      const fallbackArtworks = await artworkModel.find({ 
+        isAvailable: true, 
+        _id: { $nin: allExcludedIds } 
+      })
+      .sort({ likeCount: -1, createdAt: -1 })
+      .limit(extraNeeded)
+      .populate({ 
+        path: 'artist', 
+        select: 'displayName profileImage photoURL job isVerified' 
+      })
+      .populate({ 
+        path: 'category', 
+        select: 'name image' 
+      })
+      .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
+      .lean();
+      
+      personalizedArtworks.push(...fallbackArtworks);
+    }
+
+    // Return formatted data for caching
+    return {
+      categories: formatCategories(categories),
+      featuredArtists: formatArtists(featuredArtists),
+      featuredArtworks: formatArtworks(featuredArtworks),
+      latestArtists: formatArtists(latestArtists),
+      mostRatedArtworks: formatArtworks(mostRatedArtworks),
+      trendingArtworks: formatArtworks(trendingArtworks),
+      personalizedArtworks: formatArtworks(personalizedArtworks),
+    };
+};
+
+/**
+ * Main controller to get all data for the home screen
+ * Optimized for Flutter integration with proper image handling and intelligent caching
+ * 
+ * CACHING STRATEGY:
+ * - Guest users: 30 minutes TTL (less personalized, can be cached longer)
+ * - Authenticated users: 5 minutes TTL (more personalized, needs fresher data)
+ * - Cache keys: 'home:data:guest' or 'home:data:user:{userId}'
+ * 
+ * CACHE INVALIDATION:
+ * - Use invalidateHomeCache() when global data changes (new artworks, categories)
+ * - Use invalidateUserHomeCache(userId) when user-specific data changes (wishlist, following)
+ */
+export const getHomeData = asyncHandler(async (req, res, next) => {
+  try {
+    const userId = req.user?._id;
+
+    // Use cached data with fallback to database
+    const homeData = await cacheHomeData(userId?.toString(), async () => {
+      return await fetchHomeDataFromDB(userId);
     });
 
     // Prepare response with proper structure for Flutter
     const response = {
       success: true,
       message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
-      data: {
-        categories: formatCategories(homeData.categories),
-        featuredArtists: formatArtists(homeData.featuredArtists),
-        featuredArtworks: formatArtworks(homeData.featuredArtworks),
-        latestArtists: formatArtists(homeData.latestArtists),
-        mostRatedArtworks: formatArtworks(homeData.mostRatedArtworks),
-        trendingArtworks: formatArtworks(homeData.trendingArtworks),
-        personalizedArtworks: formatArtworks(homeData.personalizedArtworks),
-      },
+      data: homeData,
       meta: {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
+        cached: true // Indicate that caching is enabled
       }
     };
 
@@ -1488,3 +1498,42 @@ export const getPersonalizedArtworks = asyncHandler(async (req, res, next) => {
     next(new Error('حدث خطأ أثناء جلب الأعمال المخصصة', { cause: 500 }));
   }
 });
+
+/**
+ * Invalidate home page cache
+ * Call this function when home data changes (new artworks, artists, categories, etc.)
+ */
+export const invalidateHomeCache = async () => {
+  try {
+    // Invalidate both guest and user-specific home data
+    const guestCacheInvalidated = await invalidateCache('home:data:guest');
+    const userCacheInvalidated = await invalidateCache('home:data:user:*');
+    
+    const totalInvalidated = guestCacheInvalidated + userCacheInvalidated;
+    console.log(`🗑️ Invalidated ${totalInvalidated} home cache keys`);
+    
+    return totalInvalidated;
+  } catch (error) {
+    console.error('❌ Error invalidating home cache:', error);
+    return 0;
+  }
+};
+
+/**
+ * Invalidate specific user's home cache
+ * Call this when user-specific data changes (wishlist, following, etc.)
+ */
+export const invalidateUserHomeCache = async (userId) => {
+  try {
+    if (!userId) return 0;
+    
+    const userCacheKey = `home:data:user:${userId}`;
+    const invalidated = await invalidateCache(userCacheKey);
+    
+    console.log(`🗑️ Invalidated home cache for user ${userId}`);
+    return invalidated;
+  } catch (error) {
+    console.error(`❌ Error invalidating home cache for user ${userId}:`, error);
+    return 0;
+  }
+};
