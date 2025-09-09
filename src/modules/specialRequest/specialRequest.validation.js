@@ -426,7 +426,7 @@ export const deleteRequestSchema = {
     cancellationReason: Joi.string()
       .optional()
       .messages({
-        'any.only': 'سبب الإلغاء غير صالح'
-      })
+        'string.empty': 'سبب الإلغاء مطلوب'
+            })
   })
 };
