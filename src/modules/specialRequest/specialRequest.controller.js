@@ -340,6 +340,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
               existingRequest: {
                 _id: existingRequest._id,
                 status: existingRequest.status,
+                isOrdered: existingRequest.isOrdered !== undefined ? existingRequest.isOrdered : true,
                 createdAt: existingRequest.createdAt,
                 minutesElapsed: Math.round(minutesDifference * 100) / 100
               }
