@@ -3,7 +3,6 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
-import { cacheHomeData, invalidateUserCache, invalidateCache } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -123,19 +122,22 @@ function formatCategories(categories) {
 }
 
 /**
- * Fetch home data from database (used as fallback function for caching)
+ * Main controller to get all data for the home screen
+ * Optimized for Flutter integration with proper image handling
  */
-const fetchHomeDataFromDB = async (userId) => {
-  await ensureDatabaseConnection();
+export const getHomeData = asyncHandler(async (req, res, next) => {
+  try {
+    await ensureDatabaseConnection();
+    const userId = req.user?._id;
 
-  const [
-    categories,
-    featuredArtists,
-    featuredArtworks,
-    latestArtists,
-    mostRatedArtworks,
-    trendingArtworks,
-  ] = await Promise.all([
+    const [
+      categories,
+      featuredArtists,
+      featuredArtworks,
+      latestArtists,
+      mostRatedArtworks,
+      trendingArtworks,
+    ] = await Promise.all([
       // 1. Categories with artwork count
       categoryModel.aggregate([
         { $match: {} },
@@ -533,50 +535,23 @@ const fetchHomeDataFromDB = async (userId) => {
       personalizedArtworks.push(...fallbackArtworks);
     }
 
-    // Return formatted data for caching
-    return {
-      categories: formatCategories(categories),
-      featuredArtists: formatArtists(featuredArtists),
-      featuredArtworks: formatArtworks(featuredArtworks),
-      latestArtists: formatArtists(latestArtists),
-      mostRatedArtworks: formatArtworks(mostRatedArtworks),
-      trendingArtworks: formatArtworks(trendingArtworks),
-      personalizedArtworks: formatArtworks(personalizedArtworks),
-    };
-};
-
-/**
- * Main controller to get all data for the home screen
- * Optimized for Flutter integration with proper image handling and intelligent caching
- * 
- * CACHING STRATEGY:
- * - Guest users: 30 minutes TTL (less personalized, can be cached longer)
- * - Authenticated users: 5 minutes TTL (more personalized, needs fresher data)
- * - Cache keys: 'home:data:guest' or 'home:data:user:{userId}'
- * 
- * CACHE INVALIDATION:
- * - Use invalidateHomeCache() when global data changes (new artworks, categories)
- * - Use invalidateUserHomeCache(userId) when user-specific data changes (wishlist, following)
- */
-export const getHomeData = asyncHandler(async (req, res, next) => {
-  try {
-    const userId = req.user?._id;
-
-    // Use cached data with fallback to database
-    const homeData = await cacheHomeData(userId?.toString(), async () => {
-      return await fetchHomeDataFromDB(userId);
-    });
-
     // Prepare response with proper structure for Flutter
     const response = {
       success: true,
       message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
-      data: homeData,
+      data: {
+        categories: formatCategories(categories),
+        featuredArtists: formatArtists(featuredArtists),
+        featuredArtworks: formatArtworks(featuredArtworks),
+        latestArtists: formatArtists(latestArtists),
+        mostRatedArtworks: formatArtworks(mostRatedArtworks),
+        trendingArtworks: formatArtworks(trendingArtworks),
+        personalizedArtworks: formatArtworks(personalizedArtworks),
+      },
       meta: {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
-        cached: true // Indicate that caching is enabled
       }
     };
 
@@ -1498,42 +1473,3 @@ export const getPersonalizedArtworks = asyncHandler(async (req, res, next) => {
     next(new Error('حدث خطأ أثناء جلب الأعمال المخصصة', { cause: 500 }));
   }
 });
-
-/**
- * Invalidate home page cache
- * Call this function when home data changes (new artworks, artists, categories, etc.)
- */
-export const invalidateHomeCache = async () => {
-  try {
-    // Invalidate both guest and user-specific home data
-    const guestCacheInvalidated = await invalidateCache('home:data:guest');
-    const userCacheInvalidated = await invalidateCache('home:data:user:*');
-    
-    const totalInvalidated = guestCacheInvalidated + userCacheInvalidated;
-    console.log(`🗑️ Invalidated ${totalInvalidated} home cache keys`);
-    
-    return totalInvalidated;
-  } catch (error) {
-    console.error('❌ Error invalidating home cache:', error);
-    return 0;
-  }
-};
-
-/**
- * Invalidate specific user's home cache
- * Call this when user-specific data changes (wishlist, following, etc.)
- */
-export const invalidateUserHomeCache = async (userId) => {
-  try {
-    if (!userId) return 0;
-    
-    const userCacheKey = `home:data:user:${userId}`;
-    const invalidated = await invalidateCache(userCacheKey);
-    
-    console.log(`🗑️ Invalidated home cache for user ${userId}`);
-    return invalidated;
-  } catch (error) {
-    console.error(`❌ Error invalidating home cache for user ${userId}:`, error);
-    return 0;
-  }
-};
