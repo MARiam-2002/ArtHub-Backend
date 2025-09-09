@@ -3,7 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
-import { cacheHomeData, cacheCategories, cacheArtworkList } from '../../utils/cacheHelpers.js';
+import { cacheWithFallback, CACHE_CONFIG } from '../../utils/cache.js';
 import mongoose from 'mongoose';
 
 /**
@@ -122,460 +122,199 @@ function formatCategories(categories) {
   }));
 }
 
+const safeObjectId = (id) => {
+  try {
+    return new mongoose.Types.ObjectId(id);
+  } catch (e) {
+    return null;
+  }
+};
+
 /**
  * Main controller to get all data for the home screen
- * Optimized for Flutter integration with proper image handling and Redis caching
+ * Optimized with a single aggregation pipeline for maximum performance
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
-  try {
-    await ensureDatabaseConnection();
-    const userId = req.user?._id;
+  await ensureDatabaseConnection();
+  const userId = req.user?._id ? safeObjectId(req.user._id) : null;
 
-    // Use cached data with fallback to database
-    const homeData = await cacheHomeData(userId, async () => {
-      const [
-        categories,
-        featuredArtists,
-        featuredArtworks,
-        latestArtists,
-        mostRatedArtworks,
-        trendingArtworks,
-      ] = await Promise.all([
-      // 1. Categories with artwork count
-      categoryModel.aggregate([
-        { $match: {} },
-        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'category', as: 'artworks' } },
-        { $addFields: { artworksCount: { $size: '$artworks' } } },
-        { $project: { name: 1, image: 1, artworksCount: 1 } },
-        { $sort: { artworksCount: -1 } },
-        { $limit: 8 }
-      ]),
+  const cacheKey = `home:data:user:${userId || 'guest'}`;
+  
+  const homeData = await cacheWithFallback(cacheKey, async () => {
+    const aggregationResult = await artworkModel.aggregate([
+      {
+        $facet: {
+          // 1. Categories with artwork count
+          categories: [
+            { $match: { isAvailable: true } },
+            { $group: { _id: '$category', artworksCount: { $sum: 1 } } },
+            { $sort: { artworksCount: -1 } },
+            { $limit: 8 },
+            {
+              $lookup: {
+                from: 'categories',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'categoryInfo'
+              }
+            },
+            { $unwind: '$categoryInfo' },
+            {
+              $project: {
+                _id: '$categoryInfo._id',
+                name: { $ifNull: ['$categoryInfo.name.ar', '$categoryInfo.name'] },
+                image: { $ifNull: ['$categoryInfo.image.url', '$categoryInfo.image'] },
+                artworksCount: 1
+              }
+            }
+          ],
+          
+          // 2. Featured Artists (Top Rated)
+          featuredArtists: [
+            { $match: { isAvailable: true } },
+            { $group: { _id: '$artist', avgRating: { $avg: '$rating' }, reviewsCount: { $sum: '$reviewsCount' } } },
+            { $sort: { avgRating: -1, reviewsCount: -1 } },
+            { $limit: 6 },
+            {
+              $lookup: {
+                from: 'users',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'artistInfo'
+              }
+            },
+            { $unwind: '$artistInfo' },
+            {
+              $project: {
+                _id: '$artistInfo._id',
+                displayName: '$artistInfo.displayName',
+                profileImage: { $ifNull: ['$artistInfo.profileImage.url', '$artistInfo.photoURL'] },
+                job: '$artistInfo.job',
+                isVerified: '$artistInfo.isVerified',
+                rating: { $ifNull: [{ $round: ['$avgRating', 1] }, 0] },
+                reviewsCount: '$reviewsCount'
+              }
+            }
+          ],
 
-      // 2. Featured Artists (Top Rated with follower count)
-      userModel.aggregate([
-        { $match: { role: 'artist', isActive: true, isDeleted: false } },
-        { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
-        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
-        // Get artist reviews (reviews for the artist himself)
-        {
-          $lookup: {
-            from: 'reviews',
-            let: { artistId: '$_id' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: { $eq: ['$artist', '$$artistId'] },
-                  status: 'active',
-                  $or: [
-                    { artwork: { $exists: false } },
-                    { artwork: null }
-                  ]
-                }
-              }
-            ],
-            as: 'artistReviews'
-          }
-        },
-        // Get all reviews for artist's artworks
-        {
-          $lookup: {
-            from: 'reviews',
-            let: { artistId: '$_id' },
-            pipeline: [
-              {
-                $lookup: {
-                  from: 'artworks',
-                  localField: 'artwork',
-                  foreignField: '_id',
-                  as: 'artworkData'
-                }
-              },
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
-                      { $ne: ['$artwork', null] }
-                    ]
-                  },
-                  status: 'active'
-                }
-              }
-            ],
-            as: 'artworkReviews'
-          }
-        },
-        {
-          $addFields: {
-            // Combined rating: artist reviews + artwork reviews
-            artistTotalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-            artistReviewsCount: { $size: '$artistReviews' },
-            artworkTotalRating: { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] },
-            artworkReviewsCount: { $size: '$artworkReviews' },
-            // Combined totals
-            totalRating: { 
-              $add: [
-                { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-                { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
-              ]
+          // 3. Featured Artworks
+          featuredArtworks: [
+            { $match: { isAvailable: true, isFeatured: true } },
+            { $sort: { likeCount: -1, viewCount: -1 } },
+            { $limit: 6 },
+            {
+              $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' }
             },
-            totalReviewsCount: { 
-              $add: [
-                { $size: '$artistReviews' },
-                { $size: '$artworkReviews' }
-              ]
-            },
-            averageRating: {
-              $cond: {
-                if: { 
-                  $gt: [
-                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }, 
-                    0
-                  ] 
-                },
-                then: { 
-                  $divide: [
-                    { 
-                      $add: [
-                        { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-                        { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
-                      ]
-                    },
-                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }
-                  ]
-                },
-                else: 0
+            { $unwind: '$artist' },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                price: 1,
+                image: { $ifNull: ['$image.url', '$image'] },
+                artist: { _id: '$artist._id', displayName: '$artist.displayName', profileImage: { $ifNull: ['$artist.profileImage.url', '$artist.photoURL'] } }
               }
+            }
+          ],
+
+          // 4. Latest Artists
+          latestArtists: [
+            { $group: { _id: '$artist', createdAt: { $max: '$createdAt' } } },
+            { $sort: { createdAt: -1 } },
+            { $limit: 6 },
+            {
+              $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'artistInfo' }
             },
-            followersCount: { $size: '$followers' },
-            artworksCount: { $size: '$artworks' },
-          }
-        },
-        { $sort: { averageRating: -1, totalReviewsCount: -1, followersCount: -1 } },
-        { $limit: 6 },
-        { 
-          $project: { 
-            displayName: 1, 
-            profileImage: 1, 
-            photoURL: 1, 
-            coverImages: 1,
-            averageRating: 1, 
-            totalRating: 1,
-            reviewsCount: '$totalReviewsCount',
-            followersCount: 1,
-            artworksCount: 1,
-            job: 1,
-            isVerified: 1
-          } 
+            { $unwind: '$artistInfo' },
+            {
+                $project: {
+                    _id: '$artistInfo._id',
+                    displayName: '$artistInfo.displayName',
+                    profileImage: { $ifNull: ['$artistInfo.profileImage.url', '$artistInfo.photoURL'] },
+                    job: '$artistInfo.job',
+                    isVerified: '$artistInfo.isVerified'
+                }
+            }
+          ],
+
+          // 5. Most Rated Artworks
+          mostRatedArtworks: [
+            { $match: { isAvailable: true, reviewsCount: { $gt: 0 } } },
+            { $sort: { rating: -1, reviewsCount: -1 } },
+            { $limit: 6 },
+            {
+              $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' }
+            },
+            { $unwind: '$artist' },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                price: 1,
+                image: { $ifNull: ['$image.url', '$image'] },
+                artist: { _id: '$artist._id', displayName: '$artist.displayName', profileImage: { $ifNull: ['$artist.profileImage.url', '$artist.photoURL'] } }
+              }
+            }
+          ],
+          
+          // 6. Trending Artworks
+          trendingArtworks: [
+            { $match: { isAvailable: true } },
+            { $sort: { viewCount: -1, createdAt: -1 } },
+            { $limit: 6 },
+            {
+              $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' }
+            },
+            { $unwind: '$artist' },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                price: 1,
+                image: { $ifNull: ['$image.url', '$image'] },
+                artist: { _id: '$artist._id', displayName: '$artist.displayName', profileImage: { $ifNull: ['$artist.profileImage.url', '$artist.photoURL'] } }
+              }
+            }
+          ],
         }
-      ]),
-
-      // 3. Featured Artworks (Most Liked and Viewed)
-      artworkModel.find({ isAvailable: true, isFeatured: true })
-        .sort({ likeCount: -1, viewCount: -1 })
-        .limit(6)
-        .populate({ 
-          path: 'artist', 
-          select: 'displayName profileImage photoURL job isVerified' 
-        })
-        .populate({ 
-          path: 'category', 
-          select: 'name image' 
-        })
-        .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
-        .lean(),
-
-      // 4. Latest Artists (Recently Joined)
-      userModel.aggregate([
-        { $match: { role: 'artist', isActive: true, isDeleted: false } },
-        { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
-        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
-        // Check if current user is following each artist
-        {
-          $lookup: {
-            from: 'follows',
-            let: { artistId: '$_id' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ['$following', '$$artistId'] },
-                      { $eq: ['$follower', userId ? new mongoose.Types.ObjectId(userId) : null] }
-                    ]
-                  }
-                }
-              }
-            ],
-            as: 'userFollows'
-          }
-        },
-        // Get artist reviews (reviews for the artist himself)
-        {
-          $lookup: {
-            from: 'reviews',
-            let: { artistId: '$_id' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: { $eq: ['$artist', '$$artistId'] },
-                  status: 'active',
-                  $or: [
-                    { artwork: { $exists: false } },
-                    { artwork: null }
-                  ]
-                }
-              }
-            ],
-            as: 'artistReviews'
-          }
-        },
-        // Get all reviews for artist's artworks (not used in rating now)
-        {
-          $lookup: {
-            from: 'reviews',
-            let: { artistId: '$_id' },
-            pipeline: [
-              {
-                $lookup: {
-                  from: 'artworks',
-                  localField: 'artwork',
-                  foreignField: '_id',
-                  as: 'artworkData'
-                }
-              },
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
-                      { $ne: ['$artwork', null] }
-                    ]
-                  },
-                  status: 'active'
-                }
-              }
-            ],
-            as: 'artworkReviews'
-          }
-        },
-        {
-          $addFields: {
-            // Combined rating: artist reviews + artwork reviews
-            artistTotalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-            artistReviewsCount: { $size: '$artistReviews' },
-            artworkTotalRating: { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] },
-            artworkReviewsCount: { $size: '$artworkReviews' },
-            // Combined totals
-            totalRating: { 
-              $add: [
-                { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-                { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
-              ]
-            },
-            totalReviewsCount: { 
-              $add: [
-                { $size: '$artistReviews' },
-                { $size: '$artworkReviews' }
-              ]
-            },
-            averageRating: {
-              $cond: {
-                if: { 
-                  $gt: [
-                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }, 
-                    0
-                  ] 
-                },
-                then: { 
-                  $divide: [
-                    { 
-                      $add: [
-                        { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
-                        { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
-                      ]
-                    },
-                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }
-                  ]
-                },
-                else: 0
-              }
-            },
-            followersCount: { $size: '$followers' },
-            artworksCount: { $size: '$artworks' },
-            isFollowing: { $gt: [{ $size: '$userFollows' }, 0] }
-          }
-        },
-        { $sort: { createdAt: -1 } },
-        { $limit: 6 },
-        { 
-          $project: { 
-            displayName: 1, 
-            profileImage: 1, 
-            photoURL: 1, 
-            coverImages: 1,
-            averageRating: 1, 
-            totalRating: 1,
-            reviewsCount: '$totalReviewsCount',
-            followersCount: 1,
-            artworksCount: 1,
-            job: 1,
-            isVerified: 1,
-            isFollowing: 1
-          } 
-        }
-      ]),
-        
-      // 5. Most Rated Artworks
-      artworkModel.aggregate([
-        { $match: { isAvailable: true } },
-        { $lookup: { from: 'reviews', localField: '_id', foreignField: 'artwork', as: 'reviews' } },
-        {
-          $addFields: {
-            averageRating: { $ifNull: [{ $avg: '$reviews.rating' }, 0] },
-            reviewsCount: { $size: '$reviews' },
-          },
-        },
-        { $match: { reviewsCount: { $gt: 0 } } },
-        { $sort: { averageRating: -1, reviewsCount: -1 } },
-        { $limit: 6 },
-        { $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' } },
-        { $unwind: { path: '$artist', preserveNullAndEmptyArrays: true } },
-        { $lookup: { from: 'categories', localField: 'category', foreignField: '_id', as: 'category' } },
-        { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
-        {
-          $project: {
-            title: 1, description: 1, image: 1, images: 1, price: 1, currency: 1, 
-            dimensions: 1, medium: 1, year: 1, tags: 1, artist: 1, category: 1,
-            likeCount: 1, viewCount: 1, averageRating: 1, reviewsCount: 1,
-            isAvailable: 1, isFeatured: 1, createdAt: 1, updatedAt: 1
-          },
-        },
-      ]),
-
-      // 6. Trending Artworks (High Views Recently)
-      artworkModel.find({ isAvailable: true })
-        .sort({ viewCount: -1, createdAt: -1 })
-        .limit(6)
-        .populate({ 
-          path: 'artist', 
-          select: 'displayName profileImage photoURL job isVerified' 
-        })
-        .populate({ 
-          path: 'category', 
-          select: 'name image' 
-        })
-        .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
-        .lean(),
-      ]);
-
-      // 7. Personalized Artworks (Based on User History)
-      let personalizedArtworks = [];
-      if (userId) {
-        const user = await userModel.findById(userId)
-          .select('recentlyViewed wishlist')
-          .lean();
-        
-        const recentCategories = user?.recentlyViewed?.map(h => h.category).filter(Boolean) || [];
-        const wishlistIds = user?.wishlist?.map(id => new mongoose.Types.ObjectId(id)) || [];
-        
-        const excludedIds = [
-          ...featuredArtworks.map(a => a._id),
-          ...mostRatedArtworks.map(a => a._id),
-          ...trendingArtworks.map(a => a._id),
-        ].map(id => new mongoose.Types.ObjectId(id));
-
+      }
+    ]);
+    
+    // Asynchronously fetch personalized artworks if user is logged in
+    let personalizedArtworks = [];
+    if (userId) {
+        const user = await userModel.findById(userId).select('recentlyViewed').lean();
+        const recentCategories = user?.recentlyViewed?.map(h => h.category).filter(Boolean).map(id => safeObjectId(id)) || [];
         if (recentCategories.length > 0) {
-          personalizedArtworks = await artworkModel.find({
-            $or: [
-              { category: { $in: recentCategories } },
-              { _id: { $in: wishlistIds } }
-            ],
-            _id: { $nin: excludedIds },
-            isAvailable: true,
-          })
-          .limit(6)
-          .populate({ 
-            path: 'artist', 
-            select: 'displayName profileImage photoURL job isVerified' 
-          })
-          .populate({ 
-            path: 'category', 
-            select: 'name image' 
-          })
-          .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
-          .lean();
+            const excludedIds = [
+                ...(aggregationResult[0].featuredArtworks || []).map(a => a._id),
+                ...(aggregationResult[0].mostRatedArtworks || []).map(a => a._id),
+                ...(aggregationResult[0].trendingArtworks || []).map(a => a._id),
+            ];
+            
+            personalizedArtworks = await artworkModel.aggregate([
+                { $match: { isAvailable: true, category: { $in: recentCategories }, _id: { $nin: excludedIds } } },
+                { $limit: 6 },
+                { $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' } },
+                { $unwind: '$artist' },
+                {
+                    $project: {
+                        _id: 1, title: 1, price: 1, image: { $ifNull: ['$image.url', '$image'] },
+                        artist: { _id: '$artist._id', displayName: '$artist.displayName', profileImage: { $ifNull: ['$artist.profileImage.url', '$artist.photoURL'] } }
+                    }
+                }
+            ]);
         }
-      }
-      
-      // Fallback for personalized content
-      if (personalizedArtworks.length < 6) {
-        const extraNeeded = 6 - personalizedArtworks.length;
-        const allExcludedIds = [
-          ...featuredArtworks.map(a => a._id),
-          ...mostRatedArtworks.map(a => a._id),
-          ...trendingArtworks.map(a => a._id),
-          ...personalizedArtworks.map(a => a._id),
-        ].map(id => new mongoose.Types.ObjectId(id));
-
-        const fallbackArtworks = await artworkModel.find({ 
-          isAvailable: true, 
-          _id: { $nin: allExcludedIds } 
-        })
-        .sort({ likeCount: -1, createdAt: -1 })
-        .limit(extraNeeded)
-        .populate({ 
-          path: 'artist', 
-          select: 'displayName profileImage photoURL job isVerified' 
-        })
-        .populate({ 
-          path: 'category', 
-          select: 'name image' 
-        })
-        .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
-        .lean();
-        
-        personalizedArtworks.push(...fallbackArtworks);
-      }
-
-      // Return the data for caching
-      return {
-        categories,
-        featuredArtists,
-        featuredArtworks,
-        latestArtists,
-        mostRatedArtworks,
-        trendingArtworks,
-        personalizedArtworks,
-      };
-    });
-
-    // Prepare response with proper structure for Flutter
-    const response = {
-      success: true,
-      message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
-      data: {
-        categories: formatCategories(homeData.categories),
-        featuredArtists: formatArtists(homeData.featuredArtists),
-        featuredArtworks: formatArtworks(homeData.featuredArtworks),
-        latestArtists: formatArtists(homeData.latestArtists),
-        mostRatedArtworks: formatArtworks(homeData.mostRatedArtworks),
-        trendingArtworks: formatArtworks(homeData.trendingArtworks),
-        personalizedArtworks: formatArtworks(homeData.personalizedArtworks),
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        userId: userId || null,
-        isAuthenticated: !!userId,
-      }
+    }
+    
+    return {
+      ...aggregationResult[0],
+      personalizedArtworks
     };
 
-    res.status(200).json(response);
-
-  } catch (error) {
-    console.error('Home data error:', error);
-    next(new Error('حدث خطأ أثناء جلب بيانات الصفحة الرئيسية', { cause: 500 }));
-  }
+  }, CACHE_CONFIG.LONG_TTL);
+  
+  res.success(homeData, 'تم جلب بيانات الصفحة الرئيسية بنجاح');
 });
 
 /**
