@@ -3,6 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
+import { cacheHomeData, invalidateCache } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -123,21 +124,48 @@ function formatCategories(categories) {
 
 /**
  * Main controller to get all data for the home screen
- * Optimized for Flutter integration with proper image handling
+ * Optimized for Flutter integration with proper image handling and caching
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     const userId = req.user?._id;
 
-    const [
-      categories,
-      featuredArtists,
-      featuredArtworks,
-      latestArtists,
-      mostRatedArtworks,
-      trendingArtworks,
-    ] = await Promise.all([
+    // Use cache for home data
+    const homeData = await cacheHomeData(userId, async () => {
+      return await fetchHomeDataFromDatabase(userId);
+    });
+
+    // Add cache metadata to response
+    const response = {
+      ...homeData,
+      meta: {
+        ...homeData.meta,
+        cached: true,
+        cacheTimestamp: new Date().toISOString()
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('Home data error:', error);
+    next(new Error('حدث خطأ أثناء جلب بيانات الصفحة الرئيسية', { cause: 500 }));
+  }
+});
+
+/**
+ * Fetch home data from database (separated for caching)
+ */
+async function fetchHomeDataFromDatabase(userId) {
+  const [
+    categories,
+    featuredArtists,
+    featuredArtworks,
+    latestArtists,
+    mostRatedArtworks,
+    trendingArtworks,
+  ] = await Promise.all([
       // 1. Categories with artwork count
       categoryModel.aggregate([
         { $match: {} },
@@ -535,33 +563,26 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       personalizedArtworks.push(...fallbackArtworks);
     }
 
-    // Prepare response with proper structure for Flutter
-    const response = {
-      success: true,
-      message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
-      data: {
-        categories: formatCategories(categories),
-        featuredArtists: formatArtists(featuredArtists),
-        featuredArtworks: formatArtworks(featuredArtworks),
-        latestArtists: formatArtists(latestArtists),
-        mostRatedArtworks: formatArtworks(mostRatedArtworks),
-        trendingArtworks: formatArtworks(trendingArtworks),
-        personalizedArtworks: formatArtworks(personalizedArtworks),
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        userId: userId || null,
-        isAuthenticated: !!userId,
-      }
-    };
-
-    res.status(200).json(response);
-
-  } catch (error) {
-    console.error('Home data error:', error);
-    next(new Error('حدث خطأ أثناء جلب بيانات الصفحة الرئيسية', { cause: 500 }));
-  }
-});
+  // Prepare response with proper structure for Flutter
+  return {
+    success: true,
+    message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
+    data: {
+      categories: formatCategories(categories),
+      featuredArtists: formatArtists(featuredArtists),
+      featuredArtworks: formatArtworks(featuredArtworks),
+      latestArtists: formatArtists(latestArtists),
+      mostRatedArtworks: formatArtworks(mostRatedArtworks),
+      trendingArtworks: formatArtworks(trendingArtworks),
+      personalizedArtworks: formatArtworks(personalizedArtworks),
+    },
+    meta: {
+      timestamp: new Date().toISOString(),
+      userId: userId || null,
+      isAuthenticated: !!userId,
+    }
+  };
+}
 
 /**
  * Search artworks and artists with improved structure for Flutter
@@ -1473,3 +1494,31 @@ export const getPersonalizedArtworks = asyncHandler(async (req, res, next) => {
     next(new Error('حدث خطأ أثناء جلب الأعمال المخصصة', { cause: 500 }));
   }
 });
+
+/**
+ * Cache invalidation functions for home data
+ */
+
+/**
+ * Invalidate home cache for all users (when global data changes)
+ */
+export const clearHomeCache = async () => {
+  try {
+    await invalidateCache('home:data:*');
+    console.log('✅ Home cache invalidated for all users');
+  } catch (error) {
+    console.error('❌ Error invalidating home cache:', error);
+  }
+};
+
+/**
+ * Invalidate home cache for specific user (when user-specific data changes)
+ */
+export const clearUserHomeCache = async (userId) => {
+  try {
+    await invalidateCache(`home:data:user:${userId}`);
+    console.log(`✅ Home cache invalidated for user: ${userId}`);
+  } catch (error) {
+    console.error(`❌ Error invalidating home cache for user ${userId}:`, error);
+  }
+};

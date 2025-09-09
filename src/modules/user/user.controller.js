@@ -9,6 +9,7 @@ import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
 import { cacheUserProfile, cacheArtistProfile, cacheUserWishlist, cacheUserArtworks, cacheUserFavorites, invalidateUserCache } from '../../utils/cacheHelpers.js';
+import { clearUserHomeCache } from '../home/home.controller.js';
 import chatModel from '../../../DB/models/chat.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
@@ -152,8 +153,9 @@ export const toggleWishlist = asyncHandler(async (req, res, next) => {
 
     await user.save();
 
-    // Invalidate user cache
+    // Invalidate user cache and home cache
     await invalidateUserCache(userId);
+    await clearUserHomeCache(userId);
 
     res.success({
       action,
