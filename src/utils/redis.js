@@ -115,10 +115,23 @@ let redis;
 let redisAvailable = false;
 
 try {
-  // Prefer REDIS_URL for environments like Railway, Heroku, etc.
-  if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
-    redis = new Redis(process.env.REDIS_URL, redisOptions);
-    logger.info('🔗 Connecting to Redis using REDIS_URL...');
+  let connectionUrl = null;
+  let connectionType = '';
+
+  // Prioritize the public URL from Railway as it's more reliable for DNS
+  if (process.env.REDIS_PUBLIC_URL) {
+    connectionUrl = process.env.REDIS_PUBLIC_URL;
+    connectionType = 'REDIS_PUBLIC_URL';
+  } 
+  // Then, try the internal URL
+  else if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
+    connectionUrl = process.env.REDIS_URL;
+    connectionType = 'REDIS_URL';
+  }
+
+  if (connectionUrl) {
+    redis = new Redis(connectionUrl, redisOptions);
+    logger.info(`🔗 Connecting to Redis using ${connectionType}...`);
   } else {
     // Fallback to individual ENV VARS for local development or other setups
     const config = {
