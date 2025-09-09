@@ -327,28 +327,28 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
         // حساب الفرق الزمني بالساعات
         const currentTime = new Date();
         const requestTime = new Date(existingRequest.createdAt);
-        const hoursDifference = (currentTime - requestTime) / (1000 * 60 * 60);
+        const minutesDifference = (currentTime - requestTime) / (1000 * 60);
 
-        console.log(`🔍 طلب موجود منذ ${hoursDifference.toFixed(2)} ساعة`);
+        console.log(`🔍 طلب موجود منذ ${minutesDifference.toFixed(2)} دقيقة`);
 
-        // إذا مر أكثر من 3 ساعات، رفض الإلغاء
-        if (hoursDifference > 3) {
+        // إذا مر أكثر من دقيقتين، رفض الإلغاء (للاختبار)
+        if (minutesDifference > 2) {
           return res.status(400).json({
             success: false,
-            message: 'لا يمكن إلغاء الطلب بعد مرور 3 ساعات من إنشائه',
+            message: 'لا يمكن إلغاء الطلب بعد مرور دقيقتين من إنشائه',
             data: {
               existingRequest: {
                 _id: existingRequest._id,
                 status: existingRequest.status,
                 createdAt: existingRequest.createdAt,
-                hoursElapsed: Math.round(hoursDifference * 100) / 100
+                minutesElapsed: Math.round(minutesDifference * 100) / 100
               }
             },
             meta: {
               action: 'cancel_rejected',
               reason: 'time_limit_exceeded',
-              timeLimit: '3 hours',
-              timeElapsed: `${hoursDifference.toFixed(2)} hours`
+              timeLimit: '2 minutes',
+              timeElapsed: `${minutesDifference.toFixed(2)} minutes`
             }
           });
         }
@@ -361,7 +361,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
             status: 'cancelled',
             cancelledAt: new Date(),
             cancelledBy: senderId,
-            cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الـ 3 ساعات المسموحة'
+            cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الدقيقتين المسموحة (للاختبار)'
           },
           { new: true }
         ).populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
