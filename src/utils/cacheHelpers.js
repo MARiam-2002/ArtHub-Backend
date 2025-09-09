@@ -343,8 +343,11 @@ export const invalidateDashboardCache = async (adminId) => {
   return totalInvalidated;
 };
 
-// Import invalidateCache function
+// Import and re-export invalidateCache function
 import { invalidateCache } from './cache.js';
+
+// Re-export for named imports
+export { invalidateCache };
 
 export default {
   cacheUserProfile,
@@ -368,5 +371,6 @@ export default {
   invalidateArtworkCache,
   invalidateArtistCache,
   invalidateCategoryCache,
-  invalidateDashboardCache
+  invalidateDashboardCache,
+  invalidateCache
 };
