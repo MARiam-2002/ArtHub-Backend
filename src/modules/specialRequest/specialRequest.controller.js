@@ -327,29 +327,29 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
         // حساب الفرق الزمني بالساعات
         const currentTime = new Date();
         const requestTime = new Date(existingRequest.createdAt);
-        const minutesDifference = (currentTime - requestTime) / (1000 * 60);
+        const hoursDifference = (currentTime - requestTime) / (1000 * 60 * 60);
 
-        console.log(`🔍 طلب موجود منذ ${minutesDifference.toFixed(2)} دقيقة`);
+        console.log(`🔍 طلب موجود منذ ${hoursDifference.toFixed(2)} ساعة`);
 
-        // إذا مر أكثر من دقيقتين، رفض الإلغاء (للاختبار)
-        if (minutesDifference > 2) {
+        // إذا مر أكثر من 3 ساعات، رفض الإلغاء
+        if (hoursDifference > 3) {
           return res.status(400).json({
             success: false,
-            message: 'لا يمكن إلغاء الطلب بعد مرور دقيقتين من إنشائه',
+            message: 'لا يمكن إلغاء الطلب بعد مرور 3 ساعات من إنشائه',
             data: {
               existingRequest: {
                 _id: existingRequest._id,
                 status: existingRequest.status,
                 isOrdered: existingRequest.isOrdered !== undefined ? existingRequest.isOrdered : true,
                 createdAt: existingRequest.createdAt,
-                minutesElapsed: Math.round(minutesDifference * 100) / 100
+                hoursElapsed: Math.round(hoursDifference * 100) / 100
               }
             },
             meta: {
               action: 'cancel_rejected',
               reason: 'time_limit_exceeded',
-              timeLimit: '2 minutes',
-              timeElapsed: `${minutesDifference.toFixed(2)} minutes`
+              timeLimit: '3 hours',
+              timeElapsed: `${hoursDifference.toFixed(2)} hours`
             }
           });
         }
@@ -362,7 +362,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
             status: 'cancelled',
             cancelledAt: new Date(),
             cancelledBy: senderId,
-            cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الدقيقتين المسموحة (للاختبار)'
+            cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الـ 3 ساعات المسموحة'
           },
           { new: true }
         ).populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
@@ -391,7 +391,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
           data: {
             action: 'cancelled',
             specialRequest: summarizeSpecialRequest(cancelledRequest),
-            timeElapsed: `${minutesDifference.toFixed(2)} minutes`
+            timeElapsed: `${hoursDifference.toFixed(2)} hours`
           },
           meta: {
             timestamp: new Date().toISOString(),
@@ -496,11 +496,11 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
 
     // Use cache for user requests
     const cachedData = await cacheSpecialRequests(userId, 'my', async () => {
-      // بناء الاستعلام للطلبات الخاصة
-      const specialQuery = { sender: userId };
-      if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-        specialQuery.status = status;
-      }
+      // بناء الاستعلام للطلبات الخاصة - فقط pending و accepted
+      const specialQuery = { 
+        sender: userId,
+        status: { $in: ['pending', 'accepted'] }
+      };
       if (requestType) {
         specialQuery.requestType = requestType;
       }
@@ -549,7 +549,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: isFullRequest ? 'تم جلب جميع الطلبات بنجاح' : 'تم جلب الطلبات بنجاح',
+      message: isFullRequest ? 'تم جلب جميع الطلبات النشطة بنجاح' : 'تم جلب الطلبات النشطة بنجاح',
       data: {
         requests: finalRequests,
         pagination: paginationMeta,
@@ -557,7 +557,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       },
       meta: {
         userId: userId,
-        filters: { status, requestType, priority, sortBy, sortOrder },
+        filters: { status: 'pending,accepted', requestType, priority, sortBy, sortOrder },
         isFullRequest
       }
     });
