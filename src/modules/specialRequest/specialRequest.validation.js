@@ -424,7 +424,6 @@ export const deleteRequestSchema = {
   }),
   body: Joi.object({
     cancellationReason: Joi.string()
-      .valid('ordered_by_mistake', 'service_delayed', 'other_reasons')
       .optional()
       .messages({
         'any.only': 'سبب الإلغاء غير صالح'
