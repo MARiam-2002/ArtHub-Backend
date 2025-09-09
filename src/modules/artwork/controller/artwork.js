@@ -5,7 +5,6 @@ import reviewModel from '../../../../DB/models/review.model.js';
 import { getPaginationParams } from '../../../utils/pagination.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
 import { cacheArtworkList, cacheArtwork, cacheSearchResults, invalidateArtworkCache } from '../../../utils/cacheHelpers.js';
-import { clearHomeCache } from '../../home/home.controller.js';
 
 /**
  * جلب الأعمال المميزة
@@ -397,7 +396,6 @@ export const createArtwork = asyncHandler(async (req, res) => {
 
   // Invalidate cache after creating artwork
   await invalidateArtworkCache(populatedArtwork._id);
-  await clearHomeCache();
 
   res.success(populatedArtwork, 'تم إنشاء العمل الفني بنجاح', 201);
 });
@@ -458,7 +456,6 @@ export const updateArtwork = asyncHandler(async (req, res) => {
 
   // Invalidate cache after updating artwork
   await invalidateArtworkCache(id);
-  await clearHomeCache();
 
   res.success(artwork, 'تم تحديث العمل الفني بنجاح');
 });
@@ -486,7 +483,6 @@ export const deleteArtwork = asyncHandler(async (req, res) => {
 
   // Invalidate cache after deleting artwork
   await invalidateArtworkCache(id);
-  await clearHomeCache();
 
   res.success(null, 'تم حذف العمل الفني بنجاح');
 });
