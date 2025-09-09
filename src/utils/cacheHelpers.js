@@ -45,34 +45,20 @@ export const cacheArtwork = async (artworkId, fetchFn) => {
  * @returns {Promise<any>} - Categories data
  */
 export const cacheCategories = async (fetchFn, options = {}) => {
-  // Ultra performance caching for categories - very long TTL for maximum speed
   const { limit = 8, includeStats = false } = options;
   const cacheKey = `categories:list:${limit}:${includeStats}`;
   return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.VERY_LONG_TTL);
 };
 
 /**
- * Cache home screen data - Optimized for performance
+ * Cache home screen data
  * @param {string} userId - User ID (for personalized data)
  * @param {Function} fetchFn - Function to fetch home data
  * @returns {Promise<any>} - Home screen data
  */
 export const cacheHomeData = async (userId, fetchFn) => {
-  // Use longer TTL for home data since it's frequently accessed - Ultra performance
   const cacheKey = userId ? `home:data:user:${userId}` : 'home:data:guest';
-  return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.LONG_TTL);
-};
-
-/**
- * Cache home screen data with compression - Ultra performance
- * @param {string} userId - User ID (for personalized data)
- * @param {Function} fetchFn - Function to fetch home data
- * @returns {Promise<any>} - Home screen data
- */
-export const cacheHomeDataCompressed = async (userId, fetchFn) => {
-  // Ultra performance caching with very long TTL for maximum speed
-  const cacheKey = userId ? `home:compressed:user:${userId}` : 'home:compressed:guest';
-  return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.VERY_LONG_TTL);
+  return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.SHORT_TTL);
 };
 
 /**
@@ -108,7 +94,6 @@ export const cacheArtistPerformance = async (fetchFn, options = {}) => {
  * @returns {Promise<any>} - Artwork list data
  */
 export const cacheArtworkList = async (listType, fetchFn, options = {}) => {
-  // Ultra performance caching for artwork lists - optimized for speed
   const { page = 1, limit = 20, category, search } = options;
   const cacheKey = `artworks:${listType}:${page}:${limit}:${category || 'all'}:${search || 'none'}`;
   return await cacheWithFallback(cacheKey, fetchFn, CACHE_CONFIG.DEFAULT_TTL);

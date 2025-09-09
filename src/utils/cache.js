@@ -2,13 +2,13 @@ import { redis } from './redis.js';
 import { logger } from './logger.js';
 
 /**
- * Cache configuration - Optimized for performance
+ * Cache configuration
  */
 const CACHE_CONFIG = {
   DEFAULT_TTL: 300, // 5 minutes
-  LONG_TTL: 3600,   // 1 hour - Increased for home data
+  LONG_TTL: 1800,   // 30 minutes
   SHORT_TTL: 60,    // 1 minute
-  VERY_LONG_TTL: 7200, // 2 hours - Increased for categories
+  VERY_LONG_TTL: 3600, // 1 hour
   CACHE_PREFIX: 'arthub:',
   SEPARATOR: ':'
 };
@@ -27,7 +27,7 @@ export const generateCacheKey = (key, prefix = '') => {
 };
 
 /**
- * Set cache with TTL - Optimized for performance
+ * Set cache with TTL
  * @param {string} key - Cache key
  * @param {any} value - Value to cache
  * @param {number} ttl - Time to live in seconds
@@ -48,7 +48,7 @@ export const setCache = async (key, value, ttl = CACHE_CONFIG.DEFAULT_TTL) => {
 };
 
 /**
- * Get cache value - Optimized for performance
+ * Get cache value
  * @param {string} key - Cache key
  * @returns {Promise<any|null>} - Cached value or null
  */
@@ -71,7 +71,7 @@ export const getCache = async (key) => {
 };
 
 /**
- * Delete cache entry - Optimized for performance
+ * Delete cache entry
  * @param {string} key - Cache key
  * @returns {Promise<boolean>} - Success status
  */
@@ -88,7 +88,7 @@ export const deleteCache = async (key) => {
 };
 
 /**
- * Delete multiple cache entries by pattern - Optimized for performance
+ * Delete multiple cache entries by pattern
  * @param {string} pattern - Cache key pattern
  * @returns {Promise<number>} - Number of deleted keys
  */
@@ -111,7 +111,7 @@ export const deleteCacheByPattern = async (pattern) => {
 };
 
 /**
- * Check if cache key exists - Optimized for performance
+ * Check if cache key exists
  * @param {string} key - Cache key
  * @returns {Promise<boolean>} - Exists status
  */
@@ -127,7 +127,7 @@ export const cacheExists = async (key) => {
 };
 
 /**
- * Get cache TTL - Optimized for performance
+ * Get cache TTL
  * @param {string} key - Cache key
  * @returns {Promise<number>} - TTL in seconds (-1 if no expiry, -2 if key doesn't exist)
  */
@@ -142,7 +142,7 @@ export const getCacheTTL = async (key) => {
 };
 
 /**
- * Increment cache value (for counters) - Optimized for performance
+ * Increment cache value (for counters)
  * @param {string} key - Cache key
  * @param {number} increment - Increment value (default: 1)
  * @param {number} ttl - TTL for new keys
@@ -166,7 +166,7 @@ export const incrementCache = async (key, increment = 1, ttl = CACHE_CONFIG.DEFA
 };
 
 /**
- * Cache with fallback function - Ultra optimized for performance
+ * Cache with fallback function
  * @param {string} key - Cache key
  * @param {Function} fallbackFn - Function to execute if cache miss
  * @param {number} ttl - Time to live in seconds
@@ -174,10 +174,9 @@ export const incrementCache = async (key, increment = 1, ttl = CACHE_CONFIG.DEFA
  */
 export const cacheWithFallback = async (key, fallbackFn, ttl = CACHE_CONFIG.DEFAULT_TTL) => {
   try {
-    // Try to get from cache first - optimized for speed
+    // Try to get from cache first
     const cachedValue = await getCache(key);
     if (cachedValue !== null) {
-      logger.debug(`✅ Cache hit for key: ${key}`);
       return cachedValue;
     }
     
@@ -185,11 +184,9 @@ export const cacheWithFallback = async (key, fallbackFn, ttl = CACHE_CONFIG.DEFA
     logger.debug(`🔄 Cache miss, executing fallback for key: ${key}`);
     const freshValue = await fallbackFn();
     
-    // Cache the fresh value asynchronously for ultra performance - don't wait for cache write
+    // Cache the fresh value
     if (freshValue !== null && freshValue !== undefined) {
-      setCache(key, freshValue, ttl).catch(err => 
-        logger.error(`❌ Async cache set error for key ${key}:`, err.message)
-      );
+      await setCache(key, freshValue, ttl);
     }
     
     return freshValue;
@@ -206,7 +203,7 @@ export const cacheWithFallback = async (key, fallbackFn, ttl = CACHE_CONFIG.DEFA
 };
 
 /**
- * Cache middleware for Express routes - Optimized for performance
+ * Cache middleware for Express routes
  * @param {Object} options - Cache options
  * @param {number} options.ttl - Time to live in seconds
  * @param {string} options.keyGenerator - Function to generate cache key from request
@@ -256,7 +253,7 @@ export const cacheMiddleware = (options = {}) => {
 };
 
 /**
- * Invalidate cache by pattern (useful for related data) - Optimized for performance
+ * Invalidate cache by pattern (useful for related data)
  * @param {string} pattern - Cache key pattern
  * @returns {Promise<number>} - Number of invalidated keys
  */
@@ -265,7 +262,7 @@ export const invalidateCache = async (pattern) => {
 };
 
 /**
- * Cache statistics - Optimized for performance
+ * Cache statistics
  * @returns {Promise<Object>} - Cache statistics
  */
 export const getCacheStats = async () => {
@@ -285,7 +282,7 @@ export const getCacheStats = async () => {
 };
 
 /**
- * Clear all cache (use with caution) - Optimized for performance
+ * Clear all cache (use with caution)
  * @returns {Promise<boolean>} - Success status
  */
 export const clearAllCache = async () => {
@@ -309,7 +306,7 @@ export const clearAllCache = async () => {
 // Export cache configuration
 export { CACHE_CONFIG };
 
-// Export default cache utilities - Ultra optimized for performance
+// Export default cache utilities
 export default {
   setCache,
   getCache,

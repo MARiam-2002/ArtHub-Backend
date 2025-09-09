@@ -7,149 +7,119 @@ import { cacheHomeData, cacheCategories, cacheArtworkList } from '../../utils/ca
 import mongoose from 'mongoose';
 
 /**
- * Helper function to safely extract and format image URLs with fallbacks - Optimized
+ * Helper function to safely extract and format image URLs with fallbacks
  */
 function getImageUrl(imageField, defaultUrl = null) {
-  // Fast path for null/undefined
   if (!imageField) return defaultUrl;
   
-  // Fast path for string
+  // Handle different image formats
   if (typeof imageField === 'string') return imageField;
-  
-  // Fast path for object with url property
   if (imageField.url) return imageField.url;
-  
-  // Handle array case
   if (Array.isArray(imageField) && imageField.length > 0) {
-    const firstItem = imageField[0];
-    return (typeof firstItem === 'string') ? firstItem : (firstItem?.url || defaultUrl);
+    return imageField[0].url || imageField[0];
   }
   
   return defaultUrl;
 }
 
 /**
- * Helper function to get multiple image URLs from array - Optimized
+ * Helper function to get multiple image URLs from array
  */
 function getImageUrls(imagesField, limit = 5) {
   if (!imagesField || !Array.isArray(imagesField)) return [];
   
-  const result = [];
-  const maxLength = Math.min(imagesField.length, limit);
-  
-  for (let i = 0; i < maxLength; i++) {
-    const img = imagesField[i];
-    if (typeof img === 'string') {
-      result.push(img);
-    } else if (img?.url) {
-      result.push(img.url);
-    }
-  }
-  
-  return result;
+  return imagesField.slice(0, limit).map(img => {
+    if (typeof img === 'string') return img;
+    return img.url || img;
+  }).filter(Boolean);
 }
 
 /**
- * Helper function to format artist data with proper image handling - Optimized
+ * Helper function to format artist data with proper image handling
  */
 function formatArtists(artists) {
   if (!Array.isArray(artists)) return [];
   
-  const result = [];
-  for (let i = 0; i < artists.length; i++) {
-    const artist = artists[i];
-    result.push({
-      _id: artist._id,
-      displayName: artist.displayName || 'فنان غير معروف',
-      job: artist.job || 'فنان',
-      profileImage: getImageUrl(artist.profileImage, artist.photoURL),
-      coverImages: getImageUrls(artist.coverImages, 3),
-      rating: artist.averageRating ? parseFloat(artist.averageRating.toFixed(1)) : 0,
-      totalRating: artist.totalRating || 0,
-      reviewsCount: artist.reviewsCount || 0,
-      isVerified: artist.isVerified || false,
-      followersCount: artist.followersCount || 0,
-      artworksCount: artist.artworksCount || 0,
-      isFollowing: typeof artist.isFollowing === 'boolean' ? artist.isFollowing : undefined,
-    });
-  }
-  return result;
+  return artists.map(artist => ({
+    _id: artist._id,
+    displayName: artist.displayName || 'فنان غير معروف',
+    job: artist.job || 'فنان',
+    profileImage: getImageUrl(artist.profileImage, artist.photoURL),
+    coverImages: getImageUrls(artist.coverImages, 3),
+    rating: artist.averageRating ? parseFloat(artist.averageRating.toFixed(1)) : 0,
+    totalRating: artist.totalRating || 0,
+    reviewsCount: artist.reviewsCount || 0,
+    isVerified: artist.isVerified || false,
+    followersCount: artist.followersCount || 0,
+    artworksCount: artist.artworksCount || 0,
+    isFollowing: typeof artist.isFollowing === 'boolean' ? artist.isFollowing : undefined,
+  }));
 }
 
 /**
- * Helper function to format artwork data with proper image handling - Optimized
+ * Helper function to format artwork data with proper image handling
  */
 function formatArtworks(artworks) {
   if (!Array.isArray(artworks)) return [];
   
-  const result = [];
-  for (let i = 0; i < artworks.length; i++) {
-    const artwork = artworks[i];
-    const mainImage = getImageUrl(artwork.image);
-    const images = getImageUrls(artwork.images);
-    
-    result.push({
-      _id: artwork._id,
-      title: artwork.title?.ar || artwork.title || 'عمل فني',
-      description: artwork.description?.ar || artwork.description || '',
-      mainImage: mainImage,
-      images: images,
-      allImages: [mainImage, ...images].filter(Boolean),
-      price: artwork.price || 0,
-      currency: artwork.currency || 'SAR',
-      dimensions: artwork.dimensions || null,
-      medium: artwork.medium || null,
-      year: artwork.year || null,
-      tags: artwork.tags || [],
-      artist: artwork.artist ? {
-        _id: artwork.artist._id,
-        displayName: artwork.artist.displayName || 'فنان غير معروف',
-        profileImage: getImageUrl(artwork.artist.profileImage, artwork.artist.photoURL),
-        job: artwork.artist.job || 'فنان',
-        isVerified: artwork.artist.isVerified || false,
-      } : null,
-      category: artwork.category ? {
-        _id: artwork.category._id,
-        name: artwork.category.name?.ar || artwork.category.name || 'تصنيف',
-        image: getImageUrl(artwork.category.image),
-      } : null,
-      stats: {
-        likeCount: artwork.likeCount || 0,
-        viewCount: artwork.viewCount || 0,
-        rating: artwork.averageRating ? parseFloat(artwork.averageRating.toFixed(1)) : 0,
-        reviewsCount: artwork.reviewsCount || 0,
-      },
-      availability: {
-        isAvailable: artwork.isAvailable !== false,
-        isFeatured: artwork.isFeatured || false,
-      },
-      dates: {
-        createdAt: artwork.createdAt,
-        updatedAt: artwork.updatedAt,
-      }
-    });
-  }
-  return result;
+  return artworks.map(artwork => ({
+    _id: artwork._id,
+    title: artwork.title?.ar || artwork.title || 'عمل فني',
+    description: artwork.description?.ar || artwork.description || '',
+    mainImage: getImageUrl(artwork.image),
+    images: getImageUrls(artwork.images),
+    allImages: [
+      getImageUrl(artwork.image),
+      ...getImageUrls(artwork.images)
+    ].filter(Boolean),
+    price: artwork.price || 0,
+    currency: artwork.currency || 'SAR',
+    dimensions: artwork.dimensions || null,
+    medium: artwork.medium || null,
+    year: artwork.year || null,
+    tags: artwork.tags || [],
+    artist: artwork.artist ? {
+      _id: artwork.artist._id,
+      displayName: artwork.artist.displayName || 'فنان غير معروف',
+      profileImage: getImageUrl(artwork.artist.profileImage, artwork.artist.photoURL),
+      job: artwork.artist.job || 'فنان',
+      isVerified: artwork.artist.isVerified || false,
+    } : null,
+    category: artwork.category ? {
+      _id: artwork.category._id,
+      name: artwork.category.name?.ar || artwork.category.name || 'تصنيف',
+      image: getImageUrl(artwork.category.image),
+    } : null,
+    stats: {
+      likeCount: artwork.likeCount || 0,
+      viewCount: artwork.viewCount || 0,
+      rating: artwork.averageRating ? parseFloat(artwork.averageRating.toFixed(1)) : 0,
+      reviewsCount: artwork.reviewsCount || 0,
+    },
+    availability: {
+      isAvailable: artwork.isAvailable !== false,
+      isFeatured: artwork.isFeatured || false,
+    },
+    dates: {
+      createdAt: artwork.createdAt,
+      updatedAt: artwork.updatedAt,
+    }
+  }));
 }
 
 /**
- * Helper function to format category data with proper image handling - Optimized
+ * Helper function to format category data with proper image handling
  */
 function formatCategories(categories) {
   if (!Array.isArray(categories)) return [];
   
-  const result = [];
-  for (let i = 0; i < categories.length; i++) {
-    const category = categories[i];
-    result.push({
-      _id: category._id,
-      name: category.name?.ar || category.name || 'تصنيف',
-      description: category.description?.ar || category.description || '',
-      image: getImageUrl(category.image),
-      artworksCount: category.artworksCount || 0,
-    });
-  }
-  return result;
+  return categories.map(category => ({
+    _id: category._id,
+    name: category.name?.ar || category.name || 'تصنيف',
+    description: category.description?.ar || category.description || '',
+    image: getImageUrl(category.image),
+    artworksCount: category.artworksCount || 0,
+  }));
 }
 
 /**
@@ -161,7 +131,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
     const userId = req.user?._id;
 
-    // Use cached data with fallback to database - Performance optimized
+    // Use cached data with fallback to database
     const homeData = await cacheHomeData(userId, async () => {
       const [
         categories,
@@ -171,30 +141,22 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         mostRatedArtworks,
         trendingArtworks,
       ] = await Promise.all([
-      // 1. Categories with artwork count - Optimized query
+      // 1. Categories with artwork count
       categoryModel.aggregate([
         { $match: {} },
-        { 
-          $lookup: { 
-            from: 'artworks', 
-            localField: '_id', 
-            foreignField: 'category', 
-            as: 'artworks',
-            pipeline: [{ $match: { isAvailable: true, isDeleted: { $ne: true } } }]
-          } 
-        },
+        { $lookup: { from: 'artworks', localField: '_id', foreignField: 'category', as: 'artworks' } },
         { $addFields: { artworksCount: { $size: '$artworks' } } },
         { $project: { name: 1, image: 1, artworksCount: 1 } },
         { $sort: { artworksCount: -1 } },
         { $limit: 8 }
       ]),
 
-      // 2. Featured Artists (Top Rated with follower count) - Optimized query
+      // 2. Featured Artists (Top Rated with follower count)
       userModel.aggregate([
         { $match: { role: 'artist', isActive: true, isDeleted: false } },
         { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
         { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
-        // Simplified reviews lookup - only get count and average
+        // Get artist reviews (reviews for the artist himself)
         {
           $lookup: {
             from: 'reviews',
@@ -203,34 +165,93 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
               {
                 $match: {
                   $expr: { $eq: ['$artist', '$$artistId'] },
-                  status: 'active'
-                }
-              },
-              {
-                $group: {
-                  _id: null,
-                  totalRating: { $sum: '$rating' },
-                  count: { $sum: 1 }
+                  status: 'active',
+                  $or: [
+                    { artwork: { $exists: false } },
+                    { artwork: null }
+                  ]
                 }
               }
             ],
-            as: 'reviewStats'
+            as: 'artistReviews'
+          }
+        },
+        // Get all reviews for artist's artworks
+        {
+          $lookup: {
+            from: 'reviews',
+            let: { artistId: '$_id' },
+            pipeline: [
+              {
+                $lookup: {
+                  from: 'artworks',
+                  localField: 'artwork',
+                  foreignField: '_id',
+                  as: 'artworkData'
+                }
+              },
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
+                      { $ne: ['$artwork', null] }
+                    ]
+                  },
+                  status: 'active'
+                }
+              }
+            ],
+            as: 'artworkReviews'
           }
         },
         {
           $addFields: {
-            averageRating: { 
-              $ifNull: [
-                { $divide: [{ $arrayElemAt: ['$reviewStats.totalRating', 0] }, { $arrayElemAt: ['$reviewStats.count', 0] }] }, 
-                0
-              ] 
+            // Combined rating: artist reviews + artwork reviews
+            artistTotalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+            artistReviewsCount: { $size: '$artistReviews' },
+            artworkTotalRating: { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] },
+            artworkReviewsCount: { $size: '$artworkReviews' },
+            // Combined totals
+            totalRating: { 
+              $add: [
+                { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+              ]
             },
-            reviewsCount: { $ifNull: [{ $arrayElemAt: ['$reviewStats.count', 0] }, 0] },
+            totalReviewsCount: { 
+              $add: [
+                { $size: '$artistReviews' },
+                { $size: '$artworkReviews' }
+              ]
+            },
+            averageRating: {
+              $cond: {
+                if: { 
+                  $gt: [
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }, 
+                    0
+                  ] 
+                },
+                then: { 
+                  $divide: [
+                    { 
+                      $add: [
+                        { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                        { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+                      ]
+                    },
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }
+                  ]
+                },
+                else: 0
+              }
+            },
             followersCount: { $size: '$followers' },
             artworksCount: { $size: '$artworks' },
           }
         },
-        { $sort: { averageRating: -1, reviewsCount: -1, followersCount: -1 } },
+        { $sort: { averageRating: -1, totalReviewsCount: -1, followersCount: -1 } },
         { $limit: 6 },
         { 
           $project: { 
@@ -239,7 +260,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             photoURL: 1, 
             coverImages: 1,
             averageRating: 1, 
-            reviewsCount: 1,
+            totalRating: 1,
+            reviewsCount: '$totalReviewsCount',
             followersCount: 1,
             artworksCount: 1,
             job: 1,
@@ -248,7 +270,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         }
       ]),
 
-      // 3. Featured Artworks (Most Liked and Viewed) - Optimized query
+      // 3. Featured Artworks (Most Liked and Viewed)
       artworkModel.find({ isAvailable: true, isFeatured: true })
         .sort({ likeCount: -1, viewCount: -1 })
         .limit(6)
@@ -263,13 +285,13 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
         .lean(),
 
-      // 4. Latest Artists (Recently Joined) - Optimized query
+      // 4. Latest Artists (Recently Joined)
       userModel.aggregate([
         { $match: { role: 'artist', isActive: true, isDeleted: false } },
         { $lookup: { from: 'follows', localField: '_id', foreignField: 'following', as: 'followers' } },
         { $lookup: { from: 'artworks', localField: '_id', foreignField: 'artist', as: 'artworks' } },
-        // Check if current user is following each artist (only if userId exists)
-        ...(userId ? [{
+        // Check if current user is following each artist
+        {
           $lookup: {
             from: 'follows',
             let: { artistId: '$_id' },
@@ -279,7 +301,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
                   $expr: {
                     $and: [
                       { $eq: ['$following', '$$artistId'] },
-                      { $eq: ['$follower', new mongoose.Types.ObjectId(userId)] }
+                      { $eq: ['$follower', userId ? new mongoose.Types.ObjectId(userId) : null] }
                     ]
                   }
                 }
@@ -287,8 +309,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             ],
             as: 'userFollows'
           }
-        }] : []),
-        // Simplified reviews lookup
+        },
+        // Get artist reviews (reviews for the artist himself)
         {
           $lookup: {
             from: 'reviews',
@@ -297,32 +319,91 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
               {
                 $match: {
                   $expr: { $eq: ['$artist', '$$artistId'] },
-                  status: 'active'
-                }
-              },
-              {
-                $group: {
-                  _id: null,
-                  totalRating: { $sum: '$rating' },
-                  count: { $sum: 1 }
+                  status: 'active',
+                  $or: [
+                    { artwork: { $exists: false } },
+                    { artwork: null }
+                  ]
                 }
               }
             ],
-            as: 'reviewStats'
+            as: 'artistReviews'
+          }
+        },
+        // Get all reviews for artist's artworks (not used in rating now)
+        {
+          $lookup: {
+            from: 'reviews',
+            let: { artistId: '$_id' },
+            pipeline: [
+              {
+                $lookup: {
+                  from: 'artworks',
+                  localField: 'artwork',
+                  foreignField: '_id',
+                  as: 'artworkData'
+                }
+              },
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: [{ $arrayElemAt: ['$artworkData.artist', 0] }, '$$artistId'] },
+                      { $ne: ['$artwork', null] }
+                    ]
+                  },
+                  status: 'active'
+                }
+              }
+            ],
+            as: 'artworkReviews'
           }
         },
         {
           $addFields: {
-            averageRating: { 
-              $ifNull: [
-                { $divide: [{ $arrayElemAt: ['$reviewStats.totalRating', 0] }, { $arrayElemAt: ['$reviewStats.count', 0] }] }, 
-                0
-              ] 
+            // Combined rating: artist reviews + artwork reviews
+            artistTotalRating: { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+            artistReviewsCount: { $size: '$artistReviews' },
+            artworkTotalRating: { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] },
+            artworkReviewsCount: { $size: '$artworkReviews' },
+            // Combined totals
+            totalRating: { 
+              $add: [
+                { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+              ]
             },
-            reviewsCount: { $ifNull: [{ $arrayElemAt: ['$reviewStats.count', 0] }, 0] },
+            totalReviewsCount: { 
+              $add: [
+                { $size: '$artistReviews' },
+                { $size: '$artworkReviews' }
+              ]
+            },
+            averageRating: {
+              $cond: {
+                if: { 
+                  $gt: [
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }, 
+                    0
+                  ] 
+                },
+                then: { 
+                  $divide: [
+                    { 
+                      $add: [
+                        { $ifNull: [{ $sum: '$artistReviews.rating' }, 0] },
+                        { $ifNull: [{ $sum: '$artworkReviews.rating' }, 0] }
+                      ]
+                    },
+                    { $add: [{ $size: '$artistReviews' }, { $size: '$artworkReviews' }] }
+                  ]
+                },
+                else: 0
+              }
+            },
             followersCount: { $size: '$followers' },
             artworksCount: { $size: '$artworks' },
-            ...(userId ? { isFollowing: { $gt: [{ $size: '$userFollows' }, 0] } } : {})
+            isFollowing: { $gt: [{ $size: '$userFollows' }, 0] }
           }
         },
         { $sort: { createdAt: -1 } },
@@ -334,19 +415,28 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
             photoURL: 1, 
             coverImages: 1,
             averageRating: 1, 
-            reviewsCount: 1,
+            totalRating: 1,
+            reviewsCount: '$totalReviewsCount',
             followersCount: 1,
             artworksCount: 1,
             job: 1,
             isVerified: 1,
-            ...(userId ? { isFollowing: 1 } : {})
+            isFollowing: 1
           } 
         }
       ]),
         
-      // 5. Most Rated Artworks - Optimized query with pre-filtering
+      // 5. Most Rated Artworks
       artworkModel.aggregate([
-        { $match: { isAvailable: true, reviewsCount: { $gt: 0 } } },
+        { $match: { isAvailable: true } },
+        { $lookup: { from: 'reviews', localField: '_id', foreignField: 'artwork', as: 'reviews' } },
+        {
+          $addFields: {
+            averageRating: { $ifNull: [{ $avg: '$reviews.rating' }, 0] },
+            reviewsCount: { $size: '$reviews' },
+          },
+        },
+        { $match: { reviewsCount: { $gt: 0 } } },
         { $sort: { averageRating: -1, reviewsCount: -1 } },
         { $limit: 6 },
         { $lookup: { from: 'users', localField: 'artist', foreignField: '_id', as: 'artist' } },
@@ -363,7 +453,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         },
       ]),
 
-      // 6. Trending Artworks (High Views Recently) - Optimized query
+      // 6. Trending Artworks (High Views Recently)
       artworkModel.find({ isAvailable: true })
         .sort({ viewCount: -1, createdAt: -1 })
         .limit(6)
@@ -379,7 +469,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         .lean(),
       ]);
 
-      // 7. Personalized Artworks (Based on User History) - Optimized
+      // 7. Personalized Artworks (Based on User History)
       let personalizedArtworks = [];
       if (userId) {
         const user = await userModel.findById(userId)
@@ -395,7 +485,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
           ...trendingArtworks.map(a => a._id),
         ].map(id => new mongoose.Types.ObjectId(id));
 
-        if (recentCategories.length > 0 || wishlistIds.length > 0) {
+        if (recentCategories.length > 0) {
           personalizedArtworks = await artworkModel.find({
             $or: [
               { category: { $in: recentCategories } },
@@ -418,7 +508,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         }
       }
       
-      // Fallback for personalized content - Optimized
+      // Fallback for personalized content
       if (personalizedArtworks.length < 6) {
         const extraNeeded = 6 - personalizedArtworks.length;
         const allExcludedIds = [
@@ -460,7 +550,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       };
     });
 
-    // Prepare response with proper structure for Flutter - Performance optimized
+    // Prepare response with proper structure for Flutter
     const response = {
       success: true,
       message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
@@ -477,10 +567,6 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
-        performance: {
-          cached: true,
-          optimized: true
-        }
       }
     };
 
@@ -488,36 +574,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Home data error:', error);
-    
-    // تحسين معالجة الأخطاء - إرجاع استجابة محسنة
-    const errorResponse = {
-      success: false,
-      message: 'حدث خطأ أثناء جلب بيانات الصفحة الرئيسية',
-      data: {
-        categories: [],
-        featuredArtists: [],
-        featuredArtworks: [],
-        latestArtists: [],
-        mostRatedArtworks: [],
-        trendingArtworks: [],
-        personalizedArtworks: [],
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        userId: userId || null,
-        isAuthenticated: !!userId,
-        error: {
-          code: 'HOME_DATA_ERROR',
-          message: error.message,
-          performance: {
-            cached: false,
-            optimized: false
-          }
-        }
-      }
-    };
-    
-    res.status(500).json(errorResponse);
+    next(new Error('حدث خطأ أثناء جلب بيانات الصفحة الرئيسية', { cause: 500 }));
   }
 });
 
@@ -682,46 +739,7 @@ export const search = asyncHandler(async (req, res, next) => {
 
   } catch (error) {
     console.error('Search error:', error);
-    
-    // تحسين معالجة الأخطاء - إرجاع استجابة محسنة
-    const errorResponse = {
-      success: false,
-      message: 'حدث خطأ أثناء البحث',
-      data: {
-        artworks: {
-          data: [],
-          pagination: {
-            currentPage: 1,
-            totalPages: 0,
-            totalItems: 0,
-            hasNextPage: false,
-            hasPrevPage: false
-          }
-        },
-        artists: {
-          data: [],
-          pagination: {
-            currentPage: 1,
-            totalPages: 0,
-            totalItems: 0,
-            hasNextPage: false,
-            hasPrevPage: false
-          }
-        }
-      },
-      meta: {
-        searchQuery: q || '',
-        searchType: type || 'all',
-        sortBy: sortBy || 'relevance',
-        timestamp: new Date().toISOString(),
-        error: {
-          code: 'SEARCH_ERROR',
-          message: error.message
-        }
-      }
-    };
-    
-    res.status(500).json(errorResponse);
+    next(new Error('حدث خطأ أثناء البحث', { cause: 500 }));
   }
 });
 
