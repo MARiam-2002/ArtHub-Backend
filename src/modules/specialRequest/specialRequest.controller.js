@@ -353,11 +353,12 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
           });
         }
 
-        // إلغاء الطلب الموجود (تغيير isOrdered إلى false)
+        // إلغاء الطلب الموجود (تغيير isOrdered إلى false و status إلى cancelled)
         const cancelledRequest = await specialRequestModel.findByIdAndUpdate(
           existingRequest._id,
           {
             isOrdered: false,
+            status: 'cancelled',
             cancelledAt: new Date(),
             cancelledBy: senderId,
             cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الـ 3 ساعات المسموحة'
