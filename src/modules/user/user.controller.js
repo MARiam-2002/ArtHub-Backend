@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import notificationModel from '../../../DB/models/notification.model.js';
 import tokenModel from '../../../DB/models/token.model.js';
+import { cacheUserProfile, cacheArtistProfile, cacheUserWishlist, cacheUserArtworks, cacheUserFavorites, invalidateUserCache } from '../../utils/cacheHelpers.js';
 import chatModel from '../../../DB/models/chat.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
@@ -151,6 +152,9 @@ export const toggleWishlist = asyncHandler(async (req, res, next) => {
 
     await user.save();
 
+    // Invalidate user cache
+    await invalidateUserCache(userId);
+
     res.success({
       action,
       isInWishlist: action === 'added',
@@ -168,39 +172,52 @@ export const getWishlist = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
     
     const { page = 1, limit = 20 } = req.query;
-    const skip = (page - 1) * limit;
+    const userId = req.user._id;
 
-    const user = await userModel
-      .findById(req.user._id)
-      .select('wishlist')
-      .lean();
+    // Use cache for wishlist
+    const cachedData = await cacheUserFavorites(userId, async () => {
+      const user = await userModel
+        .findById(userId)
+        .select('wishlist')
+        .lean();
 
-    if (!user) {
+      if (!user) {
+        return null;
+      }
+
+      const totalItems = user.wishlist.length;
+      const skip = (page - 1) * limit;
+      const wishlistIds = user.wishlist.slice(skip, skip + Number(limit));
+
+      const artworks = await artworkModel
+        .find({ _id: { $in: wishlistIds } })
+        .populate('artist', 'displayName profileImage job')
+        .populate('category', 'name')
+        .select('title image images price currency artist category isAvailable createdAt viewCount likeCount')
+        .lean();
+
+      // Maintain the order of wishlist
+      const orderedArtworks = wishlistIds.map(id => 
+        artworks.find(artwork => artwork._id.toString() === id.toString())
+      ).filter(Boolean);
+
+      return {
+        artworks: orderedArtworks,
+        totalItems
+      };
+    }, { page, limit });
+
+    if (!cachedData) {
       return res.fail(null, 'المستخدم غير موجود', 404);
     }
 
-    const totalItems = user.wishlist.length;
-    const wishlistIds = user.wishlist.slice(skip, skip + Number(limit));
-
-    const artworks = await artworkModel
-      .find({ _id: { $in: wishlistIds } })
-      .populate('artist', 'displayName profileImage job')
-      .populate('category', 'name')
-      .select('title image images price currency artist category isAvailable createdAt viewCount likeCount')
-      .lean();
-
-    // Maintain the order of wishlist
-    const orderedArtworks = wishlistIds.map(id => 
-      artworks.find(artwork => artwork._id.toString() === id.toString())
-    ).filter(Boolean);
-
     const response = {
-      artworks: formatArtworks(orderedArtworks),
+      artworks: formatArtworks(cachedData.artworks),
       pagination: {
         currentPage: Number(page),
-        totalPages: Math.ceil(totalItems / limit),
-        totalItems,
-        hasNextPage: skip + orderedArtworks.length < totalItems
+        totalPages: Math.ceil(cachedData.totalItems / limit),
+        totalItems: cachedData.totalItems,
+        hasNextPage: (page - 1) * limit + cachedData.artworks.length < cachedData.totalItems
       }
     };
 
@@ -344,6 +361,9 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
       return res.fail(null, 'المستخدم غير موجود', 404);
     }
 
+    // Invalidate user cache after profile update
+    await invalidateUserCache(userId);
+
     res.success(updatedUser, 'تم تحديث الملف الشخصي بنجاح');
   } catch (error) {
     console.error('Update profile error:', error);
@@ -394,47 +414,57 @@ export const getArtistProfile = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
     
     const { artistId } = req.params;
+    const currentUserId = req.user?._id;
 
-    // جلب بيانات الفنان
-    const artist = await userModel
-      .findOne({ _id: artistId, role: 'artist', isActive: true })
-      .select('-password')
-      .lean();
+    // Use cache for artist profile
+    const cachedData = await cacheArtistProfile(artistId, async () => {
+      // جلب بيانات الفنان
+      const artist = await userModel
+        .findOne({ _id: artistId, role: 'artist', isActive: true })
+        .select('-password')
+        .lean();
 
-    if (!artist) {
+      if (!artist) {
+        return null;
+      }
+
+      // جلب عدد المتابعين
+      const followersCount = await followModel.countDocuments({ following: artistId });
+
+      // جلب إحصائيات التقييمات
+      const reviewStats = await reviewModel.aggregate([
+        { $match: { artist: new mongoose.Types.ObjectId(artistId) } },
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: '$rating' },
+            totalReviews: { $sum: 1 }
+          }
+        }
+      ]);
+
+      // جلب أعمال الفنان
+      const artworks = await artworkModel.find({ artist: artistId }).sort({ createdAt: -1 }).limit(10);
+
+      // جلب عدد المبيعات
+      const salesCount = await specialRequestModel.countDocuments({
+        artist: artistId,
+        status: 'completed'
+      });
+
+      return { artist, followersCount, reviewStats, artworks, salesCount };
+    });
+
+    if (!cachedData) {
       return res.fail(null, 'الفنان غير موجود', 404);
     }
 
-    // جلب عدد المتابعين
-    const followersCount = await followModel.countDocuments({ following: artistId });
-
-    // جلب إحصائيات التقييمات
-    const reviewStats = await reviewModel.aggregate([
-      { $match: { artist: new mongoose.Types.ObjectId(artistId) } },
-      {
-        $group: {
-          _id: null,
-          avgRating: { $avg: '$rating' },
-          totalReviews: { $sum: 1 }
-        }
-      }
-    ]);
-
-    // جلب أعمال الفنان
-    const artworks = await artworkModel.find({ artist: artistId }).sort({ createdAt: -1 }).limit(10);
-
-    // جلب عدد المبيعات
-    const salesCount = await specialRequestModel.countDocuments({
-      artist: artistId,
-      status: 'completed'
-    });
-
     // التحقق مما إذا كان المستخدم الحالي يتابع هذا الفنان
     let isFollowing = false;
-    if (req.user) {
+    if (currentUserId) {
       isFollowing = await followModel
         .findOne({
-          follower: req.user._id,
+          follower: currentUserId,
           following: artistId
         })
         .lean();
@@ -446,27 +476,27 @@ export const getArtistProfile = asyncHandler(async (req, res, next) => {
       message: 'تم جلب بيانات الفنان بنجاح',
       data: {
         artist: {
-          _id: artist._id,
-          displayName: artist.displayName,
-          email: artist.email,
-          profileImage: artist.profileImage?.url,
-          coverImage: artist.coverImage?.url,
-          bio: artist.bio,
-          job: artist.job,
-          location: artist.location,
-          website: artist.website,
-          socialMedia: artist.socialMedia,
-          joinDate: artist.createdAt
+          _id: cachedData.artist._id,
+          displayName: cachedData.artist.displayName,
+          email: cachedData.artist.email,
+          profileImage: cachedData.artist.profileImage?.url,
+          coverImage: cachedData.artist.coverImage?.url,
+          bio: cachedData.artist.bio,
+          job: cachedData.artist.job,
+          location: cachedData.artist.location,
+          website: cachedData.artist.website,
+          socialMedia: cachedData.artist.socialMedia,
+          joinDate: cachedData.artist.createdAt
         },
         stats: {
-          followersCount,
-          artworksCount: artworks.length,
-          salesCount,
-          avgRating: reviewStats[0]?.avgRating || 0,
-          reviewsCount: reviewStats[0]?.totalReviews || 0
+          followersCount: cachedData.followersCount,
+          artworksCount: cachedData.artworks.length,
+          salesCount: cachedData.salesCount,
+          avgRating: cachedData.reviewStats[0]?.avgRating || 0,
+          reviewsCount: cachedData.reviewStats[0]?.totalReviews || 0
         },
         isFollowing: !!isFollowing,
-        artworks
+        artworks: cachedData.artworks
       }
     });
   } catch (error) {
@@ -1332,64 +1362,73 @@ export const getProfile = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     
-    const user = await userModel
-      .findById(req.user._id)
-      .select('-password')
-      .lean();
+    const userId = req.user._id;
+    
+    // Use cache for user profile
+    const profileData = await cacheUserProfile(userId, async () => {
+      const user = await userModel
+        .findById(userId)
+        .select('-password')
+        .lean();
 
-    if (!user) {
+      if (!user) {
+        return null;
+      }
+
+      // Get user stats
+      const [artworksCount, followersCount, followingCount, wishlistCount] = await Promise.all([
+        artworkModel.countDocuments({ artist: user._id }),
+        followModel.countDocuments({ following: user._id }),
+        followModel.countDocuments({ follower: user._id }),
+        user.wishlist ? user.wishlist.length : 0
+      ]);
+
+      // Default values for null fields
+      const defaultProfileImage = {
+        url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1753201276/WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c.jpg',
+        id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
+      };
+
+      const defaultSocialMedia = {
+        instagram: null,
+        twitter: null,
+        facebook: null
+      };
+
+      return {
+        _id: user._id,
+        displayName: user.displayName || 'مستخدم جديد',
+        email: user.email,
+        role: user.role || 'user',
+        profileImage: user.profileImage?.url || defaultProfileImage.url,
+        coverImage: user.coverImages && user.coverImages.length > 0 ? user.coverImages[0].url : null,
+        bio: user.bio || 'لم يتم إضافة نبذة شخصية بعد',
+        job: user.job || 'مستخدم',
+        location: user.location || 'غير محدد',
+        website: user.website || null,
+        socialMedia: user.socialMedia || defaultSocialMedia,
+        isActive: user.isActive !== undefined ? user.isActive : true,
+        isVerified: user.isVerified !== undefined ? user.isVerified : false,
+        preferredLanguage: user.preferredLanguage || 'ar',
+        notificationSettings: user.notificationSettings || {
+          enablePush: true,
+          enableEmail: true,
+          muteChat: false
+        },
+        lastActive: user.lastActive || user.createdAt,
+        createdAt: user.createdAt,
+        stats: {
+          artworksCount: artworksCount || 0,
+          followersCount: followersCount || 0,
+          followingCount: followingCount || 0,
+          wishlistCount: wishlistCount || 0
+        }
+      };
+    });
+
+    if (!profileData) {
       return res.fail(null, 'المستخدم غير موجود', 404);
     }
-
-    // Get user stats
-    const [artworksCount, followersCount, followingCount, wishlistCount] = await Promise.all([
-      artworkModel.countDocuments({ artist: user._id }),
-      followModel.countDocuments({ following: user._id }),
-      followModel.countDocuments({ follower: user._id }),
-      user.wishlist ? user.wishlist.length : 0
-    ]);
-
-    // Default values for null fields
-    const defaultProfileImage = {
-      url: 'https://res.cloudinary.com/dgzucjqgi/image/upload/v1753201276/WhatsApp_Image_2025-07-22_at_05.04.10_49b23bf3_aane8c.jpg',
-      id: 'ecommerceDefaults/user/png-clipart-user-profile-facebook-passport-miscellaneous-silhouette_aol7vc'
-    };
-
-    const defaultSocialMedia = {
-      instagram: null,
-      twitter: null,
-      facebook: null
-    };
-
-    const profileData = {
-      _id: user._id,
-      displayName: user.displayName || 'مستخدم جديد',
-      email: user.email,
-      role: user.role || 'user',
-      profileImage: user.profileImage?.url || defaultProfileImage.url,
-      coverImage: user.coverImages && user.coverImages.length > 0 ? user.coverImages[0].url : null,
-      bio: user.bio || 'لم يتم إضافة نبذة شخصية بعد',
-      job: user.job || 'مستخدم',
-      location: user.location || 'غير محدد',
-      website: user.website || null,
-      socialMedia: user.socialMedia || defaultSocialMedia,
-      isActive: user.isActive !== undefined ? user.isActive : true,
-      isVerified: user.isVerified !== undefined ? user.isVerified : false,
-      preferredLanguage: user.preferredLanguage || 'ar',
-      notificationSettings: user.notificationSettings || {
-        enablePush: true,
-        enableEmail: true,
-        muteChat: false
-      },
-      lastActive: user.lastActive || user.createdAt,
-      createdAt: user.createdAt,
-      stats: {
-        artworksCount: artworksCount || 0,
-        followersCount: followersCount || 0,
-        followingCount: followingCount || 0,
-        wishlistCount: wishlistCount || 0
-      }
-    };
 
     res.success(profileData, 'تم جلب الملف الشخصي بنجاح');
   } catch (error) {
@@ -1403,27 +1442,33 @@ export const getProfile = asyncHandler(async (req, res, next) => {
  */
 export const getMyArtworks = asyncHandler(async (req, res, next) => {
   try {
+    const userId = req.user._id;
     const { page = 1, limit = 10, status } = req.query;
     const skip = (page - 1) * limit;
 
-    // Build query
-    const query = { artist: req.user._id };
-    if (status) {
-      query.isAvailable = status === 'available';
-    }
+    // Use cache for user artworks
+    const cachedData = await cacheUserArtworks(userId, async () => {
+      // Build query
+      const query = { artist: userId };
+      if (status) {
+        query.isAvailable = status === 'available';
+      }
 
-    const [artworks, totalCount] = await Promise.all([
-      artworkModel
-        .find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .populate('category', 'name')
-        .lean(),
-      artworkModel.countDocuments(query)
-    ]);
+      const [artworks, totalCount] = await Promise.all([
+        artworkModel
+          .find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit))
+          .populate('category', 'name')
+          .lean(),
+        artworkModel.countDocuments(query)
+      ]);
 
-    const formattedArtworks = artworks.map(artwork => ({
+      return { artworks, totalCount };
+    }, { page, limit, status });
+
+    const formattedArtworks = cachedData.artworks.map(artwork => ({
       _id: artwork._id,
       title: artwork.title,
       images: artwork.images,
@@ -1440,9 +1485,9 @@ export const getMyArtworks = asyncHandler(async (req, res, next) => {
       artworks: formattedArtworks,
       pagination: {
         currentPage: Number(page),
-        totalPages: Math.ceil(totalCount / limit),
-        totalItems: totalCount,
-        hasNextPage: skip + artworks.length < totalCount
+        totalPages: Math.ceil(cachedData.totalCount / limit),
+        totalItems: cachedData.totalCount,
+        hasNextPage: skip + cachedData.artworks.length < cachedData.totalCount
       }
     }, 'تم جلب أعمالك الفنية بنجاح');
   } catch (error) {

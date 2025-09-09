@@ -8,6 +8,7 @@ import { sendChatMessageNotification } from '../../utils/pushNotifications.js';
 import { createNotification } from '../notification/notification.controller.js';
 import { sendToChat, sendToUser } from '../../utils/socketService.js';
 import jwt from 'jsonwebtoken';
+import { cacheChatData, invalidateUserCache } from '../../utils/cacheHelpers.js';
 
 /**
  * Helper function to safely format image URLs
@@ -105,50 +106,56 @@ export const getChats = asyncHandler(async (req, res, next) => {
     const { page = 1, limit = 20, search = '' } = req.query;
     const skip = (page - 1) * limit;
 
-    // Build query for searching
-    let searchQuery = { 
-      members: { $in: [userId] }, 
-      isDeleted: { $ne: true } 
-    };
+    // Use cache for chat data
+    const cacheKey = `chats:${userId}:${page}:${limit}:${search}`;
+    const cachedData = await cacheChatData(userId, async () => {
+      // Build query for searching
+      let searchQuery = { 
+        members: { $in: [userId] }, 
+        isDeleted: { $ne: true } 
+      };
 
-    if (search.trim()) {
-      // Search in other user's display name
-      const searchUsers = await userModel.find({
-        displayName: { $regex: search, $options: 'i' }
-      }).select('_id');
-      
-      const userIds = searchUsers.map(user => user._id);
-      searchQuery.members = { $in: [userId, ...userIds] };
-    }
+      if (search.trim()) {
+        // Search in other user's display name
+        const searchUsers = await userModel.find({
+          displayName: { $regex: search, $options: 'i' }
+        }).select('_id');
+        
+        const userIds = searchUsers.map(user => user._id);
+        searchQuery.members = { $in: [userId, ...userIds] };
+      }
 
-    const [chats, totalCount] = await Promise.all([
-      chatModel
-        .find(searchQuery)
-        .populate({
-          path: 'members',
-          select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
-        })
-        .populate({
-          path: 'lastMessage',
-          select: 'content text messageType sender isRead readAt sentAt createdAt',
-          populate: {
-            path: 'sender',
-            select: 'displayName profileImage photoURL'
-          }
-        })
-        .sort({ lastActivity: -1, updatedAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      chatModel.countDocuments(searchQuery)
-    ]);
+      const [chats, totalCount] = await Promise.all([
+        chatModel
+          .find(searchQuery)
+          .populate({
+            path: 'members',
+            select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+          })
+          .populate({
+            path: 'lastMessage',
+            select: 'content text messageType sender isRead readAt sentAt createdAt',
+            populate: {
+              path: 'sender',
+              select: 'displayName profileImage photoURL'
+            }
+          })
+          .sort({ lastActivity: -1, updatedAt: -1 })
+          .skip(skip)
+          .limit(Number(limit))
+          .lean(),
+        chatModel.countDocuments(searchQuery)
+      ]);
+
+      return { chats, totalCount };
+    }, { page, limit });
 
     // Format chats for Flutter
-    const formattedChats = chats.map(chat => formatChat(chat, userId));
+    const formattedChats = cachedData.chats.map(chat => formatChat(chat, userId));
 
     // Get total unread count
     const totalUnreadCount = await messageModel.countDocuments({
-      chat: { $in: chats.map(chat => chat._id) },
+      chat: { $in: cachedData.chats.map(chat => chat._id) },
       sender: { $ne: userId },
       isRead: false
     });
@@ -161,9 +168,9 @@ export const getChats = asyncHandler(async (req, res, next) => {
         totalUnreadCount,
         pagination: {
           currentPage: Number(page),
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          hasNextPage: skip + chats.length < totalCount,
+          totalPages: Math.ceil(cachedData.totalCount / limit),
+          totalItems: cachedData.totalCount,
+          hasNextPage: skip + cachedData.chats.length < cachedData.totalCount,
           hasPrevPage: Number(page) > 1
         }
       },
@@ -308,27 +315,60 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Check if user is member of chat
-    const chat = await chatModel.findOne({
-      _id: chatId,
-      members: { $in: [userId] },
-      isDeleted: { $ne: true }
-    })
-    .populate({
-      path: 'members',
-      select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
-    })
-    .populate({
-      path: 'lastMessage',
-      select: 'content text messageType sender isRead readAt sentAt createdAt',
-      populate: {
-        path: 'sender',
-        select: 'displayName profileImage photoURL'
-      }
-    })
-    .lean();
+    // Use cache for messages data
+    const cacheKey = `messages:${chatId}:${userId}:${page}:${limit}`;
+    const cachedData = await cacheChatData(userId, async () => {
+      // Check if user is member of chat
+      const chat = await chatModel.findOne({
+        _id: chatId,
+        members: { $in: [userId] },
+        isDeleted: { $ne: true }
+      })
+      .populate({
+        path: 'members',
+        select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+      })
+      .populate({
+        path: 'lastMessage',
+        select: 'content text messageType sender isRead readAt sentAt createdAt',
+        populate: {
+          path: 'sender',
+          select: 'displayName profileImage photoURL'
+        }
+      })
+      .lean();
 
-    if (!chat) {
+      if (!chat) {
+        return { chat: null, messages: [], totalCount: 0 };
+      }
+
+      // Get messages
+      const [messages, totalCount] = await Promise.all([
+        messageModel
+          .find({ chat: chatId, isDeleted: { $ne: true } })
+          .populate({
+            path: 'sender',
+            select: 'displayName profileImage photoURL isVerified role'
+          })
+          .populate({
+            path: 'replyTo',
+            select: 'content text messageType sender createdAt',
+            populate: {
+              path: 'sender',
+              select: 'displayName profileImage photoURL'
+            }
+          })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit))
+          .lean(),
+        messageModel.countDocuments({ chat: chatId, isDeleted: { $ne: true } })
+      ]);
+
+      return { chat, messages, totalCount };
+    }, { page, limit });
+
+    if (!cachedData.chat) {
       return res.status(404).json({
         success: false,
         message: 'المحادثة غير موجودة أو غير مصرح بالوصول إليها',
@@ -336,31 +376,8 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Get messages
-    const [messages, totalCount] = await Promise.all([
-      messageModel
-        .find({ chat: chatId, isDeleted: { $ne: true } })
-        .populate({
-          path: 'sender',
-          select: 'displayName profileImage photoURL isVerified role'
-        })
-        .populate({
-          path: 'replyTo',
-          select: 'content text messageType sender createdAt',
-          populate: {
-            path: 'sender',
-            select: 'displayName profileImage photoURL'
-          }
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      messageModel.countDocuments({ chat: chatId, isDeleted: { $ne: true } })
-    ]);
-
     // Format messages for Flutter
-    const formattedMessages = messages
+    const formattedMessages = cachedData.messages
       .reverse()
       .map(message => formatMessage(message, userId));
 
@@ -381,13 +398,13 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم جلب الرسائل بنجاح',
       data: {
-        chat: formatChat(chat, userId),
+        chat: formatChat(cachedData.chat, userId),
         messages: formattedMessages,
         pagination: {
           currentPage: Number(page),
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          hasNextPage: skip + messages.length < totalCount,
+          totalPages: Math.ceil(cachedData.totalCount / limit),
+          totalItems: cachedData.totalCount,
+          hasNextPage: skip + cachedData.messages.length < cachedData.totalCount,
           hasPrevPage: Number(page) > 1
         }
       },
@@ -670,6 +687,12 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         userId: userId
       }
     };
+
+    // Invalidate cache for both users
+    await Promise.all([
+      invalidateUserCache(userId),
+      receiverId ? invalidateUserCache(receiverId) : Promise.resolve()
+    ]);
 
     res.status(201).json(response);
 

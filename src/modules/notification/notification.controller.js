@@ -3,6 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import { sendPushNotificationToUser, updateUserFCMToken, removeUserFCMToken } from '../../utils/pushNotifications.js';
+import { cacheNotifications, invalidateUserCache } from '../../utils/cacheHelpers.js';
 
 /**
  * Get user notifications with pagination
@@ -13,26 +14,34 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
     
     const userId = req.user._id;
     const { page = 1, limit = 20 } = req.query;
-    const skip = (page - 1) * limit;
 
-    // Build filter
-    const filter = { user: userId };
+    // Use cache for notifications
+    const cachedData = await cacheNotifications(userId, async () => {
+      const skip = (page - 1) * limit;
+      const filter = { user: userId };
 
-    // Get notifications and counts in parallel
-    const [notifications, totalCount, unreadCount] = await Promise.all([
-      notificationModel
-        .find(filter)
-        .populate('sender', 'displayName profileImage')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      notificationModel.countDocuments(filter),
-      notificationModel.countDocuments({ user: userId, isRead: false })
-    ]);
+      // Get notifications and counts in parallel
+      const [notifications, totalCount, unreadCount] = await Promise.all([
+        notificationModel
+          .find(filter)
+          .populate('sender', 'displayName profileImage')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit))
+          .lean(),
+        notificationModel.countDocuments(filter),
+        notificationModel.countDocuments({ user: userId, isRead: false })
+      ]);
+
+      return {
+        notifications,
+        totalCount,
+        unreadCount
+      };
+    }, { page, limit });
 
     // Format notifications for mobile app
-    const formattedNotifications = notifications.map(notification => ({
+    const formattedNotifications = cachedData.notifications.map(notification => ({
       _id: notification._id,
       title: notification.title?.ar || notification.title,
       message: notification.message?.ar || notification.message,
@@ -51,13 +60,13 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
       notifications: formattedNotifications,
       pagination: {
         currentPage: Number(page),
-        totalPages: Math.ceil(totalCount / limit),
-        totalItems: totalCount,
-        hasNextPage: skip + notifications.length < totalCount
+        totalPages: Math.ceil(cachedData.totalCount / limit),
+        totalItems: cachedData.totalCount,
+        hasNextPage: (page - 1) * limit + cachedData.notifications.length < cachedData.totalCount
       },
       summary: {
-        total: totalCount,
-        unread: unreadCount
+        total: cachedData.totalCount,
+        unread: cachedData.unreadCount
       }
     };
 
@@ -90,6 +99,9 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
     if (!notification) {
       return res.fail(null, 'الإشعار غير موجود أو مقروء بالفعل', 404);
     }
+
+    // Invalidate user cache
+    await invalidateUserCache(userId);
 
     res.success({ isRead: true }, 'تم وضع علامة مقروء على الإشعار');
   } catch (error) {

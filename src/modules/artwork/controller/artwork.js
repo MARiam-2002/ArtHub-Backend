@@ -4,6 +4,7 @@ import categoryModel from '../../../../DB/models/category.model.js';
 import reviewModel from '../../../../DB/models/review.model.js';
 import { getPaginationParams } from '../../../utils/pagination.js';
 import { asyncHandler } from '../../../utils/asyncHandler.js';
+import { cacheArtworkList, cacheArtwork, cacheSearchResults, invalidateArtworkCache } from '../../../utils/cacheHelpers.js';
 
 /**
  * جلب الأعمال المميزة
@@ -13,29 +14,34 @@ import { asyncHandler } from '../../../utils/asyncHandler.js';
 export const getFeaturedArtworks = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPaginationParams(req.query, 12);
 
-  const [artworks, totalCount] = await Promise.all([
-    artworkModel
-      .find({ isAvailable: true, isFeatured: true })
-      .populate({ 
-        path: 'artist', 
-        select: 'displayName profileImage job isActive',
-        match: { isActive: true }
-      })
-      .populate({ path: 'category', select: 'name' })
-      .sort({ likeCount: -1, viewCount: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    artworkModel.countDocuments({ isAvailable: true, isFeatured: true })
-  ]);
+  // Use cache for featured artworks
+  const cachedData = await cacheArtworkList('featured', async () => {
+    const [artworks, totalCount] = await Promise.all([
+      artworkModel
+        .find({ isAvailable: true, isFeatured: true })
+        .populate({ 
+          path: 'artist', 
+          select: 'displayName profileImage job isActive',
+          match: { isActive: true }
+        })
+        .populate({ path: 'category', select: 'name' })
+        .sort({ likeCount: -1, viewCount: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      artworkModel.countDocuments({ isAvailable: true, isFeatured: true })
+    ]);
 
-  // تصفية الأعمال التي لديها فنانين نشطين فقط
-  const activeArtworks = artworks.filter(artwork => artwork.artist);
+    // تصفية الأعمال التي لديها فنانين نشطين فقط
+    const activeArtworks = artworks.filter(artwork => artwork.artist);
 
-  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(totalCount);
+    return { artworks: activeArtworks, totalCount };
+  }, { page, limit });
+
+  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(cachedData.totalCount);
 
   res.success({ 
-    artworks: activeArtworks, 
+    artworks: cachedData.artworks, 
     pagination: paginationMeta
   }, 'تم جلب الأعمال المميزة بنجاح');
 });
@@ -49,39 +55,44 @@ export const getAllArtworks = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPaginationParams(req.query, 12);
   const { status = 'available', sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-  // بناء فلتر البحث
-  const filter = {};
-  if (status && status !== 'all') {
-    filter.status = status;
-  }
+  // Use cache for all artworks
+  const cachedData = await cacheArtworkList('all', async () => {
+    // بناء فلتر البحث
+    const filter = {};
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
 
-  // بناء خيارات الترتيب
-  const sortOptions = {};
-  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // بناء خيارات الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  const [artworks, totalCount] = await Promise.all([
-    artworkModel
-      .find(filter)
-      .populate({ 
-        path: 'artist', 
-        select: 'displayName profileImage job isActive',
-        match: { isActive: true }
-      })
-      .populate({ path: 'category', select: 'name' })
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    artworkModel.countDocuments(filter)
-  ]);
+    const [artworks, totalCount] = await Promise.all([
+      artworkModel
+        .find(filter)
+        .populate({ 
+          path: 'artist', 
+          select: 'displayName profileImage job isActive',
+          match: { isActive: true }
+        })
+        .populate({ path: 'category', select: 'name' })
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      artworkModel.countDocuments(filter)
+    ]);
 
-  // تصفية الأعمال التي لديها فنانين نشطين فقط
-  const activeArtworks = artworks.filter(artwork => artwork.artist);
+    // تصفية الأعمال التي لديها فنانين نشطين فقط
+    const activeArtworks = artworks.filter(artwork => artwork.artist);
 
-  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(totalCount);
+    return { artworks: activeArtworks, totalCount };
+  }, { page, limit, status, sortBy, sortOrder });
+
+  const paginationMeta = getPaginationParams(req.query).getPaginationMetadata(cachedData.totalCount);
 
   res.success({ 
-    artworks: activeArtworks, 
+    artworks: cachedData.artworks, 
     pagination: paginationMeta,
     filters: { status, sortBy, sortOrder }
   }, 'تم جلب الأعمال الفنية بنجاح');
@@ -95,21 +106,30 @@ export const getAllArtworks = asyncHandler(async (req, res) => {
 export const getArtworkById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const artwork = await artworkModel
-    .findById(id)
-    .populate({ 
-      path: 'artist', 
-      select: 'displayName profileImage job bio socialLinks isActive',
-      match: { isActive: true }
-    })
-    .populate({ path: 'category', select: 'name description' });
+  // Use cache for artwork details
+  const cachedData = await cacheArtwork(id, async () => {
+    const artwork = await artworkModel
+      .findById(id)
+      .populate({ 
+        path: 'artist', 
+        select: 'displayName profileImage job bio socialLinks isActive',
+        match: { isActive: true }
+      })
+      .populate({ path: 'category', select: 'name description' });
 
-  if (!artwork) {
+    if (!artwork) {
+      return null;
+    }
+
+    if (!artwork.artist) {
+      return null;
+    }
+
+    return artwork;
+  });
+
+  if (!cachedData) {
     return res.fail(null, 'العمل الفني غير موجود', 404);
-  }
-
-  if (!artwork.artist) {
-    return res.fail(null, 'الفنان غير نشط', 404);
   }
 
   // زيادة عدد المشاهدات بشكل آمن
@@ -122,14 +142,14 @@ export const getArtworkById = asyncHandler(async (req, res) => {
   // جلب المراجعات والتقييمات بشكل متوازي
   const [reviews, ratingStats, artistStats] = await Promise.all([
     reviewModel
-      .find({ artwork: artwork._id })
+      .find({ artwork: cachedData._id })
       .populate('user', 'displayName profileImage')
       .sort({ createdAt: -1 })
       .limit(10)
       .lean(),
     
     reviewModel.aggregate([
-      { $match: { artwork: artwork._id } },
+      { $match: { artwork: cachedData._id } },
       {
         $group: {
           _id: null,
@@ -142,7 +162,7 @@ export const getArtworkById = asyncHandler(async (req, res) => {
 
     // إحصائيات الفنان
     Promise.all([
-      artworkModel.countDocuments({ artist: artwork.artist._id }),
+      artworkModel.countDocuments({ artist: cachedData.artist._id }),
       reviewModel.aggregate([
         { 
           $lookup: {
@@ -373,6 +393,9 @@ export const createArtwork = asyncHandler(async (req, res) => {
     .populate('artist', 'displayName profileImage')
     .populate('category', 'name')
     .lean();
+
+  // Invalidate cache after creating artwork
+  await invalidateArtworkCache(populatedArtwork._id);
 
   res.success(populatedArtwork, 'تم إنشاء العمل الفني بنجاح', 201);
 });
@@ -608,40 +631,42 @@ export const searchArtworks = asyncHandler(async (req, res) => {
 
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
-  // بناء فلتر البحث
-  const filter = {};
+  // Use cache for search results
+  const cachedData = await cacheSearchResults(query || '', 'artworks', async () => {
+    // بناء فلتر البحث
+    const filter = {};
 
-  // البحث النصي
-  if (query && query.trim()) {
-    filter.$or = [
-      { title: { $regex: query.trim(), $options: 'i' } },
-      { description: { $regex: query.trim(), $options: 'i' } },
-      { tags: { $elemMatch: { $regex: query.trim(), $options: 'i' } } }
-    ];
-  }
+    // البحث النصي
+    if (query && query.trim()) {
+      filter.$or = [
+        { title: { $regex: query.trim(), $options: 'i' } },
+        { description: { $regex: query.trim(), $options: 'i' } },
+        { tags: { $elemMatch: { $regex: query.trim(), $options: 'i' } } }
+      ];
+    }
 
-  // فلتر السعر
-  if (minPrice || maxPrice) {
-    filter.price = {};
-    if (minPrice) filter.price.$gte = parseFloat(minPrice);
-    if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
-  }
+    // فلتر السعر
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = parseFloat(minPrice);
+      if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+    }
 
-  // فلتر الفئة
-  if (category) filter.category = category;
+    // فلتر الفئة
+    if (category) filter.category = category;
 
-  // فلتر الفنان
-  if (artist) filter.artist = artist;
+    // فلتر الفنان
+    if (artist) filter.artist = artist;
 
-  // فلتر الوسوم
-  if (tags && Array.isArray(tags)) {
-    filter.tags = { $in: tags };
-  }
+    // فلتر الوسوم
+    if (tags && Array.isArray(tags)) {
+      filter.tags = { $in: tags };
+    }
 
-  // فلتر الحالة
-  if (status && status !== 'all') {
-    filter.status = status;
-  }
+    // فلتر الحالة
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
 
   // بناء خيارات الترتيب
   let sortOptions = {};
@@ -726,17 +751,10 @@ export const searchArtworks = asyncHandler(async (req, res) => {
     const total = totalCount[0]?.total || 0;
     const totalPages = Math.ceil(total / parseInt(limit));
 
-    return res.success({
+    return {
       artworks,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages,
-        totalItems: total,
-        hasNextPage: parseInt(page) < totalPages,
-        hasPrevPage: parseInt(page) > 1
-      },
-      searchParams: { query, minPrice, maxPrice, minRating, category, artist, tags, status, sortBy, sortOrder }
-    }, 'تم البحث عن الأعمال الفنية بنجاح');
+      totalCount: total
+    };
   }
 
   // للبحث العادي بدون تقييم
@@ -762,19 +780,25 @@ export const searchArtworks = asyncHandler(async (req, res) => {
   // تصفية الأعمال التي لديها فنانين نشطين فقط
   const activeArtworks = artworks.filter(artwork => artwork.artist);
 
-  const totalPages = Math.ceil(totalCount / parseInt(limit));
-
-  res.success({
+  return {
     artworks: activeArtworks,
-    pagination: {
-      currentPage: parseInt(page),
-      totalPages,
-      totalItems: totalCount,
-      hasNextPage: parseInt(page) < totalPages,
-      hasPrevPage: parseInt(page) > 1
-    },
-    searchParams: { query, minPrice, maxPrice, category, artist, tags, status, sortBy, sortOrder }
-  }, 'تم البحث عن الأعمال الفنية بنجاح');
+    totalCount
+  };
+}, { page, limit, filters: { minPrice, maxPrice, minRating, category, artist, tags, status, sortBy, sortOrder } });
+
+const totalPages = Math.ceil(cachedData.totalCount / parseInt(limit));
+
+res.success({
+  artworks: cachedData.artworks,
+  pagination: {
+    currentPage: parseInt(page),
+    totalPages,
+    totalItems: cachedData.totalCount,
+    hasNextPage: parseInt(page) < totalPages,
+    hasPrevPage: parseInt(page) > 1
+  },
+  searchParams: { query, minPrice, maxPrice, minRating, category, artist, tags, status, sortBy, sortOrder }
+}, 'تم البحث عن الأعمال الفنية بنجاح');
 });
 
 /**

@@ -5,6 +5,7 @@ import artworkModel from '../../../DB/models/artwork.model.js';
 import reviewModel from '../../../DB/models/review.model.js';
 import mongoose from 'mongoose';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
+import { cacheDashboardStats, cacheArtistPerformance, cacheAggregation } from '../../utils/cacheHelpers.js';
 
 /**
  * @desc    الإحصائيات الرئيسية للوحة التحكم
@@ -12,28 +13,32 @@ import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
  * @access  Private (Admin)
  */
 export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
-  // احصائيات المستخدمين
-  const totalUsers = await userModel.countDocuments({ isDeleted: false });
-  const activeUsers = await userModel.countDocuments({ 
-    status: 'active', 
-    isDeleted: false 
-  });
-  const totalArtists = await userModel.countDocuments({ 
-    role: 'artist', 
-    isDeleted: false 
-  });
-  const activeArtists = await userModel.countDocuments({ 
-    role: 'artist', 
-    status: 'active', 
-    isDeleted: false 
-  });
+  const adminId = req.user?._id;
+  
+  // Use cached data with fallback to database
+  const statistics = await cacheDashboardStats(adminId, async () => {
+    // احصائيات المستخدمين
+    const totalUsers = await userModel.countDocuments({ isDeleted: false });
+    const activeUsers = await userModel.countDocuments({ 
+      status: 'active', 
+      isDeleted: false 
+    });
+    const totalArtists = await userModel.countDocuments({ 
+      role: 'artist', 
+      isDeleted: false 
+    });
+    const activeArtists = await userModel.countDocuments({ 
+      role: 'artist', 
+      status: 'active', 
+      isDeleted: false 
+    });
 
-  // احصائيات الإيرادات
-  const totalRevenueResult = await specialRequestModel.aggregate([
-    { $match: { status: 'completed' } },
-    { $group: { _id: null, totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } },
-  ]);
-  const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].totalRevenue : 0;
+    // احصائيات الإيرادات
+    const totalRevenueResult = await specialRequestModel.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: null, totalRevenue: { $sum: { $ifNull: ['$finalPrice', '$quotedPrice', '$budget'] } } } },
+    ]);
+    const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].totalRevenue : 0;
 
   // حساب النسب المئوية مقارنة بالشهر الماضي
   const currentDate = new Date();
@@ -94,18 +99,16 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
     return Math.round(Math.abs(change)); // Return absolute value, direction indicated by isPositive
   };
 
-  const usersPercentageChange = calculatePercentageChange(currentMonthUsers, lastMonthUsers);
-  const artistsPercentageChange = calculatePercentageChange(currentMonthArtists, lastMonthArtists);
+    const usersPercentageChange = calculatePercentageChange(currentMonthUsers, lastMonthUsers);
+    const artistsPercentageChange = calculatePercentageChange(currentMonthArtists, lastMonthArtists);
 
-  const currentRevenue = currentMonthRevenue.length > 0 ? currentMonthRevenue[0].totalRevenue : 0;
-  const previousRevenue = lastMonthRevenue.length > 0 ? lastMonthRevenue[0].totalRevenue : 0;
-  
-  const revenuePercentageChange = calculatePercentageChange(currentRevenue, previousRevenue);
+    const currentRevenue = currentMonthRevenue.length > 0 ? currentMonthRevenue[0].totalRevenue : 0;
+    const previousRevenue = lastMonthRevenue.length > 0 ? lastMonthRevenue[0].totalRevenue : 0;
+    
+    const revenuePercentageChange = calculatePercentageChange(currentRevenue, previousRevenue);
 
-  res.status(200).json({
-    success: true,
-    message: 'تم جلب الإحصائيات بنجاح',
-    data: {
+    // Return the data for caching
+    return {
       totalUsers: {
         value: totalUsers,
         percentageChange: usersPercentageChange,
@@ -122,7 +125,13 @@ export const getDashboardStatistics = asyncHandler(async (req, res, next) => {
         isPositive: revenuePercentageChange >= 0,
         currency: 'SAR'
       }
-    }
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'تم جلب الإحصائيات بنجاح',
+    data: statistics
   });
 });
 
@@ -421,8 +430,10 @@ export const getDashboardCharts = asyncHandler(async (req, res, next) => {
 export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
   const { limit = 3, year, month } = req.query;
   
-  let startDate = new Date();
-  let endDate = new Date();
+  // Use cached data with fallback to database
+  const performanceData = await cacheArtistPerformance(async () => {
+    let startDate = new Date();
+    let endDate = new Date();
   
   // تحديد الفترة الزمنية بناءً على المعاملات
   if (year && month) {
@@ -580,18 +591,25 @@ export const getArtistsPerformance = asyncHandler(async (req, res, next) => {
     }
   ]);
 
-  console.log(`📊 Found ${topArtists.length} artists with activity in the specified period`);
+    console.log(`📊 Found ${topArtists.length} artists with activity in the specified period`);
 
-  // إضافة معلومات الفترة المحددة للاستجابة
-  const periodInfo = year && month 
-    ? { year: parseInt(year), month: parseInt(month), type: 'specific' }
-    : { type: 'default', period: 'last_month' };
+    // إضافة معلومات الفترة المحددة للاستجابة
+    const periodInfo = year && month 
+      ? { year: parseInt(year), month: parseInt(month), type: 'specific' }
+      : { type: 'default', period: 'last_month' };
+
+    // Return the data for caching
+    return {
+      data: topArtists,
+      periodInfo
+    };
+  });
 
   res.status(200).json({
     success: true,
     message: 'تم جلب بيانات الفنانين بنجاح',
-    data: topArtists,
-    periodInfo
+    data: performanceData.data,
+    periodInfo: performanceData.periodInfo
   });
 }); 
 

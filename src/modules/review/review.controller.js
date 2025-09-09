@@ -5,6 +5,7 @@ import transactionModel from '../../../DB/models/transaction.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { getPaginationParams } from '../../utils/pagination.js';
 import { createNotification } from '../notification/notification.controller.js';
+import { cacheSearchResults, cacheAggregation, invalidateArtworkCache, invalidateUserCache } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -155,6 +156,12 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
   // إرسال الاستجابة فوراً
   res.success(simplifiedReview, 'تم إضافة التقييم بنجاح', 201);
 
+  // Invalidate cache
+  await Promise.all([
+    invalidateArtworkCache(artwork),
+    invalidateUserCache(userId)
+  ]);
+
   // تحديث متوسط تقييم العمل الفني في الخلفية
   try {
     const ratingStats = await reviewModel.getAverageRating(artwork, 'artwork');
@@ -299,61 +306,73 @@ export const getArtworkReviews = asyncHandler(async (req, res, next) => {
     return res.fail(null, 'العمل الفني غير موجود', 404);
   }
 
-  // بناء فلتر البحث
-  const filter = {
-    artwork: artworkId,
-    status: 'active'
-  };
+  // Use cache for artwork reviews
+  const cachedData = await cacheSearchResults(`artwork-reviews-${artworkId}`, 'reviews', async () => {
+    // بناء فلتر البحث
+    const filter = {
+      artwork: artworkId,
+      status: 'active'
+    };
 
-  if (rating) filter.rating = parseInt(rating);
-  if (verified !== undefined) filter.isVerifiedPurchase = verified === 'true';
-  if (recommended !== undefined) filter.isRecommended = recommended === 'true';
-  if (search) {
-    filter.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { comment: { $regex: search, $options: 'i' } }
-    ];
-  }
+    if (rating) filter.rating = parseInt(rating);
+    if (verified !== undefined) filter.isVerifiedPurchase = verified === 'true';
+    if (recommended !== undefined) filter.isRecommended = recommended === 'true';
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { comment: { $regex: search, $options: 'i' } }
+      ];
+    }
 
-  // بناء معايير الترتيب
-  const sortOptions = {};
-  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // بناء معايير الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  // جلب التقييمات والإحصائيات بشكل متوازي
-  const [reviews, totalCount, ratingStats, distribution] = await Promise.all([
-    reviewModel
-      .find(filter)
-      .populate('user', 'displayName userName profileImage')
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    
-    reviewModel.countDocuments(filter),
-    
-    reviewModel.getAverageRating(artworkId, 'artwork'),
-    
-    reviewModel.getRatingDistribution(artworkId, 'artwork')
-  ]);
+    // جلب التقييمات والإحصائيات بشكل متوازي
+    const [reviews, totalCount, ratingStats, distribution] = await Promise.all([
+      reviewModel
+        .find(filter)
+        .populate('user', 'displayName userName profileImage')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      
+      reviewModel.countDocuments(filter),
+      
+      reviewModel.getAverageRating(artworkId, 'artwork'),
+      
+      reviewModel.getRatingDistribution(artworkId, 'artwork')
+    ]);
 
-  // حساب إحصائيات إضافية
-  const verifiedCount = await reviewModel.countDocuments({
-    artwork: artworkId,
-    status: 'active',
-    isVerifiedPurchase: true
-  });
+    // حساب إحصائيات إضافية
+    const verifiedCount = await reviewModel.countDocuments({
+      artwork: artworkId,
+      status: 'active',
+      isVerifiedPurchase: true
+    });
 
-  const recommendedCount = await reviewModel.countDocuments({
-    artwork: artworkId,
-    status: 'active',
-    isRecommended: true
-  });
+    const recommendedCount = await reviewModel.countDocuments({
+      artwork: artworkId,
+      status: 'active',
+      isRecommended: true
+    });
+
+    return {
+      reviews,
+      totalCount,
+      ratingStats,
+      distribution,
+      verifiedCount,
+      recommendedCount
+    };
+  }, { page, limit, filters: { rating, sortBy, sortOrder, verified, recommended, search } });
 
   // معلومات الصفحات
-  const totalPages = Math.ceil(totalCount / limit);
+  const totalPages = Math.ceil(cachedData.totalCount / limit);
 
   // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
-  const simplifiedReviews = reviews.map(review => ({
+  const simplifiedReviews = cachedData.reviews.map(review => ({
     _id: review._id,
     rating: review.rating,
     comment: review.comment,
@@ -368,9 +387,9 @@ export const getArtworkReviews = asyncHandler(async (req, res, next) => {
   const responseData = {
     reviews: simplifiedReviews,
     stats: {
-      avgRating: ratingStats.avgRating ? Math.round(ratingStats.avgRating * 10) / 10 : 0,
-      totalReviews: totalCount,
-      distribution
+      avgRating: cachedData.ratingStats.avgRating ? Math.round(cachedData.ratingStats.avgRating * 10) / 10 : 0,
+      totalReviews: cachedData.totalCount,
+      distribution: cachedData.distribution
     }
   };
 
@@ -641,64 +660,76 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
     return res.fail(null, 'الفنان غير موجود', 404);
   }
 
-  // بناء فلتر البحث - تقييمات الفنان فقط (بدون artwork)
-  const filter = {
-    artist: artistId,
-    artwork: { $exists: false }, // تقييمات الفنان فقط بدون لوحة
-    status: 'active'
-  };
+  // Use cache for artist reviews
+  const cachedData = await cacheSearchResults(`artist-reviews-${artistId}`, 'reviews', async () => {
+    // بناء فلتر البحث - تقييمات الفنان فقط (بدون artwork)
+    const filter = {
+      artist: artistId,
+      artwork: { $exists: false }, // تقييمات الفنان فقط بدون لوحة
+      status: 'active'
+    };
 
-  if (rating) filter.rating = parseInt(rating);
-  if (verified !== undefined) filter.isVerifiedPurchase = verified === 'true';
-  if (recommended !== undefined) filter.isRecommended = recommended === 'true';
-  if (search) {
-    filter.$or = [
-      { title: { $regex: search, $options: 'i' } },
-      { comment: { $regex: search, $options: 'i' } }
-    ];
-  }
+    if (rating) filter.rating = parseInt(rating);
+    if (verified !== undefined) filter.isVerifiedPurchase = verified === 'true';
+    if (recommended !== undefined) filter.isRecommended = recommended === 'true';
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { comment: { $regex: search, $options: 'i' } }
+      ];
+    }
 
-  // بناء معايير الترتيب
-  const sortOptions = {};
-  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // بناء معايير الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  // جلب التقييمات والإحصائيات بشكل متوازي
-  const [reviews, totalCount, ratingStats, distribution] = await Promise.all([
-    reviewModel
-      .find(filter)
-      .populate('user', 'displayName userName profileImage')
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    
-    reviewModel.countDocuments(filter),
-    
-    reviewModel.getAverageRating(artistId, 'artist'),
-    
-    reviewModel.getRatingDistribution(artistId, 'artist')
-  ]);
+    // جلب التقييمات والإحصائيات بشكل متوازي
+    const [reviews, totalCount, ratingStats, distribution] = await Promise.all([
+      reviewModel
+        .find(filter)
+        .populate('user', 'displayName userName profileImage')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      
+      reviewModel.countDocuments(filter),
+      
+      reviewModel.getAverageRating(artistId, 'artist'),
+      
+      reviewModel.getRatingDistribution(artistId, 'artist')
+    ]);
 
-  // حساب إحصائيات إضافية - تقييمات الفنان فقط
-  const verifiedCount = await reviewModel.countDocuments({
-    artist: artistId,
-    artwork: { $exists: false }, // تقييمات الفنان فقط
-    status: 'active',
-    isVerifiedPurchase: true
-  });
+    // حساب إحصائيات إضافية - تقييمات الفنان فقط
+    const verifiedCount = await reviewModel.countDocuments({
+      artist: artistId,
+      artwork: { $exists: false }, // تقييمات الفنان فقط
+      status: 'active',
+      isVerifiedPurchase: true
+    });
 
-  const recommendedCount = await reviewModel.countDocuments({
-    artist: artistId,
-    artwork: { $exists: false }, // تقييمات الفنان فقط
-    status: 'active',
-    isRecommended: true
-  });
+    const recommendedCount = await reviewModel.countDocuments({
+      artist: artistId,
+      artwork: { $exists: false }, // تقييمات الفنان فقط
+      status: 'active',
+      isRecommended: true
+    });
+
+    return {
+      reviews,
+      totalCount,
+      ratingStats,
+      distribution,
+      verifiedCount,
+      recommendedCount
+    };
+  }, { page, limit, filters: { rating, sortBy, sortOrder, verified, recommended, search } });
 
   // معلومات الصفحات
-  const totalPages = Math.ceil(totalCount / limit);
+  const totalPages = Math.ceil(cachedData.totalCount / limit);
 
   // تبسيط البيانات للاستجابة - فقط البيانات المطلوبة
-  const simplifiedReviews = reviews.map(review => ({
+  const simplifiedReviews = cachedData.reviews.map(review => ({
     _id: review._id,
     rating: review.rating,
     comment: review.comment,
@@ -713,9 +744,9 @@ export const getArtistReviews = asyncHandler(async (req, res, next) => {
   const responseData = {
     reviews: simplifiedReviews,
     stats: {
-      avgRating: ratingStats.avgRating ? Math.round(ratingStats.avgRating * 10) / 10 : 0,
-      totalReviews: totalCount,
-      distribution
+      avgRating: cachedData.ratingStats.avgRating ? Math.round(cachedData.ratingStats.avgRating * 10) / 10 : 0,
+      totalReviews: cachedData.totalCount,
+      distribution: cachedData.distribution
     }
   };
 
@@ -893,68 +924,77 @@ export const getMyReviews = asyncHandler(async (req, res, next) => {
   const { page, limit, skip } = getPaginationParams(req.query, 10);
   const { type, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-  // بناء فلتر البحث
-  const filter = {
-    user: userId,
-    status: { $ne: 'deleted' }
-  };
+  // Use cache for user reviews
+  const cachedData = await cacheSearchResults(`my-reviews-${userId}`, 'reviews', async () => {
+    // بناء فلتر البحث
+    const filter = {
+      user: userId,
+      status: { $ne: 'deleted' }
+    };
 
-  if (type === 'artwork') {
-    filter.artwork = { $exists: true };
-  } else if (type === 'artist') {
-    filter.artist = { $exists: true };
-  }
+    if (type === 'artwork') {
+      filter.artwork = { $exists: true };
+    } else if (type === 'artist') {
+      filter.artist = { $exists: true };
+    }
 
-  // بناء معايير الترتيب
-  const sortOptions = {};
-  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // بناء معايير الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-  // جلب التقييمات والإحصائيات
-  const [reviews, totalCount, stats] = await Promise.all([
-    reviewModel
-      .find(filter)
-      .populate('artwork', 'title images')
-      .populate('artist', 'displayName userName profileImage')
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    
-    reviewModel.countDocuments(filter),
-    
-    reviewModel.aggregate([
-      { $match: filter },
-      {
-        $group: {
-          _id: null,
-          avgRating: { $avg: '$rating' },
-          totalHelpfulVotes: { $sum: '$helpfulVotes' },
-          artworkReviews: {
-            $sum: { $cond: [{ $ifNull: ['$artwork', false] }, 1, 0] }
-          },
-          artistReviews: {
-            $sum: { $cond: [{ $ifNull: ['$artist', false] }, 1, 0] }
+    // جلب التقييمات والإحصائيات
+    const [reviews, totalCount, stats] = await Promise.all([
+      reviewModel
+        .find(filter)
+        .populate('artwork', 'title images')
+        .populate('artist', 'displayName userName profileImage')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      
+      reviewModel.countDocuments(filter),
+      
+      reviewModel.aggregate([
+        { $match: filter },
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: '$rating' },
+            totalHelpfulVotes: { $sum: '$helpfulVotes' },
+            artworkReviews: {
+              $sum: { $cond: [{ $ifNull: ['$artwork', false] }, 1, 0] }
+            },
+            artistReviews: {
+              $sum: { $cond: [{ $ifNull: ['$artist', false] }, 1, 0] }
+            }
           }
         }
+      ])
+    ]);
+
+    return {
+      reviews,
+      totalCount,
+      stats: stats[0] || {
+        avgRating: 0,
+        totalHelpfulVotes: 0,
+        artworkReviews: 0,
+        artistReviews: 0
       }
-    ])
-  ]);
+    };
+  }, { page, limit, filters: { type, sortBy, sortOrder } });
 
   // معلومات الصفحات
-  const totalPages = Math.ceil(totalCount / limit);
+  const totalPages = Math.ceil(cachedData.totalCount / limit);
 
   const responseData = {
-    reviews,
-    stats: stats[0] || {
-      avgRating: 0,
-      totalHelpfulVotes: 0,
-      artworkReviews: 0,
-      artistReviews: 0
-    },
+    reviews: cachedData.reviews,
+    stats: cachedData.stats,
     pagination: {
       currentPage: page,
       totalPages,
-      totalItems: totalCount,
+      totalItems: cachedData.totalCount,
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
       limit
@@ -977,86 +1017,89 @@ export const getReviewsStats = asyncHandler(async (req, res, next) => {
 
   const { period = 'month', groupBy = 'rating' } = req.query;
 
-  // حساب تاريخ البداية حسب الفترة
-  let dateFilter = {};
-  const now = new Date();
-  
-  switch (period) {
-    case 'day':
-      dateFilter = { $gte: new Date(now.setHours(0, 0, 0, 0)) };
-      break;
-    case 'week':
-      dateFilter = { $gte: new Date(now.setDate(now.getDate() - 7)) };
-      break;
-    case 'month':
-      dateFilter = { $gte: new Date(now.setMonth(now.getMonth() - 1)) };
-      break;
-    case 'quarter':
-      dateFilter = { $gte: new Date(now.setMonth(now.getMonth() - 3)) };
-      break;
-    case 'year':
-      dateFilter = { $gte: new Date(now.setFullYear(now.getFullYear() - 1)) };
-      break;
-    default:
-      dateFilter = {};
-  }
+  // Use cache for reviews stats
+  const cachedData = await cacheAggregation('reviews-stats', async () => {
+    // حساب تاريخ البداية حسب الفترة
+    let dateFilter = {};
+    const now = new Date();
+    
+    switch (period) {
+      case 'day':
+        dateFilter = { $gte: new Date(now.setHours(0, 0, 0, 0)) };
+        break;
+      case 'week':
+        dateFilter = { $gte: new Date(now.setDate(now.getDate() - 7)) };
+        break;
+      case 'month':
+        dateFilter = { $gte: new Date(now.setMonth(now.getMonth() - 1)) };
+        break;
+      case 'quarter':
+        dateFilter = { $gte: new Date(now.setMonth(now.getMonth() - 3)) };
+        break;
+      case 'year':
+        dateFilter = { $gte: new Date(now.setFullYear(now.getFullYear() - 1)) };
+        break;
+      default:
+        dateFilter = {};
+    }
 
-  const matchCondition = { status: 'active' };
-  if (Object.keys(dateFilter).length > 0) {
-    matchCondition.createdAt = dateFilter;
-  }
+    const matchCondition = { status: 'active' };
+    if (Object.keys(dateFilter).length > 0) {
+      matchCondition.createdAt = dateFilter;
+    }
 
-  // الحصول على الإحصائيات العامة
-  const [
-    totalReviews,
-    artworkReviews,
-    artistReviews,
-    avgRating,
-    topRatedContent,
-    recentActivity
-  ] = await Promise.all([
-    reviewModel.countDocuments(matchCondition),
-    
-    reviewModel.countDocuments({ ...matchCondition, artwork: { $exists: true } }),
-    
-    reviewModel.countDocuments({ ...matchCondition, artist: { $exists: true } }),
-    
-    reviewModel.aggregate([
-      { $match: matchCondition },
-      { $group: { _id: null, avgRating: { $avg: '$rating' } } }
-    ]),
-    
-    reviewModel.aggregate([
-      { $match: matchCondition },
-      { $group: { _id: '$rating', count: { $sum: 1 } } },
-      { $sort: { _id: -1 } }
-    ]),
-    
-    reviewModel.aggregate([
-      { $match: matchCondition },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: -1 } },
-      { $limit: 30 }
-    ])
-  ]);
-
-  const responseData = {
-    summary: {
-      total: totalReviews,
+    // الحصول على الإحصائيات العامة
+    const [
+      totalReviews,
       artworkReviews,
       artistReviews,
-      avgRating: avgRating[0]?.avgRating || 0
-    },
-    distribution: topRatedContent,
-    activity: recentActivity.reverse()
-  };
+      avgRating,
+      topRatedContent,
+      recentActivity
+    ] = await Promise.all([
+      reviewModel.countDocuments(matchCondition),
+      
+      reviewModel.countDocuments({ ...matchCondition, artwork: { $exists: true } }),
+      
+      reviewModel.countDocuments({ ...matchCondition, artist: { $exists: true } }),
+      
+      reviewModel.aggregate([
+        { $match: matchCondition },
+        { $group: { _id: null, avgRating: { $avg: '$rating' } } }
+      ]),
+      
+      reviewModel.aggregate([
+        { $match: matchCondition },
+        { $group: { _id: '$rating', count: { $sum: 1 } } },
+        { $sort: { _id: -1 } }
+      ]),
+      
+      reviewModel.aggregate([
+        { $match: matchCondition },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: -1 } },
+        { $limit: 30 }
+      ])
+    ]);
 
-  res.success(responseData, 'تم جلب إحصائيات التقييمات بنجاح');
+    return {
+      summary: {
+        total: totalReviews,
+        artworkReviews,
+        artistReviews,
+        avgRating: avgRating[0]?.avgRating || 0
+      },
+      distribution: topRatedContent,
+      activity: recentActivity.reverse()
+    };
+  }, { period, groupBy });
+
+  res.success(cachedData, 'تم جلب إحصائيات التقييمات بنجاح');
 });
 
 /**

@@ -1,6 +1,7 @@
 import categoryModel from '../../../DB/models/category.model.js';
 import artworkModel from '../../../DB/models/artwork.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
+import { cacheCategories, invalidateCategoryCache } from '../../utils/cacheHelpers.js';
 
 /**
  * Create a new category
@@ -26,6 +27,9 @@ export const createCategory = asyncHandler(async (req, res) => {
       description: description?.trim(), 
       image 
     });
+
+    // Invalidate category cache after creation
+    await invalidateCategoryCache();
 
     res.success(category, 'تم إنشاء التصنيف بنجاح', 201);
   } catch (error) {
@@ -73,6 +77,9 @@ export const updateCategory = asyncHandler(async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    // Invalidate category cache after update
+    await invalidateCategoryCache();
+
     res.success(category, 'تم تحديث التصنيف بنجاح');
   } catch (error) {
     console.error('Error updating category:', error);
@@ -106,6 +113,10 @@ export const deleteCategory = asyncHandler(async (req, res) => {
     }
     
     await categoryModel.findByIdAndDelete(id);
+    
+    // Invalidate category cache after deletion
+    await invalidateCategoryCache();
+    
     res.success(null, 'تم حذف التصنيف بنجاح');
   } catch (error) {
     console.error('Error deleting category:', error);
@@ -336,7 +347,9 @@ export const getPopularCategories = asyncHandler(async (req, res) => {
   const { limit = 8 } = req.query;
 
   try {
-    const popularCategories = await categoryModel.aggregate([
+    // Use cached data with fallback to database
+    const popularCategories = await cacheCategories(async () => {
+      return await categoryModel.aggregate([
       {
         $lookup: {
           from: 'artworks',
@@ -370,6 +383,7 @@ export const getPopularCategories = asyncHandler(async (req, res) => {
         $limit: parseInt(limit)
       }
     ]);
+    }, { limit: parseInt(limit), includeStats: true });
 
     res.success(popularCategories, 'تم جلب التصنيفات الشائعة بنجاح');
   } catch (error) {

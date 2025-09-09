@@ -7,6 +7,7 @@ import http from 'http';
 import { initializeSocketIO } from './src/utils/socketService.js';
 import { ensureDatabaseConnection } from './src/utils/mongodbUtils.js';
 import { initScheduledJobs, stopScheduledJobs } from './src/utils/cron.js';
+import { initializeRedis, shutdownRedis } from './src/utils/redisInit.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -38,10 +39,25 @@ const initializeDatabase = async () => {
   }
 };
 
-// Initialize database connection
+// Initialize Redis connection
+const initializeRedisConnection = async () => {
+  try {
+    await initializeRedis();
+  } catch (err) {
+    console.error('❌ Redis initialization error:', err);
+    // Continue without Redis cache
+  }
+};
+
+// Initialize database and Redis connections
 initializeDatabase().catch(err => {
   console.error('❌ Initial database connection failed:', err.message);
   // Don't crash the app, we'll retry per-request
+});
+
+initializeRedisConnection().catch(err => {
+  console.error('❌ Initial Redis connection failed:', err.message);
+  // Continue without Redis cache
 });
 
 // Add middleware to check database connection on each request
@@ -773,6 +789,14 @@ if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
     if (scheduledJobs) {
       stopScheduledJobs(scheduledJobs);
       console.log('✅ Scheduled jobs stopped');
+    }
+
+    // Close Redis connection
+    try {
+      await shutdownRedis();
+      console.log('✅ Redis connection closed');
+    } catch (err) {
+      console.error('❌ Error closing Redis:', err);
     }
 
     // Close database connections

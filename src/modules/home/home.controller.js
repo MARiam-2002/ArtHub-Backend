@@ -3,6 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
+import { cacheHomeData, cacheCategories, cacheArtworkList } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -123,21 +124,23 @@ function formatCategories(categories) {
 
 /**
  * Main controller to get all data for the home screen
- * Optimized for Flutter integration with proper image handling
+ * Optimized for Flutter integration with proper image handling and Redis caching
  */
 export const getHomeData = asyncHandler(async (req, res, next) => {
   try {
     await ensureDatabaseConnection();
     const userId = req.user?._id;
 
-    const [
-      categories,
-      featuredArtists,
-      featuredArtworks,
-      latestArtists,
-      mostRatedArtworks,
-      trendingArtworks,
-    ] = await Promise.all([
+    // Use cached data with fallback to database
+    const homeData = await cacheHomeData(userId, async () => {
+      const [
+        categories,
+        featuredArtists,
+        featuredArtworks,
+        latestArtists,
+        mostRatedArtworks,
+        trendingArtworks,
+      ] = await Promise.all([
       // 1. Categories with artwork count
       categoryModel.aggregate([
         { $match: {} },
@@ -464,34 +467,63 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         })
         .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
         .lean(),
-    ]);
+      ]);
 
-    // 7. Personalized Artworks (Based on User History)
-    let personalizedArtworks = [];
-    if (userId) {
-      const user = await userModel.findById(userId)
-        .select('recentlyViewed wishlist')
-        .lean();
-      
-      const recentCategories = user?.recentlyViewed?.map(h => h.category).filter(Boolean) || [];
-      const wishlistIds = user?.wishlist?.map(id => new mongoose.Types.ObjectId(id)) || [];
-      
-      const excludedIds = [
-        ...featuredArtworks.map(a => a._id),
-        ...mostRatedArtworks.map(a => a._id),
-        ...trendingArtworks.map(a => a._id),
-      ].map(id => new mongoose.Types.ObjectId(id));
+      // 7. Personalized Artworks (Based on User History)
+      let personalizedArtworks = [];
+      if (userId) {
+        const user = await userModel.findById(userId)
+          .select('recentlyViewed wishlist')
+          .lean();
+        
+        const recentCategories = user?.recentlyViewed?.map(h => h.category).filter(Boolean) || [];
+        const wishlistIds = user?.wishlist?.map(id => new mongoose.Types.ObjectId(id)) || [];
+        
+        const excludedIds = [
+          ...featuredArtworks.map(a => a._id),
+          ...mostRatedArtworks.map(a => a._id),
+          ...trendingArtworks.map(a => a._id),
+        ].map(id => new mongoose.Types.ObjectId(id));
 
-      if (recentCategories.length > 0) {
-        personalizedArtworks = await artworkModel.find({
-          $or: [
-            { category: { $in: recentCategories } },
-            { _id: { $in: wishlistIds } }
-          ],
-          _id: { $nin: excludedIds },
-          isAvailable: true,
+        if (recentCategories.length > 0) {
+          personalizedArtworks = await artworkModel.find({
+            $or: [
+              { category: { $in: recentCategories } },
+              { _id: { $in: wishlistIds } }
+            ],
+            _id: { $nin: excludedIds },
+            isAvailable: true,
+          })
+          .limit(6)
+          .populate({ 
+            path: 'artist', 
+            select: 'displayName profileImage photoURL job isVerified' 
+          })
+          .populate({ 
+            path: 'category', 
+            select: 'name image' 
+          })
+          .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
+          .lean();
+        }
+      }
+      
+      // Fallback for personalized content
+      if (personalizedArtworks.length < 6) {
+        const extraNeeded = 6 - personalizedArtworks.length;
+        const allExcludedIds = [
+          ...featuredArtworks.map(a => a._id),
+          ...mostRatedArtworks.map(a => a._id),
+          ...trendingArtworks.map(a => a._id),
+          ...personalizedArtworks.map(a => a._id),
+        ].map(id => new mongoose.Types.ObjectId(id));
+
+        const fallbackArtworks = await artworkModel.find({ 
+          isAvailable: true, 
+          _id: { $nin: allExcludedIds } 
         })
-        .limit(6)
+        .sort({ likeCount: -1, createdAt: -1 })
+        .limit(extraNeeded)
         .populate({ 
           path: 'artist', 
           select: 'displayName profileImage photoURL job isVerified' 
@@ -502,51 +534,34 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         })
         .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
         .lean();
+        
+        personalizedArtworks.push(...fallbackArtworks);
       }
-    }
-    
-    // Fallback for personalized content
-    if (personalizedArtworks.length < 6) {
-      const extraNeeded = 6 - personalizedArtworks.length;
-      const allExcludedIds = [
-        ...featuredArtworks.map(a => a._id),
-        ...mostRatedArtworks.map(a => a._id),
-        ...trendingArtworks.map(a => a._id),
-        ...personalizedArtworks.map(a => a._id),
-      ].map(id => new mongoose.Types.ObjectId(id));
 
-      const fallbackArtworks = await artworkModel.find({ 
-        isAvailable: true, 
-        _id: { $nin: allExcludedIds } 
-      })
-      .sort({ likeCount: -1, createdAt: -1 })
-      .limit(extraNeeded)
-      .populate({ 
-        path: 'artist', 
-        select: 'displayName profileImage photoURL job isVerified' 
-      })
-      .populate({ 
-        path: 'category', 
-        select: 'name image' 
-      })
-      .select('title description image images price currency dimensions medium year tags artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured createdAt updatedAt')
-      .lean();
-      
-      personalizedArtworks.push(...fallbackArtworks);
-    }
+      // Return the data for caching
+      return {
+        categories,
+        featuredArtists,
+        featuredArtworks,
+        latestArtists,
+        mostRatedArtworks,
+        trendingArtworks,
+        personalizedArtworks,
+      };
+    });
 
     // Prepare response with proper structure for Flutter
     const response = {
       success: true,
       message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
       data: {
-        categories: formatCategories(categories),
-        featuredArtists: formatArtists(featuredArtists),
-        featuredArtworks: formatArtworks(featuredArtworks),
-        latestArtists: formatArtists(latestArtists),
-        mostRatedArtworks: formatArtworks(mostRatedArtworks),
-        trendingArtworks: formatArtworks(trendingArtworks),
-        personalizedArtworks: formatArtworks(personalizedArtworks),
+        categories: formatCategories(homeData.categories),
+        featuredArtists: formatArtists(homeData.featuredArtists),
+        featuredArtworks: formatArtworks(homeData.featuredArtworks),
+        latestArtists: formatArtists(homeData.latestArtists),
+        mostRatedArtworks: formatArtworks(homeData.mostRatedArtworks),
+        trendingArtworks: formatArtworks(homeData.trendingArtworks),
+        personalizedArtworks: formatArtworks(homeData.personalizedArtworks),
       },
       meta: {
         timestamp: new Date().toISOString(),

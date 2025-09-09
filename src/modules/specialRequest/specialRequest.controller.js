@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { getPaginationParams } from '../../utils/pagination.js';
 import { sendSpecialRequestNotification } from '../../utils/pushNotifications.js';
 import transactionModel from '../../../DB/models/transaction.model.js';
+import { cacheSpecialRequests, invalidateUserCache } from '../../utils/cacheHelpers.js';
 
 /**
  * Helper function to safely format image URLs
@@ -459,6 +460,12 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       }
     };
 
+    // Invalidate cache for both users
+    await Promise.all([
+      invalidateUserCache(userId),
+      invalidateUserCache(artistId)
+    ]);
+
     res.status(201).json(response);
 
   } catch (error) {
@@ -483,50 +490,55 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     // إذا كان limit=full، لا نحتاج pagination
     const { skip } = isFullRequest ? { skip: 0 } : getPaginationParams({ page, limit });
 
-    // بناء الاستعلام للطلبات الخاصة
-    const specialQuery = { sender: userId };
-    if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-      specialQuery.status = status;
-    }
-    if (requestType) {
-      specialQuery.requestType = requestType;
-    }
-    if (priority) {
-      specialQuery.priority = priority;
-    }
+    // Use cache for user requests
+    const cachedData = await cacheSpecialRequests(userId, 'my', async () => {
+      // بناء الاستعلام للطلبات الخاصة
+      const specialQuery = { sender: userId };
+      if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+        specialQuery.status = status;
+      }
+      if (requestType) {
+        specialQuery.requestType = requestType;
+      }
+      if (priority) {
+        specialQuery.priority = priority;
+      }
 
-    // جلب الطلبات الخاصة فقط
-    const specialRequests = await specialRequestModel.find(specialQuery)
-      .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-      .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-      .populate('artwork', 'title image')
-      .lean();
+      // جلب الطلبات الخاصة فقط
+      const specialRequests = await specialRequestModel.find(specialQuery)
+        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artwork', 'title image')
+        .lean();
 
-    // تلخيص ودمج
-    const summarizedSpecial = specialRequests.map(r => ({ ...summarizeSpecialRequest(r), orderType: 'special' }));
-    let allRequests = [...summarizedSpecial];
+      // تلخيص ودمج
+      const summarizedSpecial = specialRequests.map(r => ({ ...summarizeSpecialRequest(r), orderType: 'special' }));
+      let allRequests = [...summarizedSpecial];
 
-    // ترتيب حسب createdAt
-    allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      // ترتيب حسب createdAt
+      allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      return allRequests;
+    }, { page, limit, status, requestType, priority });
 
     // إذا كان limit=full، نرسل جميع الطلبات بدون pagination
-    const finalRequests = isFullRequest ? allRequests : allRequests.slice(skip, skip + Number(limit));
+    const finalRequests = isFullRequest ? cachedData : cachedData.slice(skip, skip + Number(limit));
 
     // pagination meta
     const paginationMeta = isFullRequest ? {
       currentPage: 1,
       totalPages: 1,
-      totalItems: allRequests.length,
-      itemsPerPage: allRequests.length,
+      totalItems: cachedData.length,
+      itemsPerPage: cachedData.length,
       hasNextPage: false,
       hasPrevPage: false,
       isFullRequest: true
     } : {
       currentPage: Number(page),
-      totalPages: Math.ceil(allRequests.length / Number(limit)),
-      totalItems: allRequests.length,
+      totalPages: Math.ceil(cachedData.length / Number(limit)),
+      totalItems: cachedData.length,
       itemsPerPage: Number(limit),
-      hasNextPage: skip + finalRequests.length < allRequests.length,
+      hasNextPage: skip + finalRequests.length < cachedData.length,
       hasPrevPage: Number(page) > 1,
       isFullRequest: false
     };
@@ -537,7 +549,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       data: {
         requests: finalRequests,
         pagination: paginationMeta,
-        totalCount: allRequests.length
+        totalCount: cachedData.length
       },
       meta: {
         userId: userId,
@@ -576,57 +588,62 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // بناء الاستعلام
-    const query = { artist: artistId };
-    
-    if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-      query.status = status;
-    }
-    
-    if (requestType) {
-      query.requestType = requestType;
-    }
-    
-    if (priority) {
-      query.priority = priority;
-    }
+    // Use cache for artist requests
+    const cachedData = await cacheSpecialRequests(artistId, 'artist', async () => {
+      // بناء الاستعلام
+      const query = { artist: artistId };
+      
+      if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+        query.status = status;
+      }
+      
+      if (requestType) {
+        query.requestType = requestType;
+      }
+      
+      if (priority) {
+        query.priority = priority;
+      }
 
-    // بناء خيارات الترتيب
-    const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+      // بناء خيارات الترتيب
+      const sortOptions = {};
+      sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // تنفيذ الاستعلام - إذا كان limit=full، لا نطبق limit
-    const [requests, totalCount] = await Promise.all([
-      specialRequestModel
-        .find(query)
-        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .populate('category', 'name image')
-        .sort(sortOptions)
-        .skip(isFullRequest ? 0 : skip)
-        .limit(isFullRequest ? 0 : Number(limit)) // 0 means no limit
-        .lean(),
-      specialRequestModel.countDocuments(query)
-    ]);
+      // تنفيذ الاستعلام - إذا كان limit=full، لا نطبق limit
+      const [requests, totalCount] = await Promise.all([
+        specialRequestModel
+          .find(query)
+          .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+          .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+          .populate('category', 'name image')
+          .sort(sortOptions)
+          .skip(isFullRequest ? 0 : skip)
+          .limit(isFullRequest ? 0 : Number(limit)) // 0 means no limit
+          .lean(),
+        specialRequestModel.countDocuments(query)
+      ]);
+
+      return { requests, totalCount };
+    }, { page, limit, status, requestType, priority });
 
     // Format requests for Flutter
-    const formattedRequests = requests.map(request => formatSpecialRequest(request));
+    const formattedRequests = cachedData.requests.map(request => formatSpecialRequest(request));
 
     // إعداد معلومات الصفحات
     const paginationMeta = isFullRequest ? {
       currentPage: 1,
       totalPages: 1,
-      totalItems: totalCount,
-      itemsPerPage: totalCount,
+      totalItems: cachedData.totalCount,
+      itemsPerPage: cachedData.totalCount,
       hasNextPage: false,
       hasPrevPage: false,
       isFullRequest: true
     } : {
       currentPage: Number(page),
-      totalPages: Math.ceil(totalCount / Number(limit)),
-      totalItems: totalCount,
+      totalPages: Math.ceil(cachedData.totalCount / Number(limit)),
+      totalItems: cachedData.totalCount,
       itemsPerPage: Number(limit),
-      hasNextPage: skip + requests.length < totalCount,
+      hasNextPage: skip + cachedData.requests.length < cachedData.totalCount,
       hasPrevPage: Number(page) > 1,
       isFullRequest: false
     };
@@ -685,15 +702,29 @@ export const getRequestById = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // جلب الطلب مع تفاصيل كاملة
-    const request = await specialRequestModel
-      .findById(requestId)
-      .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-      .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-      .populate('category', 'name image')
-      .lean();
+    // Use cache for request details
+    const cacheKey = `request:details:${requestId}:${userId}`;
+    const cachedData = await cacheSpecialRequests(userId, 'details', async () => {
+      // جلب الطلب مع تفاصيل كاملة
+      const request = await specialRequestModel
+        .findById(requestId)
+        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('category', 'name image')
+        .lean();
 
-    if (!request) {
+      if (!request) {
+        return { request: null, isSender: false, isArtist: false };
+      }
+
+      // التحقق من أن المستخدم هو صاحب الطلب أو الفنان
+      const isSender = request.sender._id.toString() === userId.toString();
+      const isArtist = request.artist._id.toString() === userId.toString();
+
+      return { request, isSender, isArtist };
+    }, { requestId });
+
+    if (!cachedData.request) {
       return res.status(404).json({
         success: false,
         message: 'الطلب غير موجود',
@@ -701,11 +732,7 @@ export const getRequestById = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // التحقق من أن المستخدم هو صاحب الطلب أو الفنان
-    const isSender = request.sender._id.toString() === userId.toString();
-    const isArtist = request.artist._id.toString() === userId.toString();
-
-    if (!isSender && !isArtist) {
+    if (!cachedData.isSender && !cachedData.isArtist) {
       return res.status(403).json({
         success: false,
         message: 'غير مصرح لك بعرض هذا الطلب',
@@ -717,16 +744,16 @@ export const getRequestById = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم جلب تفاصيل الطلب بنجاح',
       data: {
-        specialRequest: formatSpecialRequest(request),
+        specialRequest: formatSpecialRequest(cachedData.request),
         userRelation: {
-          isSender,
-          isArtist,
-          canEdit: isSender && request.status === 'pending',
-          canAccept: isArtist && request.status === 'pending',
-          canReject: isArtist && request.status === 'pending',
-          canComplete: isArtist && ['accepted', 'in_progress'].includes(request.status),
-          canCancel: (isSender && ['pending', 'accepted'].includes(request.status)) || 
-                    (isArtist && request.status === 'pending')
+          isSender: cachedData.isSender,
+          isArtist: cachedData.isArtist,
+          canEdit: cachedData.isSender && cachedData.request.status === 'pending',
+          canAccept: cachedData.isArtist && cachedData.request.status === 'pending',
+          canReject: cachedData.isArtist && cachedData.request.status === 'pending',
+          canComplete: cachedData.isArtist && ['accepted', 'in_progress'].includes(cachedData.request.status),
+          canCancel: (cachedData.isSender && ['pending', 'accepted'].includes(cachedData.request.status)) || 
+                    (cachedData.isArtist && cachedData.request.status === 'pending')
         }
       },
       meta: {
