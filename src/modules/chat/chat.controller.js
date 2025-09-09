@@ -646,7 +646,8 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
             userId,
             senderName,
             content,
-            chatId
+            chatId,
+            messageType
           );
           
           console.log(`✅ Push notification sent to ${receiver.displayName || receiver.email}`);

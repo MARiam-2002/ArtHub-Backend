@@ -646,7 +646,8 @@ export const sendChatMessageNotification = async (
   senderId,
   senderName,
   messageText,
-  chatId
+  chatId,
+  messageType = 'text'
 ) => {
   try {
     // Get unread count for this specific chat
@@ -658,6 +659,50 @@ export const sendChatMessageNotification = async (
       isDeleted: { $ne: true }
     });
 
+    // Determine notification content based on message type
+    let notificationBody = {
+      ar: '',
+      en: ''
+    };
+
+    switch (messageType) {
+      case 'voice':
+        notificationBody = {
+          ar: 'رسالة صوتية جديدة',
+          en: 'New Voice Message'
+        };
+        break;
+      case 'image':
+        notificationBody = {
+          ar: 'صورة جديدة',
+          en: 'New Image'
+        };
+        break;
+      case 'file':
+        notificationBody = {
+          ar: 'ملف جديد',
+          en: 'New File'
+        };
+        break;
+      case 'location':
+        notificationBody = {
+          ar: 'موقع جديد',
+          en: 'New Location'
+        };
+        break;
+      case 'contact':
+        notificationBody = {
+          ar: 'جهة اتصال جديدة',
+          en: 'New Contact'
+        };
+        break;
+      default: // text
+        notificationBody = {
+          ar: messageText ? messageText.substring(0, 100) : 'رسالة جديدة',
+          en: messageText ? messageText.substring(0, 100) : 'New Message'
+        };
+    }
+
     return sendPushNotificationToUser(
       receiverId,
       {
@@ -665,16 +710,14 @@ export const sendChatMessageNotification = async (
           ar: senderName || 'رسالة جديدة',
           en: senderName || 'New Message'
         },
-        body: {
-          ar: messageText ? messageText.substring(0, 100) : 'صورة جديدة',
-          en: messageText ? messageText.substring(0, 100) : 'New Image'
-        }
+        body: notificationBody
       },
       {
         screen: 'CHAT_DETAIL',
         chatId: chatId.toString(),
         senderId: senderId.toString(),
-        type: 'chat_message',
+        type: messageType === 'voice' ? 'voice' : 'chat_message',
+        messageType: messageType,
         unreadCount: unreadCount.toString(),
         timestamp: Date.now().toString()
       }
@@ -682,6 +725,37 @@ export const sendChatMessageNotification = async (
   } catch (error) {
     console.error('Error sending chat notification:', error);
     // Fallback to basic notification without unread count
+    let notificationBody = {
+      ar: '',
+      en: ''
+    };
+
+    switch (messageType) {
+      case 'voice':
+        notificationBody = {
+          ar: 'رسالة صوتية جديدة',
+          en: 'New Voice Message'
+        };
+        break;
+      case 'image':
+        notificationBody = {
+          ar: 'صورة جديدة',
+          en: 'New Image'
+        };
+        break;
+      case 'file':
+        notificationBody = {
+          ar: 'ملف جديد',
+          en: 'New File'
+        };
+        break;
+      default:
+        notificationBody = {
+          ar: messageText ? messageText.substring(0, 100) : 'رسالة جديدة',
+          en: messageText ? messageText.substring(0, 100) : 'New Message'
+        };
+    }
+
     return sendPushNotificationToUser(
       receiverId,
       {
@@ -689,16 +763,14 @@ export const sendChatMessageNotification = async (
           ar: senderName || 'رسالة جديدة',
           en: senderName || 'New Message'
         },
-        body: {
-          ar: messageText ? messageText.substring(0, 100) : 'صورة جديدة',
-          en: messageText ? messageText.substring(0, 100) : 'New Image'
-        }
+        body: notificationBody
       },
       {
         screen: 'CHAT_DETAIL',
         chatId: chatId.toString(),
         senderId: senderId.toString(),
-        type: 'chat_message',
+        type: messageType === 'voice' ? 'voice' : 'chat_message',
+        messageType: messageType,
         timestamp: Date.now().toString()
       }
     );
