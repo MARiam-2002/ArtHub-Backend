@@ -390,7 +390,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
           data: {
             action: 'cancelled',
             specialRequest: summarizeSpecialRequest(cancelledRequest),
-            timeElapsed: `${hoursDifference.toFixed(2)} hours`
+            timeElapsed: `${minutesDifference.toFixed(2)} minutes`
           },
           meta: {
             timestamp: new Date().toISOString(),
