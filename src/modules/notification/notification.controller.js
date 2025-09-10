@@ -41,19 +41,46 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
     }, { page, limit });
 
     // Format notifications for mobile app
-    const formattedNotifications = cachedData.notifications.map(notification => ({
-      _id: notification._id,
-      title: notification.title?.ar || notification.title,
-      message: notification.message?.ar || notification.message,
-      type: notification.type,
-      isRead: notification.isRead,
-      sender: notification.sender ? {
-        _id: notification.sender._id,
-        displayName: notification.sender.displayName,
-        profileImage: notification.sender.profileImage?.url
-      } : null,
-      data: notification.data || {},
-      createdAt: notification.createdAt
+    const formattedNotifications = await Promise.all(cachedData.notifications.map(async (notification) => {
+      let senderInfo = null;
+      
+      // إذا كان sender موجود في populate
+      if (notification.sender) {
+        senderInfo = {
+          _id: notification.sender._id,
+          displayName: notification.sender.displayName,
+          profileImage: notification.sender.profileImage?.url || notification.sender.profileImage
+        };
+      } 
+      // إذا لم يكن sender موجود، نحاول الحصول عليه من data.senderId
+      else if (notification.data?.senderId) {
+        try {
+          const senderUser = await userModel.findById(notification.data.senderId)
+            .select('displayName profileImage photoURL')
+            .lean();
+          
+          if (senderUser) {
+            senderInfo = {
+              _id: senderUser._id,
+              displayName: senderUser.displayName,
+              profileImage: senderUser.profileImage?.url || senderUser.profileImage || senderUser.photoURL
+            };
+          }
+        } catch (error) {
+          console.warn('Error fetching sender info:', error);
+        }
+      }
+
+      return {
+        _id: notification._id,
+        title: notification.title?.ar || notification.title,
+        message: notification.message?.ar || notification.message,
+        type: notification.type,
+        isRead: notification.isRead,
+        sender: senderInfo,
+        data: notification.data || {},
+        createdAt: notification.createdAt
+      };
     }));
 
     const response = {
