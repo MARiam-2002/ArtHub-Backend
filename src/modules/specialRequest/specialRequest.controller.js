@@ -312,98 +312,39 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // منطق Toggle للطلبات العادية (ready_artwork)
+    // التحقق من وجود طلب مشابه مسبقاً
+    const existingRequestQuery = {
+      sender: senderId,
+      artist: artist,
+      requestType: requestType
+    };
+
+    // إضافة artwork للاستعلام إذا كان نوع الطلب ready_artwork
     if (requestType === 'ready_artwork' && artwork) {
-      // البحث عن طلب موجود بنفس المستخدم والفنان والعمل الفني
-      const existingRequest = await specialRequestModel.findOne({
-        sender: senderId,
-        artist: artist,
-        artwork: artwork,
-        requestType: 'ready_artwork',
-        isOrdered: true // البحث عن الطلبات المُفعلة فقط
-      }).lean();
-
-      if (existingRequest) {
-        // حساب الفرق الزمني بالدقائق (للاختبار)
-        const currentTime = new Date();
-        const requestTime = new Date(existingRequest.createdAt);
-        const minutesDifference = (currentTime - requestTime) / (1000 * 60);
-
-        console.log(`🔍 طلب موجود منذ ${minutesDifference.toFixed(2)} دقيقة`);
-
-        // إذا مر أكثر من دقيقتين، رفض الإلغاء
-        if (minutesDifference > 2) {
-          return res.status(400).json({
-            success: false,
-            message: 'لا يمكن إلغاء الطلب بعد مرور دقيقتين من إنشائه',
-            data: {
-              existingRequest: {
-                _id: existingRequest._id,
-                status: existingRequest.status,
-                isOrdered: existingRequest.isOrdered !== undefined ? existingRequest.isOrdered : true,
-                createdAt: existingRequest.createdAt,
-                minutesElapsed: Math.round(minutesDifference * 100) / 100
-              }
-            },
-            meta: {
-              action: 'cancel_rejected',
-              reason: 'time_limit_exceeded',
-              timeLimit: '2 minutes',
-              timeElapsed: `${minutesDifference.toFixed(2)} minutes`
-            }
-          });
-        }
-
-        // إلغاء الطلب الموجود (تغيير isOrdered إلى false و status إلى cancelled)
-        const cancelledRequest = await specialRequestModel.findByIdAndUpdate(
-          existingRequest._id,
-          {
-            isOrdered: false,
-            status: 'cancelled',
-            cancelledAt: new Date(),
-            cancelledBy: senderId,
-            cancellationReason: 'إلغاء بواسطة المستخدم خلال فترة الدقيقتين المسموحة'
-          },
-          { new: true }
-        ).populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .lean();
-
-        // إرسال إشعار للفنان بإلغاء الطلب
-        const senderUser = await userModel.findById(senderId).select('displayName').lean();
-        const senderName = senderUser?.displayName || 'مستخدم';
-
-        try {
-          await sendSpecialRequestNotification(
-            artist,
-            'cancelled',
-            senderName,
-            description.substring(0, 50),
-            requestType
-          );
-        } catch (notificationError) {
-          console.warn('Cancel notification failed:', notificationError);
-        }
-
-        const response = {
-          success: true,
-          message: 'تم إلغاء الطلب بنجاح',
-          data: {
-            action: 'cancelled',
-            specialRequest: summarizeSpecialRequest(cancelledRequest),
-            timeElapsed: `${minutesDifference.toFixed(2)} minutes`
-          },
-          meta: {
-            timestamp: new Date().toISOString(),
-            userId: senderId,
-            action: 'cancel_request',
-            originalRequestId: existingRequest._id
-          }
-        };
-
-        return res.status(200).json(response);
-      }
+      existingRequestQuery.artwork = artwork;
     }
+
+    const existingRequest = await specialRequestModel.findOne(existingRequestQuery).lean();
+
+    if (existingRequest) {
+      return res.status(400).json({
+        success: false,
+        message: 'تم طلب هذا العمل من هذا الفنان مسبقاً',
+        data: {
+          existingRequest: {
+            _id: existingRequest._id,
+            status: existingRequest.status,
+            createdAt: existingRequest.createdAt,
+            requestType: existingRequest.requestType
+          }
+        },
+        meta: {
+          action: 'duplicate_request',
+          reason: 'request_already_exists'
+        }
+      });
+    }
+
 
     // إنشاء طلب جديد (الطلبات الخاصة أو الطلبات العادية الجديدة)
     const requestData = {
@@ -518,8 +459,8 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
         queryCopy.status = status;
       } else if (!status) {
-        // إذا لم يتم تمرير status، نعرض جميع الحالات
-        // queryCopy.status = { $in: ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'] };
+        // إذا لم يتم تمرير status، نعرض فقط الطلبات المكتملة والمعلقة
+        queryCopy.status = { $in: ['pending', 'completed'] };
       }
       
       if (requestType) {
@@ -1220,6 +1161,32 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
         success: false,
         message: 'غير مصرح لك بحذف هذا الطلب',
         data: null
+      });
+    }
+
+    // التحقق من الوقت المسموح للحذف (دقيقتين)
+    const currentTime = new Date();
+    const requestTime = new Date(request.createdAt);
+    const minutesDifference = (currentTime - requestTime) / (1000 * 60);
+
+    if (minutesDifference > 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'لا يمكن حذف الطلب بعد مرور دقيقتين من إنشائه',
+        data: {
+          request: {
+            _id: request._id,
+            status: request.status,
+            createdAt: request.createdAt,
+            minutesElapsed: Math.round(minutesDifference * 100) / 100
+          }
+        },
+        meta: {
+          action: 'delete_rejected',
+          reason: 'time_limit_exceeded',
+          timeLimit: '2 minutes',
+          timeElapsed: `${minutesDifference.toFixed(2)} minutes`
+        }
       });
     }
 
