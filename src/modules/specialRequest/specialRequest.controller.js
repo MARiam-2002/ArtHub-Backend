@@ -1,6 +1,7 @@
 import specialRequestModel from '../../../DB/models/specialRequest.model.js';
 import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
+import notificationModel from '../../../DB/models/notification.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
 import mongoose from 'mongoose';
@@ -388,6 +389,35 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
     const senderName = senderUser?.displayName || 'مستخدم';
 
     try {
+      // إنشاء إشعار في قاعدة البيانات
+      const notificationTitle = requestType === 'ready_artwork' ? 'طلب عادي جديد' : 'طلب خاص جديد';
+      const notificationMessage = `${senderName} أرسل لك ${requestType === 'ready_artwork' ? 'طلب عادي' : 'طلب خاص'}: ${description.substring(0, 50)}...`;
+
+      await notificationModel.create({
+        user: artist, // الفنان المستقبل للإشعار
+        sender: senderId, // المستخدم المرسل للطلب
+        title: {
+          ar: notificationTitle,
+          en: requestType === 'ready_artwork' ? 'New Regular Order' : 'New Special Request'
+        },
+        message: {
+          ar: notificationMessage,
+          en: `${senderName} sent you a ${requestType === 'ready_artwork' ? 'regular order' : 'special request'}: ${description.substring(0, 50)}...`
+        },
+        type: 'request',
+        ref: specialRequest._id,
+        refModel: 'SpecialRequest',
+        data: {
+          requestType: requestType,
+          requestId: specialRequest._id,
+          senderId: senderId,
+          artistId: artist,
+          budget: Number(budget),
+          duration: Number(duration)
+        }
+      });
+
+      // إرسال push notification
       await sendSpecialRequestNotification(
         artist,
         'new_request',
@@ -396,7 +426,7 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
         specialRequest.requestType // تمرير نوع الطلب (custom_artwork أو ready_artwork)
       );
     } catch (notificationError) {
-      console.warn('Push notification failed:', notificationError);
+      console.warn('Notification creation/push failed:', notificationError);
     }
 
     const response = {
