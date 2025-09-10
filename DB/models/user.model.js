@@ -61,12 +61,12 @@ const userSchema = new Schema(
       url: {
         type: String,
         default:
-          'https://asset.cloudinary.com/dgzucjqgi/554357d17f851fe8249797db949e1766'
+          'https://res.cloudinary.com/dgzucjqgi/image/upload/v1755218681/WhatsApp_Image_2025-07-22_at_05.04.10_fcc150e2_aswz5i.jpg'
       },
       id: {
         type: String,
         default:
-          'dgzucjqgi/554357d17f851fe8249797db949e1766'
+          'https://asset.cloudinary.com/dgzucjqgi/554357d17f851fe8249797db949e1766'
       }
     },
 
