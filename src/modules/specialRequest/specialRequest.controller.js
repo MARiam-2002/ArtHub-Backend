@@ -312,6 +312,36 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
+    // التحقق من عدم وجود طلب سابق لنفس المستخدم والفنان والعمل الفني
+    if (requestType === 'ready_artwork' && artwork) {
+      const existingRequest = await specialRequestModel.findOne({
+        sender: senderId,
+        artist: artist,
+        artwork: artwork,
+        requestType: 'ready_artwork',
+        status: { $in: ['pending', 'accepted', 'in_progress', 'review'] } // الطلبات النشطة فقط
+      }).lean();
+
+      if (existingRequest) {
+        return res.status(400).json({
+          success: false,
+          message: 'لقد قمت بطلب هذا العمل الفني من قبل ولا يمكن طلبه مرة أخرى',
+          data: {
+            existingRequest: {
+              _id: existingRequest._id,
+              status: existingRequest.status,
+              createdAt: existingRequest.createdAt
+            }
+          },
+          meta: {
+            action: 'duplicate_request',
+            reason: 'already_requested',
+            existingRequestId: existingRequest._id
+          }
+        });
+      }
+    }
+
     // التحقق من وجود طلب مشابه مسبقاً
     const existingRequestQuery = {
       sender: senderId,
@@ -322,27 +352,6 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
     // إضافة artwork للاستعلام إذا كان نوع الطلب ready_artwork
     if (requestType === 'ready_artwork' && artwork) {
       existingRequestQuery.artwork = artwork;
-    }
-
-    const existingRequest = await specialRequestModel.findOne(existingRequestQuery).lean();
-
-    if (existingRequest) {
-      return res.status(400).json({
-        success: false,
-        message: 'تم طلب هذا العمل من هذا الفنان مسبقاً',
-        data: {
-          existingRequest: {
-            _id: existingRequest._id,
-            status: existingRequest.status,
-            createdAt: existingRequest.createdAt,
-            requestType: existingRequest.requestType
-          }
-        },
-        meta: {
-          action: 'duplicate_request',
-          reason: 'request_already_exists'
-        }
-      });
     }
 
 
