@@ -15,24 +15,33 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
     const { page = 1, limit = 20 } = req.query;
 
-    const skip = (page - 1) * limit;
-    const filter = { user: userId };
+    // Use cache for notifications with smart invalidation
+    const cachedData = await cacheNotifications(userId, async () => {
+      const skip = (page - 1) * limit;
+      const filter = { user: userId };
 
-    // Get notifications and counts in parallel
-    const [notifications, totalCount, unreadCount] = await Promise.all([
-      notificationModel
-        .find(filter)
-        .populate('sender', 'displayName profileImage')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
-      notificationModel.countDocuments(filter),
-      notificationModel.countDocuments({ user: userId, isRead: false })
-    ]);
+      // Get notifications and counts in parallel
+      const [notifications, totalCount, unreadCount] = await Promise.all([
+        notificationModel
+          .find(filter)
+          .populate('sender', 'displayName profileImage')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(Number(limit))
+          .lean(),
+        notificationModel.countDocuments(filter),
+        notificationModel.countDocuments({ user: userId, isRead: false })
+      ]);
+
+      return {
+        notifications,
+        totalCount,
+        unreadCount
+      };
+    }, { page, limit });
 
     // Format notifications for mobile app
-    const formattedNotifications = await Promise.all(notifications.map(async (notification) => {
+    const formattedNotifications = await Promise.all(cachedData.notifications.map(async (notification) => {
       let senderInfo = null;
       
       // إذا كان sender موجود في populate
@@ -78,13 +87,13 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
       notifications: formattedNotifications,
       pagination: {
         currentPage: Number(page),
-        totalPages: Math.ceil(totalCount / limit),
-        totalItems: totalCount,
-        hasNextPage: (page - 1) * limit + notifications.length < totalCount
+        totalPages: Math.ceil(cachedData.totalCount / limit),
+        totalItems: cachedData.totalCount,
+        hasNextPage: (page - 1) * limit + cachedData.notifications.length < cachedData.totalCount
       },
       summary: {
-        total: totalCount,
-        unread: unreadCount
+        total: cachedData.totalCount,
+        unread: cachedData.unreadCount
       }
     };
 
