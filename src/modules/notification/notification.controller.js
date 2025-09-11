@@ -145,6 +145,11 @@ export const markAllAsRead = asyncHandler(async (req, res, next) => {
       }
     );
 
+    // Invalidate user cache to ensure immediate updates
+    await invalidateUserCache(userId);
+    
+    console.log(`🔄 Marked ${result.modifiedCount} notifications as read for user ${userId}, cache invalidated`);
+
     res.success({
       markedCount: result.modifiedCount
     }, 'تم وضع علامة مقروء على جميع الإشعارات');
@@ -251,6 +256,11 @@ export const deleteAllNotifications = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
 
     const result = await notificationModel.deleteMany({ user: userId });
+
+    // Invalidate user cache to ensure immediate updates
+    await invalidateUserCache(userId);
+    
+    console.log(`🗑️ Deleted ${result.deletedCount} notifications for user ${userId}, cache invalidated`);
 
     res.success({
       deletedCount: result.deletedCount
