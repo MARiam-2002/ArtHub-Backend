@@ -414,6 +414,11 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
     return res.fail(null, 'فقط المستخدمين العاديين يمكنهم تقييم الفنانين', 403);
   }
 
+  // التحقق من وجود rating أو comment على الأقل
+  if (!rating && !comment) {
+    return res.fail(null, 'يجب إدخال التقييم أو التعليق على الأقل', 400);
+  }
+
   // التحقق من صحة معرف الفنان
   if (!mongoose.Types.ObjectId.isValid(artist)) {
     return res.fail(null, 'معرف الفنان غير صالح', 400);
