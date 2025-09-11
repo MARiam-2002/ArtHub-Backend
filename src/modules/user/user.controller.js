@@ -353,6 +353,8 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
     // Invalidate user cache after profile update
     await invalidateUserCache(userId);
     await invalidateHomeCache(); // Invalidate home cache
+    
+    console.log(`🔄 Profile updated for user ${userId}, cache invalidated`);
 
     res.success(updatedUser, 'تم تحديث الملف الشخصي بنجاح');
   } catch (error) {

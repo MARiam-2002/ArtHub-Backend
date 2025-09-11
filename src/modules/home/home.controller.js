@@ -3,7 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
-import { cacheHomeData, cacheSearchResults, cacheArtworkDetails, cacheArtistProfile, cacheCategoryArtworks, invalidateHomeCache } from '../../utils/cacheHelpers.js';
+import { cacheHomeData, cacheSearchResults, cacheArtworkDetails, cacheArtistProfile, cacheCategoryArtworks, cacheUserProfile, invalidateHomeCache } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -550,22 +550,29 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       };
     }, { userId });
 
-    // Get current user data if authenticated
+    // Get current user data if authenticated (use cache for consistency)
     let currentUser = null;
     if (userId) {
-      const user = await userModel.findById(userId)
-        .select('displayName profileImage photoURL email role')
-        .lean();
-      
-      if (user) {
-        currentUser = {
+      // Use cache for user profile to ensure consistency with profile updates
+      const userProfileData = await cacheUserProfile(userId, async () => {
+        const user = await userModel.findById(userId)
+          .select('displayName profileImage photoURL email role')
+          .lean();
+        
+        if (!user) {
+          return null;
+        }
+
+        return {
           _id: user._id,
           displayName: user.displayName,
           profileImage: getImageUrl(user.profileImage, user.photoURL),
           email: user.email,
           role: user.role
         };
-      }
+      });
+      
+      currentUser = userProfileData;
     }
 
     // Prepare response with proper structure for Flutter (same format as before)
