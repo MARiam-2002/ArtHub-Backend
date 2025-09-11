@@ -491,63 +491,58 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       console.log(`🔍 User Query:`, specialQuery);
     }
 
-    // Use cache for user requests with smart invalidation
-    const cachedData = await cacheSpecialRequests(userId, 'my', async () => {
-      // إنشاء copy من الـ query لتجنب تعديل الـ original
-      const queryCopy = { ...specialQuery };
-      
-      // إضافة فلاتر الحالة إذا تم تمريرها
-      if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-        queryCopy.status = status;
-      } else if (!status) {
-        // إذا لم يتم تمرير status، نعرض فقط الطلبات المكتملة والمعلقة
-        queryCopy.status = { $in: ['pending', 'completed'] };
-      }
-      
-      if (requestType) {
-        queryCopy.requestType = requestType;
-      }
-      if (priority) {
-        queryCopy.priority = priority;
-      }
+    // إنشاء copy من الـ query لتجنب تعديل الـ original
+    const queryCopy = { ...specialQuery };
+    
+    // إضافة فلاتر الحالة إذا تم تمريرها
+    if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+      queryCopy.status = status;
+    } else if (!status) {
+      // إذا لم يتم تمرير status، نعرض فقط الطلبات المكتملة والمعلقة
+      queryCopy.status = { $in: ['pending', 'completed'] };
+    }
+    
+    if (requestType) {
+      queryCopy.requestType = requestType;
+    }
+    if (priority) {
+      queryCopy.priority = priority;
+    }
 
-      // جلب الطلبات الخاصة فقط
-      const specialRequests = await specialRequestModel.find(queryCopy)
-        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-        .populate('artwork', 'title image')
-        .lean();
-      
-      console.log(`📊 Found ${specialRequests.length} special requests for ${userRole} ${userId}`);
+    // جلب الطلبات الخاصة فقط
+    const specialRequests = await specialRequestModel.find(queryCopy)
+      .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+      .populate('artwork', 'title image')
+      .lean();
+    
+    console.log(`📊 Found ${specialRequests.length} special requests for ${userRole} ${userId}`);
 
-      // تلخيص ودمج
-      const summarizedSpecial = specialRequests.map(r => ({ ...summarizeSpecialRequest(r), orderType: 'special' }));
-      let allRequests = [...summarizedSpecial];
+    // تلخيص ودمج
+    const summarizedSpecial = specialRequests.map(r => ({ ...summarizeSpecialRequest(r), orderType: 'special' }));
+    let allRequests = [...summarizedSpecial];
 
-      // ترتيب حسب createdAt
-      allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-      return allRequests;
-    }, { page, limit, status, requestType, priority, userRole });
+    // ترتيب حسب createdAt
+    allRequests = allRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // إذا كان limit=full، نرسل جميع الطلبات بدون pagination
-    const finalRequests = isFullRequest ? cachedData : cachedData.slice(skip, skip + Number(limit));
+    const finalRequests = isFullRequest ? allRequests : allRequests.slice(skip, skip + Number(limit));
 
     // pagination meta
     const paginationMeta = isFullRequest ? {
       currentPage: 1,
       totalPages: 1,
-      totalItems: cachedData.length,
-      itemsPerPage: cachedData.length,
+      totalItems: allRequests.length,
+      itemsPerPage: allRequests.length,
       hasNextPage: false,
       hasPrevPage: false,
       isFullRequest: true
     } : {
       currentPage: Number(page),
-      totalPages: Math.ceil(cachedData.length / Number(limit)),
-      totalItems: cachedData.length,
+      totalPages: Math.ceil(allRequests.length / Number(limit)),
+      totalItems: allRequests.length,
       itemsPerPage: Number(limit),
-      hasNextPage: skip + finalRequests.length < cachedData.length,
+      hasNextPage: skip + finalRequests.length < allRequests.length,
       hasPrevPage: Number(page) > 1,
       isFullRequest: false
     };
@@ -558,7 +553,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
       data: {
         requests: finalRequests,
         pagination: paginationMeta,
-        totalCount: cachedData.length
+        totalCount: allRequests.length
       },
       meta: {
         userId: userId,
@@ -568,7 +563,7 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
         isFullRequest,
         debug: {
           query: specialQuery,
-          totalFound: cachedData.length
+          totalFound: allRequests.length
         }
       }
     });
@@ -605,62 +600,57 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Use cache for artist requests with smart invalidation
-    const cachedData = await cacheSpecialRequests(artistId, 'artist', async () => {
-      // بناء الاستعلام
-      const query = { artist: artistId };
-      
-      if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-        query.status = status;
-      }
-      
-      if (requestType) {
-        query.requestType = requestType;
-      }
-      
-      if (priority) {
-        query.priority = priority;
-      }
+    // بناء الاستعلام
+    const query = { artist: artistId };
+    
+    if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+      query.status = status;
+    }
+    
+    if (requestType) {
+      query.requestType = requestType;
+    }
+    
+    if (priority) {
+      query.priority = priority;
+    }
 
-      // بناء خيارات الترتيب
-      const sortOptions = {};
-      sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // بناء خيارات الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-      // تنفيذ الاستعلام - إذا كان limit=full، لا نطبق limit
-      const [requests, totalCount] = await Promise.all([
-        specialRequestModel
-          .find(query)
-          .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-          .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-          .populate('category', 'name image')
-          .sort(sortOptions)
-          .skip(isFullRequest ? 0 : skip)
-          .limit(isFullRequest ? 0 : Number(limit)) // 0 means no limit
-          .lean(),
-        specialRequestModel.countDocuments(query)
-      ]);
-
-      return { requests, totalCount };
-    }, { page, limit, status, requestType, priority });
+    // تنفيذ الاستعلام - إذا كان limit=full، لا نطبق limit
+    const [requests, totalCount] = await Promise.all([
+      specialRequestModel
+        .find(query)
+        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('category', 'name image')
+        .sort(sortOptions)
+        .skip(isFullRequest ? 0 : skip)
+        .limit(isFullRequest ? 0 : Number(limit)) // 0 means no limit
+        .lean(),
+      specialRequestModel.countDocuments(query)
+    ]);
 
     // Format requests for Flutter
-    const formattedRequests = cachedData.requests.map(request => formatSpecialRequest(request));
+    const formattedRequests = requests.map(request => formatSpecialRequest(request));
 
     // إعداد معلومات الصفحات
     const paginationMeta = isFullRequest ? {
       currentPage: 1,
       totalPages: 1,
-      totalItems: cachedData.totalCount,
-      itemsPerPage: cachedData.totalCount,
+      totalItems: totalCount,
+      itemsPerPage: totalCount,
       hasNextPage: false,
       hasPrevPage: false,
       isFullRequest: true
     } : {
       currentPage: Number(page),
-      totalPages: Math.ceil(cachedData.totalCount / Number(limit)),
-      totalItems: cachedData.totalCount,
+      totalPages: Math.ceil(totalCount / Number(limit)),
+      totalItems: totalCount,
       itemsPerPage: Number(limit),
-      hasNextPage: skip + cachedData.requests.length < cachedData.totalCount,
+      hasNextPage: skip + requests.length < totalCount,
       hasPrevPage: Number(page) > 1,
       isFullRequest: false
     };
@@ -683,7 +673,7 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
         requests: formattedRequests,
         pagination: paginationMeta,
         statusCounts: statusCountsMap,
-        totalCount: cachedData.totalCount
+        totalCount
       },
       meta: {
         timestamp: new Date().toISOString(),
