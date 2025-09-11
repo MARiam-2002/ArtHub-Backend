@@ -498,8 +498,8 @@ export const getUserRequests = asyncHandler(async (req, res, next) => {
     if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
       queryCopy.status = status;
     } else if (!status) {
-      // إذا لم يتم تمرير status، نعرض فقط الطلبات المكتملة والمعلقة
-      queryCopy.status = { $in: ['pending', 'completed'] };
+      // إذا لم يتم تمرير status، نعرض الطلبات النشطة (completed, review, in_progress, accepted, pending)
+      queryCopy.status = { $in: ['completed', 'review', 'in_progress', 'accepted', 'pending'] };
     }
     
     if (requestType) {
@@ -605,6 +605,9 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
     
     if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
       query.status = status;
+    } else if (!status) {
+      // إذا لم يتم تمرير status، نعرض الطلبات النشطة (completed, review, in_progress, accepted, pending)
+      query.status = { $in: ['completed', 'review', 'in_progress', 'accepted', 'pending'] };
     }
     
     if (requestType) {

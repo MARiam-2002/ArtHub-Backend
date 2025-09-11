@@ -956,25 +956,6 @@
              "enum": ["pending", "accepted", "rejected", "in_progress", "review", "completed", "cancelled"],
              "description": "الحالة الجديدة للطلب",
              "example": "accepted"
-           },
-           "response": {
-             "type": "string",
-             "minLength": 10,
-             "maxLength": 1000,
-             "description": "رد أو ملاحظات إضافية من الفنان",
-             "example": "سأقوم بتنفيذ طلبك خلال أسبوع من الآن"
-           },
-           "estimatedDelivery": {
-             "type": "string",
-             "format": "date-time",
-             "description": "تاريخ التسليم المتوقع (مطلوب عند القبول)",
-             "example": "2024-01-15T10:00:00.000Z"
-           },
-           "quotedPrice": {
-             "type": "number",
-             "minimum": 0,
-             "description": "السعر المقتبس من الفنان (مطلوب عند القبول)",
-             "example": 500
            }
          }
        },
@@ -6441,7 +6422,7 @@
       "patch": {
         "tags": ["SpecialRequest"],
         "summary": "تحديث حالة الطلب الخاص",
-        "description": "تحديث حالة طلب خاص (للفنان فقط). يسمح للفنان بتغيير حالة الطلب من pending إلى accepted/rejected/in_progress/review/completed/cancelled",
+        "description": "تحديث حالة طلب خاص (للفنان فقط). يسمح للفنان بتغيير حالة الطلب إلى أي من الحالات المتاحة. يحتاج فقط إلى status.",
         "security": [
           {
             "BearerAuth": []
