@@ -1195,28 +1195,28 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // التحقق من الوقت المسموح للحذف (دقيقتين)
+    // التحقق من الوقت المسموح للحذف (3 ساعات)
     const currentTime = new Date();
     const requestTime = new Date(request.createdAt);
-    const minutesDifference = (currentTime - requestTime) / (1000 * 60);
+    const hoursDifference = (currentTime - requestTime) / (1000 * 60 * 60);
 
-    if (minutesDifference > 2) {
+    if (hoursDifference > 3) {
       return res.status(400).json({
         success: false,
-        message: 'لا يمكن حذف الطلب بعد مرور دقيقتين من إنشائه',
+        message: 'لا يمكن حذف الطلب بعد مرور 3 ساعات من إنشائه',
         data: {
           request: {
             _id: request._id,
             status: request.status,
             createdAt: request.createdAt,
-            minutesElapsed: Math.round(minutesDifference * 100) / 100
+            hoursElapsed: Math.round(hoursDifference * 100) / 100
           }
         },
         meta: {
           action: 'delete_rejected',
           reason: 'time_limit_exceeded',
-          timeLimit: '2 minutes',
-          timeElapsed: `${minutesDifference.toFixed(2)} minutes`
+          timeLimit: '3 hours',
+          timeElapsed: `${hoursDifference.toFixed(2)} hours`
         }
       });
     }
