@@ -257,6 +257,7 @@ export const cacheAggregation = async (aggregationType, fetchFn, options = {}) =
 export const invalidateUserCache = async (userId) => {
   const patterns = [
     `user:profile:${userId}`,
+    `home:user:${userId}`, // New key for home user data
     `user:wishlist:${userId}:*`,
     `user:artworks:${userId}:*`,
     `requests:my:${userId}:*`,
