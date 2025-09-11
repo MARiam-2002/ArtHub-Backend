@@ -72,7 +72,11 @@ class InMemoryCache {
   }
 
   async keys(pattern) {
-    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+    // Handle Redis-style patterns with proper escaping
+    const escapedPattern = pattern
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape special regex characters
+      .replace(/\\\*/g, '.*'); // Convert escaped * to .*
+    const regex = new RegExp(`^${escapedPattern}$`);
     return Array.from(this.cache.keys()).filter(key => regex.test(key));
   }
 
