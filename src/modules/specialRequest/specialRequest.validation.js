@@ -115,26 +115,16 @@ export const updateRequestStatusSchema = {
       }),
     estimatedDelivery: Joi.date()
       .min('now')
-      .when('status', {
-        is: 'accepted',
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      })
+      .optional()
       .messages({
         'date.base': 'تاريخ التسليم المتوقع يجب أن يكون تاريخ صالح',
-        'date.min': 'تاريخ التسليم المتوقع يجب أن يكون في المستقبل',
-        'any.required': 'تاريخ التسليم المتوقع مطلوب عند قبول الطلب'
+        'date.min': 'تاريخ التسليم المتوقع يجب أن يكون في المستقبل'
       }),
     quotedPrice: Joi.number()
       .positive()
-      .when('status', {
-        is: 'accepted',
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      })
+      .optional()
       .messages({
-        'number.positive': 'السعر المقتبس يجب أن يكون رقم موجب',
-        'any.required': 'السعر المقتبس مطلوب عند قبول الطلب'
+        'number.positive': 'السعر المقتبس يجب أن يكون رقم موجب'
       })
   }),
   params: Joi.object({

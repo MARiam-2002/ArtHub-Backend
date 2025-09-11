@@ -412,11 +412,11 @@ router.get('/:requestId', isAuthenticated, controller.getRequestById);
  *               estimatedDelivery:
  *                 type: string
  *                 format: date-time
- *                 description: تاريخ التسليم المتوقع (مطلوب عند القبول)
+ *                 description: تاريخ التسليم المتوقع (اختياري)
  *               quotedPrice:
  *                 type: number
  *                 minimum: 0
- *                 description: السعر المقتبس (مطلوب عند القبول)
+ *                 description: السعر المقتبس (اختياري)
  *     responses:
  *       200:
  *         description: تم تحديث حالة الطلب بنجاح
