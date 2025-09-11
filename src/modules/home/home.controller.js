@@ -132,8 +132,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
     const userId = req.user?._id;
 
     // Use cache for home data with user-specific key
-    const cacheKey = `home_data_${userId || 'guest'}`;
-    const cachedData = await cacheHomeData(cacheKey, async () => {
+    const cachedData = await cacheHomeData(userId, async () => {
       const [
         categories,
         featuredArtists,
