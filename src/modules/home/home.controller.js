@@ -539,6 +539,24 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       }
 
       // Return formatted data for caching
+      // Get current user data if authenticated
+      let currentUser = null;
+      if (userId) {
+        const user = await userModel.findById(userId)
+          .select('displayName profileImage photoURL email role')
+          .lean();
+        
+        if (user) {
+          currentUser = {
+            _id: user._id,
+            displayName: user.displayName,
+            profileImage: getImageUrl(user.profileImage, user.photoURL),
+            email: user.email,
+            role: user.role
+          };
+        }
+      }
+
       return {
         categories: formatCategories(categories),
         featuredArtists: formatArtists(featuredArtists),
@@ -547,26 +565,9 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         mostRatedArtworks: formatArtworks(mostRatedArtworks),
         trendingArtworks: formatArtworks(trendingArtworks),
         personalizedArtworks: formatArtworks(personalizedArtworks),
+        currentUser: currentUser
       };
     }, { userId });
-
-    // Get current user data if authenticated
-    let currentUser = null;
-    if (userId) {
-      const user = await userModel.findById(userId)
-        .select('displayName profileImage photoURL email role')
-        .lean();
-      
-      if (user) {
-        currentUser = {
-          _id: user._id,
-          displayName: user.displayName,
-          profileImage: getImageUrl(user.profileImage, user.photoURL),
-          email: user.email,
-          role: user.role
-        };
-      }
-    }
 
     // Prepare response with proper structure for Flutter (same format as before)
     const response = {

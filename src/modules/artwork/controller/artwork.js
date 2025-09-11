@@ -106,29 +106,21 @@ export const getAllArtworks = asyncHandler(async (req, res) => {
 export const getArtworkById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Use cache for artwork details
-  const cachedData = await cacheArtwork(id, async () => {
-    const artwork = await artworkModel
-      .findById(id)
-      .populate({ 
-        path: 'artist', 
-        select: 'displayName profileImage job bio socialLinks isActive',
-        match: { isActive: true }
-      })
-      .populate({ path: 'category', select: 'name description' });
+  // Get artwork details directly (no cache for reviews)
+  const artwork = await artworkModel
+    .findById(id)
+    .populate({ 
+      path: 'artist', 
+      select: 'displayName profileImage job bio socialLinks isActive',
+      match: { isActive: true }
+    })
+    .populate({ path: 'category', select: 'name description' });
 
-    if (!artwork) {
-      return null;
-    }
+  if (!artwork) {
+    return res.fail(null, 'العمل الفني غير موجود', 404);
+  }
 
-    if (!artwork.artist) {
-      return null;
-    }
-
-    return artwork;
-  });
-
-  if (!cachedData) {
+  if (!artwork.artist) {
     return res.fail(null, 'العمل الفني غير موجود', 404);
   }
 
