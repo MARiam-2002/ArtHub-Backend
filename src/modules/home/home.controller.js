@@ -773,43 +773,80 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Use cache for artwork details with smart invalidation
-    const cacheKey = `artwork_${id}_${userId || 'guest'}`;
-    const cachedData = await cacheArtworkDetails(cacheKey, async () => {
+    // Fetch artwork details directly from database (no cache)
+    const artwork = await artworkModel.findById(id)
+      .populate({ 
+        path: 'artist', 
+        select: 'displayName profileImage photoURL job bio isVerified createdAt' 
+      })
+      .populate({ 
+        path: 'category', 
+        select: 'name image description' 
+      })
+      .lean();
 
-      const artwork = await artworkModel.findById(id)
-        .populate({ 
-          path: 'artist', 
-          select: 'displayName profileImage photoURL job bio isVerified createdAt' 
-        })
-        .populate({ 
-          path: 'category', 
-          select: 'name image description' 
-        })
-        .lean();
+    if (!artwork) {
+      return res.status(404).json({
+        success: false,
+        message: 'العمل الفني غير موجود',
+        data: null
+      });
+    }
 
-      if (!artwork) {
-        return null;
-      }
+    // Increment view count
+    await artworkModel.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
 
-      // Increment view count
-      await artworkModel.findByIdAndUpdate(id, { $inc: { viewCount: 1 } });
+    // Get reviews for this artwork
+    const reviewModel = (await import('../../../DB/models/review.model.js')).default;
+    const reviews = await reviewModel.find({ artwork: id, status: 'active' })
+      .populate('user', 'displayName profileImage')
+      .sort({ createdAt: -1 })
+      .lean();
 
-      // Get reviews for this artwork
-      const reviewModel = (await import('../../../DB/models/review.model.js')).default;
-      const reviews = await reviewModel.find({ artwork: id, status: 'active' })
-        .populate('user', 'displayName profileImage')
-        .sort({ createdAt: -1 })
-        .lean();
+    // Calculate average rating and count
+    const reviewsCount = reviews.length;
+    const rating = reviewsCount
+      ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount).toFixed(2))
+      : 0;
 
-      // Calculate average rating and count
-      const reviewsCount = reviews.length;
-      const rating = reviewsCount
-        ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount).toFixed(2))
-        : 0;
+    // Format reviews for frontend (show all reviews)
+    const reviewsList = reviews
+      .map(r => ({
+        _id: r._id,
+        user: {
+          _id: r.user?._id,
+          displayName: r.user?.displayName,
+          profileImage: getImageUrl(r.user?.profileImage),
+        },
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+      }));
 
-      // Format reviews for frontend (show all reviews)
-      const reviewsList = reviews
+    // Get artist reviews (reviews for the artist, not the artwork)
+    let artistReviews = [];
+    let artistRating = 0;
+    let artistReviewsCount = 0;
+    
+    if (artwork.artist) {
+      const artistReviewModel = (await import('../../../DB/models/review.model.js')).default;
+      
+      // Get artist reviews (reviews where artwork field doesn't exist)
+      const artistReviewsData = await artistReviewModel.find({ 
+        artist: artwork.artist._id, 
+        status: 'active',
+        $or: [
+          { artwork: { $exists: false } },
+          { artwork: null }
+        ]
+      })
+      .populate('user', 'displayName profileImage')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+      // Format artist reviews (show all reviews)
+      artistReviews = artistReviewsData
         .map(r => ({
           _id: r._id,
           user: {
@@ -822,144 +859,99 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
           createdAt: r.createdAt,
         }));
 
-      // Get artist reviews (reviews for the artist, not the artwork)
-      let artistReviews = [];
-      let artistRating = 0;
-      let artistReviewsCount = 0;
-      
-      if (artwork.artist) {
-        const artistReviewModel = (await import('../../../DB/models/review.model.js')).default;
-        
-        // Get artist reviews (reviews where artwork field doesn't exist)
-        const artistReviewsData = await artistReviewModel.find({ 
-          artist: artwork.artist._id, 
-          status: 'active',
-          $or: [
-            { artwork: { $exists: false } },
-            { artwork: null }
-          ]
-        })
-        .populate('user', 'displayName profileImage')
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .lean();
-
-        // Format artist reviews (show all reviews)
-        artistReviews = artistReviewsData
-          .map(r => ({
-            _id: r._id,
-            user: {
-              _id: r.user?._id,
-              displayName: r.user?.displayName,
-              profileImage: getImageUrl(r.user?.profileImage),
-            },
-            rating: r.rating,
-            comment: r.comment,
-            createdAt: r.createdAt,
-          }));
-
-        // Calculate comprehensive artist rating (artist reviews + artwork reviews)
-        const comprehensiveArtistStats = await artistReviewModel.aggregate([
-          { 
-            $match: { 
-              artist: artwork.artist._id, 
-              status: 'active'
-            } 
-          },
-          {
-            $group: {
-              _id: null,
-              avgRating: { $avg: '$rating' },
-              count: { $sum: 1 }
-            }
-          }
-        ]);
-
-        if (comprehensiveArtistStats.length > 0) {
-          artistRating = parseFloat(comprehensiveArtistStats[0].avgRating.toFixed(1));
-          artistReviewsCount = comprehensiveArtistStats[0].count;
-        }
-      }
-
-      // Get related artworks
-      const relatedArtworks = await artworkModel.find({
-        _id: { $ne: id },
-        $or: [
-          { category: artwork.category?._id },
-          { artist: artwork.artist?._id }
-        ],
-        isAvailable: true
-      })
-      .populate({ 
-        path: 'artist', 
-        select: 'displayName profileImage photoURL job isVerified' 
-      })
-      .populate({ 
-        path: 'category', 
-        select: 'name image' 
-      })
-      .select('title description image images price currency artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured')
-      .sort({ viewCount: -1, likeCount: -1 })
-      .limit(6)
-      .lean();
-
-      // Check if user liked this artwork
-      let isLiked = false;
-      if (userId) {
-        const user = await userModel.findById(userId).select('wishlist').lean();
-        isLiked = user?.wishlist?.some(wid => wid.toString() === id.toString()) || false;
-      }
-
-      // Build response data
-      const formattedArtwork = {
-        ...formatArtworks([artwork])[0],
-        isLiked: isLiked,
-        stats: {
-          ...formatArtworks([artwork])[0].stats,
-          rating,
-          reviewsCount
-        }
-      };
-
-      return {
-        artwork: formattedArtwork,
-        reviews: reviewsList,
-        artistReviews: {
-          rating: artistRating,
-          reviewsCount: artistReviewsCount,
-          reviews: artistReviews
+      // Calculate comprehensive artist rating (artist reviews + artwork reviews)
+      const comprehensiveArtistStats = await artistReviewModel.aggregate([
+        { 
+          $match: { 
+            artist: artwork.artist._id, 
+            status: 'active'
+          } 
         },
-        relatedArtworks: formatArtworks(relatedArtworks),
-        totals: {
-          artworkReviews: {
-            total: reviewsCount,
-            rating: rating
-          },
-          artistReviews: {
-            total: artistReviewsCount,
-            rating: artistRating
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: '$rating' },
+            count: { $sum: 1 }
           }
         }
-      };
-    }, { userId });
+      ]);
 
-    if (!cachedData) {
-      return res.status(404).json({
-        success: false,
-        message: 'العمل الفني غير موجود',
-        data: null
-      });
+      if (comprehensiveArtistStats.length > 0) {
+        artistRating = parseFloat(comprehensiveArtistStats[0].avgRating.toFixed(1));
+        artistReviewsCount = comprehensiveArtistStats[0].count;
+      }
     }
+
+    // Get related artworks
+    const relatedArtworks = await artworkModel.find({
+      _id: { $ne: id },
+      $or: [
+        { category: artwork.category?._id },
+        { artist: artwork.artist?._id }
+      ],
+      isAvailable: true
+    })
+    .populate({ 
+      path: 'artist', 
+      select: 'displayName profileImage photoURL job isVerified' 
+    })
+    .populate({ 
+      path: 'category', 
+      select: 'name image' 
+    })
+    .select('title description image images price currency artist category likeCount viewCount averageRating reviewsCount isAvailable isFeatured')
+    .sort({ viewCount: -1, likeCount: -1 })
+    .limit(6)
+    .lean();
+
+    // Check if user liked this artwork
+    let isLiked = false;
+    if (userId) {
+      const user = await userModel.findById(userId).select('wishlist').lean();
+      isLiked = user?.wishlist?.some(wid => wid.toString() === id.toString()) || false;
+    }
+
+    // Build response data
+    const formattedArtwork = {
+      ...formatArtworks([artwork])[0],
+      isLiked: isLiked,
+      stats: {
+        ...formatArtworks([artwork])[0].stats,
+        rating,
+        reviewsCount
+      }
+    };
+
+    const responseData = {
+      artwork: formattedArtwork,
+      reviews: reviewsList,
+      artistReviews: {
+        rating: artistRating,
+        reviewsCount: artistReviewsCount,
+        reviews: artistReviews
+      },
+      relatedArtworks: formatArtworks(relatedArtworks),
+      totals: {
+        artworkReviews: {
+          total: reviewsCount,
+          rating: rating
+        },
+        artistReviews: {
+          total: artistReviewsCount,
+          rating: artistRating
+        }
+      }
+    };
 
     const response = {
       success: true,
       message: 'تم جلب تفاصيل العمل الفني بنجاح',
-      data: cachedData,
+      data: responseData,
       meta: {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
-        cached: true
+        cached: false
       }
     };
 
