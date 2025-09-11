@@ -597,62 +597,57 @@ export const getArtistRequests = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Use cache for artist requests
-    const cachedData = await cacheSpecialRequests(artistId, 'artist', async () => {
-      // بناء الاستعلام
-      const query = { artist: artistId };
-      
-      if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
-        query.status = status;
-      }
-      
-      if (requestType) {
-        query.requestType = requestType;
-      }
-      
-      if (priority) {
-        query.priority = priority;
-      }
+    // بناء الاستعلام
+    const query = { artist: artistId };
+    
+    if (status && ['pending', 'accepted', 'rejected', 'in_progress', 'review', 'completed', 'cancelled'].includes(status)) {
+      query.status = status;
+    }
+    
+    if (requestType) {
+      query.requestType = requestType;
+    }
+    
+    if (priority) {
+      query.priority = priority;
+    }
 
-      // بناء خيارات الترتيب
-      const sortOptions = {};
-      sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    // بناء خيارات الترتيب
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-      // تنفيذ الاستعلام - إذا كان limit=full، لا نطبق limit
-      const [requests, totalCount] = await Promise.all([
-        specialRequestModel
-          .find(query)
-          .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-          .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
-          .populate('category', 'name image')
-          .sort(sortOptions)
-          .skip(isFullRequest ? 0 : skip)
-          .limit(isFullRequest ? 0 : Number(limit)) // 0 means no limit
-          .lean(),
-        specialRequestModel.countDocuments(query)
-      ]);
-
-      return { requests, totalCount };
-    }, { page, limit, status, requestType, priority });
+    // تنفيذ الاستعلام - إذا كان limit=full، لا نطبق limit
+    const [requests, totalCount] = await Promise.all([
+      specialRequestModel
+        .find(query)
+        .populate('sender', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('artist', 'displayName profileImage photoURL job averageRating reviewsCount isVerified email phone')
+        .populate('category', 'name image')
+        .sort(sortOptions)
+        .skip(isFullRequest ? 0 : skip)
+        .limit(isFullRequest ? 0 : Number(limit)) // 0 means no limit
+        .lean(),
+      specialRequestModel.countDocuments(query)
+    ]);
 
     // Format requests for Flutter
-    const formattedRequests = cachedData.requests.map(request => formatSpecialRequest(request));
+    const formattedRequests = requests.map(request => formatSpecialRequest(request));
 
     // إعداد معلومات الصفحات
     const paginationMeta = isFullRequest ? {
       currentPage: 1,
       totalPages: 1,
-      totalItems: cachedData.totalCount,
-      itemsPerPage: cachedData.totalCount,
+      totalItems: totalCount,
+      itemsPerPage: totalCount,
       hasNextPage: false,
       hasPrevPage: false,
       isFullRequest: true
     } : {
       currentPage: Number(page),
-      totalPages: Math.ceil(cachedData.totalCount / Number(limit)),
-      totalItems: cachedData.totalCount,
+      totalPages: Math.ceil(totalCount / Number(limit)),
+      totalItems: totalCount,
       itemsPerPage: Number(limit),
-      hasNextPage: skip + cachedData.requests.length < cachedData.totalCount,
+      hasNextPage: skip + requests.length < totalCount,
       hasPrevPage: Number(page) > 1,
       isFullRequest: false
     };

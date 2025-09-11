@@ -106,56 +106,50 @@ export const getChats = asyncHandler(async (req, res, next) => {
     const { page = 1, limit = 20, search = '' } = req.query;
     const skip = (page - 1) * limit;
 
-    // Use cache for chat data
-    const cacheKey = `chats:${userId}:${page}:${limit}:${search}`;
-    const cachedData = await cacheChatData(userId, async () => {
-      // Build query for searching
-      let searchQuery = { 
-        members: { $in: [userId] }, 
-        isDeleted: { $ne: true } 
-      };
+    // Build query for searching
+    let searchQuery = { 
+      members: { $in: [userId] }, 
+      isDeleted: { $ne: true } 
+    };
 
-      if (search.trim()) {
-        // Search in other user's display name
-        const searchUsers = await userModel.find({
-          displayName: { $regex: search, $options: 'i' }
-        }).select('_id');
-        
-        const userIds = searchUsers.map(user => user._id);
-        searchQuery.members = { $in: [userId, ...userIds] };
-      }
+    if (search.trim()) {
+      // Search in other user's display name
+      const searchUsers = await userModel.find({
+        displayName: { $regex: search, $options: 'i' }
+      }).select('_id');
+      
+      const userIds = searchUsers.map(user => user._id);
+      searchQuery.members = { $in: [userId, ...userIds] };
+    }
 
-      const [chats, totalCount] = await Promise.all([
-        chatModel
-          .find(searchQuery)
-          .populate({
-            path: 'members',
-            select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
-          })
-          .populate({
-            path: 'lastMessage',
-            select: 'content text messageType sender isRead readAt sentAt createdAt',
-            populate: {
-              path: 'sender',
-              select: 'displayName profileImage photoURL'
-            }
-          })
-          .sort({ lastActivity: -1, updatedAt: -1 })
-          .skip(skip)
-          .limit(Number(limit))
-          .lean(),
-        chatModel.countDocuments(searchQuery)
-      ]);
-
-      return { chats, totalCount };
-    }, { page, limit });
+    const [chats, totalCount] = await Promise.all([
+      chatModel
+        .find(searchQuery)
+        .populate({
+          path: 'members',
+          select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+        })
+        .populate({
+          path: 'lastMessage',
+          select: 'content text messageType sender isRead readAt sentAt createdAt',
+          populate: {
+            path: 'sender',
+            select: 'displayName profileImage photoURL'
+          }
+        })
+        .sort({ lastActivity: -1, updatedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      chatModel.countDocuments(searchQuery)
+    ]);
 
     // Format chats for Flutter
-    const formattedChats = cachedData.chats.map(chat => formatChat(chat, userId));
+    const formattedChats = chats.map(chat => formatChat(chat, userId));
 
     // Get total unread count
     const totalUnreadCount = await messageModel.countDocuments({
-      chat: { $in: cachedData.chats.map(chat => chat._id) },
+      chat: { $in: chats.map(chat => chat._id) },
       sender: { $ne: userId },
       isRead: false
     });
@@ -168,9 +162,9 @@ export const getChats = asyncHandler(async (req, res, next) => {
         totalUnreadCount,
         pagination: {
           currentPage: Number(page),
-          totalPages: Math.ceil(cachedData.totalCount / limit),
-          totalItems: cachedData.totalCount,
-          hasNextPage: skip + cachedData.chats.length < cachedData.totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          hasNextPage: skip + chats.length < totalCount,
           hasPrevPage: Number(page) > 1
         }
       },
@@ -315,69 +309,59 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Use cache for messages data
-    const cacheKey = `messages:${chatId}:${userId}:${page}:${limit}`;
-    const cachedData = await cacheChatData(userId, async () => {
-      // Check if user is member of chat
-      const chat = await chatModel.findOne({
-        _id: chatId,
-        members: { $in: [userId] },
-        isDeleted: { $ne: true }
-      })
-      .populate({
-        path: 'members',
-        select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
-      })
-      .populate({
-        path: 'lastMessage',
-        select: 'content text messageType sender isRead readAt sentAt createdAt',
-        populate: {
-          path: 'sender',
-          select: 'displayName profileImage photoURL'
-        }
-      })
-      .lean();
-
-      if (!chat) {
-        return { chat: null, messages: [], totalCount: 0 };
+    // Check if user is member of chat
+    const chat = await chatModel.findOne({
+      _id: chatId,
+      members: { $in: [userId] },
+      isDeleted: { $ne: true }
+    })
+    .populate({
+      path: 'members',
+      select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+    })
+    .populate({
+      path: 'lastMessage',
+      select: 'content text messageType sender isRead readAt sentAt createdAt',
+      populate: {
+        path: 'sender',
+        select: 'displayName profileImage photoURL'
       }
+    })
+    .lean();
 
-      // Get messages
-      const [messages, totalCount] = await Promise.all([
-        messageModel
-          .find({ chat: chatId, isDeleted: { $ne: true } })
-          .populate({
-            path: 'sender',
-            select: 'displayName profileImage photoURL isVerified role'
-          })
-          .populate({
-            path: 'replyTo',
-            select: 'content text messageType sender createdAt',
-            populate: {
-              path: 'sender',
-              select: 'displayName profileImage photoURL'
-            }
-          })
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(Number(limit))
-          .lean(),
-        messageModel.countDocuments({ chat: chatId, isDeleted: { $ne: true } })
-      ]);
-
-      return { chat, messages, totalCount };
-    }, { page, limit });
-
-    if (!cachedData.chat) {
+    if (!chat) {
       return res.status(404).json({
         success: false,
-        message: 'المحادثة غير موجودة أو غير مصرح بالوصول إليها',
+        message: 'المحادثة غير موجودة أو لا تملك صلاحية الوصول إليها',
         data: null
       });
     }
 
+    // Get messages
+    const [messages, totalCount] = await Promise.all([
+      messageModel
+        .find({ chat: chatId, isDeleted: { $ne: true } })
+        .populate({
+          path: 'sender',
+          select: 'displayName profileImage photoURL isVerified role'
+        })
+        .populate({
+          path: 'replyTo',
+          select: 'content text messageType sender createdAt',
+          populate: {
+            path: 'sender',
+            select: 'displayName profileImage photoURL'
+          }
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      messageModel.countDocuments({ chat: chatId, isDeleted: { $ne: true } })
+    ]);
+
     // Format messages for Flutter
-    const formattedMessages = cachedData.messages
+    const formattedMessages = messages
       .reverse()
       .map(message => formatMessage(message, userId));
 
@@ -398,13 +382,13 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم جلب الرسائل بنجاح',
       data: {
-        chat: formatChat(cachedData.chat, userId),
+        chat: formatChat(chat, userId),
         messages: formattedMessages,
         pagination: {
           currentPage: Number(page),
-          totalPages: Math.ceil(cachedData.totalCount / limit),
-          totalItems: cachedData.totalCount,
-          hasNextPage: skip + cachedData.messages.length < cachedData.totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          totalItems: totalCount,
+          hasNextPage: skip + messages.length < totalCount,
           hasPrevPage: Number(page) > 1
         }
       },

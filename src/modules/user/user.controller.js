@@ -1442,29 +1442,24 @@ export const getMyArtworks = asyncHandler(async (req, res, next) => {
     const { page = 1, limit = 10, status } = req.query;
     const skip = (page - 1) * limit;
 
-    // Use cache for user artworks
-    const cachedData = await cacheUserArtworks(userId, async () => {
-      // Build query
-      const query = { artist: userId };
-      if (status) {
-        query.isAvailable = status === 'available';
-      }
+    // Build query
+    const query = { artist: userId };
+    if (status) {
+      query.isAvailable = status === 'available';
+    }
 
-      const [artworks, totalCount] = await Promise.all([
-        artworkModel
-          .find(query)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(Number(limit))
-          .populate('category', 'name')
-          .lean(),
-        artworkModel.countDocuments(query)
-      ]);
+    const [artworks, totalCount] = await Promise.all([
+      artworkModel
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate('category', 'name')
+        .lean(),
+      artworkModel.countDocuments(query)
+    ]);
 
-      return { artworks, totalCount };
-    }, { page, limit, status });
-
-    const formattedArtworks = cachedData.artworks.map(artwork => ({
+    const formattedArtworks = artworks.map(artwork => ({
       _id: artwork._id,
       title: artwork.title,
       images: artwork.images,
@@ -1481,9 +1476,9 @@ export const getMyArtworks = asyncHandler(async (req, res, next) => {
       artworks: formattedArtworks,
       pagination: {
         currentPage: Number(page),
-        totalPages: Math.ceil(cachedData.totalCount / limit),
-        totalItems: cachedData.totalCount,
-        hasNextPage: skip + cachedData.artworks.length < cachedData.totalCount
+        totalPages: Math.ceil(totalCount / limit),
+        totalItems: totalCount,
+        hasNextPage: skip + artworks.length < totalCount
       }
     }, 'تم جلب أعمالك الفنية بنجاح');
   } catch (error) {
