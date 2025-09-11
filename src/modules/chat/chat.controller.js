@@ -48,9 +48,40 @@ function formatUserForChat(user) {
 function formatMessage(message, currentUserId) {
   if (!message) return null;
   
+  // Get formatted content based on message type (like WhatsApp)
+  let displayContent = '';
+  
+  if (message.isDeleted) {
+    displayContent = '🗑️ تم حذف هذه الرسالة';
+  } else {
+    switch (message.messageType) {
+      case 'image':
+        displayContent = message.attachments && message.attachments.length > 1 ? 
+          `🖼️ ${message.attachments.length} صور` : '🖼️ صورة';
+        break;
+      case 'file':
+        displayContent = message.attachments && message.attachments.length > 1 ? 
+          `📎 ${message.attachments.length} ملفات` : '📎 ملف';
+        break;
+      case 'voice':
+        displayContent = '🎵 رسالة صوتية';
+        break;
+      case 'location':
+        displayContent = '📍 موقع';
+        break;
+      case 'contact':
+        displayContent = '👤 جهة اتصال';
+        break;
+      default:
+        displayContent = message.content || message.text || '';
+        break;
+    }
+  }
+  
   return {
     _id: message._id,
-    content: message.content || message.text || '',
+    content: displayContent, // Use formatted content for display (includes icon)
+    originalContent: message.content || message.text || '', // Keep original content for editing
     messageType: message.messageType || 'text',
     isFromMe: message.isFromMe !== undefined ? message.isFromMe : (message.sender?._id?.toString() === currentUserId?.toString()),
     sender: formatUserForChat(message.sender),
@@ -154,35 +185,24 @@ export const getChats = asyncHandler(async (req, res, next) => {
       isRead: false
     });
 
-    const response = {
-      success: true,
-      message: 'تم جلب المحادثات بنجاح',
-      data: {
-        chats: formattedChats,
-        totalUnreadCount,
-        pagination: {
-          currentPage: Number(page),
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          hasNextPage: skip + chats.length < totalCount,
-          hasPrevPage: Number(page) > 1
-        }
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        userId: userId
+    res.success({
+      chats: formattedChats,
+      totalUnreadCount,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalCount / limit),
+        totalItems: totalCount,
+        hasNextPage: skip + chats.length < totalCount,
+        hasPrevPage: Number(page) > 1
       }
-    };
-
-    res.status(200).json(response);
+    }, 'تم جلب المحادثات بنجاح', 200, {
+      timestamp: new Date().toISOString(),
+      userId: userId
+    });
 
   } catch (error) {
     console.error('Get chats error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'حدث خطأ أثناء جلب المحادثات',
-      error: error.message
-    });
+    return res.fail(null, 'حدث خطأ أثناء جلب المحادثات', 500);
   }
 });
 
@@ -378,35 +398,24 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       }
     );
 
-    const response = {
-      success: true,
-      message: 'تم جلب الرسائل بنجاح',
-      data: {
-        chat: formatChat(chat, userId),
-        messages: formattedMessages,
-        pagination: {
-          currentPage: Number(page),
-          totalPages: Math.ceil(totalCount / limit),
-          totalItems: totalCount,
-          hasNextPage: skip + messages.length < totalCount,
-          hasPrevPage: Number(page) > 1
-        }
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-        userId: userId
+    res.success({
+      chat: formatChat(chat, userId),
+      messages: formattedMessages,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalCount / limit),
+        totalItems: totalCount,
+        hasNextPage: skip + messages.length < totalCount,
+        hasPrevPage: Number(page) > 1
       }
-    };
-
-    res.status(200).json(response);
+    }, 'تم جلب الرسائل بنجاح', 200, {
+      timestamp: new Date().toISOString(),
+      userId: userId
+    });
 
   } catch (error) {
     console.error('Get messages error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'حدث خطأ أثناء جلب الرسائل',
-      error: error.message
-    });
+    return res.fail(null, 'حدث خطأ أثناء جلب الرسائل', 500);
   }
 });
 
