@@ -263,7 +263,9 @@ export const invalidateUserCache = async (userId) => {
     `requests:artist:${userId}:*`,
     `chat:list:${userId}:*`,
     `chat:messages:*:${userId}:*`,
-    `notifications:${userId}:*`
+    `notifications:${userId}:*`,
+    `artist:profile:${userId}:*`,
+    `home:data:*`
   ];
   
   let totalInvalidated = 0;
