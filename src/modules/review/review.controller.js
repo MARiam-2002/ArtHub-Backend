@@ -52,10 +52,12 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
 
   // إذا كان هناك تقييم موجود، قم بتحديثه بدلاً من إنشاء واحد جديد
   if (existingReview) {
-    // تحديث التقييم الموجود
-    existingReview.rating = rating;
+    // تحديث التقييم الموجود - إضافة البيانات الجديدة للبيانات الموجودة
+    if (rating !== undefined && rating !== null) {
+      existingReview.rating = rating;
+    }
     if (title) existingReview.title = title;
-    if (comment) existingReview.comment = comment;
+    if (comment !== undefined && comment !== null) existingReview.comment = comment;
     if (pros) existingReview.pros = pros?.filter(p => p && p.trim());
     if (cons) existingReview.cons = cons?.filter(c => c && c.trim());
     if (subRatings) existingReview.subRatings = subRatings;
@@ -88,14 +90,14 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
           en: 'Your artwork review has been updated'
         },
         message: {
-          ar: `تم تحديث تقييم عملك الفني "${artworkDoc.title}" إلى ${rating} نجوم`,
-          en: `The review for your artwork "${artworkDoc.title}" has been updated to ${rating} stars`
+          ar: `تم تحديث تقييم عملك الفني "${artworkDoc.title}"`,
+          en: `The review for your artwork "${artworkDoc.title}" has been updated`
         },
         sender: userId,
         data: {
           reviewId: existingReview._id,
           artworkId: artwork,
-          rating
+          rating: existingReview.rating
         }
       });
     } catch (notificationError) {
@@ -114,17 +116,6 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
     }
     
     return;
-  }
-
-  // التحقق من عدد التقييمات المسموحة (5 تقييمات كحد أقصى لكل مستخدم على نفس العمل الفني)
-  const userReviewCount = await reviewModel.countDocuments({
-    user: userId,
-    artwork,
-    status: { $ne: 'deleted' }
-  });
-
-  if (userReviewCount >= 5) {
-    return res.fail(null, 'لقد تجاوزت عدد التقييمات المحددة لك (5)', 400);
   }
 
   // التحقق من المشتريات المعتمدة
