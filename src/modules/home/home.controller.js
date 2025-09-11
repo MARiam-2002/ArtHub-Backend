@@ -550,22 +550,27 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       };
     }, { userId });
 
-    // Get current user data if authenticated
+    // Get current user data if authenticated (with caching)
     let currentUser = null;
     if (userId) {
-      const user = await userModel.findById(userId)
-        .select('displayName profileImage photoURL email role')
-        .lean();
-      
-      if (user) {
-        currentUser = {
+      const userCacheKey = `user:current:${userId}`;
+      currentUser = await cacheUserProfile(userCacheKey, async () => {
+        const user = await userModel.findById(userId)
+          .select('displayName profileImage photoURL email role')
+          .lean();
+        
+        if (!user) {
+          return null;
+        }
+
+        return {
           _id: user._id,
           displayName: user.displayName,
           profileImage: getImageUrl(user.profileImage, user.photoURL),
           email: user.email,
           role: user.role
         };
-      }
+      });
     }
 
     // Prepare response with proper structure for Flutter (same format as before)

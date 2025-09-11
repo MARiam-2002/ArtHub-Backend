@@ -257,6 +257,7 @@ export const cacheAggregation = async (aggregationType, fetchFn, options = {}) =
 export const invalidateUserCache = async (userId) => {
   const patterns = [
     `user:profile:${userId}`,
+    `user:current:${userId}`,
     `user:wishlist:${userId}:*`,
     `user:artworks:${userId}:*`,
     `requests:my:${userId}:*`,
@@ -376,6 +377,7 @@ export const invalidateHomeCache = async () => {
   const patterns = [
     'home:data:user:*',
     'home:data:guest',
+    'user:current:*',
     'artworks:featured:*',
     'artworks:trending:*',
     'artworks:most-rated:*',
