@@ -145,7 +145,10 @@ router.get('/', optionalAuth, homeController.getHomeData);
  *       500:
  *         description: Server error
  */
-router.get('/search', homeController.search);
+router.get('/search', 
+  isValidation(Validators.searchQuerySchema, 'query'),
+  homeController.search
+);
 
 /**
  * @swagger

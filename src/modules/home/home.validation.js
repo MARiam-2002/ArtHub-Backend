@@ -27,9 +27,9 @@ const objectIdPattern = /^[0-9a-fA-F]{24}$/;
 export const searchQuerySchema = joi.object({
   q: joi
     .string()
-    .min(1)
+    .min(2)
     .max(100)
-    .optional()
+    .required()
     .label('نص البحث')
     .messages(defaultMessages),
   
@@ -82,6 +82,14 @@ export const searchQuerySchema = joi.object({
     .default(10)
     .optional()
     .label('عدد العناصر في الصفحة')
+    .messages(defaultMessages),
+  
+  sortBy: joi
+    .string()
+    .valid('relevance', 'price_low', 'price_high', 'rating', 'newest', 'popular')
+    .default('relevance')
+    .optional()
+    .label('ترتيب النتائج')
     .messages(defaultMessages)
 }).custom((value, helpers) => {
   // Validate that maxPrice is greater than minPrice if both are provided
