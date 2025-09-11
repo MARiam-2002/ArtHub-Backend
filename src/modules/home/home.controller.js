@@ -3,7 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
-import { cacheHomeData, cacheSearchResults, cacheArtworkDetails, cacheArtistProfile, cacheCategoryArtworks, invalidateHomeCache } from '../../utils/cacheHelpers.js';
+import { cacheSearchResults, cacheArtworkDetails, cacheArtistProfile, cacheCategoryArtworks } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -131,8 +131,8 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
     await ensureDatabaseConnection();
     const userId = req.user?._id;
 
-    // Use cache for home data with user-specific key
-    const cachedData = await cacheHomeData(userId, async () => {
+    // Fetch home data directly from database (no cache for immediate updates)
+    const homeData = await (async () => {
       const [
         categories,
         featuredArtists,
@@ -538,7 +538,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         personalizedArtworks.push(...fallbackArtworks);
       }
 
-      // Return formatted data for caching
+      // Return formatted data
       return {
         categories: formatCategories(categories),
         featuredArtists: formatArtists(featuredArtists),
@@ -548,7 +548,7 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
         trendingArtworks: formatArtworks(trendingArtworks),
         personalizedArtworks: formatArtworks(personalizedArtworks),
       };
-    }, { userId });
+    })();
 
     // Get current user data if authenticated (no cache for immediate updates)
     let currentUser = null;
@@ -574,14 +574,14 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'تم جلب بيانات الصفحة الرئيسية بنجاح',
       data: {
-        ...cachedData,
+        ...homeData,
         currentUser: currentUser
       },
       meta: {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
-        cached: true
+        cached: false
       }
     };
 
@@ -959,7 +959,7 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
-        cached: true
+        cached: false
       }
     };
 
@@ -1088,7 +1088,7 @@ export const getArtistProfile = asyncHandler(async (req, res, next) => {
         timestamp: new Date().toISOString(),
         userId: userId || null,
         isAuthenticated: !!userId,
-        cached: true
+        cached: false
       }
     };
 
@@ -1194,7 +1194,7 @@ export const getArtworksByCategory = asyncHandler(async (req, res, next) => {
       meta: {
         sortBy: sortBy,
         timestamp: new Date().toISOString(),
-        cached: true
+        cached: false
       }
     };
 
