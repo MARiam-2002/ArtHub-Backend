@@ -115,7 +115,6 @@ export const createArtworkReviewSchema = {
         'any.required': 'معرف العمل الفني مطلوب'
       }),
     rating: Joi.number()
-      .required()
       .min(1)
       .max(5)
       .integer()
@@ -123,8 +122,7 @@ export const createArtworkReviewSchema = {
         'number.base': 'التقييم يجب أن يكون رقم',
         'number.min': 'التقييم يجب أن يكون بين 1 و 5',
         'number.max': 'التقييم يجب أن يكون بين 1 و 5',
-        'number.integer': 'التقييم يجب أن يكون رقم صحيح',
-        'any.required': 'التقييم مطلوب'
+        'number.integer': 'التقييم يجب أن يكون رقم صحيح'
       }),
     title: Joi.string()
       .min(5)

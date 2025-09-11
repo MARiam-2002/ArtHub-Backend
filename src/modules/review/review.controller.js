@@ -22,6 +22,11 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
     return res.fail(null, 'فقط المستخدمين العاديين يمكنهم تقييم الأعمال الفنية', 403);
   }
 
+  // التحقق من وجود rating أو comment على الأقل
+  if (!rating && !comment) {
+    return res.fail(null, 'يجب إدخال التقييم أو التعليق على الأقل', 400);
+  }
+
   // التحقق من صحة معرف العمل الفني
   if (!mongoose.Types.ObjectId.isValid(artwork)) {
     return res.fail(null, 'معرف العمل الفني غير صالح', 400);
@@ -109,6 +114,17 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
     }
     
     return;
+  }
+
+  // التحقق من عدد التقييمات المسموحة (5 تقييمات كحد أقصى لكل مستخدم على نفس العمل الفني)
+  const userReviewCount = await reviewModel.countDocuments({
+    user: userId,
+    artwork,
+    status: { $ne: 'deleted' }
+  });
+
+  if (userReviewCount >= 5) {
+    return res.fail(null, 'لقد تجاوزت عدد التقييمات المحددة لك (5)', 400);
   }
 
   // التحقق من المشتريات المعتمدة
