@@ -550,27 +550,22 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       };
     }, { userId });
 
-    // Get current user data if authenticated (with caching)
+    // Get current user data if authenticated
     let currentUser = null;
     if (userId) {
-      const userCacheKey = `user:current:${userId}`;
-      currentUser = await cacheUserProfile(userCacheKey, async () => {
-        const user = await userModel.findById(userId)
-          .select('displayName profileImage photoURL email role')
-          .lean();
-        
-        if (!user) {
-          return null;
-        }
-
-        return {
+      const user = await userModel.findById(userId)
+        .select('displayName profileImage photoURL email role')
+        .lean();
+      
+      if (user) {
+        currentUser = {
           _id: user._id,
           displayName: user.displayName,
           profileImage: getImageUrl(user.profileImage, user.photoURL),
           email: user.email,
           role: user.role
         };
-      });
+      }
     }
 
     // Prepare response with proper structure for Flutter (same format as before)
@@ -607,7 +602,11 @@ export const search = asyncHandler(async (req, res, next) => {
     const { q, type = 'all', page = 1, limit = 20, sortBy = 'relevance' } = req.query;
     
     if (!q || q.trim().length < 2) {
-      return res.fail(null, 'يجب أن يكون النص المبحوث عنه أكثر من حرفين', 400);
+      return res.status(400).json({
+        success: false,
+        message: 'يجب أن يكون النص المبحوث عنه أكثر من حرفين',
+        data: null
+      });
     }
 
     const skip = (page - 1) * limit;
@@ -615,7 +614,8 @@ export const search = asyncHandler(async (req, res, next) => {
     const searchRegex = new RegExp(searchText, 'i');
 
     // Use cache for search results
-    const cachedData = await cacheSearchResults(searchText, type, async () => {
+    const cacheKey = `search_${searchText}_${type}_${page}_${limit}_${sortBy}`;
+    const cachedData = await cacheSearchResults(cacheKey, async () => {
     
       let sortOptions = {};
       switch (sortBy) {
@@ -744,13 +744,19 @@ export const search = asyncHandler(async (req, res, next) => {
       }
 
       return results;
-    }, { page, limit, sortBy });
+    }, { searchText, type, page, limit, sortBy });
 
-    res.success(cachedData, 'تم البحث بنجاح', 200, {
-      searchQuery: searchText,
-      searchType: type,
-      sortBy: sortBy,
-      cached: true
+    res.status(200).json({
+      success: true,
+      message: 'تم البحث بنجاح',
+      data: cachedData,
+      meta: {
+        searchQuery: searchText,
+        searchType: type,
+        sortBy: sortBy,
+        timestamp: new Date().toISOString(),
+        cached: true
+      }
     });
 
   } catch (error) {
