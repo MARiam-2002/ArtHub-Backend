@@ -175,50 +175,38 @@ export const getWishlist = asyncHandler(async (req, res, next) => {
     const { page = 1, limit = 20 } = req.query;
     const userId = req.user._id;
 
-    // Use cache for wishlist
-    const cachedData = await cacheUserFavorites(userId, async () => {
-      const user = await userModel
-        .findById(userId)
-        .select('wishlist')
-        .lean();
+    const user = await userModel
+      .findById(userId)
+      .select('wishlist')
+      .lean();
 
-      if (!user) {
-        return null;
-      }
-
-      const totalItems = user.wishlist.length;
-      const skip = (page - 1) * limit;
-      const wishlistIds = user.wishlist.slice(skip, skip + Number(limit));
-
-      const artworks = await artworkModel
-        .find({ _id: { $in: wishlistIds } })
-        .populate('artist', 'displayName profileImage job')
-        .populate('category', 'name')
-        .select('title image images price currency artist category isAvailable createdAt viewCount likeCount')
-        .lean();
-
-      // Maintain the order of wishlist
-      const orderedArtworks = wishlistIds.map(id => 
-        artworks.find(artwork => artwork._id.toString() === id.toString())
-      ).filter(Boolean);
-
-      return {
-        artworks: orderedArtworks,
-        totalItems
-      };
-    }, { page, limit });
-
-    if (!cachedData) {
+    if (!user) {
       return res.fail(null, 'المستخدم غير موجود', 404);
     }
 
+    const totalItems = user.wishlist.length;
+    const skip = (page - 1) * limit;
+    const wishlistIds = user.wishlist.slice(skip, skip + Number(limit));
+
+    const artworks = await artworkModel
+      .find({ _id: { $in: wishlistIds } })
+      .populate('artist', 'displayName profileImage job')
+      .populate('category', 'name')
+      .select('title image images price currency artist category isAvailable createdAt viewCount likeCount')
+      .lean();
+
+    // Maintain the order of wishlist
+    const orderedArtworks = wishlistIds.map(id => 
+      artworks.find(artwork => artwork._id.toString() === id.toString())
+    ).filter(Boolean);
+
     const response = {
-      artworks: formatArtworks(cachedData.artworks),
+      artworks: formatArtworks(orderedArtworks),
       pagination: {
         currentPage: Number(page),
-        totalPages: Math.ceil(cachedData.totalItems / limit),
-        totalItems: cachedData.totalItems,
-        hasNextPage: (page - 1) * limit + cachedData.artworks.length < cachedData.totalItems
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems: totalItems,
+        hasNextPage: (page - 1) * limit + orderedArtworks.length < totalItems
       }
     };
 
