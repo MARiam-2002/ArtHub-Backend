@@ -946,6 +946,72 @@
              "type": "boolean"
            }
          }
+       },
+       "SpecialRequestStatusUpdate": {
+         "type": "object",
+         "required": ["status"],
+         "properties": {
+           "status": {
+             "type": "string",
+             "enum": ["pending", "accepted", "rejected", "in_progress", "review", "completed", "cancelled"],
+             "description": "الحالة الجديدة للطلب",
+             "example": "accepted"
+           },
+           "response": {
+             "type": "string",
+             "minLength": 10,
+             "maxLength": 1000,
+             "description": "رد أو ملاحظات إضافية من الفنان",
+             "example": "سأقوم بتنفيذ طلبك خلال أسبوع من الآن"
+           },
+           "estimatedDelivery": {
+             "type": "string",
+             "format": "date-time",
+             "description": "تاريخ التسليم المتوقع (مطلوب عند القبول)",
+             "example": "2024-01-15T10:00:00.000Z"
+           },
+           "quotedPrice": {
+             "type": "number",
+             "minimum": 0,
+             "description": "السعر المقتبس من الفنان (مطلوب عند القبول)",
+             "example": 500
+           }
+         }
+       },
+       "SpecialRequestStatusUpdateResponse": {
+         "type": "object",
+         "properties": {
+           "success": {
+             "type": "boolean",
+             "example": true
+           },
+           "message": {
+             "type": "string",
+             "example": "تم تحديث حالة الطلب إلى \"مقبول\" بنجاح"
+           },
+           "data": {
+             "type": "object",
+             "properties": {
+               "specialRequest": {
+                 "$ref": "#/components/schemas/SpecialRequest"
+               }
+             }
+           },
+           "meta": {
+             "type": "object",
+             "properties": {
+               "timestamp": {
+                 "type": "string",
+                 "format": "date-time",
+                 "example": "2024-01-08T10:00:00.000Z"
+               },
+               "userId": {
+                 "type": "string",
+                 "example": "60d0fe4f5311236168a109ca"
+               }
+             }
+           }
+         }
        }
     },
     "securitySchemes": {
@@ -6362,6 +6428,153 @@
                     },
                     "data": {
                       "$ref": "#/components/schemas/SpecialRequest"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/special-requests/{requestId}/status": {
+      "patch": {
+        "tags": ["SpecialRequest"],
+        "summary": "تحديث حالة الطلب الخاص",
+        "description": "تحديث حالة طلب خاص (للفنان فقط). يسمح للفنان بتغيير حالة الطلب من pending إلى accepted/rejected/in_progress/review/completed/cancelled",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "description": "معرف الطلب الخاص",
+            "example": "60d0fe4f5311236168a109ca"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpecialRequestStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "تم تحديث حالة الطلب بنجاح",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpecialRequestStatusUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "بيانات غير صالحة",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "حالة الطلب غير صالحة"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "غير مصرح - يرجى تسجيل الدخول",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح - يرجى تسجيل الدخول"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "غير مصرح - يجب أن تكون فنان",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "غير مصرح لك بتحديث حالة الطلب"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "الطلب غير موجود",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "الطلب غير موجود"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "خطأ في الخادم",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "حدث خطأ أثناء تحديث حالة الطلب"
                     }
                   }
                 }
