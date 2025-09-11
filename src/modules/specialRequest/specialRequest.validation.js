@@ -108,15 +108,10 @@ export const updateRequestStatusSchema = {
     response: Joi.string()
       .min(10)
       .max(1000)
-      .when('status', {
-        is: Joi.valid('accepted', 'rejected'),
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      })
+      .optional()
       .messages({
         'string.min': 'الرد يجب أن يكون على الأقل 10 أحرف',
-        'string.max': 'الرد يجب ألا يتجاوز 1000 حرف',
-        'any.required': 'الرد مطلوب عند قبول أو رفض الطلب'
+        'string.max': 'الرد يجب ألا يتجاوز 1000 حرف'
       }),
     estimatedDelivery: Joi.date()
       .min('now')

@@ -408,7 +408,7 @@ router.get('/:requestId', isAuthenticated, controller.getRequestById);
  *                 type: string
  *                 minLength: 10
  *                 maxLength: 1000
- *                 description: رد أو ملاحظات إضافية
+ *                 description: رد أو ملاحظات إضافية (اختياري)
  *               estimatedDelivery:
  *                 type: string
  *                 format: date-time
