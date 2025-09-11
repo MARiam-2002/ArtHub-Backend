@@ -3,8 +3,7 @@ import userModel from '../../../DB/models/user.model.js';
 import categoryModel from '../../../DB/models/category.model.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { ensureDatabaseConnection } from '../../utils/mongodbUtils.js';
-import { cacheHomeData, cacheSearchResults, cacheArtworkDetails, cacheArtistProfile, cacheCategoryArtworks, cacheUserProfile, invalidateHomeCache } from '../../utils/cacheHelpers.js';
-import { cacheWithFallback } from '../../utils/cache.js';
+import { cacheHomeData, cacheSearchResults, cacheArtworkDetails, cacheArtistProfile, cacheCategoryArtworks, invalidateHomeCache } from '../../utils/cacheHelpers.js';
 import mongoose from 'mongoose';
 
 /**
@@ -551,30 +550,23 @@ export const getHomeData = asyncHandler(async (req, res, next) => {
       };
     }, { userId });
 
-    // Get current user data if authenticated (use cache with short TTL for immediate updates)
+    // Get current user data if authenticated (no cache for immediate updates)
     let currentUser = null;
     if (userId) {
-      // Use custom cache with short TTL for immediate profile updates
-      const userCacheKey = `home:user:${userId}`;
-      const userProfileData = await cacheWithFallback(userCacheKey, async () => {
-        const user = await userModel.findById(userId)
-          .select('displayName profileImage photoURL email role')
-          .lean();
-        
-        if (!user) {
-          return null;
-        }
-
-        return {
+      // Fetch user data directly from database for immediate updates
+      const user = await userModel.findById(userId)
+        .select('displayName profileImage photoURL email role')
+        .lean();
+      
+      if (user) {
+        currentUser = {
           _id: user._id,
           displayName: user.displayName,
           profileImage: getImageUrl(user.profileImage, user.photoURL),
           email: user.email,
           role: user.role
         };
-      }, 60); // 1 minute TTL for immediate updates
-      
-      currentUser = userProfileData;
+      }
     }
 
     // Prepare response with proper structure for Flutter (same format as before)
