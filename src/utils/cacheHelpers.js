@@ -265,7 +265,8 @@ export const invalidateUserCache = async (userId) => {
     `chat:messages:*:${userId}:*`,
     `notifications:${userId}:*`,
     `artist:profile:${userId}:*`,
-    `home:data:*`
+    `home:data:user:${userId}`,
+    `home:data:guest`
   ];
   
   let totalInvalidated = 0;
@@ -373,7 +374,8 @@ export const invalidateDashboardCache = async (adminId) => {
  */
 export const invalidateHomeCache = async () => {
   const patterns = [
-    'home:data:*',
+    'home:data:user:*',
+    'home:data:guest',
     'artworks:featured:*',
     'artworks:trending:*',
     'artworks:most-rated:*',
