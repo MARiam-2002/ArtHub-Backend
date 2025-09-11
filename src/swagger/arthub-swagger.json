@@ -6447,6 +6447,9 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SpecialRequestStatusUpdate"
+              },
+              "example": {
+                "status": "accepted"
               }
             }
           }
