@@ -440,12 +440,14 @@ export const createArtistReview = asyncHandler(async (req, res, next) => {
 
   // إذا كان هناك تقييم موجود، قم بتحديثه بدلاً من إنشاء واحد جديد
   if (existingReview) {
-    // تحديث التقييم الموجود
-    existingReview.rating = rating;
+    // تحديث التقييم الموجود - إضافة البيانات الجديدة للبيانات الموجودة
+    if (rating !== undefined && rating !== null) {
+      existingReview.rating = rating;
+    }
     if (title) existingReview.title = title;
-    if (comment) existingReview.comment = comment;
-    if (pros) existingReview.pros = pros;
-    if (cons) existingReview.cons = cons;
+    if (comment !== undefined && comment !== null) existingReview.comment = comment;
+    if (pros) existingReview.pros = pros?.filter(p => p && p.trim());
+    if (cons) existingReview.cons = cons?.filter(c => c && c.trim());
     if (isRecommended !== undefined) existingReview.isRecommended = isRecommended;
     
     // تحديث وقت التعديل
