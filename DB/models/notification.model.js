@@ -35,6 +35,7 @@ const notificationSchema = new Schema(
         'artwork_review_updated',
         'artwork_review_created',
         'artwork_review_deleted',
+        'special_request',
       ],
       default: 'other'
     },
