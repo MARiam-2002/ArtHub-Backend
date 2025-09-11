@@ -602,11 +602,7 @@ export const search = asyncHandler(async (req, res, next) => {
     const { q, type = 'all', page = 1, limit = 20, sortBy = 'relevance' } = req.query;
     
     if (!q || q.trim().length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'يجب أن يكون النص المبحوث عنه أكثر من حرفين',
-        data: null
-      });
+      return res.fail(null, 'يجب أن يكون النص المبحوث عنه أكثر من حرفين', 400);
     }
 
     const skip = (page - 1) * limit;
@@ -614,8 +610,7 @@ export const search = asyncHandler(async (req, res, next) => {
     const searchRegex = new RegExp(searchText, 'i');
 
     // Use cache for search results
-    const cacheKey = `search_${searchText}_${type}_${page}_${limit}_${sortBy}`;
-    const cachedData = await cacheSearchResults(cacheKey, async () => {
+    const cachedData = await cacheSearchResults(searchText, type, async () => {
     
       let sortOptions = {};
       switch (sortBy) {
@@ -744,19 +739,13 @@ export const search = asyncHandler(async (req, res, next) => {
       }
 
       return results;
-    }, { searchText, type, page, limit, sortBy });
+    }, { page, limit, sortBy });
 
-    res.status(200).json({
-      success: true,
-      message: 'تم البحث بنجاح',
-      data: cachedData,
-      meta: {
-        searchQuery: searchText,
-        searchType: type,
-        sortBy: sortBy,
-        timestamp: new Date().toISOString(),
-        cached: true
-      }
+    res.success(cachedData, 'تم البحث بنجاح', 200, {
+      searchQuery: searchText,
+      searchType: type,
+      sortBy: sortBy,
+      cached: true
     });
 
   } catch (error) {
