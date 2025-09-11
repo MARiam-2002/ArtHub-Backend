@@ -62,13 +62,19 @@ class InMemoryCache {
     return this.cache.get(key) || null;
   }
 
-  async del(key) {
-    const deleted = this.cache.delete(key);
-    if (this.timers.has(key)) {
-      clearTimeout(this.timers.get(key));
-      this.timers.delete(key);
+  async del(...keys) {
+    let deletedCount = 0;
+    for (const key of keys) {
+      const deleted = this.cache.delete(key);
+      if (deleted) {
+        deletedCount++;
+        if (this.timers.has(key)) {
+          clearTimeout(this.timers.get(key));
+          this.timers.delete(key);
+        }
+      }
     }
-    return deleted ? 1 : 0;
+    return deletedCount;
   }
 
   async keys(pattern) {
