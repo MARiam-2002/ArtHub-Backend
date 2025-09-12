@@ -803,11 +803,9 @@ export const getSingleArtwork = asyncHandler(async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Calculate average rating and count
-    const reviewsCount = reviews.length;
-    const rating = reviewsCount
-      ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount).toFixed(2))
-      : 0;
+    // Use stored values from database (updated by review controller)
+    const reviewsCount = artwork.reviewsCount || 0;
+    const rating = artwork.averageRating || 0;
 
     // Format reviews for frontend (show all reviews)
     const reviewsList = reviews

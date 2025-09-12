@@ -114,6 +114,21 @@ const artworkSchema = new Schema(
       type: Number,
       default: 0
     },
+    likeCount: {
+      type: Number,
+      default: 0
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    reviewsCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     status: {
       type: String,
       enum: ['available', 'sold', 'reserved', 'deleted'],
@@ -134,6 +149,10 @@ artworkSchema.index({ category: 1 });
 artworkSchema.index({ price: 1 });
 artworkSchema.index({ createdAt: -1 });
 artworkSchema.index({ isFeatured: 1, createdAt: -1 });
+artworkSchema.index({ averageRating: -1 });
+artworkSchema.index({ reviewsCount: -1 });
+artworkSchema.index({ likeCount: -1 });
+artworkSchema.index({ viewCount: -1 });
 
 // دالة لزيادة عداد المشاهدات
 artworkSchema.methods.incrementViewCount = async function () {

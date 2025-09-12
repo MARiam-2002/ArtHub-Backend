@@ -9,6 +9,33 @@ import { invalidateArtworkCache, invalidateUserCache } from '../../utils/cacheHe
 import mongoose from 'mongoose';
 
 /**
+ * Helper function to update artwork statistics in database
+ * @param {string} artworkId - Artwork ID
+ */
+async function updateArtworkStats(artworkId) {
+  try {
+    const reviews = await reviewModel.find({ 
+      artwork: artworkId, 
+      status: 'active' 
+    });
+    
+    const reviewsCount = reviews.length;
+    const averageRating = reviewsCount 
+      ? parseFloat((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsCount).toFixed(2))
+      : 0;
+    
+    await artworkModel.findByIdAndUpdate(artworkId, {
+      reviewsCount,
+      averageRating
+    });
+    
+    console.log(`Updated artwork ${artworkId} stats: rating=${averageRating}, reviewsCount=${reviewsCount}`);
+  } catch (error) {
+    console.error('Error updating artwork stats:', error);
+  }
+}
+
+/**
  * إنشاء تقييم جديد لعمل فني
  * @route POST /api/reviews/artwork
  * @access Private
@@ -128,16 +155,8 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
       console.error('خطأ في إرسال الإشعار:', notificationError);
     }
     
-    // تحديث متوسط تقييم العمل الفني في الخلفية
-    try {
-      const ratingStats = await reviewModel.getAverageRating(artwork, 'artwork');
-      await artworkModel.findByIdAndUpdate(artwork, {
-        rating: ratingStats.avgRating || 0,
-        ratingCount: ratingStats.count || 0
-      });
-    } catch (error) {
-      console.error('خطأ في تحديث متوسط التقييم:', error);
-    }
+    // تحديث إحصائيات العمل الفني في الخلفية
+    updateArtworkStats(artwork);
     
     return;
   }
@@ -193,16 +212,8 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
     invalidateUserCache(userId)
   ]);
 
-  // تحديث متوسط تقييم العمل الفني في الخلفية
-  try {
-    const ratingStats = await reviewModel.getAverageRating(artwork, 'artwork');
-    await artworkModel.findByIdAndUpdate(artwork, {
-      rating: ratingStats.avgRating || 0,
-      reviewsCount: ratingStats.count || 0
-    });
-  } catch (updateError) {
-    console.error('خطأ في تحديث إحصائيات العمل الفني:', updateError);
-  }
+  // تحديث إحصائيات العمل الفني في الخلفية
+  updateArtworkStats(artwork);
 
   // إرسال إشعار للفنان في الخلفية
   try {
@@ -295,12 +306,8 @@ export const updateArtworkReview = asyncHandler(async (req, res, next) => {
 
   await existingReview.save();
 
-  // تحديث متوسط تقييم العمل الفني
-  const ratingStats = await reviewModel.getAverageRating(existingReview.artwork, 'artwork');
-  await artworkModel.findByIdAndUpdate(existingReview.artwork, {
-    rating: ratingStats.avgRating || 0,
-    reviewsCount: ratingStats.count || 0
-  });
+  // تحديث إحصائيات العمل الفني
+  updateArtworkStats(existingReview.artwork);
 
   // إرجاع التقييم المحدث
   const updatedReview = await reviewModel
@@ -825,13 +832,9 @@ export const deleteReview = asyncHandler(async (req, res, next) => {
   review.status = 'deleted';
   await review.save();
 
-  // تحديث إحصائيات العمل الفني أو الفنان
+  // تحديث إحصائيات العمل الفني
   if (review.artwork) {
-    const ratingStats = await reviewModel.getAverageRating(review.artwork, 'artwork');
-    await artworkModel.findByIdAndUpdate(review.artwork, {
-      rating: ratingStats.avgRating || 0,
-      reviewsCount: ratingStats.count || 0
-    });
+    updateArtworkStats(review.artwork);
   }
 
   res.success(null, 'تم حذف التقييم بنجاح');
