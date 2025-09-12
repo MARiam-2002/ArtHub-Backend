@@ -370,7 +370,7 @@ export const createArtwork = asyncHandler(async (req, res) => {
   const artwork = await artworkModel.create({
     title: title.trim(),
     description: description || title.trim(), // استخدام العنوان كوصف إذا لم يتم توفير وصف
-    price,
+    price: price || null, // السماح بالسعر الاختياري
     category: categoryDoc._id, // استخدام معرف الفئة الذي تم العثور عليه
     artist,
     image: mainImage, // الصورة الرئيسية

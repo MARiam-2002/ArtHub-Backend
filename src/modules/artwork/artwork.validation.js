@@ -77,6 +77,8 @@ const priceSchema = Joi.number()
   .positive()
   .min(1)
   .max(1000000)
+  .allow(null)
+  .optional()
   .messages({
     'number.base': 'السعر يجب أن يكون رقماً',
     'number.positive': 'السعر يجب أن يكون أكبر من صفر',
@@ -143,7 +145,7 @@ export const createArtworkSchema = {
         'string.min': 'الوصف يجب أن يكون 10 أحرف على الأقل',
         'string.max': 'الوصف يجب أن يكون 2000 حرف على الأكثر'
       }),
-    price: priceSchema.required().messages({
+    price: priceSchema.messages({
       'any.required': 'سعر العمل الفني مطلوب'
     }),
     category: categorySchema.required().messages({
