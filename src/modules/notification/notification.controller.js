@@ -290,16 +290,8 @@ export const createNotification = async (data) => {
       data: notificationData
     });
 
-    // Send push notification if user has enabled it
-    const user = await userModel.findById(userId).select('notificationSettings fcmTokens');
-    
-    if (user?.notificationSettings?.pushNotifications !== false && user?.fcmTokens?.length > 0) {
-      await sendPushNotificationToUser(userId, {
-        title: title?.ar || title,
-        body: message?.ar || message,
-        data: notificationData || {}
-      });
-    }
+    // Note: Push notifications are sent directly from the calling modules
+    // to avoid duplicate notifications. This function only creates the database record.
 
     return notification;
   } catch (error) {

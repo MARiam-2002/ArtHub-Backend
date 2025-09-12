@@ -53,7 +53,7 @@ export const toggleFollow = asyncHandler(async (req, res, next) => {
 
       // Send notification to artist
       try {
-        await createNotification({
+        const notification = await createNotification({
           userId: artistId,
           title: {
             ar: 'متابع جديد',
@@ -70,6 +70,29 @@ export const toggleFollow = asyncHandler(async (req, res, next) => {
             followerName: req.user.displayName
           }
         });
+
+        // Send push notification directly
+        const { sendPushNotificationToUser } = await import('../../utils/pushNotifications.js');
+        const user = await userModel.findById(artistId).select('notificationSettings fcmTokens');
+        
+        if (user?.notificationSettings?.enablePush !== false && user?.fcmTokens?.length > 0) {
+          await sendPushNotificationToUser(artistId, {
+            title: {
+              ar: 'متابع جديد',
+              en: 'New Follower'
+            },
+            body: {
+              ar: `${req.user.displayName} بدأ بمتابعتك`,
+              en: `${req.user.displayName} started following you`
+            }
+          }, {
+            type: 'new_follower',
+            notificationId: notification._id.toString(),
+            followerId: follower.toString(),
+            followerName: req.user.displayName,
+            screen: 'PROFILE_FOLLOWERS'
+          });
+        }
       } catch (notificationError) {
         console.error('Failed to send follow notification:', notificationError);
       }

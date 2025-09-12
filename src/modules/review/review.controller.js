@@ -82,7 +82,7 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
     
     // إرسال إشعار للفنان في الخلفية
     try {
-      await createNotification({
+      const notification = await createNotification({
         userId: artworkDoc.artist,
         type: 'artwork_review_updated',
         title: {
@@ -100,6 +100,30 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
           rating: existingReview.rating
         }
       });
+
+      // Send push notification directly
+      const { sendPushNotificationToUser } = await import('../../utils/pushNotifications.js');
+      const user = await userModel.findById(artworkDoc.artist).select('notificationSettings fcmTokens');
+      
+      if (user?.notificationSettings?.enablePush !== false && user?.fcmTokens?.length > 0) {
+        await sendPushNotificationToUser(artworkDoc.artist, {
+          title: {
+            ar: 'تحديث تقييم عملك الفني',
+            en: 'Your artwork review has been updated'
+          },
+          body: {
+            ar: `تم تحديث تقييم عملك الفني "${artworkDoc.title}"`,
+            en: `The review for your artwork "${artworkDoc.title}" has been updated`
+          }
+        }, {
+          type: 'artwork_review_updated',
+          notificationId: notification._id.toString(),
+          reviewId: existingReview._id.toString(),
+          artworkId: artwork,
+          rating: existingReview.rating,
+          screen: 'ARTWORK_DETAILS'
+        });
+      }
     } catch (notificationError) {
       console.error('خطأ في إرسال الإشعار:', notificationError);
     }
@@ -182,7 +206,7 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
 
   // إرسال إشعار للفنان في الخلفية
   try {
-    await createNotification({
+    const notification = await createNotification({
       userId: artworkDoc.artist,
       type: 'artwork_reviewed',
       title: {
@@ -200,6 +224,30 @@ export const createArtworkReview = asyncHandler(async (req, res, next) => {
         rating
       }
     });
+
+    // Send push notification directly
+    const { sendPushNotificationToUser } = await import('../../utils/pushNotifications.js');
+    const user = await userModel.findById(artworkDoc.artist).select('notificationSettings fcmTokens');
+    
+    if (user?.notificationSettings?.enablePush !== false && user?.fcmTokens?.length > 0) {
+      await sendPushNotificationToUser(artworkDoc.artist, {
+        title: {
+          ar: 'تقييم جديد لعملك الفني',
+          en: 'New review for your artwork'
+        },
+        body: {
+          ar: `تم تقييم عملك الفني "${artworkDoc.title}" بـ ${rating} نجوم`,
+          en: `Your artwork "${artworkDoc.title}" has been reviewed with ${rating} stars`
+        }
+      }, {
+        type: 'artwork_reviewed',
+        notificationId: notification._id.toString(),
+        artworkId: artwork,
+        reviewId: review._id.toString(),
+        rating,
+        screen: 'ARTWORK_DETAILS'
+      });
+    }
   } catch (notificationError) {
     console.error('خطأ في إرسال الإشعار:', notificationError);
   }
