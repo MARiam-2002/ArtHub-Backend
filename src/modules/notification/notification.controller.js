@@ -22,7 +22,7 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
     const [notifications, totalCount, unreadCount] = await Promise.all([
       notificationModel
         .find(filter)
-        .populate('sender', 'displayName profileImage')
+        .populate('sender', 'displayName profileImage photoURL')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit))
@@ -40,7 +40,7 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
         senderInfo = {
           _id: notification.sender._id,
           displayName: notification.sender.displayName,
-          profileImage: notification.sender.profileImage?.url || notification.sender.profileImage
+          profileImage: notification.sender.profileImage?.url || notification.sender.profileImage || notification.sender.photoURL
         };
       } 
       // إذا لم يكن sender موجود، نحاول الحصول عليه من data.senderId
@@ -70,7 +70,10 @@ export const getNotifications = asyncHandler(async (req, res, next) => {
         isRead: notification.isRead,
         sender: senderInfo,
         data: notification.data || {},
-        createdAt: notification.createdAt
+        createdAt: notification.createdAt,
+        // إضافة معلومات إضافية للصورة
+        senderImage: senderInfo?.profileImage || null,
+        senderName: senderInfo?.displayName || null
       };
     }));
 
