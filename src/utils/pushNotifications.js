@@ -321,7 +321,7 @@ export const sendPushNotificationToMultipleUsers = async (
             tokens: batchTokens
           };
 
-          const response = await admin.messaging().sendMulticast(message);
+          const response = await admin.messaging().sendEachForMulticast(message);
           console.log(`Batch: ${response.successCount}/${batchTokens.length} notifications sent for ${lang}`);
           
           // Process failed tokens
@@ -587,7 +587,7 @@ export const cleanupInvalidFCMTokens = async () => {
             }
           };
           
-          const response = await admin.messaging().sendMulticast(message);
+          const response = await admin.messaging().sendEachForMulticast(message);
           
           // Identify valid and failed tokens
           const failedTokens = [];
