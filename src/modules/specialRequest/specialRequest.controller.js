@@ -447,13 +447,21 @@ export const createSpecialRequest = asyncHandler(async (req, res, next) => {
       }
     };
 
-    // Invalidate cache for both users
-    await Promise.all([
-      invalidateUserCache(senderId),
-      invalidateUserCache(artist)
-    ]);
-
+    // إرسال الاستجابة فوراً
     res.status(201).json(response);
+
+    // تشغيل العمليات في الخلفية
+    setImmediate(async () => {
+      try {
+        // Invalidate cache for both users
+        await Promise.all([
+          invalidateUserCache(senderId),
+          invalidateUserCache(artist)
+        ]);
+      } catch (error) {
+        console.error('Background cache invalidation failed:', error);
+      }
+    });
 
   } catch (error) {
     console.error('Create special request error:', error);
@@ -908,7 +916,21 @@ export const updateRequestStatus = asyncHandler(async (req, res, next) => {
       }
     };
 
+    // إرسال الاستجابة فوراً
     res.status(200).json(response);
+
+    // تشغيل العمليات في الخلفية
+    setImmediate(async () => {
+      try {
+        // Invalidate cache for both users
+        await Promise.all([
+          invalidateUserCache(artistId),
+          invalidateUserCache(updatedRequest.sender)
+        ]);
+      } catch (error) {
+        console.error('Background cache invalidation failed:', error);
+      }
+    });
 
   } catch (error) {
     console.error('Update request status error:', error);
@@ -1024,7 +1046,21 @@ export const addResponseToRequest = asyncHandler(async (req, res, next) => {
       }
     };
 
+    // إرسال الاستجابة فوراً
     res.status(200).json(response);
+
+    // تشغيل العمليات في الخلفية
+    setImmediate(async () => {
+      try {
+        // Invalidate cache for both users
+        await Promise.all([
+          invalidateUserCache(userId),
+          invalidateUserCache(updatedRequest.sender)
+        ]);
+      } catch (error) {
+        console.error('Background cache invalidation failed:', error);
+      }
+    });
 
   } catch (error) {
     console.error('Add response error:', error);
@@ -1151,7 +1187,21 @@ export const completeRequest = asyncHandler(async (req, res, next) => {
       }
     };
 
+    // إرسال الاستجابة فوراً
     res.status(200).json(response);
+
+    // تشغيل العمليات في الخلفية
+    setImmediate(async () => {
+      try {
+        // Invalidate cache for both users
+        await Promise.all([
+          invalidateUserCache(artistId),
+          invalidateUserCache(updatedRequest.sender)
+        ]);
+      } catch (error) {
+        console.error('Background cache invalidation failed:', error);
+      }
+    });
 
   } catch (error) {
     console.error('Complete request error:', error);
@@ -1244,7 +1294,18 @@ export const deleteRequest = asyncHandler(async (req, res, next) => {
       }
     };
 
+    // إرسال الاستجابة فوراً
     res.status(200).json(response);
+
+    // تشغيل العمليات في الخلفية
+    setImmediate(async () => {
+      try {
+        // Invalidate cache for user
+        await invalidateUserCache(userId);
+      } catch (error) {
+        console.error('Background cache invalidation failed:', error);
+      }
+    });
 
   } catch (error) {
     console.error('Delete request error:', error);
@@ -1363,7 +1424,21 @@ export const cancelSpecialRequest = asyncHandler(async (req, res, next) => {
       }
     };
 
+    // إرسال الاستجابة فوراً
     res.status(200).json(response);
+
+    // تشغيل العمليات في الخلفية
+    setImmediate(async () => {
+      try {
+        // Invalidate cache for both users
+        await Promise.all([
+          invalidateUserCache(userId),
+          invalidateUserCache(recipientId)
+        ]);
+      } catch (error) {
+        console.error('Background cache invalidation failed:', error);
+      }
+    });
 
   } catch (error) {
     console.error('Cancel request error:', error);
