@@ -94,10 +94,10 @@ export const notificationQuerySchema = Joi.object({
       'number.max': 'عدد العناصر يجب أن يكون أقل من أو يساوي 100'
     }),
   type: Joi.string()
-    .valid('request', 'message', 'review', 'system', 'other', 'special_request', 'artwork_reviewed')
+    .valid('request', 'message', 'review', 'system', 'other', 'special_request', 'artwork_reviewed', 'new_follower')
     .messages({
       'string.base': 'نوع الإشعار يجب أن يكون نصاً',
-      'any.only': 'نوع الإشعار يجب أن يكون أحد القيم المسموحة: request, message, review, system, other'
+      'any.only': 'نوع الإشعار يجب أن يكون أحد القيم المسموحة: request, message, review, system, other, new_follower'
     }),
   language: Joi.string()
     .valid('ar', 'en')
@@ -294,7 +294,7 @@ export const createNotificationSchema = Joi.object({
     'any.required': 'نص الإشعار مطلوب'
   }),
   type: Joi.string()
-    .valid('request', 'message', 'review', 'system', 'other', 'special_request', 'artwork_reviewed')
+    .valid('request', 'message', 'review', 'system', 'other', 'special_request', 'artwork_reviewed', 'new_follower')
     .default('other')
     .messages({
       'string.base': 'نوع الإشعار يجب أن يكون نصاً',
@@ -582,7 +582,7 @@ export const bulkNotificationSchema = Joi.object({
     'any.required': 'نص الإشعار مطلوب'
   }),
   type: Joi.string()
-    .valid('request', 'message', 'review', 'system', 'other', 'special_request', 'artwork_reviewed')
+    .valid('request', 'message', 'review', 'system', 'other', 'special_request', 'artwork_reviewed', 'new_follower')
     .default('other')
     .messages({
       'string.base': 'نوع الإشعار يجب أن يكون نصاً',

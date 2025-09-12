@@ -55,9 +55,15 @@ export const toggleFollow = asyncHandler(async (req, res, next) => {
       try {
         await createNotification({
           userId: artistId,
-          title: 'متابع جديد',
-          message: `${req.user.displayName} بدأ بمتابعتك`,
-          type: 'follow',
+          title: {
+            ar: 'متابع جديد',
+            en: 'New Follower'
+          },
+          message: {
+            ar: `${req.user.displayName} بدأ بمتابعتك`,
+            en: `${req.user.displayName} started following you`
+          },
+          type: 'new_follower',
           sender: follower,
           data: {
             followerId: follower.toString(),
