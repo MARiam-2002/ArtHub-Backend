@@ -720,7 +720,8 @@ export const sendChatMessageNotification = async (
         messageType: messageType,
         unreadCount: unreadCount.toString(),
         timestamp: Date.now().toString()
-      }
+      },
+      { saveToDatabase: false } // تعطيل حفظ الإشعار في قاعدة البيانات لرسائل الدردشة
     );
   } catch (error) {
     console.error('Error sending chat notification:', error);
