@@ -42,7 +42,9 @@ export const sendPushNotificationToUser = async (userId, notification, data = {}
         : notification.body;
 
     // Save notification to database if requested (async - don't wait)
-    if (options.saveToDatabase !== false) {
+    // تعطيل حفظ الإشعار في قاعدة البيانات لتجنب التكرار
+    // لأن الدوال الأخرى تحفظ الإشعارات بنفسها
+    if (options.saveToDatabase === true) {
       notificationModel.create({
         user: userId,
         title: {
@@ -763,7 +765,8 @@ export const sendCommentNotification = async (
       commenterId: commenterId.toString(),
       type: 'new_comment',
       timestamp: Date.now().toString()
-    }
+    },
+    { saveToDatabase: false } // تعطيل حفظ الإشعار في قاعدة البيانات للتعليقات
   );
 
 /**
@@ -791,7 +794,8 @@ export const sendFollowNotification = async (artistId, followerId, followerName)
       followerId: followerId.toString(),
       type: 'new_follower',
       timestamp: Date.now().toString()
-    }
+    },
+    { saveToDatabase: false } // تعطيل حفظ الإشعار في قاعدة البيانات للمتابعين
   );
 
 /**
@@ -921,7 +925,8 @@ export const sendSpecialRequestNotification = async (
       requestType: requestType,
       senderName: senderName,
       timestamp: Date.now().toString()
-    }
+    },
+    { saveToDatabase: false } // تعطيل حفظ الإشعار في قاعدة البيانات للطلبات الخاصة
   );
 };
 
