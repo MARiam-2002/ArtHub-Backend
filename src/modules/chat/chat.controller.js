@@ -127,7 +127,7 @@ function formatChat(chat, currentUserId) {
 }
 
 /**
- * Get user chats with enhanced formatting for Flutter
+ * Get user chats with enhanced formatting for Flutter - Performance Optimized
  */
 export const getChats = asyncHandler(async (req, res, next) => {
   try {
@@ -143,17 +143,19 @@ export const getChats = asyncHandler(async (req, res, next) => {
       isDeleted: { $ne: true } 
     };
 
+    let searchUsers = [];
     if (search.trim()) {
       // Search in other user's display name
-      const searchUsers = await userModel.find({
+      searchUsers = await userModel.find({
         displayName: { $regex: search, $options: 'i' }
-      }).select('_id');
+      }).select('_id').lean();
       
       const userIds = searchUsers.map(user => user._id);
       searchQuery.members = { $in: [userId, ...userIds] };
     }
 
-    const [chats, totalCount] = await Promise.all([
+    // Parallel operations for better performance
+    const [chats, totalCount, totalUnreadCount] = await Promise.all([
       chatModel
         .find(searchQuery)
         .populate({
@@ -172,22 +174,30 @@ export const getChats = asyncHandler(async (req, res, next) => {
         .skip(skip)
         .limit(Number(limit))
         .lean(),
-      chatModel.countDocuments(searchQuery)
+      
+      chatModel.countDocuments(searchQuery),
+      
+      // Get total unread count in parallel
+      messageModel.countDocuments({
+        chat: { $in: [] }, // Will be updated after chats are fetched
+        sender: { $ne: userId },
+        isRead: false
+      })
     ]);
+
+    // Update unread count query with actual chat IDs
+    const actualUnreadCount = chats.length > 0 ? await messageModel.countDocuments({
+      chat: { $in: chats.map(chat => chat._id) },
+      sender: { $ne: userId },
+      isRead: false
+    }) : 0;
 
     // Format chats for Flutter
     const formattedChats = chats.map(chat => formatChat(chat, userId));
 
-    // Get total unread count
-    const totalUnreadCount = await messageModel.countDocuments({
-      chat: { $in: chats.map(chat => chat._id) },
-      sender: { $ne: userId },
-      isRead: false
-    });
-
     res.success({
       chats: formattedChats,
-      totalUnreadCount,
+      totalUnreadCount: actualUnreadCount,
       pagination: {
         currentPage: Number(page),
         totalPages: Math.ceil(totalCount / limit),
@@ -207,7 +217,7 @@ export const getChats = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Get or create chat with user - Enhanced for Flutter
+ * Get or create chat with user - Enhanced for Flutter with Performance Optimization
  */
 export const getOrCreateChat = asyncHandler(async (req, res, next) => {
   try {
@@ -224,11 +234,33 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Check if user exists and is active
-    const otherUser = await userModel
-      .findOne({ _id: otherUserId, isActive: true, isDeleted: false })
-      .select('displayName profileImage photoURL isOnline lastSeen isVerified role')
-      .lean();
+    // Parallel operations for better performance
+    const [otherUser, existingChat] = await Promise.all([
+      // Check if user exists and is active
+      userModel
+        .findOne({ _id: otherUserId, isActive: true, isDeleted: false })
+        .select('displayName profileImage photoURL isOnline lastSeen isVerified role')
+        .lean(),
+      
+      // Check if chat already exists
+      chatModel.findOne({
+        members: { $all: [userId, otherUserId] },
+        isDeleted: { $ne: true }
+      })
+      .populate({
+        path: 'members',
+        select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+      })
+      .populate({
+        path: 'lastMessage',
+        select: 'content text messageType sender isRead readAt sentAt createdAt',
+        populate: {
+          path: 'sender',
+          select: 'displayName profileImage photoURL'
+        }
+      })
+      .lean()
+    ]);
 
     if (!otherUser) {
       return res.status(404).json({
@@ -238,51 +270,50 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Check if chat already exists
-    let chat = await chatModel.findOne({
-      members: { $all: [userId, otherUserId] },
-      isDeleted: { $ne: true }
-    })
-    .populate({
-      path: 'members',
-      select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
-    })
-    .populate({
-      path: 'lastMessage',
-      select: 'content text messageType sender isRead readAt sentAt createdAt',
-      populate: {
-        path: 'sender',
-        select: 'displayName profileImage photoURL'
-      }
-    })
-    .lean();
+    let chat = existingChat;
 
     if (!chat) {
-      // Create new chat
-      chat = await chatModel.create({
+      // Create new chat with optimized approach
+      const newChat = await chatModel.create({
         members: [userId, otherUserId],
         sender: userId,
         receiver: otherUserId,
         chatType: 'private'
       });
 
-      // Populate the newly created chat
-      chat = await chatModel.findById(chat._id)
-        .populate({
-          path: 'members',
-          select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
-        })
-        .lean();
+      // Populate the newly created chat with parallel operations
+      const [populatedChat] = await Promise.all([
+        chatModel.findById(newChat._id)
+          .populate({
+            path: 'members',
+            select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+          })
+          .lean(),
         
-      // إرسال حدث المحادثة الجديدة عبر Socket.IO
-      try {
-        const formattedChat = formatChat(chat, userId);
-        console.log('📡 Sending new_chat event to users:', userId, otherUserId);
-        sendToUser(userId, 'new_chat', formattedChat);
-        sendToUser(otherUserId, 'new_chat', formattedChat);
-      } catch (socketError) {
-        console.warn('Socket.IO new chat notification failed:', socketError);
-      }
+        // Invalidate cache for both users immediately
+        invalidateUserCache(userId),
+        invalidateUserCache(otherUserId)
+      ]);
+
+      chat = populatedChat;
+        
+      // Send new chat event via Socket.IO (non-blocking)
+      setImmediate(() => {
+        try {
+          const formattedChat = formatChat(chat, userId);
+          console.log('📡 Sending new_chat event to users:', userId, otherUserId);
+          sendToUser(userId, 'new_chat', formattedChat);
+          sendToUser(otherUserId, 'new_chat', formattedChat);
+        } catch (socketError) {
+          console.warn('Socket.IO new chat notification failed:', socketError);
+        }
+      });
+    } else {
+      // For existing chats, invalidate cache in background
+      setImmediate(() => {
+        invalidateUserCache(userId);
+        invalidateUserCache(otherUserId);
+      });
     }
 
     const response = {
@@ -310,7 +341,7 @@ export const getOrCreateChat = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Get chat messages with enhanced formatting for Flutter
+ * Get chat messages with enhanced formatting for Flutter - Performance Optimized
  */
 export const getMessages = asyncHandler(async (req, res, next) => {
   try {
@@ -329,36 +360,29 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Check if user is member of chat
-    const chat = await chatModel.findOne({
-      _id: chatId,
-      members: { $in: [userId] },
-      isDeleted: { $ne: true }
-    })
-    .populate({
-      path: 'members',
-      select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
-    })
-    .populate({
-      path: 'lastMessage',
-      select: 'content text messageType sender isRead readAt sentAt createdAt',
-      populate: {
-        path: 'sender',
-        select: 'displayName profileImage photoURL'
-      }
-    })
-    .lean();
-
-    if (!chat) {
-      return res.status(404).json({
-        success: false,
-        message: 'المحادثة غير موجودة أو لا تملك صلاحية الوصول إليها',
-        data: null
-      });
-    }
-
-    // Get messages
-    const [messages, totalCount] = await Promise.all([
+    // Parallel operations for better performance
+    const [chat, messages, totalCount] = await Promise.all([
+      // Check if user is member of chat
+      chatModel.findOne({
+        _id: chatId,
+        members: { $in: [userId] },
+        isDeleted: { $ne: true }
+      })
+      .populate({
+        path: 'members',
+        select: 'displayName profileImage photoURL isOnline lastSeen isVerified role'
+      })
+      .populate({
+        path: 'lastMessage',
+        select: 'content text messageType sender isRead readAt sentAt createdAt',
+        populate: {
+          path: 'sender',
+          select: 'displayName profileImage photoURL'
+        }
+      })
+      .lean(),
+      
+      // Get messages
       messageModel
         .find({ chat: chatId, isDeleted: { $ne: true } })
         .populate({
@@ -377,26 +401,53 @@ export const getMessages = asyncHandler(async (req, res, next) => {
         .skip(skip)
         .limit(Number(limit))
         .lean(),
+      
+      // Get total count
       messageModel.countDocuments({ chat: chatId, isDeleted: { $ne: true } })
     ]);
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'المحادثة غير موجودة أو لا تملك صلاحية الوصول إليها',
+        data: null
+      });
+    }
 
     // Format messages for Flutter
     const formattedMessages = messages
       .reverse()
       .map(message => formatMessage(message, userId));
 
-    // Mark messages as read
-    await messageModel.updateMany(
-      {
-        chat: chatId,
-        sender: { $ne: userId },
-        isRead: false
-      },
-      { 
-        isRead: true, 
-        readAt: new Date() 
+    // Mark messages as read in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        await messageModel.updateMany(
+          {
+            chat: chatId,
+            sender: { $ne: userId },
+            isRead: false
+          },
+          { 
+            isRead: true, 
+            readAt: new Date() 
+          }
+        );
+        
+        // Invalidate cache for both users
+        const otherUser = chat.members.find(member => 
+          member._id.toString() !== userId.toString()
+        );
+        if (otherUser) {
+          await Promise.all([
+            invalidateUserCache(userId),
+            invalidateUserCache(otherUser._id)
+          ]);
+        }
+      } catch (markReadError) {
+        console.warn('Mark messages as read failed:', markReadError);
       }
-    );
+    });
 
     res.success({
       chat: formatChat(chat, userId),
@@ -580,94 +631,97 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       messageData.text = content?.trim() || '';
     }
 
-    const message = await messageModel.create(messageData);
+    // Parallel operations for better performance
+    const [message, sender] = await Promise.all([
+      // Create message
+      messageModel.create(messageData),
+      
+      // Get sender info for notifications
+      userModel.findById(userId).select('displayName').lean()
+    ]);
 
-    // Update chat last message and activity
-    await chatModel.findByIdAndUpdate(chatId, {
-      lastMessage: message._id,
-      lastActivity: new Date()
-    });
-
-    // Populate message with sender info
-    const populatedMessage = await messageModel
-      .findById(message._id)
-      .populate({
-        path: 'sender',
-        select: 'displayName profileImage photoURL isVerified role'
-      })
-      .populate({
-        path: 'replyTo',
-        select: 'content text messageType sender createdAt',
-        populate: {
+    // Update chat last message and activity in parallel with message population
+    const [populatedMessage] = await Promise.all([
+      // Populate message with sender info
+      messageModel
+        .findById(message._id)
+        .populate({
           path: 'sender',
-          select: 'displayName profileImage photoURL'
-        }
+          select: 'displayName profileImage photoURL isVerified role'
+        })
+        .populate({
+          path: 'replyTo',
+          select: 'content text messageType sender createdAt',
+          populate: {
+            path: 'sender',
+            select: 'displayName profileImage photoURL'
+          }
+        })
+        .lean(),
+      
+      // Update chat last message and activity
+      chatModel.findByIdAndUpdate(chatId, {
+        lastMessage: message._id,
+        lastActivity: new Date()
       })
-      .lean();
+    ]);
 
     // Format message for response
     const formattedMessage = formatMessage(populatedMessage, userId);
 
-    // Send real-time notification via Socket.IO
-    try {
-      // Get unread count for this chat
-      const unreadCount = await messageModel.countDocuments({
-        chat: chatId,
-        sender: { $ne: receiverId },
-        isRead: false,
-        isDeleted: { $ne: true }
-      });
-
-      sendToChat(chatId, 'new_message', {
-        message: formattedMessage,
-        unreadCount: unreadCount
-      });
-      
-      // Also send to specific user if they're not in the chat room
-      if (receiverId) {
-        sendToUser(receiverId, 'new_message', formattedMessage);
-      }
-    } catch (socketError) {
-      console.warn('Socket.IO message notification failed:', socketError);
-    }
-
-    // Send push notification to receiver
-    if (receiverId) {
+    // Send notifications in background (non-blocking)
+    setImmediate(async () => {
       try {
-        const sender = await userModel.findById(userId).select('displayName').lean();
-        const senderName = sender?.displayName || 'مستخدم';
-        
-        // إرسال الإشعارات مباشرة إذا كان لدى المستخدم FCM tokens
-        const receiver = await userModel.findById(receiverId).select('fcmTokens displayName email');
-        
-        if (receiver && receiver.fcmTokens && receiver.fcmTokens.length > 0) {
-          
-          let notificationBody = '';
-          if (messageType === 'text') {
-            notificationBody = `${senderName}: ${content?.substring(0, 50) || ''}${(content?.length || 0) > 50 ? '...' : ''}`;
-          } else if (messageType === 'image') {
-            notificationBody = `${senderName}: أرسل صورة`;
-          } else {
-            notificationBody = `${senderName}: أرسل مرفق`;
-          }
+        // Send real-time notification via Socket.IO
+        const unreadCount = await messageModel.countDocuments({
+          chat: chatId,
+          sender: { $ne: receiverId },
+          isRead: false,
+          isDeleted: { $ne: true }
+        });
 
-          await sendChatMessageNotification(
-            receiverId,
-            userId,
-            senderName,
-            content,
-            chatId,
-            messageType
-          );
-          
-          console.log(`✅ Push notification sent to ${receiver.displayName || receiver.email}`);
-        } else {
-          console.log(`⚠️  No FCM tokens found for user ${receiverId}`);
+        sendToChat(chatId, 'new_message', {
+          message: formattedMessage,
+          unreadCount: unreadCount
+        });
+        
+        // Also send to specific user if they're not in the chat room
+        if (receiverId) {
+          sendToUser(receiverId, 'new_message', formattedMessage);
         }
+
+        // Send push notification to receiver
+        if (receiverId) {
+          const senderName = sender?.displayName || 'مستخدم';
+          
+          // إرسال الإشعارات مباشرة إذا كان لدى المستخدم FCM tokens
+          const receiver = await userModel.findById(receiverId).select('fcmTokens displayName email');
+          
+          if (receiver && receiver.fcmTokens && receiver.fcmTokens.length > 0) {
+            await sendChatMessageNotification(
+              receiverId,
+              userId,
+              senderName,
+              content,
+              chatId,
+              messageType
+            );
+            
+            console.log(`✅ Push notification sent to ${receiver.displayName || receiver.email}`);
+          } else {
+            console.log(`⚠️  No FCM tokens found for user ${receiverId}`);
+          }
+        }
+
+        // Invalidate cache for both users
+        await Promise.all([
+          invalidateUserCache(userId),
+          receiverId ? invalidateUserCache(receiverId) : Promise.resolve()
+        ]);
       } catch (notificationError) {
-        console.warn('Push notification failed:', notificationError);
+        console.warn('Background notification operations failed:', notificationError);
       }
-    }
+    });
 
     const response = {
       success: true,
@@ -680,12 +734,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         userId: userId
       }
     };
-
-    // Invalidate cache for both users
-    await Promise.all([
-      invalidateUserCache(userId),
-      receiverId ? invalidateUserCache(receiverId) : Promise.resolve()
-    ]);
 
     res.status(201).json(response);
 
@@ -732,29 +780,45 @@ export const markAsRead = asyncHandler(async (req, res, next) => {
       });
     }
 
-    // Mark messages as read
-    const result = await messageModel.updateMany(
-      {
-        chat: chatId,
-        sender: { $ne: userId },
-        isRead: false
-      },
-      { 
-        isRead: true, 
-        readAt: new Date() 
-      }
-    );
+    // Mark messages as read and get other user for cache invalidation
+    const [result, otherUser] = await Promise.all([
+      messageModel.updateMany(
+        {
+          chat: chatId,
+          sender: { $ne: userId },
+          isRead: false
+        },
+        { 
+          isRead: true, 
+          readAt: new Date() 
+        }
+      ),
+      
+      // Get other user for cache invalidation
+      userModel.findOne({
+        _id: { $in: chat.members.filter(member => member.toString() !== userId.toString()) }
+      }).select('_id').lean()
+    ]);
 
-    // Send real-time notification about read status
-    try {
-      sendToChat(chatId, 'messages_read', {
-        chatId,
-        readBy: userId,
-        readAt: new Date().toISOString()
-      });
-    } catch (socketError) {
-      console.warn('Socket.IO read notification failed:', socketError);
-    }
+    // Send notifications and invalidate cache in background
+    setImmediate(async () => {
+      try {
+        // Send real-time notification about read status
+        sendToChat(chatId, 'messages_read', {
+          chatId,
+          readBy: userId,
+          readAt: new Date().toISOString()
+        });
+
+        // Invalidate cache for both users
+        await Promise.all([
+          invalidateUserCache(userId),
+          otherUser ? invalidateUserCache(otherUser._id) : Promise.resolve()
+        ]);
+      } catch (backgroundError) {
+        console.warn('Background operations failed:', backgroundError);
+      }
+    });
 
     const response = {
       success: true,
