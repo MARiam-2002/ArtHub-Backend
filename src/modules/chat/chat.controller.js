@@ -680,14 +680,21 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
           isDeleted: { $ne: true }
         });
 
-        sendToChat(chatId, 'new_message', {
+        // Send to both users in the private chat
+        // Send to sender (for confirmation)
+        sendToUser(userId, 'new_message', {
+          chatId: chatId,
           message: formattedMessage,
           unreadCount: unreadCount
         });
         
-        // Also send to specific user if they're not in the chat room
+        // Send to receiver (the other person in the chat)
         if (receiverId) {
-          sendToUser(receiverId, 'new_message', formattedMessage);
+          sendToUser(receiverId, 'new_message', {
+            chatId: chatId,
+            message: formattedMessage,
+            unreadCount: unreadCount
+          });
         }
 
         // Send push notification to receiver
