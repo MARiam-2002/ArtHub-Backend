@@ -392,17 +392,19 @@ export const optimizeForServerless = () => {
     console.log('✅ MongoDB reconnected');
   });
 
-  // Handle process termination
-  process.on('SIGINT', async () => {
-    try {
-      await mongoose.connection.close();
-      console.log('MongoDB connection closed due to app termination');
-      process.exit(0);
-    } catch (error) {
-      console.error('Error closing MongoDB connection:', error);
-      process.exit(1);
-    }
-  });
+  // Handle process termination (skip on Vercel serverless)
+  if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
+    process.on('SIGINT', async () => {
+      try {
+        await mongoose.connection.close();
+        console.log('MongoDB connection closed due to app termination');
+        process.exit(0);
+      } catch (error) {
+        console.error('Error closing MongoDB connection:', error);
+        process.exit(1);
+      }
+    });
+  }
 
   // Return the connection options being used
   return getConnectionOptions();

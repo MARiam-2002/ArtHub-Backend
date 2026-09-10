@@ -1,4 +1,4 @@
-import admin from '../utils/firebaseAdmin.js';
+import admin, { isFirebaseReady } from '../utils/firebaseAdmin.js';
 import jwt from 'jsonwebtoken';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import userModel from '../../DB/models/user.model.js';
@@ -20,6 +20,9 @@ const saveTokenPair = async (userId, accessToken, refreshToken, userAgent) => {
 };
 
 const verifyFirebaseTokenInternal = async (firebaseToken) => {
+  if (!isFirebaseReady()) {
+    throw new Error('Firebase authentication is not configured');
+  }
   const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
   let user = await userModel.findOne({ firebaseUid: decodedToken.uid });
   if (!user && decodedToken.email) {

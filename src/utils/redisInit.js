@@ -7,17 +7,16 @@ import { logger } from './logger.js';
 export const initializeRedis = async () => {
   try {
     logger.info('🔄 Initializing Redis connection...');
-    
-    // Test Redis connection
+
     const isConnected = await testRedisConnection();
-    
+
     if (isConnected) {
       logger.info('✅ Redis initialized successfully');
       return true;
-    } else {
-      logger.warn('⚠️ Redis connection failed, continuing without cache');
-      return false;
     }
+
+    logger.warn('⚠️ Redis connection failed, continuing without cache');
+    return false;
   } catch (error) {
     logger.error('❌ Redis initialization error:', error.message);
     logger.warn('⚠️ Continuing without Redis cache');
@@ -37,18 +36,20 @@ export const shutdownRedis = async () => {
   }
 };
 
-// Handle process termination
-process.on('SIGINT', async () => {
-  logger.info('🔄 Received SIGINT, shutting down Redis...');
-  await shutdownRedis();
-  process.exit(0);
-});
+// Do not call process.exit in serverless (Vercel) — it kills the function
+if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
+  process.on('SIGINT', async () => {
+    logger.info('🔄 Received SIGINT, shutting down Redis...');
+    await shutdownRedis();
+    process.exit(0);
+  });
 
-process.on('SIGTERM', async () => {
-  logger.info('🔄 Received SIGTERM, shutting down Redis...');
-  await shutdownRedis();
-  process.exit(0);
-});
+  process.on('SIGTERM', async () => {
+    logger.info('🔄 Received SIGTERM, shutting down Redis...');
+    await shutdownRedis();
+    process.exit(0);
+  });
+}
 
 export default {
   initializeRedis,
