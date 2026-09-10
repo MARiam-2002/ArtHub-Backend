@@ -187,15 +187,23 @@ export const globalErrorHandling = (err, req, res, next) => {
     });
   }
 
-  // Default error response
-  const statusCode = err.cause || 500;
-  const errorMessage = statusCode === 500 ? 'حدث خطأ داخلي في الخادم' : err.message;
+  // Default error response — support status, statusCode, and cause
+  const statusCode = Number(err.status || err.statusCode || err.cause) || 500;
+  const errorMessage =
+    statusCode === 500
+      ? 'حدث خطأ داخلي في الخادم'
+      : err.message || 'حدث خطأ';
 
   res.status(statusCode).json({
     success: false,
     status: statusCode,
-    message: errorMessage,
-    error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    message: statusCode === 404 ? 'المسار غير موجود' : errorMessage,
+    error:
+      process.env.NODE_ENV === 'production' && statusCode === 500
+        ? undefined
+        : process.env.NODE_ENV === 'development'
+          ? err.stack
+          : err.message,
     timestamp: new Date().toISOString()
   });
 };

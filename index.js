@@ -12,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { MongoClient } from 'mongodb';
+import { globalErrorHandling } from './src/middleware/error.middleware.js';
 
 dotenv.config();
 const app = express();
@@ -63,15 +64,21 @@ initializeRedisConnection().catch(err => {
 // Add middleware to check database connection on each request
 app.use(async (req, res, next) => {
   // Skip database check for non-API routes and health checks
+  const skipPaths = new Set([
+    '/',
+    '/health',
+    '/api',
+    '/api/health',
+    '/api/keepalive',
+    '/api/db-test',
+    '/api/mongo-debug',
+    '/api/direct-connect',
+    '/api/api-routes'
+  ]);
+
   if (
+    skipPaths.has(req.path) ||
     !req.path.startsWith('/api') ||
-    req.path === '/health' ||
-    req.path === '/api/health' ||
-    req.path === '/api/keepalive' ||
-    req.path === '/api/db-test' ||
-    req.path === '/api/mongo-debug' ||
-    req.path === '/api/direct-connect' ||
-    req.path === '/api/api-routes' ||
     req.path === '/api-docs' ||
     req.path === '/api-docs/' ||
     req.path.startsWith('/api-docs/')
@@ -91,41 +98,19 @@ app.use(async (req, res, next) => {
   }
 
   try {
-    // Enhanced connection check with ping and retry
-    const isConnected = await checkDatabaseConnection();
+    // Fail fast on serverless — never burn the whole Hobby timeout here
+    const checkPromise = checkDatabaseConnection();
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), 2500));
+    const isConnected = await Promise.race([checkPromise, timeoutPromise]);
 
     if (!isConnected) {
       console.error('❌ Database connection check failed during request');
-
-      // Try one more time with force reconnect
-      const reconnected = await ensureDatabaseConnection(true);
-
-      if (!reconnected) {
-        console.error('❌ Database reconnection failed, but continuing request');
-        // Don't block the request, just log the error
-        // return res.status(503).json({
-        //   success: false,
-        //   status: 503,
-        //   message: 'الخدمة غير متوفرة',
-        //   error: 'خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا',
-        //   errorCode: 'DB_CONNECTION_ERROR',
-        //   timestamp: new Date().toISOString()
-        // });
-      }
+      // Do not block the request on serverless; controllers can reconnect if needed
     }
 
     next();
   } catch (err) {
     console.error('❌ Database connection error during request:', err);
-    // Don't block the request, just log the error
-    // return res.status(503).json({
-    //   success: false,
-    //   status: 503,
-    //   message: 'الخدمة غير متوفرة',
-    //   error: 'خطأ في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى لاحقًا',
-    //   errorCode: 'DB_CONNECTION_ERROR',
-    //   timestamp: new Date().toISOString()
-    // });
     next();
   }
 });
@@ -162,50 +147,32 @@ app.get('/health', async (req, res) => {
   let dbDetails = {};
 
   try {
-    // Check MongoDB connection status
-    if (mongoose.connection.readyState === 1) {
-      dbStatus = 'Connected';
+    const readyState = mongoose.connection.readyState;
+    const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
+    dbStatus = states[readyState] || 'Unknown';
 
-      // Get additional MongoDB status info if connected
+    if (readyState === 1 && mongoose.connection.db) {
       try {
-        const adminDb = mongoose.connection.db.admin();
-        const serverStatus = await adminDb.serverStatus();
-        const pingResult = await adminDb.ping();
-
+        const ping = await Promise.race([
+          mongoose.connection.db.admin().ping(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('ping timeout')), 2000))
+        ]);
         dbDetails = {
-          version: serverStatus.version,
-          uptime: serverStatus.uptime,
-          connections: serverStatus.connections?.current || 0,
-          ok: serverStatus.ok === 1,
-          ping: pingResult.ok === 1,
+          ping: ping?.ok === 1,
           host: mongoose.connection.host,
-          port: mongoose.connection.port,
-          name: mongoose.connection.name,
-          options: {
-            maxPoolSize: mongoose.connection.options?.maxPoolSize,
-            socketTimeoutMS: mongoose.connection.options?.socketTimeoutMS,
-            connectTimeoutMS: mongoose.connection.options?.connectTimeoutMS
-          }
+          name: mongoose.connection.name
         };
       } catch (dbError) {
-        console.error('Error getting MongoDB server status:', dbError);
-        dbDetails = { error: 'Could not retrieve detailed status', message: dbError.message };
+        dbDetails = { error: dbError.message };
       }
-    } else {
-      // Map readyState to human-readable status
-      const states = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'];
-      dbStatus = states[mongoose.connection.readyState] || 'Unknown';
-
-      // Include connection URL info (without credentials)
-      if (process.env.CONNECTION_URL) {
-        try {
-          const url = new URL(process.env.CONNECTION_URL);
-          dbDetails.host = url.hostname;
-          dbDetails.protocol = url.protocol;
-          dbDetails.database = url.pathname.substring(1);
-        } catch (e) {
-          dbDetails.error = 'Invalid connection URL format';
-        }
+    } else if (process.env.CONNECTION_URL) {
+      try {
+        const url = new URL(process.env.CONNECTION_URL);
+        dbDetails.host = url.hostname;
+        dbDetails.protocol = url.protocol;
+        dbDetails.database = url.pathname.substring(1);
+      } catch (e) {
+        dbDetails.error = 'Invalid connection URL format';
       }
     }
   } catch (error) {
@@ -222,7 +189,6 @@ app.get('/health', async (req, res) => {
       readyState: mongoose.connection.readyState,
       details: dbDetails
     },
-    memory: process.memoryUsage(),
     uptime: process.uptime(),
     serverless: !!process.env.VERCEL || !!process.env.VERCEL_ENV,
     region: process.env.VERCEL_REGION || process.env.AWS_REGION || 'unknown'
@@ -819,6 +785,14 @@ if (!process.env.VERCEL && !process.env.VERCEL_ENV) {
 } else {
   console.log('🚀 Running in serverless mode');
 }
+
+// 404 + error handlers MUST be last (after all routes above)
+app.all('*', (req, res, next) => {
+  const error = new Error(`Not found: ${req.method} ${req.path}`);
+  error.status = 404;
+  next(error);
+});
+app.use(globalErrorHandling);
 
 // Export the Express API for Vercel Serverless Functions
 export default app;

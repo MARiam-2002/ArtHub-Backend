@@ -5,7 +5,6 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import chatRouter from './modules/chat/chat.router.js';
 import { responseMiddleware } from './middleware/response.middleware.js';
-import { globalErrorHandling } from './middleware/error.middleware.js';
 import artworkRouter from './modules/artwork/artwork.router.js';
 import homeRouter from './modules/home/home.router.js';
 import swaggerRoutes from './swagger/swagger.js';
@@ -211,46 +210,13 @@ export const bootstrap = (app, express) => {
   app.get('/api/keepalive', async (req, res) => {
     try {
       const isConnected = mongoose.connection.readyState === 1;
-
-      if (isConnected) {
-        // Test connection with a ping
-        try {
-          await mongoose.connection.db.admin().ping();
-          res.status(200).json({
-            status: 'ok',
-            message: 'Server is alive',
-            database: 'connected',
-            timestamp: new Date().toISOString()
-          });
-        } catch (pingError) {
-          console.log('Database ping failed:', pingError.message);
-
-          // Try to reconnect
-          const reconnected = await ensureDatabaseConnection(true);
-
-          res.status(reconnected ? 200 : 503).json({
-            status: reconnected ? 'ok' : 'degraded',
-            message: reconnected
-              ? 'Server is alive, reconnected after ping failure'
-              : 'Server is alive but database connection failed',
-            database: reconnected ? 'reconnected' : 'disconnected',
-            error: reconnected ? undefined : pingError.message,
-            timestamp: new Date().toISOString()
-          });
-        }
-      } else {
-        // Try to reconnect
-        const reconnected = await ensureDatabaseConnection(true);
-
-        res.status(reconnected ? 200 : 503).json({
-          status: reconnected ? 'ok' : 'degraded',
-          message: reconnected
-            ? 'Server is alive, reconnected to database'
-            : 'Server is alive but database connection failed',
-          database: reconnected ? 'reconnected' : 'disconnected',
-          timestamp: new Date().toISOString()
-        });
-      }
+      res.status(200).json({
+        status: 'ok',
+        message: 'Server is alive',
+        database: isConnected ? 'connected' : 'disconnected',
+        readyState: mongoose.connection.readyState,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error in keepalive endpoint:', error);
       res.status(500).json({
@@ -262,13 +228,5 @@ export const bootstrap = (app, express) => {
     }
   });
 
-  // 404 handler
-  app.all('*', (req, res, next) => {
-    const error = new Error('not found page');
-    error.status = 404;
-    next(error);
-  });
-
-  // Global error handler
-  app.use(globalErrorHandling);
+  // 404 and global error handlers are registered in index.js AFTER all routes
 };
