@@ -68,8 +68,6 @@ router.get('/', (req, res) => {
     `${(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim()}://${(req.headers['x-forwarded-host'] || req.get('host') || '').split(',')[0].trim()}` ||
     FALLBACK_PRODUCTION_URL;
 
-  const spec = buildSpecForRequest(req);
-
   const swaggerHtml = `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -303,7 +301,7 @@ router.get('/', (req, res) => {
   <script>
     window.onload = function() {
       const ui = SwaggerUIBundle({
-        spec: ${JSON.stringify(spec)},
+        url: '/api-docs/swagger.json',
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
@@ -326,14 +324,10 @@ router.get('/', (req, res) => {
         tryItOutEnabled: true,
         supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
         requestInterceptor: function(request) {
-          // Ensure relative URLs resolve against the selected server
           return request;
         },
         responseInterceptor: function(response) {
           return response;
-        },
-        onComplete: function() {
-          // Keep default server as current deployment origin
         }
       });
       window.ui = ui;
