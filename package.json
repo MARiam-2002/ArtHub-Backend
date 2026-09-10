@@ -67,7 +67,7 @@
     "swagger:complete": "node scripts/complete-swagger-for-vercel.js"
   },
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   },
   "keywords": [
     "art",
