@@ -2,7 +2,7 @@ import userModel from '../../../../DB/models/user.model.js';
 import { asyncHandler } from '../../../utils/errorHandler.js';
 import { handleDatabaseError, handleAuthError } from '../../../utils/errorHandler.js';
 import { generateTokens, saveTokenPair } from '../../../middleware/auth.middleware.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../../../utils/sendEmails.js';

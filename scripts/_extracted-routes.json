@@ -1,0 +1,1016 @@
+[
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin",
+    "file": "src\\modules\\admin\\reports-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "delete",
+    "path": "/api/admin/{id}",
+    "file": "src\\modules\\admin\\reports-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/{id}",
+    "file": "src\\modules\\admin\\reports-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "patch",
+    "path": "/api/admin/{id}/status",
+    "file": "src\\modules\\admin\\reports-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/admins",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "post",
+    "path": "/api/admin/admins",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "delete",
+    "path": "/api/admin/admins/{id}",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/admins/{id}",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "put",
+    "path": "/api/admin/admins/{id}",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "put",
+    "path": "/api/admin/admins/{id}/change-password",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/artists",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/artists/{artistId}",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/artists/{artistId}/activity",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/artists/{artistId}/artworks",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/artists/{artistId}/info",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/artists/{artistId}/reports",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/artists/{artistId}/reviews",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "patch",
+    "path": "/api/admin/artists/{artistId}/status",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "put",
+    "path": "/api/admin/change-password",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/export",
+    "file": "src\\modules\\admin\\reviews-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "post",
+    "path": "/api/admin/login",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/orders",
+    "file": "src\\modules\\admin\\order-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "delete",
+    "path": "/api/admin/orders/{id}",
+    "file": "src\\modules\\admin\\order-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "patch",
+    "path": "/api/admin/orders/{id}/status",
+    "file": "src\\modules\\admin\\order-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/overview",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/profile",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "put",
+    "path": "/api/admin/profile",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/statistics",
+    "file": "src\\modules\\admin\\reviews-management.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/users",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/users/{id}",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/users/{id}/activity",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "delete",
+    "path": "/api/admin/users/{id}/block",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/users/{id}/orders",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/users/{id}/reviews",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "post",
+    "path": "/api/admin/users/{id}/send-message",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "admin",
+    "method": "get",
+    "path": "/api/admin/users/export",
+    "file": "src\\modules\\admin\\admin.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "get",
+    "path": "/api/artworks",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "post",
+    "path": "/api/artworks",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "delete",
+    "path": "/api/artworks/{id}",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "get",
+    "path": "/api/artworks/{id}",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "put",
+    "path": "/api/artworks/{id}",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "delete",
+    "path": "/api/artworks/{id}/favorite",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "post",
+    "path": "/api/artworks/{id}/favorite",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "get",
+    "path": "/api/artworks/{id}/reviews",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "post",
+    "path": "/api/artworks/{id}/reviews",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "get",
+    "path": "/api/artworks/artist/{artistId}",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "get",
+    "path": "/api/artworks/featured",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "get",
+    "path": "/api/artworks/my-artworks",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "artwork",
+    "method": "get",
+    "path": "/api/artworks/search",
+    "file": "src\\modules\\artwork\\artwork.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/fcm-token",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/firebase",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/forgot-password",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/login",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/login-with-fingerprint",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/logout",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "get",
+    "path": "/api/auth/me",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/refresh-token",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/register",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/reset-password",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/update-fingerprint",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "auth",
+    "method": "post",
+    "path": "/api/auth/verify-forget-code",
+    "file": "src\\modules\\auth\\auth.router.js"
+  },
+  {
+    "module": "category",
+    "method": "get",
+    "path": "/api/categories",
+    "file": "src\\modules\\category\\category.router.js"
+  },
+  {
+    "module": "category",
+    "method": "post",
+    "path": "/api/categories",
+    "file": "src\\modules\\category\\category.router.js"
+  },
+  {
+    "module": "category",
+    "method": "delete",
+    "path": "/api/categories/{id}",
+    "file": "src\\modules\\category\\category.router.js"
+  },
+  {
+    "module": "category",
+    "method": "get",
+    "path": "/api/categories/{id}",
+    "file": "src\\modules\\category\\category.router.js"
+  },
+  {
+    "module": "category",
+    "method": "put",
+    "path": "/api/categories/{id}",
+    "file": "src\\modules\\category\\category.router.js"
+  },
+  {
+    "module": "category",
+    "method": "get",
+    "path": "/api/categories/popular",
+    "file": "src\\modules\\category\\category.router.js"
+  },
+  {
+    "module": "category",
+    "method": "get",
+    "path": "/api/categories/stats",
+    "file": "src\\modules\\category\\category.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "get",
+    "path": "/api/chat",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "get",
+    "path": "/api/chat/{chatId}/messages",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "delete",
+    "path": "/api/chat/{chatId}/messages/{messageId}",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "put",
+    "path": "/api/chat/{chatId}/read",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "post",
+    "path": "/api/chat/{chatId}/send",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "post",
+    "path": "/api/chat/create",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "get",
+    "path": "/api/chat/unread-count",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "chat",
+    "method": "get",
+    "path": "/api/chat/unread-counts",
+    "file": "src\\modules\\chat\\chat.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/artists/performance",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/charts",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/overview",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/sales/analytics",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/sales/comprehensive",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/sales/report",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/sales/top-artists",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/sales/trends",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "dashboard",
+    "method": "get",
+    "path": "/api/dashboard/statistics",
+    "file": "src\\modules\\dashboard\\dashboard.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "delete",
+    "path": "/api/follow/artist/{artistId}",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "post",
+    "path": "/api/follow/artist/{artistId}",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "post",
+    "path": "/api/follow/follow",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "get",
+    "path": "/api/follow/followers",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "get",
+    "path": "/api/follow/followers/{userId}",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "get",
+    "path": "/api/follow/following",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "get",
+    "path": "/api/follow/following/{userId}",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "get",
+    "path": "/api/follow/my-followers",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "get",
+    "path": "/api/follow/my-following",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "get",
+    "path": "/api/follow/status/{artistId}",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "post",
+    "path": "/api/follow/toggle",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "follow",
+    "method": "post",
+    "path": "/api/follow/unfollow",
+    "file": "src\\modules\\follow\\follow.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/artist/{id}",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/artwork/{id}",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/category/{id}",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/featured-artworks",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/most-rated-artworks",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/personalized-artworks",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/search",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "home",
+    "method": "get",
+    "path": "/api/home/trending",
+    "file": "src\\modules\\home\\home.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "delete",
+    "path": "/api/notifications",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "get",
+    "path": "/api/notifications",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "post",
+    "path": "/api/notifications",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "delete",
+    "path": "/api/notifications/{notificationId}",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "patch",
+    "path": "/api/notifications/{notificationId}/read",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "get",
+    "path": "/api/notifications/firebase",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "patch",
+    "path": "/api/notifications/read-all",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "get",
+    "path": "/api/notifications/settings",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "put",
+    "path": "/api/notifications/settings",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "delete",
+    "path": "/api/notifications/token",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "get",
+    "path": "/api/notifications/token",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "notification",
+    "method": "post",
+    "path": "/api/notifications/token",
+    "file": "src\\modules\\notification\\notification.router.js"
+  },
+  {
+    "module": "review",
+    "method": "delete",
+    "path": "/api/reviews/{reviewId}",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "post",
+    "path": "/api/reviews/{reviewId}/helpful",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "patch",
+    "path": "/api/reviews/{reviewId}/moderate",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "post",
+    "path": "/api/reviews/{reviewId}/report",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "get",
+    "path": "/api/reviews/admin/stats",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "post",
+    "path": "/api/reviews/artist",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "get",
+    "path": "/api/reviews/artist/{artistId}",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "put",
+    "path": "/api/reviews/artist/{reviewId}",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "post",
+    "path": "/api/reviews/artwork",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "get",
+    "path": "/api/reviews/artwork/{artworkId}",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "put",
+    "path": "/api/reviews/artwork/{reviewId}",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "review",
+    "method": "get",
+    "path": "/api/reviews/my",
+    "file": "src\\modules\\review\\review.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "post",
+    "path": "/api/special-requests",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "delete",
+    "path": "/api/special-requests/{requestId}",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "get",
+    "path": "/api/special-requests/{requestId}",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "post",
+    "path": "/api/special-requests/{requestId}/cancel",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "post",
+    "path": "/api/special-requests/{requestId}/complete",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "post",
+    "path": "/api/special-requests/{requestId}/response",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "patch",
+    "path": "/api/special-requests/{requestId}/status",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "get",
+    "path": "/api/special-requests/artist",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "get",
+    "path": "/api/special-requests/cancellation-reasons",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "get",
+    "path": "/api/special-requests/my",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "specialRequest",
+    "method": "get",
+    "path": "/api/special-requests/types",
+    "file": "src\\modules\\specialRequest\\specialRequest.router.js"
+  },
+  {
+    "module": "global",
+    "method": "get",
+    "path": "/api/terms",
+    "file": "src\\modules\\global\\terms.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "get",
+    "path": "/api/transactions",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "post",
+    "path": "/api/transactions",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "get",
+    "path": "/api/transactions/{transactionId}",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "post",
+    "path": "/api/transactions/{transactionId}/cancel",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "post",
+    "path": "/api/transactions/{transactionId}/dispute",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "post",
+    "path": "/api/transactions/{transactionId}/installments/{installmentNumber}",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "post",
+    "path": "/api/transactions/{transactionId}/refund",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "patch",
+    "path": "/api/transactions/{transactionId}/status",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "patch",
+    "path": "/api/transactions/{transactionId}/tracking",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "patch",
+    "path": "/api/transactions/bulk",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "get",
+    "path": "/api/transactions/export",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "transaction",
+    "method": "get",
+    "path": "/api/transactions/stats",
+    "file": "src\\modules\\transaction\\transaction.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/artist/{artistId}",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "put",
+    "path": "/api/user/bio",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "put",
+    "path": "/api/user/change-password",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "put",
+    "path": "/api/user/cover-image",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "delete",
+    "path": "/api/user/delete-account",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/following",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/latest-artists",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/my-artworks",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/notification-settings",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "put",
+    "path": "/api/user/notification-settings",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/profile",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "put",
+    "path": "/api/user/profile",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/top-artists",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "get",
+    "path": "/api/user/wishlist",
+    "file": "src\\modules\\user\\user.router.js"
+  },
+  {
+    "module": "user",
+    "method": "post",
+    "path": "/api/user/wishlist/toggle",
+    "file": "src\\modules\\user\\user.router.js"
+  }
+]
