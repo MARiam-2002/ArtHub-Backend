@@ -17,8 +17,16 @@ if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
 
 // Variables for connection management
 let mongoServer;
-const MAX_RETRIES = parseInt(process.env.MONGODB_MAX_RETRY_ATTEMPTS || '5');
-const RETRY_INTERVAL = parseInt(process.env.MONGODB_BASE_RETRY_DELAY || '3000'); // 3 seconds
+const isServerlessEnv = () =>
+  !!process.env.VERCEL || !!process.env.VERCEL_ENV || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+// On Vercel Hobby, total budget is ~10s — keep connect attempts short
+const MAX_RETRIES = parseInt(
+  process.env.MONGODB_MAX_RETRY_ATTEMPTS || (isServerlessEnv() ? '1' : '5')
+);
+const RETRY_INTERVAL = parseInt(
+  process.env.MONGODB_BASE_RETRY_DELAY || (isServerlessEnv() ? '500' : '3000')
+);
 
 // Global connection cache - critical for serverless
 let cachedConnection = null;
@@ -27,43 +35,53 @@ let connectionPromise = null;
 let lastConnectionAttempt = 0;
 const CONNECTION_COOLDOWN = 1000; // 1 second between connection attempts
 
+/**
+ * Normalize CONNECTION_URL from env (strip quotes/whitespace that break Vercel envs)
+ */
+export const getConnectionUrl = () => {
+  let url = process.env.CONNECTION_URL || process.env.MONGODB_URI || '';
+  url = String(url).trim();
+  if (
+    (url.startsWith('"') && url.endsWith('"')) ||
+    (url.startsWith("'") && url.endsWith("'"))
+  ) {
+    url = url.slice(1, -1).trim();
+  }
+  // Common paste issue: literal \n at end
+  url = url.replace(/\\n$/g, '').trim();
+  return url;
+};
+
 // Serverless-optimized connection options
 const getConnectionOptions = (isServerless = false) => {
   const baseOptions = {
-    serverSelectionTimeoutMS: parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '20000'),
-    socketTimeoutMS: parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '60000'),
-    connectTimeoutMS: parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '20000'),
-    maxPoolSize: isServerless ? 5 : 10,
-    minPoolSize: isServerless ? 1 : 2,
+    serverSelectionTimeoutMS: parseInt(
+      process.env.MONGODB_SERVER_SELECTION_TIMEOUT || (isServerless ? '5000' : '20000')
+    ),
+    socketTimeoutMS: parseInt(
+      process.env.MONGODB_SOCKET_TIMEOUT || (isServerless ? '10000' : '60000')
+    ),
+    connectTimeoutMS: parseInt(
+      process.env.MONGODB_CONNECTION_TIMEOUT || (isServerless ? '5000' : '20000')
+    ),
+    maxPoolSize: isServerless ? 1 : 10,
+    minPoolSize: isServerless ? 0 : 2,
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    // Critical settings for preventing "buffering timed out" errors
-    bufferCommands: false, // Disable buffering when not connected
-    autoIndex: false, // Don't build indexes on connection
-    family: 4, // Force IPv4
-    // Heartbeat to keep connection alive
-    heartbeatFrequencyMS: 10000
+    bufferCommands: false,
+    autoIndex: false,
+    family: 4,
+    heartbeatFrequencyMS: isServerless ? 30000 : 10000
   };
 
   if (isServerless) {
-    // Additional serverless optimizations
-    baseOptions.serverSelectionTimeoutMS = parseInt(
-      process.env.MONGODB_SERVER_SELECTION_TIMEOUT || '20000'
-    ); // Increased from 10000
-    baseOptions.connectTimeoutMS = parseInt(process.env.MONGODB_CONNECTION_TIMEOUT || '20000'); // Increased from 10000
-    baseOptions.socketTimeoutMS = parseInt(process.env.MONGODB_SOCKET_TIMEOUT || '60000'); // Increased from 45000
-    baseOptions.maxPoolSize = 1; // Smaller connection pool for serverless
-    baseOptions.minPoolSize = 0; // No minimum pool size
-    baseOptions.maxIdleTimeMS = 10000; // Close idle connections faster
-    baseOptions.keepAlive = true; // Keep connections alive
-    baseOptions.keepAliveInitialDelay = 30000; // 30 seconds
-    baseOptions.retryWrites = true; // Enable retry for write operations
-    baseOptions.retryReads = true; // Enable retry for read operations
+    baseOptions.maxIdleTimeMS = 10000;
+    baseOptions.retryWrites = true;
+    baseOptions.retryReads = true;
 
-    // Only add directConnection for non-SRV URIs
-    const connectionUrl = process.env.CONNECTION_URL || '';
-    if (!connectionUrl.includes('+srv')) {
-      baseOptions.directConnection = true; // Skip DNS seedlist discovery
+    const connectionUrl = getConnectionUrl();
+    if (connectionUrl && !connectionUrl.includes('+srv')) {
+      baseOptions.directConnection = true;
     }
   }
 
@@ -130,16 +148,20 @@ export const connectDB = async (retryCount = 0) => {
       // Different connection approach based on environment
       if (process.env.NODE_ENV === 'production') {
         // Production environment: use CONNECTION_URL from environment variables
-        if (!process.env.CONNECTION_URL) {
+        const connectionUrl = getConnectionUrl();
+        if (!connectionUrl) {
           console.error('❌ Missing CONNECTION_URL environment variable in production');
           throw new Error('Missing CONNECTION_URL in production');
         }
 
+        // Keep process.env in sync with sanitized value
+        process.env.CONNECTION_URL = connectionUrl;
+
         // Check if connection string contains placeholders
         if (
-          process.env.CONNECTION_URL.includes('your_username') ||
-          process.env.CONNECTION_URL.includes('your_password') ||
-          process.env.CONNECTION_URL.includes('your_cluster')
+          connectionUrl.includes('your_username') ||
+          connectionUrl.includes('your_password') ||
+          connectionUrl.includes('your_cluster')
         ) {
           console.error('⚠️ MongoDB connection string contains placeholder values');
           throw new Error('MongoDB connection string contains placeholders');
@@ -148,8 +170,7 @@ export const connectDB = async (retryCount = 0) => {
         console.log('🔄 Connecting to production MongoDB...');
 
         // Detect serverless environment
-        const isServerless =
-          !!process.env.VERCEL || !!process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME;
+        const isServerless = isServerlessEnv();
         if (isServerless) {
           console.log('🚀 Running in serverless environment, using optimized settings');
         }
@@ -166,17 +187,18 @@ export const connectDB = async (retryCount = 0) => {
             if (attempt > 0) {
               console.log(`🔄 Connection attempt ${attempt} of ${MAX_RETRIES}...`);
               await new Promise(resolve => setTimeout(resolve, backoffTime));
-              backoffTime = backoffTime * 1.5; // Exponential backoff
+              backoffTime = Math.min(backoffTime * 1.5, isServerless ? 1000 : backoffTime * 1.5);
             }
 
             // For Vercel, add a special flag to help with debugging
             if (isServerless) {
-              console.log(
-                `🔄 Connecting to MongoDB with URL pattern: ${process.env.CONNECTION_URL.split('@')[1].split('/')[0]}`
-              );
+              const hostPart = connectionUrl.includes('@')
+                ? connectionUrl.split('@').pop()?.split('/')[0]
+                : '(unparseable host)';
+              console.log(`🔄 Connecting to MongoDB host: ${hostPart}`);
             }
 
-            await mongoose.connect(process.env.CONNECTION_URL, options);
+            await mongoose.connect(connectionUrl, options);
             break; // Connection successful, exit the loop
           } catch (err) {
             lastError = err;

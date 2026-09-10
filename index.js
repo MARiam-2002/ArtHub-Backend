@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { bootstrap } from './src/index.router.js';
-import { connectDB, closeDatabase, checkDatabaseConnection } from './DB/connection.js';
+import { connectDB, closeDatabase, checkDatabaseConnection, getConnectionUrl } from './DB/connection.js';
 import mongoose from 'mongoose';
 import http from 'http';
 import { initializeSocketIO } from './src/utils/socketService.js';
@@ -118,6 +118,22 @@ app.use(async (req, res, next) => {
 // Initialize routes and middleware
 bootstrap(app, express);
 
+// Root landing — browsers hitting the domain should not look like a crash
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'ArtHub API',
+    documentation: '/api-docs',
+    health: '/api/health',
+    api: '/api',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Silence browser favicon noise
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/favicon.png', (req, res) => res.status(204).end());
+
 // Base API route
 app.get('/api', (req, res) => {
   res.json({
@@ -165,15 +181,21 @@ app.get('/health', async (req, res) => {
       } catch (dbError) {
         dbDetails = { error: dbError.message };
       }
-    } else if (process.env.CONNECTION_URL) {
+    } else if (getConnectionUrl()) {
       try {
-        const url = new URL(process.env.CONNECTION_URL);
-        dbDetails.host = url.hostname;
-        dbDetails.protocol = url.protocol;
-        dbDetails.database = url.pathname.substring(1);
+        const raw = getConnectionUrl();
+        // Avoid URL() throwing on mongodb+srv with special password chars
+        const hostMatch = raw.match(/@([^/?]+)/);
+        dbDetails.host = hostMatch ? hostMatch[1] : 'configured';
+        dbDetails.hasConnectionUrl = true;
+        dbDetails.urlValid = raw.startsWith('mongodb://') || raw.startsWith('mongodb+srv://');
       } catch (e) {
         dbDetails.error = 'Invalid connection URL format';
+        dbDetails.hasConnectionUrl = true;
       }
+    } else {
+      dbDetails.error = 'CONNECTION_URL is not set';
+      dbDetails.hasConnectionUrl = false;
     }
   } catch (error) {
     dbStatus = 'Error';
