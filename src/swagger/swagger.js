@@ -6,19 +6,9 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// قراءة ملف swagger.json بدلاً من استخدام assert
 const swaggerJsonPath = path.join(__dirname, 'arthub-swagger.json');
 const swaggerDocument = JSON.parse(fs.readFileSync(swaggerJsonPath, 'utf8'));
 
-// المسارات موجودة بالفعل في arthub-swagger.json، لا حاجة لإضافتها مرة أخرى
-// swaggerDocument.paths = {
-//   ...swaggerDocument.paths,
-//   ...dashboardPaths,
-//   ...adminPaths,
-//   ...orderManagementPaths
-// };
-
-// قراءة ملف اللوجو وتحويله إلى Base64 لتضمينه مباشرة في HTML
 let logoBase64 = '';
 try {
   const logoPath = path.join(__dirname, '..', 'public', 'assets', 'images', 'logo.png');
@@ -26,17 +16,60 @@ try {
   logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
 } catch (error) {
   console.error('Error loading logo:', error);
-  // استخدام مسار URL في حالة الفشل
   logoBase64 = '/assets/images/logo.png';
 }
 
 const router = Router();
 
-// Website URL for meta tags
-const siteUrl = process.env.API_URL || 'https://arthub-api.vercel.app';
+const FALLBACK_PRODUCTION_URL = process.env.API_URL || 'https://arthub-api.vercel.app';
 
-// Create custom Swagger UI HTML with absolute URLs
+/**
+ * Build OpenAPI servers list with the current request origin first so
+ * Swagger "Try it out" hits the same host the UI is served from.
+ */
+function buildSpecForRequest(req) {
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+  const host = (req.headers['x-forwarded-host'] || req.get('host') || '').split(',')[0].trim();
+  const origin = host ? `${proto}://${host}` : FALLBACK_PRODUCTION_URL;
+
+  const spec = structuredClone(swaggerDocument);
+  const otherServers = (swaggerDocument.servers || []).filter(
+    s => s.url !== origin && s.url !== '/' && !s.url.includes('localhost')
+  );
+
+  spec.servers = [
+    { url: origin, description: 'Current deployment (Try it out)' },
+    { url: '/', description: 'Same origin' },
+    ...otherServers,
+    { url: 'http://localhost:3000', description: 'Local development' }
+  ];
+
+  // Prefer production URL when served from Vercel but API_URL is set
+  if (process.env.VERCEL && process.env.API_URL && process.env.API_URL !== origin) {
+    spec.servers.unshift({
+      url: process.env.API_URL,
+      description: 'Configured production API'
+    });
+  }
+
+  return spec;
+}
+
+// JSON endpoint for tooling / Swagger clients
+router.get('/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(buildSpecForRequest(req));
+});
+
 router.get('/', (req, res) => {
+  const siteUrl =
+    process.env.API_URL ||
+    `${(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim()}://${(req.headers['x-forwarded-host'] || req.get('host') || '').split(',')[0].trim()}` ||
+    FALLBACK_PRODUCTION_URL;
+
+  const spec = buildSpecForRequest(req);
+
   const swaggerHtml = `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -47,10 +80,8 @@ router.get('/', (req, res) => {
   <meta name="description" content="توثيق كامل لواجهة برمجة التطبيقات (API) الخاصة بتطبيق ArtHub للمبدعين والفنانين">
   <meta name="keywords" content="ArtHub, API, documentation, توثيق, واجهة برمجة التطبيقات, فن, إبداع">
   
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="${logoBase64}" />
   
-  <!-- Open Graph meta tags for better social sharing -->
   <meta property="og:title" content="ArtHub API Documentation">
   <meta property="og:description" content="توثيق كامل لواجهة برمجة التطبيقات (API) الخاصة بتطبيق ArtHub للمبدعين والفنانين">
   <meta property="og:image" content="${logoBase64}">
@@ -58,13 +89,11 @@ router.get('/', (req, res) => {
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ar_SA">
   
-  <!-- Twitter Card for Twitter sharing -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ArtHub API Documentation">
   <meta name="twitter:description" content="توثيق كامل لواجهة برمجة التطبيقات (API) الخاصة بتطبيق ArtHub للمبدعين والفنانين">
   <meta name="twitter:image" content="${logoBase64}">
   
-  <!-- Preload CSS for better performance -->
   <link rel="preload" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" as="style">
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4.5.0/swagger-ui.css" />
   
@@ -87,7 +116,6 @@ router.get('/', (req, res) => {
       text-align: center;
     }
     
-    /* Logo and Header */
     .header-container {
       background-color: #C1D1E6;
       color: #333;
@@ -122,7 +150,6 @@ router.get('/', (req, res) => {
       color: #333;
     }
     
-    /* Custom Swagger UI Colors */
     .swagger-ui .opblock.opblock-post {
       background: rgba(193, 209, 230, 0.1);
       border-color: #C1D1E6;
@@ -199,34 +226,28 @@ router.get('/', (req, res) => {
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* Fix button text color for better contrast */
     .swagger-ui .btn {
       color: #333;
     }
     
-    /* Fix links color */
     .swagger-ui a.nostyle, 
     .swagger-ui a.nostyle:visited {
       color: #333 !important;
     }
     
-    /* Fix tag headers */
     .swagger-ui .opblock-tag {
       border-color: #C1D1E6;
       background: rgba(193, 209, 230, 0.1);
     }
     
-    /* Improve tab colors */
     .swagger-ui .tab-header .tab-item.active h4 {
       color: #333;
     }
     
-    /* Improve scheme selection */
     .swagger-ui .scheme-container .schemes-title {
       color: #333;
     }
     
-    /* Mobile Responsive Improvements */
     @media screen and (max-width: 768px) {
       .header-container {
         flex-direction: column;
@@ -282,7 +303,7 @@ router.get('/', (req, res) => {
   <script>
     window.onload = function() {
       const ui = SwaggerUIBundle({
-        spec: ${JSON.stringify(swaggerDocument)},
+        spec: ${JSON.stringify(spec)},
         dom_id: '#swagger-ui',
         deepLinking: true,
         presets: [
@@ -305,12 +326,14 @@ router.get('/', (req, res) => {
         tryItOutEnabled: true,
         supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
         requestInterceptor: function(request) {
-          // إضافة headers إضافية إذا لزم الأمر
+          // Ensure relative URLs resolve against the selected server
           return request;
         },
         responseInterceptor: function(response) {
-          // معالجة الاستجابة إذا لزم الأمر
           return response;
+        },
+        onComplete: function() {
+          // Keep default server as current deployment origin
         }
       });
       window.ui = ui;
@@ -320,6 +343,7 @@ router.get('/', (req, res) => {
 </html>
   `;
   res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Cache-Control', 'no-store');
   res.send(swaggerHtml);
 });
 

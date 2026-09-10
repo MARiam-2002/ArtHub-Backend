@@ -74,18 +74,11 @@ export const bootstrap = (app, express) => {
   // خدمة الملفات الثابتة من مجلد public
   app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 
-  // 1. خدمة ملفات swagger.json و swagger.yaml كـ static قبل swaggerRoutes
-  app.use(
-    '/api-docs/swagger.json',
-    express.static(path.join(__dirname, 'swagger', 'swagger.json'))
-  );
-  app.use(
-    '/api-docs/swagger.yaml',
-    express.static(path.join(__dirname, 'swagger', 'swagger.yaml'))
-  );
-
-  // 2. راوتر Swagger UI (لا تغيره)
+  // Swagger UI + dynamic swagger.json (servers resolved from request host)
   app.use('/api-docs', swaggerRoutes);
+  app.get('/api-docs/swagger.yaml', (req, res) => {
+    res.sendFile(path.join(__dirname, 'swagger', 'swagger.yaml'));
+  });
 
   // API routes
   app.use('/api/auth', authRouter);

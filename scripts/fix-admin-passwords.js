@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import userModel from '../DB/models/user.model.js';
 import { connectDB } from '../DB/connection.js';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 async function fixAdminPasswords() {
   try {
